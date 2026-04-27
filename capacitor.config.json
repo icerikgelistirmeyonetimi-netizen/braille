@@ -1,0 +1,11 @@
+{
+  "appId": "com.braille.egitim",
+  "appName": "Braille Eğitim",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<title>Braille Bilye Mekanizması — Simülatör</title>
+<style>
+  body {
+    margin: 0;
+    padding: 16px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #1a1d23;
+    color: #e8eaed;
+  }
+  h1 { margin: 0 0 4px 0; font-size: 22px; }
+  .alt { color: #8a8f98; font-size: 13px; margin-bottom: 16px; }
+  .ust {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+  }
+  @media (max-width: 800px) { .ust { grid-template-columns: 1fr; } }
+  .panel {
+    background: #23272f;
+    border: 1px solid #353a45;
+    border-radius: 10px;
+    padding: 14px;
+  }
+  svg { width: 100%; height: auto; display: block; background: #161920; border-radius: 6px; }
+  button {
+    background: #3b82f6;
+    color: white;
+    border: 0;
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 4px 4px 4px 0;
+  }
+  button:hover { background: #2563eb; }
+  button.ikincil { background: #4b5563; }
+  button.ikincil:hover { background: #374151; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: #161920;
+    color: #e8eaed;
+    border: 1px solid #353a45;
+    border-radius: 6px;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+  }
+  .durum {
+    background: #161920;
+    border-left: 3px solid #3b82f6;
+    padding: 8px 12px;
+    margin-top: 12px;
+    font-size: 13px;
+    border-radius: 0 6px 6px 0;
+    min-height: 36px;
+  }
+  .legend { font-size: 12px; color: #8a8f98; margin-top: 8px; line-height: 1.6; }
+  .legend span.dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  label { font-size: 13px; display: block; margin-top: 10px; }
+  input[type=range] { width: 100%; }
+  .istatistik { font-size: 12px; color: #8a8f98; margin-top: 8px; }
+  .istatistik strong { color: #e8eaed; }
+</style>
+</head>
+<body>
+
+<h1>Braille Bilye Mekanizması — Simülatör</h1>
+<div class="alt">Çift katmanlı sürgülü levha + XY kol + yerçekimi dispenseri. Yan görünüş animasyon, üstten görünüm haritalama.</div>
+
+<div class="ust">
+  <div class="panel">
+    <svg id="yan" viewBox="0 0 600 380" aria-label="Yan görünüş animasyon"></svg>
+    <div class="legend">
+      <span class="dot" style="background:#fbbf24"></span> Bilye &nbsp;
+      <span class="dot" style="background:#94a3b8"></span> Üst plaka (sabit) &nbsp;
+      <span class="dot" style="background:#60a5fa"></span> Üst katman (yuvalı taşıyıcı) &nbsp;
+      <span class="dot" style="background:#a78bfa"></span> Alt katman (sürgülü kapak)
+    </div>
+    <svg id="ust" viewBox="0 0 600 200" style="margin-top:14px" aria-label="Üstten görünüş — desen"></svg>
+  </div>
+
+  <div class="panel">
+    <label>Metin (otomatik braille’ye çevrilir):
+      <textarea id="metin" rows="2">Merhaba</textarea>
+    </label>
+
+    <label>Hücre sayısı: <span id="hucreLbl">5</span>
+      <input type="range" id="hucreSayisi" min="3" max="20" value="5" />
+    </label>
+
+    <label>Animasyon hızı: <span id="hizLbl">1.0×</span>
+      <input type="range" id="hiz" min="0.3" max="3.0" step="0.1" value="1.0" />
+    </label>
+
+    <div style="margin-top:12px">
+      <button id="basla">▶ Tam Döngü Çalıştır</button>
+      <button id="dur" class="ikincil">⏸ Durdur</button>
+    </div>
+    <div style="margin-top:6px">
+      <button id="sadeceDoldur" class="ikincil">Sadece Doldur</button>
+      <button id="sadeceKaldir" class="ikincil">Sadece Kaldır</button>
+      <button id="sadeceReset" class="ikincil">Sadece Reset</button>
+    </div>
+
+    <div class="durum" id="durum">Hazır. Bir buton basın.</div>
+    <div class="istatistik" id="istatistik"></div>
+  </div>
+</div>
+
+<script>
+// ==========================================================
+// Türkçe Braille tablosu (uygulamandakinin aynısı)
+// ==========================================================
+const HARFLER = {
+  'A':[1],'B':[1,2],'C':[1,4],'Ç':[1,6],'D':[1,4,5],'E':[1,5],
+  'F':[1,2,4],'G':[1,2,4,5],'Ğ':[1,2,6],'H':[1,2,5],'I':[3,5],
+  'İ':[2,4],'J':[2,4,5],'K':[1,3],'L':[1,2,3],'M':[1,3,4],
+  'N':[1,3,4,5],'O':[1,3,5],'Ö':[2,4,6],'P':[1,2,3,4],'R':[1,2,3,5],
+  'S':[2,3,4],'Ş':[1,4,6],'T':[2,3,4,5],'U':[1,3,6],'Ü':[1,2,5,6],
+  'V':[1,2,3,6],'Y':[1,3,4,5,6],'Z':[1,3,5,6]
+};
+function metinBraille(metin) {
+  const sonuc = [];
+  for (const ch of metin) {
+    const ust = ch.toLocaleUpperCase('tr');
+    if (HARFLER[ust]) sonuc.push(HARFLER[ust]);
+    else sonuc.push([]); // boşluk veya tanınmayan
+  }
+  return sonuc;
+}
+
+// ==========================================================
+// SVG çizim — yan görünüş
+// ==========================================================
+const yan = document.getElementById('yan');
+const ustSvg = document.getElementById('ust');
+const NS = 'http://www.w3.org/2000/svg';
+
+let HUCRE = 5;             // simülasyondaki hücre sayısı
+const NOKTA_ARALIGI = 22;  // px (büyütülmüş, görsel için)
+const HUCRE_ARALIGI = 80;
+const BILYE_R = 7;
+
+// State
+let durum = {
+  z: 0,              // 0 = aşağıda, 1 = yukarıda
+  altKaydi: false,   // alt katman kaymış mı?
+  bilyeler: [],      // {col, row, cepteVar:bool, dusuyor:bool, x?, y?}
+  kol: { x: 50, y: 30, hareket:false, kapiAcik:false },
+  desen: []          // hücre[col].row değerleri (true/false)
+};
+let calisiyor = false;
+let hizCarpan = 1.0;
+
+function temizle(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+
+// SVG eleman yardımcı
+function el(tag, attrs={}, text=null) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== null) e.textContent = text;
+  return e;
+}
+
+function cepX(col) { return 90 + col * HUCRE_ARALIGI + (col%2===0?0:0); }
+// her hücre 2 sütun (sol & sağ) x 3 satır
+function noktaXY(hucreIdx, sutun, satir) {
+  const baseX = 90 + hucreIdx * HUCRE_ARALIGI;
+  const x = baseX + sutun * NOKTA_ARALIGI;
+  const yOfsetMerkez = 200; // levhalar aşağıda iken üst katman y'si
+  return { x, satir };
+}
+
+// Yan görünüş çizimi (her frame'de yeniden çizilir)
+function cizYan() {
+  temizle(yan);
+
+  // Arka plan grid
+  const grid = el('rect', {x:0, y:0, width:600, height:380, fill:'#161920'});
+  yan.appendChild(grid);
+
+  // ------- Hazne (sol üst) -------
+  yan.appendChild(el('path', {
+    d:'M 20 30 L 60 30 L 50 70 L 30 70 Z',
+    fill:'#374151', stroke:'#6b7280', 'stroke-width':1.5
+  }));
+  // hazne içindeki bilyeler
+  for (let i=0; i<6; i++) {
+    yan.appendChild(el('circle', {
+      cx: 30 + (i%3)*7, cy: 38 + Math.floor(i/3)*7,
+      r: 3, fill:'#fbbf24'
+    }));
+  }
+  yan.appendChild(el('text', {x:25, y:25, fill:'#8a8f98', 'font-size':10}, 'Hazne'));
+
+  // ------- Hortum (haznenin altından kola) -------
+  const kolX = durum.kol.x;
+  yan.appendChild(el('path', {
+    d:`M 40 70 Q 40 100 ${kolX+15} 110`,
+    stroke:'#6b7280', 'stroke-width':3, fill:'none'
+  }));
+
+  // ------- XY KOL BAŞI -------
+  yan.appendChild(el('rect', {
+    x: kolX, y: 100, width: 30, height: 35,
+    fill:'#475569', stroke:'#94a3b8', 'stroke-width':1.5, rx:3
+  }));
+  // kapı (servo)
+  const kapiAci = durum.kol.kapiAcik ? -45 : 0;
+  yan.appendChild(el('rect', {
+    x: kolX+10, y: 130, width: 10, height: 4,
+    fill:'#fbbf24',
+    transform:`rotate(${kapiAci} ${kolX+15} 132)`
+  }));
+  yan.appendChild(el('text', {x: kolX+2, y:97, fill:'#94a3b8', 'font-size':9}, 'KOL'));
+
+  // koldaki bekleyen bilye (kapı kapalıyken)
+  if (!durum.kol.kapiAcik) {
+    yan.appendChild(el('circle', {cx: kolX+15, cy:122, r: BILYE_R, fill:'#fbbf24'}));
+  }
+
+  // ------- ÜST PLAKA (sabit, delikli) -------
+  const ustY = 150;
+  yan.appendChild(el('rect', {x:75, y:ustY, width: HUCRE*HUCRE_ARALIGI+30, height:8, fill:'#94a3b8'}));
+  // delikler
+  for (let h=0; h<HUCRE; h++) {
+    for (let s=0; s<2; s++) {
+      const x = 90 + h*HUCRE_ARALIGI + s*NOKTA_ARALIGI;
+      yan.appendChild(el('rect', {x:x-5, y:ustY, width:10, height:8, fill:'#161920'}));
+    }
+  }
+
+  // ------- ÜST KATMAN (yuvalı taşıyıcı, Z hareketi yapar) -------
+  const zOfset = durum.z * -55; // yukarı kalkma
+  const ustKatY = ustY + 30 + zOfset;
+  yan.appendChild(el('rect', {x:75, y:ustKatY, width: HUCRE*HUCRE_ARALIGI+30, height:14, fill:'#60a5fa'}));
+  // yuva delikleri (üst katmanda)
+  for (let h=0; h<HUCRE; h++) {
+    for (let s=0; s<2; s++) {
+      const x = 90 + h*HUCRE_ARALIGI + s*NOKTA_ARALIGI;
+      yan.appendChild(el('circle', {cx:x, cy:ustKatY+7, r:6, fill:'#161920'}));
+    }
+  }
+
+  // ------- ALT KATMAN (sürgülü kapak) -------
+  const altKaydiPx = durum.altKaydi ? 22 : 0;
+  const altKatY = ustKatY + 14;
+  yan.appendChild(el('rect', {
+    x: 75 + altKaydiPx, y: altKatY,
+    width: HUCRE*HUCRE_ARALIGI+30, height:10, fill:'#a78bfa'
+  }));
+  // alt katmandaki kör cepler
+  for (let h=0; h<HUCRE; h++) {
+    for (let s=0; s<2; s++) {
+      const x = 90 + h*HUCRE_ARALIGI + s*NOKTA_ARALIGI + altKaydiPx;
+      yan.appendChild(el('circle', {cx:x, cy:altKatY+5, r:5, fill:'#7c3aed'}));
+    }
+  }
+
+  // ------- BİLYELER -------
+  for (const b of durum.bilyeler) {
+    const baseX = 90 + b.col * HUCRE_ARALIGI;
+    let bx = baseX + b.sutun * NOKTA_ARALIGI;
+    let by;
+    if (b.dusuyor) {
+      // animasyon: kol pozisyonundan cebe iniyor
+      by = b.dusY;
+      bx = b.dusX !== undefined ? b.dusX : bx;
+    } else if (b.kayiyor) {
+      // reset: alt katman çekildi, bilye düşüyor
+      by = b.kayY;
+      bx = b.kayX;
+    } else {
+      // yuvada otururken: üst katman yarısında veya üst plakadan çıkmış
+      by = ustKatY + 7;
+      // eğer levha yukarıdaysa, görsel olarak üst plakadan çıkmış göster
+      if (durum.z > 0.7) by = ustY - 4;
+    }
+    yan.appendChild(el('circle', {cx:bx, cy:by, r:BILYE_R, fill:'#fbbf24',
+                                  stroke:'#d97706', 'stroke-width':1}));
+  }
+
+  // ------- ALT REZERVUAR (eğimli toplama haznesi) -------
+  yan.appendChild(el('path', {
+    d:`M 75 320 L 75 340 L 530 340 L 580 360 L 580 370 L 75 370 Z`,
+    fill:'#1f2937', stroke:'#374151'
+  }));
+  yan.appendChild(el('text', {x:80, y:336, fill:'#8a8f98', 'font-size':10}, 'Toplama haznesi (eğimli)'));
+
+  // ------- Kılavuz oklar -------
+  if (durum.altKaydi) {
+    yan.appendChild(el('text', {x:75 + altKaydiPx + 30, y:altKatY+25, fill:'#a78bfa', 'font-size':12, 'font-weight':'bold'}, '→ kaydı'));
+  }
+  if (durum.z > 0.5) {
+    yan.appendChild(el('text', {x:540, y:ustKatY+5, fill:'#60a5fa', 'font-size':12, 'font-weight':'bold'}, '↑ kalktı'));
+  }
+
+  // Etiketler
+  yan.appendChild(el('text', {x:550, y:ustY-3, fill:'#94a3b8', 'font-size':10}, 'Üst plaka'));
+}
+
+// Üstten görünüş — desen haritası
+function cizUst() {
+  temizle(ustSvg);
+  ustSvg.appendChild(el('rect', {x:0, y:0, width:600, height:200, fill:'#161920'}));
+  ustSvg.appendChild(el('text', {x:10, y:18, fill:'#8a8f98', 'font-size':12}, 'Üstten görünüş — kabarık olması istenen noktalar (kolun ziyaret sırası)'));
+
+  for (let h=0; h<HUCRE; h++) {
+    // hücre çerçevesi
+    ustSvg.appendChild(el('rect', {
+      x: 80 + h*HUCRE_ARALIGI - 10, y: 50, width: 50, height: 100,
+      fill:'none', stroke:'#353a45', 'stroke-width':1, rx:4
+    }));
+    // hücre numarası
+    ustSvg.appendChild(el('text', {
+      x: 80 + h*HUCRE_ARALIGI + 15, y: 175,
+      fill:'#6b7280', 'font-size':11, 'text-anchor':'middle'
+    }, `H${h+1}`));
+
+    for (let s=0; s<2; s++) {
+      for (let r=0; r<3; r++) {
+        const x = 90 + h*HUCRE_ARALIGI + s*NOKTA_ARALIGI;
+        const y = 70 + r*25;
+        const noktaNo = s*3 + r + 1; // 1,2,3,4,5,6
+        const aktif = (durum.desen[h] || []).includes(noktaNo);
+        ustSvg.appendChild(el('circle', {
+          cx:x, cy:y, r: aktif ? 9 : 5,
+          fill: aktif ? '#fbbf24' : '#374151',
+          stroke: aktif ? '#d97706' : 'none', 'stroke-width':1
+        }));
+      }
+    }
+  }
+}
+
+// ==========================================================
+// Animasyon yardımcıları
+// ==========================================================
+const bekle = (ms) => new Promise(r => setTimeout(r, ms / hizCarpan));
+
+async function animateProp(set, get, hedef, sure, postRender=null) {
+  const baslangic = get();
+  const adim = 30;
+  const adimSayi = Math.max(1, Math.floor(sure / adim));
+  for (let i=1; i<=adimSayi; i++) {
+    set(baslangic + (hedef - baslangic) * (i / adimSayi));
+    cizYan();
+    if (postRender) postRender();
+    await bekle(adim);
+  }
+}
+
+function durumYaz(metin) {
+  document.getElementById('durum').textContent = metin;
+}
+
+// Belirli bir koordinattaki nokta numarası (1..6)
+// kol başının x ekseninde hangi hücre + sütuna gideceğini hesaplar
+function hedefXKonum(col, sutun) {
+  return 90 + col * HUCRE_ARALIGI + sutun * NOKTA_ARALIGI - 15;
+}
+
+// ==========================================================
+// Senaryolar
+// ==========================================================
+async function adimReset() {
+  durumYaz('Reset: levhalar indiriliyor...');
+  await animateProp(v => durum.z = v, () => durum.z, 0, 400);
+
+  durumYaz('Reset: alt katman yana kayıyor → bilyeler düşüyor');
+  // Önce alt katman kayar
+  const oldBilyeler = durum.bilyeler.slice();
+  await animateProp(_ => {}, () => 0, 1, 300, () => {});
+  durum.altKaydi = true;
+
+  // Bilyeler düşmeye başlar
+  for (const b of durum.bilyeler) {
+    b.kayiyor = true;
+    b.kayX = 90 + b.col * HUCRE_ARALIGI + b.sutun * NOKTA_ARALIGI;
+    b.kayY = 220;
+  }
+  cizYan();
+  // Animasyon: bilyeler aşağı düşüp eğimli alana kayar
+  for (let t=0; t<25; t++) {
+    for (const b of durum.bilyeler) {
+      if (b.kayiyor) {
+        b.kayY += 12;
+        if (b.kayY > 320) {
+          b.kayX += 14; // hazneye doğru kay
+        }
+      }
+    }
+    cizYan();
+    await bekle(30);
+  }
+  // bilyeleri temizle
+  durum.bilyeler = [];
+
+  durumYaz('Reset: alt katman geri hizalanıyor');
+  await bekle(200);
+  durum.altKaydi = false;
+  cizYan();
+  await bekle(150);
+  durumYaz('Reset tamamlandı. Sayfa yenileme için hazır.');
+}
+
+async function adimDoldur() {
+  // Eğer levha yukarıdaysa önce indir
+  if (durum.z > 0.05) {
+    durumYaz('Levhalar indiriliyor...');
+    await animateProp(v => durum.z = v, () => durum.z, 0, 400);
+  }
+  // Eski bilyeleri temizle
+  durum.bilyeler = [];
+
+  // Hedefler: aktif noktalar
+  const hedefler = [];
+  for (let h=0; h<HUCRE; h++) {
+    const noktalar = durum.desen[h] || [];
+    for (const n of noktalar) {
+      const sutun = n > 3 ? 1 : 0;
+      const satir = (n-1) % 3;
+      hedefler.push({col:h, sutun, satir, n});
+    }
+  }
+
+  durumYaz(`Doldurma: ${hedefler.length} bilye yerleştirilecek`);
+
+  // En kısa yol için basit greedy — başlangıç sol üst
+  let curX = 50;
+  const sirali = [];
+  const kalan = hedefler.slice();
+  while (kalan.length > 0) {
+    let enYakin = 0;
+    let enYakinUzaklik = Infinity;
+    for (let i=0; i<kalan.length; i++) {
+      const tx = hedefXKonum(kalan[i].col, kalan[i].sutun);
+      const u = Math.abs(tx - curX);
+      if (u < enYakinUzaklik) { enYakinUzaklik = u; enYakin = i; }
+    }
+    sirali.push(kalan[enYakin]);
+    curX = hedefXKonum(kalan[enYakin].col, kalan[enYakin].sutun);
+    kalan.splice(enYakin, 1);
+  }
+
+  // Her hedefe git ve bilye bırak
+  for (let i=0; i<sirali.length; i++) {
+    const h = sirali[i];
+    const hedefX = hedefXKonum(h.col, h.sutun);
+    durumYaz(`Doldurma ${i+1}/${sirali.length} → Hücre ${h.col+1}, nokta ${h.n}`);
+    // Kol hedefe git
+    await animateProp(v => durum.kol.x = v, () => durum.kol.x, hedefX, 250);
+    // Kapı aç
+    durum.kol.kapiAcik = true;
+    cizYan();
+    await bekle(80);
+    // Bilye düşüş animasyonu
+    const bilye = {
+      col: h.col, sutun: h.sutun, satir: h.satir,
+      dusuyor: true, dusY: 132, dusX: hedefX + 15
+    };
+    durum.bilyeler.push(bilye);
+    for (let f=0; f<8; f++) {
+      bilye.dusY += 10;
+      cizYan();
+      await bekle(20);
+    }
+    bilye.dusuyor = false;
+    // Kapı kapat
+    durum.kol.kapiAcik = false;
+    cizYan();
+    await bekle(60);
+  }
+  durumYaz(`Doldurma tamamlandı: ${sirali.length} bilye yerleşti.`);
+}
+
+async function adimKaldir() {
+  durumYaz('Levhalar yukarı kaldırılıyor → bilyeler delikten çıkıyor → ÖĞRENCİ OKUYABİLİR');
+  await animateProp(v => durum.z = v, () => durum.z, 1, 600);
+  durumYaz('✓ Sayfa öğrencinin parmağı altında. Okuma başlayabilir.');
+}
+
+async function tamDongu() {
+  if (calisiyor) return;
+  calisiyor = true;
+  butonlariKilitle(true);
+
+  // Önce reset (önceki sayfa varsa)
+  if (durum.bilyeler.length > 0) await adimReset();
+
+  // Metni braille'ye çevir
+  const metin = document.getElementById('metin').value;
+  const tumHucreler = metinBraille(metin);
+  durum.desen = tumHucreler.slice(0, HUCRE);
+  cizUst();
+  istatistikGuncelle();
+
+  // Doldur
+  await adimDoldur();
+  await bekle(300);
+
+  // Kaldır
+  await adimKaldir();
+  await bekle(1500);
+
+  // Reset
+  await adimReset();
+
+  butonlariKilitle(false);
+  calisiyor = false;
+  durumYaz('Tam döngü tamamlandı. Tekrar başlatabilirsiniz.');
+}
+
+function butonlariKilitle(kilit) {
+  ['basla','sadeceDoldur','sadeceKaldir','sadeceReset'].forEach(id =>
+    document.getElementById(id).disabled = kilit
+  );
+}
+
+function istatistikGuncelle() {
+  const aktif = durum.desen.reduce((a,h) => a + (h?.length || 0), 0);
+  const toplam = HUCRE * 6;
+  document.getElementById('istatistik').innerHTML =
+    `<strong>${HUCRE}</strong> hücre × 6 nokta = <strong>${toplam}</strong> cep · ` +
+    `<strong>${aktif}</strong> bilye yerleşecek (${(100*aktif/toplam).toFixed(0)}% doluluk)`;
+}
+
+// ==========================================================
+// UI bağlantıları
+// ==========================================================
+document.getElementById('basla').onclick = tamDongu;
+document.getElementById('dur').onclick = () => { calisiyor = false; hizCarpan = 100; setTimeout(()=>hizCarpan=parseFloat(document.getElementById('hiz').value), 100); };
+document.getElementById('sadeceDoldur').onclick = async () => {
+  if (calisiyor) return; calisiyor = true; butonlariKilitle(true);
+  const tumHucreler = metinBraille(document.getElementById('metin').value);
+  durum.desen = tumHucreler.slice(0, HUCRE); cizUst(); istatistikGuncelle();
+  await adimDoldur();
+  butonlariKilitle(false); calisiyor = false;
+};
+document.getElementById('sadeceKaldir').onclick = async () => {
+  if (calisiyor) return; calisiyor = true; butonlariKilitle(true);
+  await adimKaldir();
+  butonlariKilitle(false); calisiyor = false;
+};
+document.getElementById('sadeceReset').onclick = async () => {
+  if (calisiyor) return; calisiyor = true; butonlariKilitle(true);
+  await adimReset();
+  butonlariKilitle(false); calisiyor = false;
+};
+document.getElementById('hucreSayisi').oninput = (e) => {
+  HUCRE = parseInt(e.target.value);
+  document.getElementById('hucreLbl').textContent = HUCRE;
+  const t = metinBraille(document.getElementById('metin').value);
+  durum.desen = t.slice(0, HUCRE);
+  cizYan(); cizUst(); istatistikGuncelle();
+};
+document.getElementById('hiz').oninput = (e) => {
+  hizCarpan = parseFloat(e.target.value);
+  document.getElementById('hizLbl').textContent = hizCarpan.toFixed(1) + '×';
+};
+document.getElementById('metin').oninput = (e) => {
+  const t = metinBraille(e.target.value);
+  durum.desen = t.slice(0, HUCRE);
+  cizUst(); istatistikGuncelle();
+};
+
+// İlk çizim
+durum.desen = metinBraille('Merhaba').slice(0, HUCRE);
+cizYan();
+cizUst();
+istatistikGuncelle();
+</script>
+
+</body>
+</html>
