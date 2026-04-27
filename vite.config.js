@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const base = process.env.GITHUB_PAGES === 'true' ? '/braille/' : '/';
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     tailwindcss(),
@@ -19,7 +22,8 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         lang: 'tr-TR',
-        start_url: '/',
+        start_url: base,
+        scope: base,
         icons: [
           {
             src: 'icon.svg',
