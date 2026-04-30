@@ -215,6 +215,115 @@ const Ikon = {
             fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
             fill="currentColor" direction="rtl">بِسْمِ</text>
     </svg>
+  ),
+  modul6: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="10" y="10" width="44" height="44" rx="6" />
+      <text x="32" y="42" textAnchor="middle" fontSize="22" fontWeight="800"
+            fill="currentColor" stroke="none">π</text>
+    </svg>
+  ),
+  matRakam: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="46" textAnchor="middle" fontSize="34"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">1·2·3</text>
+    </svg>
+  ),
+  matSembol: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="46" textAnchor="middle" fontSize="34"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">+−×÷</text>
+    </svg>
+  ),
+  geometri: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="14,50 32,18 50,50" />
+      <circle cx="48" cy="18" r="6" />
+    </svg>
+  ),
+  matIfade: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="42" textAnchor="middle" fontSize="22"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">2+3=5</text>
+    </svg>
+  ),
+  modul7: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="32" cy="32" r="6" fill="currentColor" />
+      <ellipse cx="32" cy="32" rx="22" ry="9" />
+      <ellipse cx="32" cy="32" rx="22" ry="9" transform="rotate(60 32 32)" />
+      <ellipse cx="32" cy="32" rx="22" ry="9" transform="rotate(120 32 32)" />
+    </svg>
+  ),
+  yunan: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="46" textAnchor="middle" fontSize="36"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">α β γ</text>
+    </svg>
+  ),
+  fenSembol: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="44" textAnchor="middle" fontSize="22"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">°⇌→</text>
+    </svg>
+  ),
+  kimya: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M24 8 v18 L12 50 a4 4 0 0 0 4 6 h32 a4 4 0 0 0 4 -6 L40 26 V8" />
+      <path d="M22 8 h20" />
+    </svg>
+  ),
+  fizik: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="44" textAnchor="middle" fontSize="22"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">F=ma</text>
+    </svg>
+  ),
+  modul8: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M24 50 V14 h20 v8 h-20" />
+      <circle cx="20" cy="50" r="6" fill="currentColor" />
+      <circle cx="40" cy="46" r="6" fill="currentColor" />
+    </svg>
+  ),
+  nota: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="46" textAnchor="middle" fontSize="38"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">♩ ♪</text>
+    </svg>
+  ),
+  sure: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="44" textAnchor="middle" fontSize="22"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">𝅝 𝅗𝅥 ♩ ♪</text>
+    </svg>
+  ),
+  muzikSembol: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="46" textAnchor="middle" fontSize="36"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">♯ ♭</text>
+    </svg>
+  ),
+  muzikDizi: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="44" textAnchor="middle" fontSize="20"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">do-re-mi</text>
+    </svg>
   )
 };
 
@@ -281,6 +390,45 @@ const MODULLER = [
       { yol: '/kuran-heceler',   baslik: 'Hece Okuma',         ikon: Ikon.hece },
       { yol: '/kuran-kelimeler', baslik: 'Kelime Okuma',       ikon: Ikon.kuranKelime },
       { yol: '/test-kuran',      baslik: 'Test / Sınav',       ikon: Ikon.test }
+    ]
+  },
+  {
+    id: 'modul6',
+    baslik: 'Modül 6',
+    altBaslik: 'Matematik Braille',
+    ikon: Ikon.modul6,
+    ogeler: [
+      { yol: '/mat-rakamlar',  baslik: 'Rakamlar',           ikon: Ikon.matRakam },
+      { yol: '/mat-semboller', baslik: 'İşlem Sembolleri',   ikon: Ikon.matSembol },
+      { yol: '/mat-geometri',  baslik: 'Geometri',            ikon: Ikon.geometri },
+      { yol: '/mat-ifadeler',  baslik: 'İfade Okuma',         ikon: Ikon.matIfade },
+      { yol: '/test-matematik', baslik: 'Test / Sınav',       ikon: Ikon.test }
+    ]
+  },
+  {
+    id: 'modul7',
+    baslik: 'Modül 7',
+    altBaslik: 'Fen Bilimleri',
+    ikon: Ikon.modul7,
+    ogeler: [
+      { yol: '/fen-yunan',     baslik: 'Yunan Harfleri',          ikon: Ikon.yunan },
+      { yol: '/fen-semboller', baslik: 'Birim ve Semboller',      ikon: Ikon.fenSembol },
+      { yol: '/fen-kimya',     baslik: 'Kimyasal Formüller',      ikon: Ikon.kimya },
+      { yol: '/fen-fizik',     baslik: 'Fizik Formülleri',        ikon: Ikon.fizik },
+      { yol: '/test-fen',      baslik: 'Test / Sınav',            ikon: Ikon.test }
+    ]
+  },
+  {
+    id: 'modul8',
+    baslik: 'Modül 8',
+    altBaslik: 'Müzik Braille',
+    ikon: Ikon.modul8,
+    ogeler: [
+      { yol: '/muzik-notalar',   baslik: 'Notalar (Do-Si)',     ikon: Ikon.nota },
+      { yol: '/muzik-sureler',   baslik: 'Nota Süreleri',       ikon: Ikon.sure },
+      { yol: '/muzik-semboller', baslik: 'Anahtar ve Semboller', ikon: Ikon.muzikSembol },
+      { yol: '/muzik-diziler',   baslik: 'Dizi Okuma',          ikon: Ikon.muzikDizi },
+      { yol: '/test-muzik',      baslik: 'Test / Sınav',        ikon: Ikon.test }
     ]
   }
 ];

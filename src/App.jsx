@@ -26,6 +26,21 @@ import KuranTecvidEgitimi from './pages/KuranTecvidEgitimi.jsx';
 import KuranHeceOkuma from './pages/KuranHeceOkuma.jsx';
 import KuranKelimeOkumaSayfa from './pages/KuranKelimeOkumaSayfa.jsx';
 import TestKuran from './pages/TestKuran.jsx';
+import MatematikRakamEgitimi from './pages/MatematikRakamEgitimi.jsx';
+import MatematikSembolEgitimi from './pages/MatematikSembolEgitimi.jsx';
+import MatematikGeometriEgitimi from './pages/MatematikGeometriEgitimi.jsx';
+import MatematikIfadeOkuma from './pages/MatematikIfadeOkuma.jsx';
+import TestMatematik from './pages/TestMatematik.jsx';
+import FenYunanHarfler from './pages/FenYunanHarfler.jsx';
+import FenSembolEgitimi from './pages/FenSembolEgitimi.jsx';
+import FenKimyaFormulleri from './pages/FenKimyaFormulleri.jsx';
+import FenFizikFormulleri from './pages/FenFizikFormulleri.jsx';
+import TestFen from './pages/TestFen.jsx';
+import MuzikNotaEgitimi from './pages/MuzikNotaEgitimi.jsx';
+import MuzikSembolEgitimi from './pages/MuzikSembolEgitimi.jsx';
+import MuzikSureleri from './pages/MuzikSureleri.jsx';
+import MuzikDiziOkuma from './pages/MuzikDiziOkuma.jsx';
+import TestMuzik from './pages/TestMuzik.jsx';
 import { sallamayiBaslat } from './utils/sallama.js';
 
 export default function App() {
@@ -60,6 +75,21 @@ export default function App() {
           <Route path="/kuran-heceler" element={<KuranHeceOkuma />} />
           <Route path="/kuran-kelimeler" element={<KuranKelimeOkumaSayfa />} />
           <Route path="/test-kuran" element={<TestKuran />} />
+          <Route path="/mat-rakamlar" element={<MatematikRakamEgitimi />} />
+          <Route path="/mat-semboller" element={<MatematikSembolEgitimi />} />
+          <Route path="/mat-geometri" element={<MatematikGeometriEgitimi />} />
+          <Route path="/mat-ifadeler" element={<MatematikIfadeOkuma />} />
+          <Route path="/test-matematik" element={<TestMatematik />} />
+          <Route path="/fen-yunan" element={<FenYunanHarfler />} />
+          <Route path="/fen-semboller" element={<FenSembolEgitimi />} />
+          <Route path="/fen-kimya" element={<FenKimyaFormulleri />} />
+          <Route path="/fen-fizik" element={<FenFizikFormulleri />} />
+          <Route path="/test-fen" element={<TestFen />} />
+          <Route path="/muzik-notalar" element={<MuzikNotaEgitimi />} />
+          <Route path="/muzik-sureler" element={<MuzikSureleri />} />
+          <Route path="/muzik-semboller" element={<MuzikSembolEgitimi />} />
+          <Route path="/muzik-diziler" element={<MuzikDiziOkuma />} />
+          <Route path="/test-muzik" element={<TestMuzik />} />
           <Route path="/ayarlar" element={<Ayarlar />} />
         </Routes>
       </main>
