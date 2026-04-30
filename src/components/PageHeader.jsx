@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import GorunumGecisi from './GorunumGecisi.jsx';
+import KarisikYazmaButonu from './KarisikYazmaButonu.jsx';
 
 export default function PageHeader({ baslik }) {
   const navigate = useNavigate();
@@ -26,7 +27,20 @@ export default function PageHeader({ baslik }) {
           </svg>
         </span>
       </button>
-      <h1 className="banner-baslik" style={{ margin: 0, fontSize: '1.5em', flex: 1, textAlign: 'center' }}>{baslik}</h1>
+      <h1
+        className="banner-baslik"
+        style={{
+          margin: 0,
+          fontSize: 'clamp(0.95em, 4.2vw, 1.5em)',
+          flex: 1,
+          minWidth: 0,
+          textAlign: 'center'
+        }}
+        title={baslik}
+      >
+        {baslik}
+      </h1>
+      <KarisikYazmaButonu />
       <GorunumGecisi />
     </header>
   );

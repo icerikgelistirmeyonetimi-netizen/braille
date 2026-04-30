@@ -11,6 +11,7 @@ import YazmaEgitimi from './pages/YazmaEgitimi.jsx';
 import YazmaYonergeli from './pages/YazmaYonergeli.jsx';
 import YazmaYonergeliCumle from './pages/YazmaYonergeliCumle.jsx';
 import YazmaSerbest from './pages/YazmaSerbest.jsx';
+import YazmaKarisik from './pages/YazmaKarisik.jsx';
 import KisaltmaBirHarfli from './pages/KisaltmaBirHarfli.jsx';
 import KisaltmaIkiHarfli from './pages/KisaltmaIkiHarfli.jsx';
 import KisaltmaHece from './pages/KisaltmaHece.jsx';
@@ -25,6 +26,7 @@ import KuranHarekeEgitimi from './pages/KuranHarekeEgitimi.jsx';
 import KuranTecvidEgitimi from './pages/KuranTecvidEgitimi.jsx';
 import KuranHeceOkuma from './pages/KuranHeceOkuma.jsx';
 import KuranKelimeOkumaSayfa from './pages/KuranKelimeOkumaSayfa.jsx';
+import KuranSureOkuma from './pages/KuranSureOkuma.jsx';
 import TestKuran from './pages/TestKuran.jsx';
 import MatematikRakamEgitimi from './pages/MatematikRakamEgitimi.jsx';
 import MatematikSembolEgitimi from './pages/MatematikSembolEgitimi.jsx';
@@ -60,6 +62,7 @@ export default function App() {
           <Route path="/yazma-yonergeli" element={<YazmaYonergeli />} />
           <Route path="/yazma-yonergeli-cumle" element={<YazmaYonergeliCumle />} />
           <Route path="/yazma-serbest" element={<YazmaSerbest />} />
+          <Route path="/yazma-karisik/:kaynak" element={<YazmaKarisik />} />
           <Route path="/kisaltma-bir-harfli" element={<KisaltmaBirHarfli />} />
           <Route path="/kisaltma-iki-harfli" element={<KisaltmaIkiHarfli />} />
           <Route path="/kisaltma-hece" element={<KisaltmaHece />} />
@@ -74,6 +77,7 @@ export default function App() {
           <Route path="/kuran-tecvid" element={<KuranTecvidEgitimi />} />
           <Route path="/kuran-heceler" element={<KuranHeceOkuma />} />
           <Route path="/kuran-kelimeler" element={<KuranKelimeOkumaSayfa />} />
+          <Route path="/kuran-sureler" element={<KuranSureOkuma />} />
           <Route path="/test-kuran" element={<TestKuran />} />
           <Route path="/mat-rakamlar" element={<MatematikRakamEgitimi />} />
           <Route path="/mat-semboller" element={<MatematikSembolEgitimi />} />

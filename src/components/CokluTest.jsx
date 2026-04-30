@@ -120,11 +120,15 @@ export default function CokluTest({ baslik, kaynaklar }) {
         const noktaMetin = aktif.hucreler
           .map((h, i) => `${HUCRE_ETIKET[i] || (i + 1) + '.'} hücre ${h.join(', ')}`)
           .join('; ');
-        konus('Üç yanlış hak doldu.', { kesintiyle: true });
-        setTimeout(() => {
-          konus(`Doğru cevap: ${ad}. Noktalar: ${noktaMetin}.`, { kesintiyle: true });
-        }, 900);
-        setTimeout(sonrakiSoruyaGec, 4500);
+        konus('Üç yanlış hak doldu.', {
+          kesintiyle: true,
+          onSon: () => {
+            konus(`Doğru cevap: ${ad}. Noktalar: ${noktaMetin}.`, {
+              kesintiyle: true,
+              onSon: () => setTimeout(sonrakiSoruyaGec, 700)
+            });
+          }
+        });
         return;
       }
       hataBildir(`${n} numara yanlış.`);
@@ -228,7 +232,8 @@ export default function CokluTest({ baslik, kaynaklar }) {
                   baslikAriaLabel={cokHucreli
                     ? `${HUCRE_ETIKET[hi] || (hi + 1) + '.'} hücre`
                     : (aktif.ariaAd || aktif.ad)}
-                  tiklanabilir
+                  tiklanabilir={!aciklandi}
+                  kesfedilebilir={!aciklandi}
                   onNoktaTikla={(n) => tikla(hi, n)}
                   dogruNoktalar={basilanlar[hi] || []}
                   yanlisNoktalar={yanlis.hucre === hi ? yanlis.noktalar : []}

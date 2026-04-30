@@ -66,12 +66,18 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 /**
  * Verilen metni Türkçe sesle okur.
  * @param {string} metin
- * @param {{ kesintiyle?: boolean, hiz?: number }} [opt]
+ * @param {{ kesintiyle?: boolean, hiz?: number, onSon?: () => void }} [opt]
  */
 export function konus(metin, opt = {}) {
   const a = ayarlariAl();
-  if (!a.sesAcik) return;
-  const { kesintiyle = true, hiz } = opt;
+  if (!a.sesAcik) {
+    // Ses kapalıysa bile akış kırılmasın diye onSon yine tetiklensin
+    if (opt && typeof opt.onSon === 'function') {
+      setTimeout(() => { try { opt.onSon(); } catch (_) {} }, 0);
+    }
+    return;
+  }
+  const { kesintiyle = true, hiz, onSon } = opt;
 
   // Native (Android APK) yolu
   if (nativePlatform && nativeTTS) {
@@ -89,18 +95,36 @@ export function konus(metin, opt = {}) {
           category: 'ambient'
         });
       } catch (_) { /* yok say */ }
+      if (typeof onSon === 'function') {
+        try { onSon(); } catch (_) { /* */ }
+      }
     })();
     return;
   }
 
   // Web Speech API yolu
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    if (typeof onSon === 'function') {
+      setTimeout(() => { try { onSon(); } catch (_) {} }, 0);
+    }
+    return;
+  }
   if (kesintiyle) window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(metin);
   u.lang = 'tr-TR';
   u.rate = hiz ?? a.konusmaHizi;
   u.pitch = 1;
   if (tercihEdilenSes) u.voice = tercihEdilenSes;
+  if (typeof onSon === 'function') {
+    let bittiCagrildi = false;
+    const son = () => {
+      if (bittiCagrildi) return;
+      bittiCagrildi = true;
+      try { onSon(); } catch (_) { /* */ }
+    };
+    u.onend = son;
+    u.onerror = son;
+  }
   window.speechSynthesis.speak(u);
 }
 

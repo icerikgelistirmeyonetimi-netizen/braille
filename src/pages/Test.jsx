@@ -86,13 +86,9 @@ export default function Test() {
         setBasilanlar(aktif.noktalar);
         const ad = aktif.ariaAd || aktif.ad;
         const noktaListesi = aktif.noktalar.join(', ');
-        // Önce kısa uyarı, sonra doğru cevabı vurgulu seslendir.
-        konus('Üç yanlış hak doldu.', { kesintiyle: true });
-        setTimeout(() => {
-          konus(`Doğru cevap: ${ad}. Noktaları: ${noktaListesi}.`,
-            { kesintiyle: true });
-        }, 900);
-        setTimeout(() => {
+        // Önce kısa uyarı, sonra doğru cevabı vurgulu seslendir;
+        // her seslendirme bitince bir sonrakine geç.
+        const sonrakine = () => {
           if (indeks + 1 >= sorular.length) {
             setBittimi(true);
           } else {
@@ -102,7 +98,16 @@ export default function Test() {
             setSoruHata(0);
             setAciklandi(false);
           }
-        }, 4200);
+        };
+        konus('Üç yanlış hak doldu.', {
+          kesintiyle: true,
+          onSon: () => {
+            konus(`Doğru cevap: ${ad}. Noktaları: ${noktaListesi}.`, {
+              kesintiyle: true,
+              onSon: () => setTimeout(sonrakine, 700)
+            });
+          }
+        });
         return;
       }
       hataBildir(`${n} numara yanlış.`);
@@ -202,7 +207,8 @@ export default function Test() {
         <BrailleCell
           baslik={aktif.ad}
           baslikAriaLabel={aktif.ariaAd || aktif.ad}
-          tiklanabilir
+          tiklanabilir={!aciklandi}
+          kesfedilebilir={!aciklandi}
           onNoktaTikla={tikla}
           dogruNoktalar={basilanlar}
           yanlisNoktalar={yanlis}

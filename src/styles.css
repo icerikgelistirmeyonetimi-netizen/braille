@@ -119,6 +119,13 @@ h1, h2, h3 { color: var(--fg); }
   overflow: hidden;
 }
 
+/* App içindeki <main> şeffaf bir kapsayıcı: .page doğrudan .app'in
+   flex çocuğu gibi davransın. Aksi halde .page'in flex:1 + min-height:0
+   davranışı çalışmaz, içerik taşar. */
+.app > main {
+  display: contents;
+}
+
 .page {
   flex: 1;
   min-height: 0;
@@ -207,6 +214,18 @@ h1, h2, h3 { color: var(--fg); }
 }
 
 /* Hücre adımlama önizleme şeridi (CokHucreOkuyucu çoklu hücre modu) */
+.aktif-hucre-wrap {
+  /* Dikey alana göre nokta boyutu — küçük ekranlarda otomatik küçülür */
+  --dot-size: clamp(34px, 9vh, 64px);
+  --dot-font: clamp(0.9em, 2.4vh, 1.2em);
+  --cell-pad: clamp(8px, 2vh, 14px);
+  --cell-gap: clamp(6px, 1.6vh, 12px);
+  --cell-title: clamp(1em, 2.4vh, 1.5em);
+}
+[data-theme="lowVision"] .aktif-hucre-wrap {
+  --dot-size: clamp(48px, 12vh, 90px);
+  --dot-font: clamp(1.1em, 3vh, 1.6em);
+}
 .hucre-onizleme {
   display: flex;
   flex-wrap: wrap;
@@ -264,6 +283,57 @@ h1, h2, h3 { color: var(--fg); }
 }
 [data-theme="lowVision"] .hucre-onizleme-no { font-size: 0.95em; }
 
+/* Sure listesi (Kısa Sureler sayfası) */
+.sure-listesi {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-auto-rows: minmax(150px, auto);
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+  align-content: start;
+}
+.sure-karti {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 10px;
+  background: var(--surface, rgba(127,127,127,0.06));
+  color: var(--fg);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.15s ease, background 0.15s ease;
+  box-shadow: var(--shadow);
+  min-height: 0;
+  height: 100%;
+}
+.sure-karti:hover { border-color: var(--accent); transform: translateY(-1px); }
+.sure-karti:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+.sure-karti-no {
+  font-size: 0.8em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.sure-karti-ad {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: var(--accent);
+}
+.sure-karti-ar {
+  font-size: 1.3em;
+  direction: rtl;
+  color: var(--fg);
+  line-height: 1.6;
+  padding: 2px 0;
+}
+.sure-karti-ayet {
+  font-size: 0.75em;
+  color: var(--muted);
+}
+
 .skip-link { position: absolute; left: -9999px; }
 .skip-link:focus {
   left: 12px; top: 12px;
@@ -279,6 +349,30 @@ h1, h2, h3 { color: var(--fg); }
   gap: 12px;
   padding-bottom: 12px;
   border-bottom: 2px solid var(--panel-border);
+  position: relative;
+}
+
+/* Karışık yazma seçim butonları progress bar yerine */
+.banner-grup-secim {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.banner-grup-secim button {
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: clamp(0.75em, 2.6vw, 0.95em);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.banner-grup-secim button.aktif {
+  background: var(--accent, #1c63ff);
+  color: #fff;
+  border-color: var(--accent, #1c63ff);
 }
 
 .back-btn {
@@ -394,6 +488,11 @@ h1, h2, h3 { color: var(--fg); }
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  /* Asla iki satıra inmesin: tek satır + sığdırma */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 [data-theme="lowVision"] .banner-baslik {
   background: none;
@@ -579,11 +678,33 @@ h1, h2, h3 { color: var(--fg); }
 
 /* ---------- Kontroller ve ilerleme ---------- */
 .controls {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
   margin-top: 0;
+  width: 100%;
+  /* Mobilde her zaman ekranın alt kenarına yapışsın */
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding-top: 8px;
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
+  z-index: 5;
+}
+.controls > button {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: clamp(0.78em, 3.2vw, 1em);
+}
+.controls.grup-secim > button.aktif {
+  background: var(--accent, #1c63ff);
+  color: #fff;
+  border-color: var(--accent, #1c63ff);
 }
 .progress {
   text-align: center;
@@ -937,6 +1058,7 @@ h1, h2, h3 { color: var(--fg); }
 /* ---------- Klavye: telefon dikey (portre) ----------
    Modül 1 hücresiyle aynı boyutta kalsın; sadece aksiyon butonları küçülsün. */
 @media (max-width: 480px) and (orientation: portrait) {
+  .app { padding: 10px 10px 0; }
   .braille-klavye { gap: 12px; }
   .klv-aksiyonlar { gap: 8px; flex-wrap: wrap; }
   .klv-aksiyon { min-width: 80px; padding: 10px 12px; }
@@ -1267,6 +1389,12 @@ h1, h2, h3 { color: var(--fg); }
   .yazma-bolum-ust  { justify-content: flex-start; }
   .yazma-bolum-orta { justify-content: center; }
   .yazma-bolum-alt  { justify-content: flex-end; }
+
+  .grup-secim button.aktif {
+    background: var(--accent, #1c63ff);
+    color: #fff;
+    border-color: var(--accent, #1c63ff);
+  }
 
   .yazma-page .progress { font-size: 0.8em; margin: 0; }
   .yazma-page .yazma-metin { font-size: 1em; padding: 4px 8px; margin: 0; }

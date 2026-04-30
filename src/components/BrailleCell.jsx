@@ -25,12 +25,17 @@ export default function BrailleCell({
   dogruNoktalar = [],
   yanlisNoktalar = [],
   tiklanabilir = false,
+  // Pasif (okuma) hücrelerde de parmakla noktanın üzerine gelince
+  // numarayı seslendirip titreşim verir. Cevap girilmez.
+  kesfedilebilir = true,
   onNoktaTikla,
   baslik,
   baslikAriaLabel
 }) {
   const noktaSira = [1, 4, 2, 5, 3, 6]; // grid sırası: satır satır
   const sonOkunan = useRef(null);
+  // Hücreyle herhangi bir parmak/fare etkileşimi (keşif veya tıklama)
+  const etkilesimli = tiklanabilir || kesfedilebilir;
 
   const noktaDurumu = (n) => {
     const siniflar = ['dot'];
@@ -50,7 +55,7 @@ export default function BrailleCell({
 
   // Üzerine gelindiğinde / parmak gezdirildiğinde numarayı seslendir + kısa titreşim
   const noktaUzerinde = (n) => {
-    if (!tiklanabilir) return;
+    if (!etkilesimli) return;
     if (sonOkunan.current === n) return;
     sonOkunan.current = n;
     titret(25); // parmak yeni noktaya girdi
@@ -63,7 +68,7 @@ export default function BrailleCell({
 
   // Dokunmatikte parmak hareket ettikçe altındaki noktayı bul
   const dokunusHareket = (e) => {
-    if (!tiklanabilir) return;
+    if (!etkilesimli) return;
     const t = e.touches && e.touches[0];
     if (!t) return;
     const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -79,6 +84,8 @@ export default function BrailleCell({
 
   // Dokunma bittiğinde parmağın bulunduğu noktayı tıkla
   const dokunusBitti = (e) => {
+    if (!etkilesimli) return;
+    sonOkunan.current = null;
     if (!tiklanabilir) return;
     const t = e.changedTouches && e.changedTouches[0];
     if (!t) return;
@@ -90,7 +97,6 @@ export default function BrailleCell({
       e.preventDefault(); // sentetik click'i engelle (çift tetiklemeyi önler)
       onNoktaTikla(n);
     }
-    sonOkunan.current = null;
   };
 
   return (
@@ -99,7 +105,7 @@ export default function BrailleCell({
         className="cell-title"
         aria-label={baslik ? (baslikAriaLabel || baslik) : undefined}
         aria-hidden={baslik ? undefined : true}
-        style={baslik ? undefined : { visibility: 'hidden' }}
+        style={baslik ? undefined : { display: 'none' }}
       >
         {baslik || '\u00A0'}
       </div>
@@ -127,7 +133,12 @@ export default function BrailleCell({
                     onMouseEnter: () => noktaUzerinde(n),
                     onFocus: () => noktaUzerinde(n)
                   }
-                : { 'aria-hidden': false })}
+                : kesfedilebilir
+                  ? {
+                      'aria-hidden': false,
+                      onMouseEnter: () => noktaUzerinde(n)
+                    }
+                  : { 'aria-hidden': false })}
             >
               {n}
             </Etiket>

@@ -12,7 +12,6 @@ const KAYNAKLAR = {
     veri: KURAN_HECELERI.map((h) => ({
       yazi: h.yazi,
       okunus: h.okunus,
-      anlam: `${h.harf} harfi + ${h.hareke} harekesi`,
       hucreler: h.hucreler
     }))
   },

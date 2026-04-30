@@ -131,12 +131,7 @@ export default function TestNoktalama() {
         const noktaMetin = aktif.hucreler
           .map((h, i) => `${HUCRE_ETIKET[i] || (i + 1) + '.'} hücre ${h.join(', ')}`)
           .join('; ');
-        konus('Üç yanlış hak doldu.', { kesintiyle: true });
-        setTimeout(() => {
-          konus(`Doğru cevap: ${ad}. Noktalar: ${noktaMetin}.`,
-            { kesintiyle: true });
-        }, 900);
-        setTimeout(() => {
+        const sonrakine = () => {
           if (indeks + 1 >= sorular.length) {
             setBittimi(true);
           } else {
@@ -148,7 +143,16 @@ export default function TestNoktalama() {
             setSoruHata(0);
             setAciklandi(false);
           }
-        }, 4500);
+        };
+        konus('Üç yanlış hak doldu.', {
+          kesintiyle: true,
+          onSon: () => {
+            konus(`Doğru cevap: ${ad}. Noktalar: ${noktaMetin}.`, {
+              kesintiyle: true,
+              onSon: () => setTimeout(sonrakine, 700)
+            });
+          }
+        });
         return;
       }
       hataBildir(`${n} numara yanlış.`);
@@ -276,7 +280,8 @@ export default function TestNoktalama() {
                   baslikAriaLabel={cokHucreli
                     ? `${HUCRE_ETIKET[hi] || (hi + 1) + '.'} hücre`
                     : (aktif.ariaAd || aktif.ad)}
-                  tiklanabilir
+                  tiklanabilir={!aciklandi}
+                  kesfedilebilir={!aciklandi}
                   onNoktaTikla={(n) => tikla(hi, n)}
                   dogruNoktalar={basilanlar[hi] || []}
                   yanlisNoktalar={yanlis.hucre === hi ? yanlis.noktalar : []}

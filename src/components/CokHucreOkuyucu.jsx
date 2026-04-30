@@ -44,6 +44,7 @@ export default function CokHucreOkuyucu({
   useEffect(() => {
     if (bitti || !aktif || hucreIndeksi === 0) return;
     const noktalar = aktif.hucreler[hucreIndeksi];
+    if (!noktalar) return; // kelime değişmiş, indeks henüz sıfırlanmamış olabilir
     konus(`${hucreIndeksi + 1}. hücre: ${noktalar.join(', ')} numaralı noktalar.`,
           { kesintiyle: true });
   }, [hucreIndeksi, indeks, aktif, bitti]);
@@ -68,8 +69,10 @@ export default function CokHucreOkuyucu({
   }
 
   const k = aktif;
-  const aktifNoktalar = k.hucreler[hucreIndeksi] || [];
-  const sonHucre = hucreIndeksi >= hucreSayisi - 1;
+  // hucreIndeksi yeni kelime daha az hücreliyse taşmış olabilir; render için sınırla
+  const guvenliHucreIndeksi = Math.min(hucreIndeksi, hucreSayisi - 1);
+  const aktifNoktalar = k.hucreler[guvenliHucreIndeksi] || [];
+  const sonHucre = guvenliHucreIndeksi >= hucreSayisi - 1;
   const ilkKelime = indeks === 0;
 
   const oncekiHucre = () => {
@@ -97,7 +100,7 @@ export default function CokHucreOkuyucu({
         <PageHeader baslik={baslik} />
         <div className="progress" aria-hidden="true">
           İlerleme: {indeks + 1} / {ogeler.length}
-          {hucreSayisi > 1 && ` • Hücre ${hucreIndeksi + 1} / ${hucreSayisi}`}
+          {hucreSayisi > 1 && ` • Hücre ${guvenliHucreIndeksi + 1} / ${hucreSayisi}`}
         </div>
       </div>
 
@@ -122,12 +125,14 @@ export default function CokHucreOkuyucu({
         </div>
 
         {/* Aktif tek hücre — büyük */}
-        <BrailleCell
-          aktifNoktalar={aktifNoktalar}
-          baslikAriaLabel={hucreSayisi > 1
-            ? `${hucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
-            : k.yazi}
-        />
+        <div className="aktif-hucre-wrap">
+          <BrailleCell
+            aktifNoktalar={aktifNoktalar}
+            baslikAriaLabel={hucreSayisi > 1
+              ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
+              : k.yazi}
+          />
+        </div>
 
         {/* Tüm hücrelerin küçük önizlemesi — aktif olan vurgulanır */}
         {hucreSayisi > 1 && (
@@ -137,8 +142,8 @@ export default function CokHucreOkuyucu({
                 key={i}
                 type="button"
                 role="tab"
-                aria-selected={i === hucreIndeksi}
-                className={`hucre-onizleme-oge ${i === hucreIndeksi ? 'aktif' : ''}`}
+                aria-selected={i === guvenliHucreIndeksi}
+                className={`hucre-onizleme-oge ${i === guvenliHucreIndeksi ? 'aktif' : ''}`}
                 onClick={() => setHucreIndeksi(i)}
                 aria-label={`${i + 1}. hücreye git`}
               >

@@ -389,6 +389,7 @@ const MODULLER = [
       { yol: '/kuran-tecvid',    baslik: 'Tecvid İşaretleri',  ikon: Ikon.tecvid },
       { yol: '/kuran-heceler',   baslik: 'Hece Okuma',         ikon: Ikon.hece },
       { yol: '/kuran-kelimeler', baslik: 'Kelime Okuma',       ikon: Ikon.kuranKelime },
+      { yol: '/kuran-sureler',   baslik: 'Kısa Sureler',         ikon: Ikon.kuranKelime },
       { yol: '/test-kuran',      baslik: 'Test / Sınav',       ikon: Ikon.test }
     ]
   },
