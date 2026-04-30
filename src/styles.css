@@ -147,6 +147,36 @@ h1, h2, h3 { color: var(--fg); }
   justify-content: center;
   width: 100%;
 }
+/* Tek satırda dinamik küçülme: hücre sayısına göre nokta boyutu hesaplanır.
+   --hucre-sayisi inline style ile JSX'ten verilir.
+   Mantık: ekrandaki kullanılabilir genişlik / hücre sayısı / (2 nokta + boşluklar)
+   yaklaşık olarak hesaplanır; min/max ile sınırlandırılır. */
+.cell-row.fit {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  --hucre-sayisi: 1;
+  --dot-size: clamp(
+    18px,
+    calc((100vw - 64px) / (var(--hucre-sayisi) * 2.6)),
+    64px
+  );
+  --dot-font: clamp(0.6em, calc(var(--dot-size) / 56), 1.25em);
+  --cell-gap: clamp(4px, calc(var(--dot-size) / 6), 14px);
+  --cell-pad: clamp(6px, calc(var(--dot-size) / 4), 18px);
+  --cell-title: 1.4em;
+}
+[data-theme="lowVision"] .cell-row.fit {
+  --dot-size: clamp(
+    24px,
+    calc((100vw - 64px) / (var(--hucre-sayisi) * 2.4)),
+    90px
+  );
+  --dot-font: clamp(0.8em, calc(var(--dot-size) / 50), 2em);
+  --cell-gap: clamp(6px, calc(var(--dot-size) / 6), 18px);
+  --cell-pad: clamp(8px, calc(var(--dot-size) / 4), 24px);
+  --cell-title: 2em;
+}
+/* Eski sınıflar — geriye dönük uyumluluk için bırakıldı (test ekranı vs.) */
 .cell-row.cok-hucre {
   --dot-size: 38px;
   --dot-font: 0.95em;
@@ -175,6 +205,64 @@ h1, h2, h3 { color: var(--fg); }
   --cell-pad: 18px;
   --cell-title: 2em;
 }
+
+/* Hücre adımlama önizleme şeridi (CokHucreOkuyucu çoklu hücre modu) */
+.hucre-onizleme {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 100%;
+  padding: 6px 4px;
+}
+.hucre-onizleme-oge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: inherit;
+  min-width: 0;
+}
+.hucre-onizleme-oge:hover { background: rgba(127, 127, 127, 0.12); }
+.hucre-onizleme-oge.aktif {
+  border-color: var(--accent);
+  background: rgba(127, 127, 127, 0.08);
+}
+.hucre-onizleme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 8px);
+  grid-auto-rows: 8px;
+  gap: 3px;
+}
+.hucre-onizleme-nokta {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+  background: transparent;
+}
+.hucre-onizleme-nokta.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.hucre-onizleme-no {
+  font-size: 0.75em;
+  color: var(--muted);
+  font-weight: 600;
+}
+[data-theme="lowVision"] .hucre-onizleme-grid {
+  grid-template-columns: repeat(2, 12px);
+  grid-auto-rows: 12px;
+  gap: 4px;
+}
+[data-theme="lowVision"] .hucre-onizleme-nokta {
+  width: 12px; height: 12px;
+}
+[data-theme="lowVision"] .hucre-onizleme-no { font-size: 0.95em; }
 
 .skip-link { position: absolute; left: -9999px; }
 .skip-link:focus {

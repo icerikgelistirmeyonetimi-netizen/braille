@@ -82,7 +82,10 @@ export default function IsaretSayfasi({ baslik, isaretler }) {
         </div>
 
         {k.hucreler.length > 0 && (
-          <div className={`cell-row ${k.hucreler.length >= 7 ? 'cok-hucre' : k.hucreler.length >= 4 ? 'cok-hucre-orta' : ''}`}>
+          <div
+            className="cell-row fit"
+            style={{ '--hucre-sayisi': k.hucreler.length }}
+          >
             {k.hucreler.map((noktalar, i) => (
               <BrailleCell
                 key={i}
