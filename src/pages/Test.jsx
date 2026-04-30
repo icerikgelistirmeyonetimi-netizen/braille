@@ -41,6 +41,8 @@ export default function Test() {
   const [yanlis, setYanlis] = useState([]);
   const [puan, setPuan] = useState(0);
   const [hataSayisi, setHataSayisi] = useState(0);
+  const [soruHata, setSoruHata] = useState(0);
+  const [aciklandi, setAciklandi] = useState(false);
   const [bittimi, setBittimi] = useState(false);
 
   const aktif = sorular[indeks];
@@ -55,24 +57,54 @@ export default function Test() {
     setYanlis([]);
     setPuan(0);
     setHataSayisi(0);
+    setSoruHata(0);
+    setAciklandi(false);
     setBittimi(false);
   };
 
   useEffect(() => {
-    if (!aktif || bittimi) return;
+    if (!aktif || bittimi || aciklandi) return;
     const metin = `Soru ${indeks + 1}: ${aktif.ariaAd || aktif.ad} ${kaynak.kategori}ini oluşturan noktalara dokunun.`;
     konus(metin);
     const tekrar = () => konus(metin, { kesintiyle: true });
     window.addEventListener('yonergeTekrar', tekrar);
     return () => window.removeEventListener('yonergeTekrar', tekrar);
-  }, [indeks, aktif, bittimi, kaynak]);
+  }, [indeks, aktif, bittimi, kaynak, aciklandi]);
 
   const tikla = (n) => {
-    if (!aktif || bittimi) return;
+    if (!aktif || bittimi || aciklandi) return;
     if (basilanlar.includes(n)) return;
     if (!aktif.noktalar.includes(n)) {
       setYanlis([n]);
       setHataSayisi((h) => h + 1);
+      const yeniSoruHata = soruHata + 1;
+      setSoruHata(yeniSoruHata);
+      if (yeniSoruHata >= 3) {
+        // Üç yanlış: doğru cevabı açıkla.
+        setAciklandi(true);
+        setYanlis([]);
+        setBasilanlar(aktif.noktalar);
+        const ad = aktif.ariaAd || aktif.ad;
+        const noktaListesi = aktif.noktalar.join(', ');
+        // Önce kısa uyarı, sonra doğru cevabı vurgulu seslendir.
+        konus('Üç yanlış hak doldu.', { kesintiyle: true });
+        setTimeout(() => {
+          konus(`Doğru cevap: ${ad}. Noktaları: ${noktaListesi}.`,
+            { kesintiyle: true });
+        }, 900);
+        setTimeout(() => {
+          if (indeks + 1 >= sorular.length) {
+            setBittimi(true);
+          } else {
+            setIndeks((i) => i + 1);
+            setBasilanlar([]);
+            setYanlis([]);
+            setSoruHata(0);
+            setAciklandi(false);
+          }
+        }, 4200);
+        return;
+      }
       hataBildir(`${n} numara yanlış.`);
       setTimeout(() => setYanlis([]), 700);
       return;
@@ -91,6 +123,8 @@ export default function Test() {
           setIndeks((i) => i + 1);
           setBasilanlar([]);
           setYanlis([]);
+          setSoruHata(0);
+          setAciklandi(false);
         }
       }, 1400);
     } else {
@@ -194,6 +228,8 @@ export default function Test() {
               setIndeks((i) => i + 1);
               setBasilanlar([]);
               setYanlis([]);
+              setSoruHata(0);
+              setAciklandi(false);
             }
           }}
         >

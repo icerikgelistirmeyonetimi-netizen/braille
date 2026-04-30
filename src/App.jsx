@@ -9,6 +9,7 @@ import Test from './pages/Test.jsx';
 import Ayarlar from './pages/Ayarlar.jsx';
 import YazmaEgitimi from './pages/YazmaEgitimi.jsx';
 import YazmaYonergeli from './pages/YazmaYonergeli.jsx';
+import YazmaYonergeliCumle from './pages/YazmaYonergeliCumle.jsx';
 import YazmaSerbest from './pages/YazmaSerbest.jsx';
 import KisaltmaBirHarfli from './pages/KisaltmaBirHarfli.jsx';
 import KisaltmaIkiHarfli from './pages/KisaltmaIkiHarfli.jsx';
@@ -17,6 +18,8 @@ import KisaltmaKelimeKoku from './pages/KisaltmaKelimeKoku.jsx';
 import KisaltmaKelimeParcasi from './pages/KisaltmaKelimeParcasi.jsx';
 import NoktalamaIsaretleri from './pages/NoktalamaIsaretleri.jsx';
 import OzelIsaretler from './pages/OzelIsaretler.jsx';
+import TestKisaltma from './pages/TestKisaltma.jsx';
+import TestNoktalama from './pages/TestNoktalama.jsx';
 import { sallamayiBaslat } from './utils/sallama.js';
 
 export default function App() {
@@ -34,6 +37,7 @@ export default function App() {
           <Route path="/test" element={<Test />} />
           <Route path="/yazma-egitim" element={<YazmaEgitimi />} />
           <Route path="/yazma-yonergeli" element={<YazmaYonergeli />} />
+          <Route path="/yazma-yonergeli-cumle" element={<YazmaYonergeliCumle />} />
           <Route path="/yazma-serbest" element={<YazmaSerbest />} />
           <Route path="/kisaltma-bir-harfli" element={<KisaltmaBirHarfli />} />
           <Route path="/kisaltma-iki-harfli" element={<KisaltmaIkiHarfli />} />
@@ -42,6 +46,8 @@ export default function App() {
           <Route path="/kisaltma-kelime-parcasi" element={<KisaltmaKelimeParcasi />} />
           <Route path="/noktalama-isaretleri" element={<NoktalamaIsaretleri />} />
           <Route path="/ozel-isaretler" element={<OzelIsaretler />} />
+          <Route path="/test-kisaltma" element={<TestKisaltma />} />
+          <Route path="/test-noktalama" element={<TestNoktalama />} />
           <Route path="/ayarlar" element={<Ayarlar />} />
         </Routes>
       </main>

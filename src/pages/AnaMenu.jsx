@@ -71,6 +71,13 @@ const Ikon = {
       <path d="M48 12 l4 4" />
     </svg>
   ),
+  cumle: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 18 h48 M8 32 h40 M8 46 h32" />
+      <path d="M50 50 L58 42 l4 4 L54 54 z" fill="currentColor" />
+    </svg>
+  ),
   serbest: (
     <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
          strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -192,9 +199,10 @@ const MODULLER = [
     altBaslik: 'Braille ile Yazma',
     ikon: Ikon.modul2,
     ogeler: [
-      { yol: '/yazma-egitim',    baslik: 'Perkins Klavye Eğitimi', ikon: Ikon.klavye },
-      { yol: '/yazma-yonergeli', baslik: 'Yönergeli Yazma',        ikon: Ikon.yazma },
-      { yol: '/yazma-serbest',   baslik: 'Serbest Yazma',          ikon: Ikon.serbest }
+      { yol: '/yazma-egitim',         baslik: 'Perkins Klavye Eğitimi', ikon: Ikon.klavye },
+      { yol: '/yazma-yonergeli',      baslik: 'Yönergeli Yazma',        ikon: Ikon.yazma },
+      { yol: '/yazma-yonergeli-cumle', baslik: 'Yönergeli Cümle Yazma',  ikon: Ikon.cumle },
+      { yol: '/yazma-serbest',        baslik: 'Serbest Yazma',          ikon: Ikon.serbest }
     ]
   },
   {
@@ -207,7 +215,8 @@ const MODULLER = [
       { yol: '/kisaltma-iki-harfli',     baslik: 'İki Harfli Kısaltmalar',     ikon: Ikon.ikiHarf },
       { yol: '/kisaltma-hece',           baslik: 'Hece Kısaltmaları',          ikon: Ikon.hece },
       { yol: '/kisaltma-kelime-koku',    baslik: 'Kelime Kökü Kısaltmaları',   ikon: Ikon.kok },
-      { yol: '/kisaltma-kelime-parcasi', baslik: 'Kelime Parçası Kısaltmaları', ikon: Ikon.parca }
+      { yol: '/kisaltma-kelime-parcasi', baslik: 'Kelime Parçası Kısaltmaları', ikon: Ikon.parca },
+      { yol: '/test-kisaltma',           baslik: 'Test / Sınav',                ikon: Ikon.test }
     ]
   },
   {
@@ -217,7 +226,8 @@ const MODULLER = [
     ikon: Ikon.modul4,
     ogeler: [
       { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul },
-      { yol: '/ozel-isaretler',        baslik: 'Diğer Özel İşaretler', ikon: Ikon.ozelIsaret }
+      { yol: '/ozel-isaretler',        baslik: 'Diğer Özel İşaretler', ikon: Ikon.ozelIsaret },
+      { yol: '/test-noktalama',        baslik: 'Test / Sınav',           ikon: Ikon.test }
     ]
   }
 ];
