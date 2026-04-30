@@ -1,0 +1,137 @@
+import React, { useEffect, useState } from 'react';
+import PageHeader from '../components/PageHeader.jsx';
+import BrailleCell from '../components/BrailleCell.jsx';
+import { KURAN_HECELERI, KURAN_KELIMELERI } from '../data/kuran.js';
+import { konus, basariBildir, konusmayiDurdur } from '../utils/ses.js';
+
+// Kur'an braillesinde harf + hareke ardı ardına ayrı hücreler olarak yazılır.
+// Bu ekran, bir kelimenin/hecenin ardışık braille hücrelerini soldan sağa
+// görselleştirir ve okunuşunu seslendirir.
+
+const KAYNAKLAR = {
+  hece: {
+    etiket: 'Hece Okuma',
+    bittiMesaji: 'Tebrikler! Tüm heceleri okudunuz.',
+    veri: KURAN_HECELERI.map((h) => ({
+      yazi: h.yazi,
+      okunus: h.okunus,
+      anlam: `${h.harf} harfi + ${h.hareke} harekesi`,
+      hucreler: h.hucreler
+    }))
+  },
+  kelime: {
+    etiket: 'Kelime Okuma',
+    bittiMesaji: 'Tebrikler! Tüm kelimeleri okudunuz.',
+    veri: KURAN_KELIMELERI.map((k) => ({
+      yazi: k.yazi,
+      okunus: k.okunus,
+      anlam: k.anlam,
+      hucreler: k.hucreler
+    }))
+  }
+};
+
+export default function KuranKelimeOkuma({ kaynakAnahtari = 'hece', baslik }) {
+  const kaynak = KAYNAKLAR[kaynakAnahtari] || KAYNAKLAR.hece;
+  const [indeks, setIndeks] = useState(0);
+  const bitti = indeks >= kaynak.veri.length;
+
+  useEffect(() => {
+    if (bitti) {
+      konus(kaynak.bittiMesaji);
+      return;
+    }
+    const k = kaynak.veri[indeks];
+    const metin = `${k.yazi}, okunuşu: ${k.okunus}. ${k.anlam}. ` +
+                  `${k.hucreler.length} braille hücresinden oluşur.`;
+    konus(metin);
+    const tekrar = () => konus(metin, { kesintiyle: true });
+    window.addEventListener('yonergeTekrar', tekrar);
+    return () => window.removeEventListener('yonergeTekrar', tekrar);
+  }, [indeks, bitti, kaynak]);
+
+  useEffect(() => () => konusmayiDurdur(), []);
+
+  if (bitti) {
+    return (
+      <div className="page">
+        <PageHeader baslik={baslik || kaynak.etiket} />
+        <div className="page-mid">
+          <BrailleCell aktifNoktalar={[1, 2, 3, 4, 5, 6]} />
+          <div className="instruction success" role="status" aria-live="polite" style={{ margin: 0 }}>
+            {kaynak.bittiMesaji}
+          </div>
+        </div>
+        <div className="controls">
+          <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>
+        </div>
+      </div>
+    );
+  }
+
+  const k = kaynak.veri[indeks];
+
+  return (
+    <div className="page">
+      <div>
+        <PageHeader baslik={baslik || kaynak.etiket} />
+        <div className="progress" aria-hidden="true">
+          İlerleme: {indeks + 1} / {kaynak.veri.length}
+        </div>
+      </div>
+
+      <div className="page-mid">
+        <div style={{ textAlign: 'center', fontSize: '2.4em', fontWeight: 700, color: 'var(--accent)', direction: 'rtl' }}>
+          {k.yazi}
+        </div>
+        <div style={{
+          display: 'flex',
+          gap: 'var(--cell-gap)',
+          alignItems: 'flex-end',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          {k.hucreler.map((noktalar, i) => (
+            <BrailleCell
+              key={i}
+              aktifNoktalar={noktalar}
+              baslikAriaLabel={`${i + 1}. hücre`}
+            />
+          ))}
+        </div>
+        <div role="status" aria-live="polite"
+             style={{ textAlign: 'center', fontSize: '1.3em', color: 'var(--accent)', fontWeight: 700 }}>
+          “{k.okunus}”
+        </div>
+        <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.95em', maxWidth: 560, margin: '0 auto' }}>
+          {k.anlam}
+        </div>
+      </div>
+
+      <div className="controls">
+        <button
+          type="button"
+          onClick={() => konus(`${k.yazi}, okunuşu ${k.okunus}. ${k.anlam}.`, { kesintiyle: true })}
+        >
+          Tekrar Dinle
+        </button>
+        <button
+          type="button"
+          disabled={indeks === 0}
+          onClick={() => setIndeks((i) => Math.max(0, i - 1))}
+        >
+          ← Önceki
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            basariBildir('Sıradaki.');
+            setTimeout(() => setIndeks((i) => i + 1), 600);
+          }}
+        >
+          Anladım →
+        </button>
+      </div>
+    </div>
+  );
+}

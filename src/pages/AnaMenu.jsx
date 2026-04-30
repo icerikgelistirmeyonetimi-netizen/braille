@@ -176,6 +176,45 @@ const Ikon = {
             fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
             fill="currentColor">`*^</text>
     </svg>
+  ),
+  modul5: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 8 h28 a8 8 0 0 1 8 8 v40 a4 4 0 0 1 -4 4 H14 a4 4 0 0 1 -4 -4 V12 a4 4 0 0 1 4 -4 z" />
+      <path d="M22 22 h20 M22 32 h20 M22 42 h12" />
+      <path d="M50 8 l4 4 l-4 4" />
+    </svg>
+  ),
+  kuranHarf: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="50" textAnchor="middle" fontSize="44"
+            fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor" direction="rtl">ب</text>
+    </svg>
+  ),
+  harake: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="50" textAnchor="middle" fontSize="44"
+            fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor" direction="rtl">َ</text>
+      <text x="32" y="36" textAnchor="middle" fontSize="22"
+            fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor" direction="rtl">ا</text>
+    </svg>
+  ),
+  tecvid: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 40 q 10 -22 22 0 q 10 22 22 0" />
+      <circle cx="32" cy="50" r="3" fill="currentColor" />
+    </svg>
+  ),
+  kuranKelime: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="44" textAnchor="middle" fontSize="22"
+            fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor" direction="rtl">بِسْمِ</text>
+    </svg>
   )
 };
 
@@ -228,6 +267,20 @@ const MODULLER = [
       { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul },
       { yol: '/ozel-isaretler',        baslik: 'Diğer Özel İşaretler', ikon: Ikon.ozelIsaret },
       { yol: '/test-noktalama',        baslik: 'Test / Sınav',           ikon: Ikon.test }
+    ]
+  },
+  {
+    id: 'modul5',
+    baslik: 'Modül 5',
+    altBaslik: "Kur'an Eğitimi",
+    ikon: Ikon.modul5,
+    ogeler: [
+      { yol: '/kuran-harfler',   baslik: 'Arap Harfleri',     ikon: Ikon.kuranHarf },
+      { yol: '/kuran-harekeler', baslik: 'Harekeler',          ikon: Ikon.harake },
+      { yol: '/kuran-tecvid',    baslik: 'Tecvid İşaretleri',  ikon: Ikon.tecvid },
+      { yol: '/kuran-heceler',   baslik: 'Hece Okuma',         ikon: Ikon.hece },
+      { yol: '/kuran-kelimeler', baslik: 'Kelime Okuma',       ikon: Ikon.kuranKelime },
+      { yol: '/test-kuran',      baslik: 'Test / Sınav',       ikon: Ikon.test }
     ]
   }
 ];

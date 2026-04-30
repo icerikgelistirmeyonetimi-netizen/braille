@@ -20,6 +20,12 @@ import NoktalamaIsaretleri from './pages/NoktalamaIsaretleri.jsx';
 import OzelIsaretler from './pages/OzelIsaretler.jsx';
 import TestKisaltma from './pages/TestKisaltma.jsx';
 import TestNoktalama from './pages/TestNoktalama.jsx';
+import KuranHarfEgitimi from './pages/KuranHarfEgitimi.jsx';
+import KuranHarekeEgitimi from './pages/KuranHarekeEgitimi.jsx';
+import KuranTecvidEgitimi from './pages/KuranTecvidEgitimi.jsx';
+import KuranHeceOkuma from './pages/KuranHeceOkuma.jsx';
+import KuranKelimeOkumaSayfa from './pages/KuranKelimeOkumaSayfa.jsx';
+import TestKuran from './pages/TestKuran.jsx';
 import { sallamayiBaslat } from './utils/sallama.js';
 
 export default function App() {
@@ -48,6 +54,12 @@ export default function App() {
           <Route path="/ozel-isaretler" element={<OzelIsaretler />} />
           <Route path="/test-kisaltma" element={<TestKisaltma />} />
           <Route path="/test-noktalama" element={<TestNoktalama />} />
+          <Route path="/kuran-harfler" element={<KuranHarfEgitimi />} />
+          <Route path="/kuran-harekeler" element={<KuranHarekeEgitimi />} />
+          <Route path="/kuran-tecvid" element={<KuranTecvidEgitimi />} />
+          <Route path="/kuran-heceler" element={<KuranHeceOkuma />} />
+          <Route path="/kuran-kelimeler" element={<KuranKelimeOkumaSayfa />} />
+          <Route path="/test-kuran" element={<TestKuran />} />
           <Route path="/ayarlar" element={<Ayarlar />} />
         </Routes>
       </main>
