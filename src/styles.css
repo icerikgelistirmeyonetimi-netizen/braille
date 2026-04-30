@@ -134,7 +134,46 @@ h1, h2, h3 { color: var(--fg); }
   justify-content: center;
   flex-direction: column;
   gap: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px;
+}
+/* Çok hücreli (4+) gösterimlerde otomatik küçültme */
+.cell-row {
+  display: flex;
+  gap: var(--cell-gap);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+.cell-row.cok-hucre {
+  --dot-size: 38px;
+  --dot-font: 0.95em;
+  --cell-gap: 8px;
+  --cell-pad: 10px;
+  --cell-title: 1.2em;
+}
+[data-theme="lowVision"] .cell-row.cok-hucre {
+  --dot-size: 54px;
+  --dot-font: 1.2em;
+  --cell-gap: 10px;
+  --cell-pad: 12px;
+  --cell-title: 1.6em;
+}
+.cell-row.cok-hucre-orta {
+  --dot-size: 50px;
+  --dot-font: 1.05em;
+  --cell-gap: 10px;
+  --cell-pad: 14px;
+  --cell-title: 1.5em;
+}
+[data-theme="lowVision"] .cell-row.cok-hucre-orta {
+  --dot-size: 70px;
+  --dot-font: 1.5em;
+  --cell-gap: 14px;
+  --cell-pad: 18px;
+  --cell-title: 2em;
 }
 
 .skip-link { position: absolute; left: -9999px; }

@@ -213,13 +213,7 @@ export default function CokluTest({ baslik, kaynaklar }) {
       </div>
 
       <div className="page-mid">
-        <div style={{
-          display: 'flex',
-          gap: 'var(--cell-gap)',
-          alignItems: 'flex-end',
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}>
+        <div className={`cell-row ${aktif.hucreler.length >= 7 ? 'cok-hucre' : aktif.hucreler.length >= 4 ? 'cok-hucre-orta' : ''}`}>
           {aktif.hucreler.map((_, hi) => {
             const aktifHucreVurgu = cokHucreli && hi === hucreIndeksi
               ? { outline: '3px solid var(--accent)', borderRadius: 12, padding: 6 }

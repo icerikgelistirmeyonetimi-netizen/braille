@@ -57,13 +57,7 @@ export default function CokHucreOkuyucu({ baslik, ogeler, bittiMesaji = 'Tebrikl
         <div style={{ textAlign: 'center', fontSize: '1.8em', fontWeight: 700, color: 'var(--accent)' }}>
           {k.yazi}
         </div>
-        <div style={{
-          display: 'flex',
-          gap: 'var(--cell-gap)',
-          alignItems: 'flex-end',
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}>
+        <div className={`cell-row ${k.hucreler.length >= 7 ? 'cok-hucre' : k.hucreler.length >= 4 ? 'cok-hucre-orta' : ''}`}>
           {k.hucreler.map((noktalar, i) => (
             <BrailleCell
               key={i}
