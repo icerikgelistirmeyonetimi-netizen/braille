@@ -101,15 +101,23 @@ export default function CokHucreOkuyucu({
         </div>
       </div>
 
-      <div className="page-mid">
+      <div className="page-mid" style={{ justifyContent: 'flex-start', gap: 10, paddingTop: 8 }}>
         {/* Kelime/ifade yazısı */}
-        <div style={{
-          textAlign: 'center',
-          fontSize: rtl ? '2.2em' : '1.6em',
-          fontWeight: 700,
-          color: 'var(--accent)',
-          direction: rtl ? 'rtl' : 'ltr'
-        }}>
+        <div
+          lang={rtl ? 'ar' : undefined}
+          style={{
+            textAlign: 'center',
+            fontSize: rtl ? '1.8em' : '1.6em',
+            lineHeight: rtl ? 1.5 : 1.2,
+            fontWeight: 700,
+            color: 'var(--accent)',
+            direction: rtl ? 'rtl' : 'ltr',
+            margin: 0,
+            padding: rtl ? '4px 0 0' : 0,
+            wordBreak: 'break-word',
+            maxWidth: '100%'
+          }}
+        >
           {k.yazi}
         </div>
 
