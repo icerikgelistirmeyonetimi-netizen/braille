@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
+import TanitimTuru, { turuSifirla } from '../components/TanitimTuru.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import {
   ayarlariAl,
@@ -22,6 +23,7 @@ import {
 export default function Ayarlar() {
   const [a, setA] = useState(ayarlariAl());
   const [ilerleme, setIlerleme] = useState(tumIlerlemeyiAl());
+  const [turAcik, setTurAcik] = useState(false);
   const [arduino, setArduino] = useState(arduinoDurumuAl());
   const [arduinoHata, setArduinoHata] = useState('');
 
@@ -76,6 +78,7 @@ export default function Ayarlar() {
 
   return (
     <div className="page">
+      {turAcik && <TanitimTuru zorunlu={false} onKapat={() => setTurAcik(false)} />}
       <PageHeader baslik="Ayarlar" />
 
       <div style={{ overflowY: 'auto', minHeight: 0, paddingRight: 6 }}>
@@ -244,6 +247,18 @@ export default function Ayarlar() {
               </div>
             )}
         </div>
+      </section>
+
+      <section style={{ marginTop: 28 }}>
+        <h2>Tanıtım Turu</h2>
+        <button
+          type="button"
+          style={{ marginTop: 8 }}
+          onClick={() => { turuSifirla(); setTurAcik(true); }}
+          aria-label="Tanıtım turunu yeniden göster"
+        >
+          Tanıtım Turunu Tekrar Göster
+        </button>
       </section>
 
       <section style={{ marginTop: 28 }}>

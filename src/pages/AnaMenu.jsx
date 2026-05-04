@@ -560,16 +560,6 @@ export default function AnaMenu() {
         </section>
       </div>
 
-      <div style={{ textAlign: 'center' }}>
-        <button
-          type="button"
-          onClick={() => { turuSifirla(); setTurAcik(true); }}
-          style={{ background: 'transparent', color: 'var(--accent)', borderColor: 'var(--accent)' }}
-          aria-label="Tanıtım turunu yeniden göster"
-        >
-          Tanıtım Turunu Tekrar Göster
-        </button>
-      </div>
     </div>
   );
 }
