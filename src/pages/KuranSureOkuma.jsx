@@ -21,6 +21,7 @@ export default function KuranSureOkuma() {
         ogeler={seciliSure.kelimeler}
         bittiMesaji={`Tebrikler! ${seciliSure.ad} sûresini tamamladın.`}
         rtl
+        bolumAnahtari={`kuran-sure-${seciliSure.ad}`}
       />
     );
   }

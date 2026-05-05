@@ -16,6 +16,7 @@ export default function FenFormulOkuma({ tur = 'kimya' }) {
       baslik={baslik}
       ogeler={ogeler}
       bittiMesaji="Tebrikler! Tüm formülleri okudunuz."
+      bolumAnahtari={tur === 'fizik' ? 'fen-fizik-formuller' : 'fen-kimya-formuller'}
     />
   );
 }

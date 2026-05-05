@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import BrailleCell from './BrailleCell.jsx';
 import PageHeader from './PageHeader.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
-import { ogrenildiIsaretle } from '../utils/ilerleme.js';
+import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 import { deseniGonder, deseniTemizle } from '../utils/arduino.js';
 
 /**
@@ -16,13 +16,58 @@ import { deseniGonder, deseniTemizle } from '../utils/arduino.js';
  *  - bittiMesaji?: string
  */
 export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahtari, bittiMesaji }) {
-  const [indeks, setIndeks] = useState(0);
+  const [indeks, setIndeks] = useState(() => {
+    const kaydedilen = indeksAl(bolumAnahtari);
+    return kaydedilen < ogeler.length ? kaydedilen : 0;
+  });
   const [basilanlar, setBasilanlar] = useState([]); // doğru basılmışlar
   const [yanlis, setYanlis] = useState([]);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
   const tebriklerAktif = useRef(false);
 
-  const aktifOge = ogeler[indeks];
-  const bitti = indeks >= ogeler.length;
+  const [kayitlilarModu, setKayitlilarModu] = useState(false);
+  const anahtar = bolumAnahtari || baslik || 'genel';
+  const kayitliAdlar = sonraOgrenAl(anahtar);
+  const kayitliSayisi = kayitliAdlar.length;
+  const aktifListe = kayitlilarModu
+    ? ogeler.filter((o) => kayitliAdlar.includes(o.ad))
+    : ogeler;
+
+  const aktifOge = aktifListe[indeks];
+  const bitti = indeks >= aktifListe.length;
+
+  // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
+  useEffect(() => {
+    if (bolumAnahtari && !kayitlilarModu) indeksKaydet(bolumAnahtari, indeks);
+  }, [indeks, bolumAnahtari, kayitlilarModu]);
+
+  const gosterToast = (mesaj) => {
+    clearTimeout(toastTimerRef.current);
+    setToast(mesaj);
+    toastTimerRef.current = setTimeout(() => setToast(null), 2000);
+  };
+
+  const modDegistir = (kayitlilar) => {
+    setKayitlilarModu(kayitlilar);
+    setIndeks(0);
+    setBasilanlar([]);
+    setYanlis([]);
+  };
+
+  const kaydetSonra = () => {
+    if (bitti || !aktifOge) return;
+    const kaydedildi = sonraOgrenAl(anahtar).includes(aktifOge.ad);
+    if (kaydedildi) {
+      sonraOgrenKaldir(anahtar, aktifOge.ad);
+      konus('Sonra öğren listesinden kaldırıldı.');
+      gosterToast('Sonra öğren listesinden kaldırıldı');
+    } else {
+      sonraOgrenKaydet(anahtar, aktifOge.ad);
+      konus('Sonra öğren listesine kaydedildi.');
+      gosterToast('Sonra öğren listesine kaydedildi');
+    }
+  };
 
   const yonergeMetni = useMemo(() => {
     if (bitti) return bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!';
@@ -42,7 +87,7 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
       konus(bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!');
       return;
     }
-    const oge = ogeler[indeks];
+    const oge = aktifListe[indeks];
     const ad = oge.ariaAd || oge.ad;
     const noktaListesi = oge.noktalar.join(', ');
     const ek = oge.aciklama ? ` ${oge.aciklama}` : '';
@@ -65,7 +110,7 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
       window.removeEventListener('yonergeTekrar', tekrar);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indeks]);
+  }, [indeks, kayitlilarModu]);
 
   // Yeni öğe geldiğinde durumu sıfırla
   useEffect(() => {
@@ -92,11 +137,15 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
         {baslik && <PageHeader baslik={baslik} />}
         <div className="page-mid">
           <div className="instruction success" role="status" aria-live="polite">
-            {bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!'}
+            {kayitlilarModu && aktifListe.length === 0
+              ? 'Bu bölümde henüz kaydedilmiş öğe yok.'
+              : (bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!')}
           </div>
         </div>
         <div className="controls">
-          <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>
+          {kayitlilarModu
+            ? <button type="button" onClick={() => modDegistir(false)}>Tüm Listeye Dön</button>
+            : <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
         </div>
       </div>
     );
@@ -128,14 +177,33 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
 
   return (
     <div className="page">
+      {toast && <div className="toast" aria-live="assertive">{toast}</div>}
       <div>
         {baslik && <PageHeader baslik={baslik} />}
         <div className="progress" aria-hidden="true">
-          İlerleme: {indeks + 1} / {ogeler.length}
+          İlerleme: {indeks + 1} / {aktifListe.length}
         </div>
+        {kayitliSayisi > 0 && (
+          <div className="banner-grup-secim" style={{ margin: '4px 0 0' }}>
+            <button type="button" className={!kayitlilarModu ? 'aktif' : ''} aria-pressed={!kayitlilarModu} onClick={() => modDegistir(false)}>Tümü</button>
+            <button type="button" className={kayitlilarModu ? 'aktif' : ''} aria-pressed={kayitlilarModu} onClick={() => modDegistir(true)}>Kayıtlılar ({kayitliSayisi})</button>
+          </div>
+        )}
       </div>
 
       <div className="page-mid">
+        <button
+          type="button"
+          className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktifOge?.ad) ? ' kaydedildi' : ''}`}
+          onClick={kaydetSonra}
+          aria-label="Daha sonra öğren listesine kaydet"
+          title="Daha sonra öğren"
+          style={{ alignSelf: 'flex-end' }}
+        >
+          <svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          </svg>
+        </button>
         <div
           role="status"
           aria-live="polite"
@@ -170,24 +238,28 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
           onClick={() => konus(yonergeMetni)}
           aria-label="Yönergeyi tekrar dinle"
         >
-          Yönergeyi Tekrarla
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <span className="btn-etiket">Tekrar</span>
         </button>
         <button
           type="button"
+          aria-label="Sıfırla"
           onClick={() => {
             setBasilanlar([]);
             setYanlis([]);
             konus('Tekrar deneyelim.');
           }}
         >
-          Sıfırla
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+          <span className="btn-etiket">Sıfırla</span>
         </button>
         <button
           type="button"
-          onClick={() => setIndeks((i) => Math.min(i + 1, ogeler.length))}
+          onClick={() => setIndeks((i) => Math.min(i + 1, aktifListe.length))}
           aria-label="Bu öğeyi atla"
         >
-          Atla →
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+          <span className="btn-etiket">Atla</span>
         </button>
       </div>
     </div>

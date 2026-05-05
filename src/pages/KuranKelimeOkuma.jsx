@@ -35,6 +35,7 @@ export default function KuranKelimeOkuma({ kaynakAnahtari = 'hece', baslik }) {
       ogeler={kaynak.veri}
       bittiMesaji={kaynak.bittiMesaji}
       rtl
+      bolumAnahtari={`kuran-kelime-${kaynakAnahtari}`}
     />
   );
 }

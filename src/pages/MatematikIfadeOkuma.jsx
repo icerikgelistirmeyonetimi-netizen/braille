@@ -14,6 +14,7 @@ export default function MatematikIfadeOkuma() {
       baslik="Matematik: İfade Okuma"
       ogeler={ogeler}
       bittiMesaji="Tebrikler! Tüm matematik ifadelerini okudunuz."
+      bolumAnahtari="matematik-ifade"
     />
   );
 }

@@ -44,6 +44,7 @@ import MuzikSureleri from './pages/MuzikSureleri.jsx';
 import MuzikDiziOkuma from './pages/MuzikDiziOkuma.jsx';
 import TestMuzik from './pages/TestMuzik.jsx';
 import { sallamayiBaslat } from './utils/sallama.js';
+import DesktopShell from './components/DesktopShell.jsx';
 
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
@@ -51,7 +52,8 @@ export default function App() {
     <div className="app">
       <a href="#main" className="skip-link">İçeriğe atla</a>
       <main id="main">
-        <Routes>
+        <DesktopShell>
+          <Routes>
           <Route path="/" element={<AnaMenu />} />
           <Route path="/hucre" element={<HucreTanima />} />
           <Route path="/harfler" element={<HarfEgitimi />} />
@@ -95,7 +97,8 @@ export default function App() {
           <Route path="/muzik-diziler" element={<MuzikDiziOkuma />} />
           <Route path="/test-muzik" element={<TestMuzik />} />
           <Route path="/ayarlar" element={<Ayarlar />} />
-        </Routes>
+          </Routes>
+        </DesktopShell>
       </main>
     </div>
   );

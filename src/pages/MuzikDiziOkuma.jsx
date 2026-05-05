@@ -14,6 +14,7 @@ export default function MuzikDiziOkuma() {
       baslik="Müzik: Dizi Okuma"
       ogeler={ogeler}
       bittiMesaji="Tebrikler! Tüm müzik dizilerini okudunuz."
+      bolumAnahtari="muzik-dizi"
     />
   );
 }

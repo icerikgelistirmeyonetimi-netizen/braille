@@ -108,6 +108,81 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 a { color: var(--accent); }
 h1, h2, h3 { color: var(--fg); }
 
+/* =============================================================
+   MASAÜSTÜ KABUĞU — DesktopShell (≥900px)
+   ds-wrapper kendi grid'ini yönetir. Banner (ds-header) her zaman
+   grid-column: 1/-1 ile tam genişlik kapsar.
+   ============================================================= */
+
+/* Mobil: wrapper şeffaf, header+sidebar gizli, içerik doğrudan .app'e bağlı */
+.ds-wrapper { display: contents; }
+.ds-header  { display: none; }
+.ds-sidebar { display: none; }
+.ds-content { display: contents; }
+
+@media (min-width: 900px) {
+  /* .app masaüstünde biraz genişler — !important ile altta gelen
+     varsayılan .app { max-width: 720px } kuralını yener */
+  .app { max-width: 1024px !important; }
+
+  /* ds-wrapper: .app'in flex çocuğu — kendi grid'ini kurar */
+  .ds-wrapper {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 8px 18px;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+
+  /* Banner — iki sütunu kapsar, tam genişlik */
+  .ds-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    grid-column: 1 / -1;
+    padding-bottom: 0;
+  }
+
+  /* Sol sidebar — AnaMenu .modul-yan ile aynı stil */
+  .ds-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 10px;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 8%, var(--panel)) 0%,
+      var(--panel) 60%
+    );
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    overflow-y: auto;
+  }
+
+  /* İçerik alanı */
+  .ds-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Alt sayfalardaki .page genişliği shell ile aynı kalsın (içeriğe göre daralmasın) */
+  .ds-content > .page { width: 100%; }
+
+  /* Yazma sayfaları: .yazma-bolum align-items:center olduğundan başlık şeridi
+     içerik genişliğine kadar daralıyordu. Üst bölümde stretch kullan. */
+  .ds-content .yazma-bolum-ust { align-items: stretch; width: 100%; }
+
+  /* PageHeader'daki GorunumGecisi shell header'da zaten var */
+  .ds-wrapper .header-bar .gorunum-btn:not(.karisik-yazma-btn) { display: none; }
+}
+
 /* ---------- Layout ---------- */
 .app {
   max-width: 720px;
@@ -347,7 +422,7 @@ h1, h2, h3 { color: var(--fg); }
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding-bottom: 12px;
+  padding-bottom: 0;
   border-bottom: 2px solid var(--panel-border);
   position: relative;
 }
@@ -368,11 +443,25 @@ h1, h2, h3 { color: var(--fg); }
   font-size: clamp(0.75em, 2.6vw, 0.95em);
   border-radius: 6px;
   white-space: nowrap;
+  background: transparent;
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: none;
+  font-weight: 500;
+  opacity: 0.65;
 }
-.banner-grup-secim button.aktif {
+.banner-grup-secim button:hover {
+  opacity: 1;
+  filter: none;
+}
+.banner-grup-secim button.aktif,
+.banner-grup-secim button[aria-pressed="true"] {
   background: var(--accent, #1c63ff);
   color: #fff;
   border-color: var(--accent, #1c63ff);
+  font-weight: 700;
+  opacity: 1;
+  box-shadow: var(--shadow);
 }
 
 .back-btn {
@@ -389,6 +478,44 @@ h1, h2, h3 { color: var(--fg); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+.sonra-kaydet-btn {
+  background: transparent;
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: none;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sonra-kaydet-btn svg { width: 22px; height: 22px; pointer-events: none; }
+
+/* Sayfa içinde sağa yaslanmış küçük boyut */
+.sonra-kaydet-btn.sayfa-ici {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  align-self: flex-end;
+  opacity: 0.55;
+}
+.sonra-kaydet-btn.sayfa-ici:hover,
+.sonra-kaydet-btn.sayfa-ici:focus-visible { opacity: 1; }
+
+/* Kaydedilmiş durum — ikon dolup koyulaşır */
+.sonra-kaydet-btn.kaydedildi {
+  opacity: 1;
+  color: var(--accent);
+}
+.sonra-kaydet-btn.kaydedildi svg {
+  fill: var(--accent);
 }
 .back-ikon {
   display: inline-flex;
@@ -435,6 +562,33 @@ h1, h2, h3 { color: var(--fg); }
   min-width: 52px;
 }
 [data-theme="lowVision"] .gorunum-ikon { width: 26px; height: 26px; }
+
+/* ---------- Toast bildirimi ---------- */
+.toast {
+  position: fixed;
+  top: max(env(safe-area-inset-top, 0px), 16px);
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 0.92em;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  animation: toastIn 0.22s ease, toastOut 0.3s ease 1.7s forwards;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
 
 /* ---------- Menu ---------- */
 .menu {
@@ -700,6 +854,20 @@ h1, h2, h3 { color: var(--fg); }
   padding-left: 8px;
   padding-right: 8px;
   font-size: clamp(0.78em, 3.2vw, 1em);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+/* Dar ekranda metin etiketleri gizle */
+.controls > button .btn-etiket {
+  display: none;
+}
+/* Yeterli genişlikte etiketleri göster */
+@media (min-width: 420px) {
+  .controls > button .btn-etiket {
+    display: inline;
+  }
 }
 .controls.grup-secim > button.aktif {
   background: var(--accent, #1c63ff);

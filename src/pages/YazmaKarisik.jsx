@@ -4,6 +4,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import BrailleKlavye from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
 import { kaynagiAl } from '../utils/karisikYazmaKaynaklari.js';
+import { sonraOgrenTumunuAl } from '../utils/ilerleme.js';
 
 // Aynı içerikteki dot dizilerini karşılaştır (sırasız küme eşitliği).
 const noktaEsit = (a, b) => {
@@ -47,11 +48,33 @@ export default function YazmaKarisik() {
     );
   }
 
-  // Soru sayısı seçimi: 'tum' = tüm dersi karışık, ya da 2/3/4 öğe
+  // Soru sayısı seçimi: 'tum' = tüm dersi karışık, 'kayitlilar' = sonra-öğren listesi, ya da 2/3/4 öğe
   const [grupBoyu, setGrupBoyu] = useState('tum');
+
+  // Sonra-öğren listesiyle eşleştirme (kaynak şemasından bağımsız)
+  const kayitlilarFiltrele = (items) => {
+    const tumKayitli = sonraOgrenTumunuAl();
+    const savedSet = new Set(Object.values(tumKayitli).flat().map(String));
+    if (!savedSet.size) return [];
+    return items.filter((item) => {
+      if (!item) return false;
+      const et = String(item.etiket ?? '');
+      if (savedSet.has(et) || savedSet.has(et.toUpperCase()) || savedSet.has(et.toLowerCase())) return true;
+      if (item.ariaAd && savedSet.has(String(item.ariaAd))) return true;
+      if (item.ariaAd) {
+        const ad = String(item.ariaAd);
+        for (const s of savedSet) { if (s.length >= 2 && ad.includes(s)) return true; }
+      }
+      return false;
+    });
+  };
 
   // Kaynağı karıştır ve istenen kadar al
   const sorulariUret = (boyut) => {
+    if (boyut === 'kayitlilar') {
+      const filtrelenmis = kayitlilarFiltrele(kaynakNesne.items);
+      return filtrelenmis.length ? karistir(filtrelenmis) : [];
+    }
     const karisik = karistir(kaynakNesne.items);
     if (boyut === 'tum') return karisik;
     return karisik.slice(0, Math.min(boyut, karisik.length));
@@ -220,6 +243,38 @@ export default function YazmaKarisik() {
     setBittimi(false);
   };
 
+  // Kayıtlılar modu seçiliyken liste boşsa uyarı göster
+  if (grupBoyu === 'kayitlilar' && sorular.length === 0) {
+    return (
+      <div className="page yazma-page">
+        <div className="yazma-bolum yazma-bolum-ust">
+          <PageHeader baslik={kaynakNesne.baslik} />
+          <div className="progress banner-grup-secim" role="group" aria-label="Soru sayısı">
+            <button type="button" onClick={() => yenidenBasla('tum')}>Tümü</button>
+            <button type="button" className="aktif" aria-pressed={true}>Kayıtlılar</button>
+            {[2, 3, 4].map((n) => (
+              <button key={n} type="button" onClick={() => yenidenBasla(n)}>{n + "'li"}</button>
+            ))}
+          </div>
+        </div>
+        <div className="yazma-bolum yazma-bolum-orta">
+          <div className="instruction" style={{ textAlign: 'center', padding: '32px 16px' }}>
+            Bu ders için "Sonra öğren" listenizde kayıtlı öğe bulunmuyor.
+            <br /><br />
+            <span style={{ color: 'var(--muted)', fontSize: '0.9em' }}>
+              Dersi çalışırken yer imi butonuna basarak öğeleri kaydedebilirsiniz.
+            </span>
+          </div>
+        </div>
+        <div className="yazma-bolum yazma-bolum-alt">
+          <div className="controls">
+            <button type="button" onClick={() => yenidenBasla('tum')}>Tüm Listeyi Çalış</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (bittimi) {
     const yuzde = Math.round((puan / sorular.length) * 100);
     return (
@@ -262,6 +317,13 @@ export default function YazmaKarisik() {
             onClick={() => yenidenBasla('tum')}
             title="Tüm derste karışık yazma"
           >Tümü</button>
+          <button
+            type="button"
+            className={grupBoyu === 'kayitlilar' ? 'aktif' : ''}
+            aria-pressed={grupBoyu === 'kayitlilar'}
+            onClick={() => yenidenBasla('kayitlilar')}
+            title="Sonra öğren listesindeki öğeler"
+          >Kayıtlılar</button>
           {[2, 3, 4].map((n) => (
             <button
               key={n}
