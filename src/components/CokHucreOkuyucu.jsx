@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
-import { konus, basariBildir, konusmayiDurdur } from '../utils/ses.js';
+import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
 import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 
 // Genel amaçlı çok hücreli sıralı okuma bileşeni.
@@ -23,6 +23,8 @@ export default function CokHucreOkuyucu({
     return k < ogeler.length ? k : 0;
   });
   const [hucreIndeksi, setHucreIndeksi] = useState(0);
+  const [basilanlar, setBasilanlar] = useState([]);
+  const [yanlis, setYanlis] = useState([]);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
 
@@ -65,6 +67,7 @@ export default function CokHucreOkuyucu({
 
   // Yeni kelimeye geçince ilk hücreden başla
   useEffect(() => { setHucreIndeksi(0); }, [indeks]);
+  useEffect(() => { setBasilanlar([]); setYanlis([]); }, [indeks, hucreIndeksi]);
 
   // Yeni kelime tanıtımı (kelime adı + okunuş + hücre sayısı)
   useEffect(() => {
@@ -74,7 +77,7 @@ export default function CokHucreOkuyucu({
     }
     const k = ogeler[indeks];
     const metin = `${k.yazi}, okunuşu: ${k.okunus}. ${k.anlam || ''} ` +
-                  `${k.hucreler.length} braille hücresinden oluşur.`;
+                  `${k.hucreler.length} braille hücresinden oluşur. Lütfen noktalarına dokunun.`;
     konus(metin);
     const tekrar = () => konus(metin, { kesintiyle: true });
     window.addEventListener('yonergeTekrar', tekrar);
@@ -86,7 +89,7 @@ export default function CokHucreOkuyucu({
     if (bitti || !aktif || hucreIndeksi === 0) return;
     const noktalar = aktif.hucreler[hucreIndeksi];
     if (!noktalar) return; // kelime değişmiş, indeks henüz sıfırlanmamış olabilir
-    konus(`${hucreIndeksi + 1}. hücre: ${noktalar.join(', ')} numaralı noktalar.`,
+    konus(`${hucreIndeksi + 1}. hücre: ${noktalar.join(', ')} numaralı noktalara dokunun.`,
           { kesintiyle: true });
   }, [hucreIndeksi, indeks, aktif, bitti]);
 
@@ -136,6 +139,25 @@ export default function CokHucreOkuyucu({
       setTimeout(() => setIndeks((i) => i + 1), 500);
     } else {
       setHucreIndeksi((i) => i + 1);
+    }
+  };
+
+  const noktayaTikla = (n) => {
+    if (basilanlar.includes(n)) return;
+    if (!aktifNoktalar.includes(n)) {
+      setYanlis([n]);
+      hataBildir(`${n} numara yanlış.`);
+      setTimeout(() => setYanlis([]), 700);
+      return;
+    }
+    const yeni = [...basilanlar, n];
+    setBasilanlar(yeni);
+    if (aktifNoktalar.every((x) => yeni.includes(x))) {
+      basariBildir('Doğru!');
+      setTimeout(() => sonrakiHucre(), 600);
+    } else {
+      const kalan = aktifNoktalar.filter((x) => !yeni.includes(x));
+      konus(`Doğru. Sıradaki nokta: ${kalan[0]} numara.`);
     }
   };
 
@@ -190,10 +212,14 @@ export default function CokHucreOkuyucu({
           {k.yazi}
         </div>
 
-        {/* Aktif tek hücre — büyük */}
+        {/* Aktif tek hücre — büyük, tıklanabilir */}
         <div className="aktif-hucre-wrap">
           <BrailleCell
-            aktifNoktalar={aktifNoktalar}
+            hedefNoktalar={aktifNoktalar}
+            dogruNoktalar={basilanlar}
+            yanlisNoktalar={yanlis}
+            tiklanabilir
+            onNoktaTikla={noktayaTikla}
             baslikAriaLabel={hucreSayisi > 1
               ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
               : k.yazi}
@@ -254,9 +280,9 @@ export default function CokHucreOkuyucu({
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
               <span className="btn-etiket">Önceki</span>
             </button>
-            <button type="button" aria-label={sonHucre ? 'Sıradaki kelime' : 'Sonraki hücre'} onClick={sonrakiHucre}>
+            <button type="button" aria-label={sonHucre ? 'Sıradaki kelimeyi atla' : 'Hücreyi atla'} onClick={sonrakiHucre}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="9 18 15 12 9 6"/></svg>
-              <span className="btn-etiket">{sonHucre ? 'Sonraki' : 'Sonraki'}</span>
+              <span className="btn-etiket">Atla</span>
             </button>
           </>
         ) : (
@@ -268,14 +294,14 @@ export default function CokHucreOkuyucu({
             </button>
             <button
               type="button"
-              aria-label="Anladım, sonraki"
+              aria-label="Atla, sonraki"
               onClick={() => {
                 basariBildir('Sıradaki.');
                 setTimeout(() => setIndeks((i) => i + 1), 500);
               }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="9 18 15 12 9 6"/></svg>
-              <span className="btn-etiket">Anladım</span>
+              <span className="btn-etiket">Atla</span>
             </button>
           </>
         )}

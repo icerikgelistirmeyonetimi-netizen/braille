@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
-import { konus, basariBildir, konusmayiDurdur } from '../utils/ses.js';
+import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
 import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 
 // MEB Türkçe Braille Yazı Kılavuzu (2014) – Noktalama ve özel işaret sayfası.
@@ -14,6 +14,9 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
   const [detayAcik, setDetayAcik] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const [hucreIndeksi, setHucreIndeksi] = useState(0);
+  const [basilanlar, setBasilanlar] = useState([]);
+  const [yanlis, setYanlis] = useState([]);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -42,15 +45,26 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
       return;
     }
     const k = aktifListe[indeks];
-    const metin = `${k.ad}. ${k.aciklama}`;
+    const tapMesaj = k.hucreler.length > 0 ? ' Lütfen noktalarına dokunun.' : '';
+    const metin = `${k.ad}. ${k.aciklama}${tapMesaj}`;
     konus(metin);
     const tekrar = () => konus(metin, { kesintiyle: true });
     window.addEventListener('yonergeTekrar', tekrar);
     return () => window.removeEventListener('yonergeTekrar', tekrar);
   }, [indeks, bitti, baslik, isaretler, kayitlilarModu]);
 
-  // Yeni işarete geçince detay popup'ını kapat
-  useEffect(() => { setDetayAcik(false); }, [indeks]);
+  // Yeni işarete geçince sıfırla
+  useEffect(() => { setDetayAcik(false); setHucreIndeksi(0); }, [indeks]);
+  useEffect(() => { setBasilanlar([]); setYanlis([]); }, [indeks, hucreIndeksi]);
+
+  // Yeni hücreye geçince seslendir
+  useEffect(() => {
+    if (bitti || hucreIndeksi === 0) return;
+    const k = aktifListe[indeks];
+    if (!k || !k.hucreler[hucreIndeksi]) return;
+    konus(`${hucreIndeksi + 1}. hücre: ${k.hucreler[hucreIndeksi].join(', ')} numaralı noktalara dokunun.`, { kesintiyle: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hucreIndeksi, indeks, bitti]);
 
   useEffect(() => () => konusmayiDurdur(), []);
 
@@ -97,6 +111,33 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
       sonraOgrenKaydet(anahtar, k.ad);
       konus('Sonra öğren listesine kaydedildi.');
       gosterToast('Sonra öğren listesine kaydedildi');
+    }
+  };
+
+  const noktayaTikla = (n) => {
+    const aktifHucreNoktalar = k.hucreler[hucreIndeksi] || [];
+    if (basilanlar.includes(n)) return;
+    if (!aktifHucreNoktalar.includes(n)) {
+      setYanlis([n]);
+      hataBildir(`${n} numara yanlış.`);
+      setTimeout(() => setYanlis([]), 700);
+      return;
+    }
+    const yeni = [...basilanlar, n];
+    setBasilanlar(yeni);
+    const tamamMi = aktifHucreNoktalar.every((x) => yeni.includes(x));
+    if (tamamMi) {
+      const sonHucreDir = hucreIndeksi >= k.hucreler.length - 1;
+      if (sonHucreDir) {
+        basariBildir('Tebrikler!');
+        setTimeout(() => setIndeks((i) => i + 1), 800);
+      } else {
+        basariBildir('Doğru!');
+        setTimeout(() => setHucreIndeksi((i) => i + 1), 500);
+      }
+    } else {
+      const kalan = aktifHucreNoktalar.filter((x) => !yeni.includes(x));
+      konus(`Doğru. Sıradaki nokta: ${kalan[0]} numara.`);
     }
   };
 
@@ -151,18 +192,21 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
         </div>
 
         {k.hucreler.length > 0 && (
-          <div
-            className="cell-row fit"
-            style={{ '--hucre-sayisi': k.hucreler.length }}
-          >
-            {k.hucreler.map((noktalar, i) => (
-              <BrailleCell
-                key={i}
-                aktifNoktalar={noktalar}
-                baslikAriaLabel={`${k.ad} sembolü ${i + 1}. hücre`}
-              />
-            ))}
-          </div>
+          <>
+            <BrailleCell
+              hedefNoktalar={k.hucreler[hucreIndeksi]}
+              dogruNoktalar={basilanlar}
+              yanlisNoktalar={yanlis}
+              tiklanabilir
+              onNoktaTikla={noktayaTikla}
+              baslikAriaLabel={k.hucreler.length > 1 ? `${k.ad} sembolü ${hucreIndeksi + 1}. hücre` : `${k.ad} sembolü`}
+            />
+            {k.hucreler.length > 1 && (
+              <div style={{ fontSize: '0.85em', color: 'var(--muted)' }}>
+                Hücre {hucreIndeksi + 1} / {k.hucreler.length}
+              </div>
+            )}
+          </>
         )}
 
         <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.95em' }}>
@@ -189,14 +233,18 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
         </button>
         <button
           type="button"
-          aria-label="Anladım, sonraki"
+          aria-label={k.hucreler.length > 0 ? 'Atla, sonraki' : 'Anladım, sonraki'}
           onClick={() => {
-            basariBildir('Sıradaki işaret.');
-            setTimeout(() => setIndeks((i) => i + 1), 400);
+            if (k.hucreler.length > 0 && hucreIndeksi < k.hucreler.length - 1) {
+              setHucreIndeksi((i) => i + 1);
+            } else {
+              basariBildir('Sıradaki işaret.');
+              setTimeout(() => setIndeks((i) => i + 1), 400);
+            }
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="9 18 15 12 9 6"/></svg>
-          <span className="btn-etiket">Anladım</span>
+          <span className="btn-etiket">{k.hucreler.length > 0 ? 'Atla' : 'Anladım'}</span>
         </button>
       </div>
 
