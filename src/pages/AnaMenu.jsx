@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
+import { indeksAl } from '../utils/ilerleme.js';
 import TanitimTuru, { turuSifirla } from '../components/TanitimTuru.jsx';
 import GorunumGecisi from '../components/GorunumGecisi.jsx';
 import { Ikon, MODULLER } from '../data/moduller.jsx';
@@ -115,18 +116,28 @@ export default function AnaMenu() {
         <section className="modul-icerik" aria-label={`${modul.baslik} bölümleri`}>
           <h2 className="modul-icerik-baslik">{modul.baslik} — {modul.altBaslik}</h2>
           <nav className="menu-grid" aria-label={modul.baslik}>
-            {modul.ogeler.map((m) => (
-              <button
-                key={m.yol}
-                type="button"
-                className="menu-card"
-                onClick={() => navigate(m.yol)}
-                aria-label={m.baslik}
-              >
-                <span className="menu-card-ikon" aria-hidden="true">{m.ikon}</span>
-                <span className="menu-card-yazi">{m.baslik}</span>
-              </button>
-            ))}
+            {modul.ogeler.map((m) => {
+              const ilerleme = m.anahtar ? indeksAl(m.anahtar) : 0;
+              const tamamlandi = m.toplam && ilerleme >= m.toplam;
+              return (
+                <button
+                  key={m.yol}
+                  type="button"
+                  className="menu-card"
+                  onClick={() => navigate(m.yol)}
+                  aria-label={m.baslik + (tamamlandi ? ', tamamlandı' : m.toplam ? `, ${ilerleme} / ${m.toplam}` : '')}
+                >
+                  <span className="menu-card-ikon" aria-hidden="true">{m.ikon}</span>
+                  <span className="menu-card-yazi">{m.baslik}</span>
+                  {tamamlandi && (
+                    <span className="menu-card-ilerleme tamamlandi" aria-hidden="true">✓ Tamamlandı</span>
+                  )}
+                  {!tamamlandi && m.toplam && (
+                    <span className="menu-card-ilerleme devam" aria-hidden="true">{ilerleme} / {m.toplam}</span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </section>
       </div>

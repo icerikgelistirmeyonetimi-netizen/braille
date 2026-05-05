@@ -331,9 +331,9 @@ export const MODULLER = [
     ikon: Ikon.modul1,
     ogeler: [
       { yol: '/hucre',     baslik: 'Hücreyi Tanı',         ikon: Ikon.hucre },
-      { yol: '/harfler',   baslik: 'Harf Eğitimi',          ikon: Ikon.harf },
-      { yol: '/rakamlar',  baslik: 'Rakam Eğitimi',         ikon: Ikon.rakam },
-      { yol: '/noktalama', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalama },
+      { yol: '/harfler',   baslik: 'Harf Eğitimi',          ikon: Ikon.harf,     anahtar: 'harfler',   toplam: 29 },
+      { yol: '/rakamlar',  baslik: 'Rakam Eğitimi',         ikon: Ikon.rakam,    anahtar: 'rakamlar',  toplam: 10 },
+      { yol: '/noktalama', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalama, anahtar: 'noktalama', toplam: 8 },
       { yol: '/test',      baslik: 'Test / Sınav',          ikon: Ikon.test }
     ]
   },
@@ -344,8 +344,8 @@ export const MODULLER = [
     ikon: Ikon.modul2,
     ogeler: [
       { yol: '/yazma-egitim',          baslik: 'Perkins Klavye Eğitimi', ikon: Ikon.klavye },
-      { yol: '/yazma-yonergeli',       baslik: 'Yönergeli Yazma',        ikon: Ikon.yazma },
-      { yol: '/yazma-yonergeli-cumle', baslik: 'Yönergeli Cümle Yazma',  ikon: Ikon.cumle },
+      { yol: '/yazma-yonergeli',       baslik: 'Yönergeli Yazma',        ikon: Ikon.yazma,  anahtar: 'yazma-yonergeli',       toplam: 500 },
+      { yol: '/yazma-yonergeli-cumle', baslik: 'Yönergeli Cümle Yazma',  ikon: Ikon.cumle,  anahtar: 'yazma-yonergeli-cumle', toplam: 78 },
       { yol: '/yazma-serbest',         baslik: 'Serbest Yazma',          ikon: Ikon.serbest }
     ]
   },
@@ -355,11 +355,11 @@ export const MODULLER = [
     altBaslik: 'Kısaltma Sistemi',
     ikon: Ikon.modul3,
     ogeler: [
-      { yol: '/kisaltma-bir-harfli',     baslik: 'Bir Harfli Kısaltmalar',      ikon: Ikon.birHarf },
-      { yol: '/kisaltma-iki-harfli',     baslik: 'İki Harfli Kısaltmalar',      ikon: Ikon.ikiHarf },
-      { yol: '/kisaltma-hece',           baslik: 'Hece Kısaltmaları',           ikon: Ikon.hece },
-      { yol: '/kisaltma-kelime-koku',    baslik: 'Kelime Kökü Kısaltmaları',    ikon: Ikon.kok },
-      { yol: '/kisaltma-kelime-parcasi', baslik: 'Kelime Parçası Kısaltmaları', ikon: Ikon.parca },
+      { yol: '/kisaltma-bir-harfli',     baslik: 'Bir Harfli Kısaltmalar',      ikon: Ikon.birHarf, anahtar: 'kisaltma-bir-harfli',     toplam: 28 },
+      { yol: '/kisaltma-iki-harfli',     baslik: 'İki Harfli Kısaltmalar',      ikon: Ikon.ikiHarf, anahtar: 'kisaltma-iki-harfli',     toplam: 87 },
+      { yol: '/kisaltma-hece',           baslik: 'Hece Kısaltmaları',           ikon: Ikon.hece,    anahtar: 'kisaltma-hece',           toplam: 22 },
+      { yol: '/kisaltma-kelime-koku',    baslik: 'Kelime Kökü Kısaltmaları',    ikon: Ikon.kok,     anahtar: 'kisaltma-kelime-koku',    toplam: 46 },
+      { yol: '/kisaltma-kelime-parcasi', baslik: 'Kelime Parçası Kısaltmaları', ikon: Ikon.parca,   anahtar: 'kisaltma-kelime-parcasi', toplam: 39 },
       { yol: '/test-kisaltma',           baslik: 'Test / Sınav',                ikon: Ikon.test }
     ]
   },
@@ -369,8 +369,8 @@ export const MODULLER = [
     altBaslik: 'Noktalama ve Özel İşaretler',
     ikon: Ikon.modul4,
     ogeler: [
-      { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul },
-      { yol: '/ozel-isaretler',       baslik: 'Diğer Özel İşaretler',  ikon: Ikon.ozelIsaret },
+      { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul, anahtar: 'noktalama-isaretleri', toplam: 15 },
+      { yol: '/ozel-isaretler',       baslik: 'Diğer Özel İşaretler',  ikon: Ikon.ozelIsaret,     anahtar: 'ozel-isaretler',       toplam: 11 },
       { yol: '/test-noktalama',       baslik: 'Test / Sınav',           ikon: Ikon.test }
     ]
   },
@@ -380,11 +380,11 @@ export const MODULLER = [
     altBaslik: "Kur'an Eğitimi",
     ikon: Ikon.modul5,
     ogeler: [
-      { yol: '/kuran-harfler',   baslik: 'Arap Harfleri',      ikon: Ikon.kuranHarf },
-      { yol: '/kuran-harekeler', baslik: 'Harekeler',           ikon: Ikon.harake },
-      { yol: '/kuran-tecvid',    baslik: 'Tecvid İşaretleri',  ikon: Ikon.tecvid },
-      { yol: '/kuran-heceler',   baslik: 'Hece Okuma',          ikon: Ikon.hece },
-      { yol: '/kuran-kelimeler', baslik: 'Kelime Okuma',        ikon: Ikon.kuranKelime },
+      { yol: '/kuran-harfler',   baslik: 'Arap Harfleri',      ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',   toplam: 31 },
+      { yol: '/kuran-harekeler', baslik: 'Harekeler',           ikon: Ikon.harake,    anahtar: 'kuran-harekeler', toplam: 8 },
+      { yol: '/kuran-tecvid',    baslik: 'Tecvid İşaretleri',  ikon: Ikon.tecvid,    anahtar: 'kuran-tecvid',    toplam: 7 },
+      { yol: '/kuran-heceler',   baslik: 'Hece Okuma',          ikon: Ikon.hece, anahtar: 'kuran-kelime-hece', toplam: 15 },
+      { yol: '/kuran-kelimeler', baslik: 'Kelime Okuma',        ikon: Ikon.kuranKelime, anahtar: 'kuran-kelime-kelime', toplam: 145 },
       { yol: '/kuran-sureler',   baslik: 'Kısa Sureler',        ikon: Ikon.kuranKelime },
       { yol: '/test-kuran',      baslik: 'Test / Sınav',        ikon: Ikon.test }
     ]
@@ -395,10 +395,10 @@ export const MODULLER = [
     altBaslik: 'Matematik Braille',
     ikon: Ikon.modul6,
     ogeler: [
-      { yol: '/mat-rakamlar',   baslik: 'Rakamlar',           ikon: Ikon.matRakam },
-      { yol: '/mat-semboller',  baslik: 'İşlem Sembolleri',   ikon: Ikon.matSembol },
-      { yol: '/mat-geometri',   baslik: 'Geometri',            ikon: Ikon.geometri },
-      { yol: '/mat-ifadeler',   baslik: 'İfade Okuma',         ikon: Ikon.matIfade },
+      { yol: '/mat-rakamlar',   baslik: 'Rakamlar',           ikon: Ikon.matRakam,  anahtar: 'mat-rakamlar',    toplam: 10 },
+      { yol: '/mat-semboller',  baslik: 'İşlem Sembolleri',   ikon: Ikon.matSembol, anahtar: 'mat-semboller',   toplam: 15 },
+      { yol: '/mat-geometri',   baslik: 'Geometri',            ikon: Ikon.geometri,  anahtar: 'mat-geometri',    toplam: 7 },
+      { yol: '/mat-ifadeler',   baslik: 'İfade Okuma',         ikon: Ikon.matIfade,  anahtar: 'matematik-ifade', toplam: 5 },
       { yol: '/test-matematik', baslik: 'Test / Sınav',        ikon: Ikon.test }
     ]
   },
@@ -408,10 +408,10 @@ export const MODULLER = [
     altBaslik: 'Fen Bilimleri',
     ikon: Ikon.modul7,
     ogeler: [
-      { yol: '/fen-yunan',     baslik: 'Yunan Harfleri',     ikon: Ikon.yunan },
-      { yol: '/fen-semboller', baslik: 'Birim ve Semboller', ikon: Ikon.fenSembol },
-      { yol: '/fen-kimya',     baslik: 'Kimyasal Formüller', ikon: Ikon.kimya },
-      { yol: '/fen-fizik',     baslik: 'Fizik Formülleri',   ikon: Ikon.fizik },
+      { yol: '/fen-yunan',     baslik: 'Yunan Harfleri',     ikon: Ikon.yunan,     anahtar: 'fen-yunan',            toplam: 11 },
+      { yol: '/fen-semboller', baslik: 'Birim ve Semboller', ikon: Ikon.fenSembol, anahtar: 'fen-semboller',        toplam: 8 },
+      { yol: '/fen-kimya',     baslik: 'Kimyasal Formüller', ikon: Ikon.kimya,     anahtar: 'fen-kimya-formuller',  toplam: 5 },
+      { yol: '/fen-fizik',     baslik: 'Fizik Formülleri',   ikon: Ikon.fizik,     anahtar: 'fen-fizik-formuller',  toplam: 2 },
       { yol: '/test-fen',      baslik: 'Test / Sınav',       ikon: Ikon.test }
     ]
   },
@@ -421,10 +421,10 @@ export const MODULLER = [
     altBaslik: 'Müzik Braille',
     ikon: Ikon.modul8,
     ogeler: [
-      { yol: '/muzik-notalar',   baslik: 'Notalar (Do-Si)',      ikon: Ikon.nota },
+      { yol: '/muzik-notalar',   baslik: 'Notalar (Do-Si)',      ikon: Ikon.nota,       anahtar: 'muzik-notalar',   toplam: 7 },
       { yol: '/muzik-sureler',   baslik: 'Nota Süreleri',        ikon: Ikon.sure },
-      { yol: '/muzik-semboller', baslik: 'Anahtar ve Semboller', ikon: Ikon.muzikSembol },
-      { yol: '/muzik-diziler',   baslik: 'Dizi Okuma',           ikon: Ikon.muzikDizi },
+      { yol: '/muzik-semboller', baslik: 'Anahtar ve Semboller', ikon: Ikon.muzikSembol, anahtar: 'muzik-semboller', toplam: 7 },
+      { yol: '/muzik-diziler',   baslik: 'Dizi Okuma',           ikon: Ikon.muzikDizi,   anahtar: 'muzik-dizi',      toplam: 3 },
       { yol: '/test-muzik',      baslik: 'Test / Sınav',         ikon: Ikon.test }
     ]
   }

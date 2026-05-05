@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
+import { indeksKaydet } from '../utils/ilerleme.js';
 import { HARFLER, NOKTALAMA } from '../data/braille.js';
 import { YAZMA_KELIMELERI } from '../data/yazmaKelimeleri.js';
 
@@ -25,6 +26,8 @@ function karakterinNoktalari(ch) {
 
 export default function YazmaYonergeli() {
   const [cumleIdx, setCumleIdx] = useState(0);
+
+  useEffect(() => { indeksKaydet('yazma-yonergeli', cumleIdx); }, [cumleIdx]);
   const [konum, setKonum] = useState(0); // doğru yazılan karakter sayısı
   const [hataSayisi, setHataSayisi] = useState(0);
   // Aynı karakter için ardışık yanlış deneme sayısı
