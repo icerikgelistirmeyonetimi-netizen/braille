@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Amasya';
+  src: url('/Amasya-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  unicode-range: U+0600-U+06FF, U+0750-U+077F, U+FB50-U+FDFF, U+FE70-U+FEFF;
+}
+
 /* ============================================================
    İki tema:
      - Varsayılan ("normal"): modern, hafif, beyaz arka plan
@@ -400,6 +408,7 @@ h1, h2, h3 { color: var(--fg); }
 .sure-karti-ar {
   font-size: 1.3em;
   direction: rtl;
+  font-family: 'Amasya', serif;
   color: var(--fg);
   line-height: 1.6;
   padding: 2px 0;
@@ -791,6 +800,7 @@ h1, h2, h3 { color: var(--fg); }
   color: var(--accent);
   margin-bottom: 10px;
   letter-spacing: 0.02em;
+  font-family: 'Amasya', 'Segoe UI', Tahoma, sans-serif;
 }
 .cell {
   display: grid;
@@ -899,6 +909,11 @@ h1, h2, h3 { color: var(--fg); }
   margin: 0;
   color: var(--muted);
   font-size: 0.95em;
+}
+[data-theme="lowVision"] .progress {
+  color: var(--fg);
+  font-size: 1.15em;
+  font-weight: 700;
 }
 
 /* ---------- Küçük ekranlar ---------- */

@@ -201,6 +201,7 @@ export default function CokHucreOkuyucu({
             fontSize: rtl ? '1.8em' : '1.6em',
             lineHeight: rtl ? 1.5 : 1.2,
             fontWeight: 700,
+            fontFamily: rtl ? "'Amasya', serif" : undefined,
             color: 'var(--accent)',
             direction: rtl ? 'rtl' : 'ltr',
             margin: 0,
