@@ -4,6 +4,7 @@ import { konus, konusmayiDurdur } from '../utils/ses.js';
 import { indeksAl } from '../utils/ilerleme.js';
 import TanitimTuru, { turuSifirla } from '../components/TanitimTuru.jsx';
 import GorunumGecisi from '../components/GorunumGecisi.jsx';
+import FullscreenButonu from '../components/FullscreenButonu.jsx';
 import { Ikon, MODULLER } from '../data/moduller.jsx';
 
 export default function AnaMenu() {
@@ -78,7 +79,10 @@ export default function AnaMenu() {
             Braille Eğitim
           </h1>
         </div>
-        <GorunumGecisi />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FullscreenButonu />
+          <GorunumGecisi />
+        </div>
       </header>
 
       <div className="modul-layout">
