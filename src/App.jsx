@@ -49,36 +49,20 @@ import DesktopShell from './components/DesktopShell.jsx';
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
 
-  // Telefon yana çevrildiğinde tam ekran; dikeye döndüğünde çık
+  // Telefon yana çevrildiğinde tam ekran
+  // exitFullscreen çağırılmıyor — orientation değişince tarayıcı zaten çıkıyor,
+  // programatik çıkış sonrası Chrome yeni requestFullscreen'i bloke ediyor.
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape) and (max-height: 600px)');
-
-    const tamEkranGir = () => {
-      if (document.fullscreenElement) return;
+    const tryFullscreen = () => {
+      if (!mq.matches) return;
+      if (document.fullscreenElement || document.webkitFullscreenElement) return;
       const el = document.documentElement;
       const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
       if (fn) fn.call(el).catch(() => {});
     };
-    const tamEkranCik = () => {
-      if (!document.fullscreenElement) return;
-      const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
-      if (fn) fn.call(document).catch(() => {});
-    };
-
-    // Her dokunuş/tıklamada: landscape ise ve fullscreen değilse gir
-    const dokunusta = () => { if (mq.matches) tamEkranGir(); };
-    document.addEventListener('touchstart', dokunusta, { passive: true });
-    document.addEventListener('click', dokunusta);
-
-    // Dikeye dönünce tam ekrandan çık
-    const mqHandler = (e) => { if (!e.matches) tamEkranCik(); };
-    mq.addEventListener('change', mqHandler);
-
-    return () => {
-      document.removeEventListener('touchstart', dokunusta);
-      document.removeEventListener('click', dokunusta);
-      mq.removeEventListener('change', mqHandler);
-    };
+    document.addEventListener('touchstart', tryFullscreen, { passive: true });
+    return () => document.removeEventListener('touchstart', tryFullscreen);
   }, []);
   return (
     <div className="app">
