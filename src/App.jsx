@@ -49,9 +49,10 @@ import DesktopShell from './components/DesktopShell.jsx';
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
 
-  // Telefon yana çevrildiğinde tam ekran; dikeyea döndüğünde çık
+  // Telefon yana çevrildiğinde tam ekran; dikeye döndüğünde çık
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape) and (max-height: 600px)');
+    let bekliyor = false; // landscape'e geçince sonraki dokunuşu bekle
 
     const tamEkranGir = () => {
       const el = document.documentElement;
@@ -61,17 +62,43 @@ export default function App() {
       }
     };
     const tamEkranCik = () => {
+      bekliyor = false;
       if (document.fullscreenElement) {
         const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
         if (fn) fn.call(document).catch(() => {});
       }
     };
 
-    const handler = (e) => { if (e.matches) tamEkranGir(); else tamEkranCik(); };
+    // Bir sonraki dokunuşta fullscreen iste (kullanıcı hareketi gerekli)
+    const dokunustaGir = () => {
+      if (!bekliyor) return;
+      bekliyor = false;
+      tamEkranGir();
+    };
+    document.addEventListener('touchstart', dokunustaGir, { passive: true });
+    document.addEventListener('click', dokunustaGir);
+
+    const handler = (e) => {
+      if (e.matches) {
+        // Önce doğrudan dene; başarısız olursa sonraki dokunuşa bırak
+        const el = document.documentElement;
+        const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+        if (fn) {
+          fn.call(el).catch(() => { bekliyor = true; });
+        } else {
+          bekliyor = true;
+        }
+      } else {
+        tamEkranCik();
+      }
+    };
     mq.addEventListener('change', handler);
-    // Sayfa zaten landscape açıldıysa
-    if (mq.matches) tamEkranGir();
-    return () => mq.removeEventListener('change', handler);
+    if (mq.matches) { bekliyor = true; tamEkranGir(); }
+    return () => {
+      mq.removeEventListener('change', handler);
+      document.removeEventListener('touchstart', dokunustaGir);
+      document.removeEventListener('click', dokunustaGir);
+    };
   }, []);
   return (
     <div className="app">
