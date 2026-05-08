@@ -13,14 +13,17 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon.svg'],
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true
+      },
       manifest: {
         name: 'Braille Eğitim',
         short_name: 'Braille',
         description: 'Görme engelliler için Türkçe Braille alfabesi öğretim uygulaması',
         theme_color: '#f5f7fb',
         background_color: '#f5f7fb',
-        display: 'standalone',
-        orientation: 'portrait',
+        display: 'fullscreen',
         lang: 'tr-TR',
         start_url: base,
         scope: base,
