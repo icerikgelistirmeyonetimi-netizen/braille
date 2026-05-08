@@ -49,21 +49,20 @@ import DesktopShell from './components/DesktopShell.jsx';
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
 
-  // Telefon yana çevrildiğinde tam ekran
-  // exitFullscreen çağırılmıyor — orientation değişince tarayıcı zaten çıkıyor,
-  // programatik çıkış sonrası Chrome yeni requestFullscreen'i bloke ediyor.
+  // Mobilde ilk dokunuşta otomatik fullscreen
   useEffect(() => {
-    const mq = window.matchMedia('(orientation: landscape) and (max-height: 600px)');
-    const tryFullscreen = () => {
-      if (!mq.matches) return;
+    const isMobile = window.matchMedia('(pointer: coarse)').matches;
+    if (!isMobile) return;
+    const giris = () => {
       if (document.fullscreenElement || document.webkitFullscreenElement) return;
       const el = document.documentElement;
-      const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+      const fn = el.requestFullscreen || el.webkitRequestFullscreen;
       if (fn) fn.call(el).catch(() => {});
     };
-    document.addEventListener('touchstart', tryFullscreen, { passive: true });
-    return () => document.removeEventListener('touchstart', tryFullscreen);
+    document.addEventListener('touchstart', giris, { passive: true, once: false });
+    return () => document.removeEventListener('touchstart', giris);
   }, []);
+
   return (
     <div className="app">
       <a href="#main" className="skip-link">İçeriğe atla</a>

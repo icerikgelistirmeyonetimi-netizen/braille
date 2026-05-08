@@ -188,7 +188,7 @@ h1, h2, h3 { color: var(--fg); }
   .ds-content .yazma-bolum-ust { align-items: stretch; width: 100%; }
 
   /* PageHeader'daki butonlar shell header'da zaten var — gizle */
-  .ds-wrapper .header-bar .gorunum-btn { display: none; }
+  .ds-wrapper .header-bar .gorunum-btn:not(.fs-btn) { display: none; }
 }
 
 /* ---------- Layout ---------- */
@@ -556,6 +556,10 @@ h1, h2, h3 { color: var(--fg); }
   align-items: center;
   justify-content: center;
   box-shadow: none;
+}
+/* Fullscreen butonu: masaüstünde gizle, sadece dokunmatik cihazlarda göster */
+@media (hover: hover) and (pointer: fine) {
+  .fs-btn { display: none; }
 }
 .gorunum-ikon {
   display: inline-flex;

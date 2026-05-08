@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { MODULLER, Ikon } from '../data/moduller.jsx';
 import GorunumGecisi from './GorunumGecisi.jsx';
 import KarisikYazmaButonu from './KarisikYazmaButonu.jsx';
+import FullscreenButonu from './FullscreenButonu.jsx';
 
 function getAktifModul(pathname) {
   for (const m of MODULLER) {
@@ -47,6 +48,7 @@ export default function DesktopShell({ children }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <KarisikYazmaButonu />
+          <FullscreenButonu />
           <GorunumGecisi />
         </div>
       </header>
