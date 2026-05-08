@@ -800,7 +800,7 @@ h1, h2, h3 { color: var(--fg); }
   color: var(--accent);
   margin-bottom: 10px;
   letter-spacing: 0.02em;
-  font-family: 'Amasya', 'Segoe UI', Tahoma, sans-serif;
+  font-family: 'Segoe UI', Tahoma, 'Amasya', sans-serif;
 }
 .cell {
   display: grid;
