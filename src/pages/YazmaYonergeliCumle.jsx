@@ -195,6 +195,7 @@ export default function YazmaYonergeliCumle() {
             onEnter={!beklenen ? ileriCumle : undefined}
             vurguNoktalar={ipucuGoster ? beklenenNoktalar : []}
             klavyeIpucu={ipucuGoster}
+            siralikTiklama
           />
         </div>
       </div>
@@ -216,6 +217,7 @@ export default function YazmaYonergeliCumle() {
           onEnter={!beklenen ? ileriCumle : undefined}
           vurguNoktalar={ipucuGoster ? beklenenNoktalar : []}
           klavyeIpucu={ipucuGoster}
+          siralikTiklama
         />
       </div>
     </div>

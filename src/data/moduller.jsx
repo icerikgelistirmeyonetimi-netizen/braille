@@ -338,20 +338,8 @@ export const MODULLER = [
     ]
   },
   {
-    id: 'modul2',
-    baslik: 'Modül 2',
-    altBaslik: 'Braille ile Yazma',
-    ikon: Ikon.modul2,
-    ogeler: [
-      { yol: '/yazma-egitim',          baslik: 'Perkins Klavye Eğitimi', ikon: Ikon.klavye },
-      { yol: '/yazma-yonergeli',       baslik: 'Yönergeli Yazma',        ikon: Ikon.yazma,  anahtar: 'yazma-yonergeli',       toplam: 500 },
-      { yol: '/yazma-yonergeli-cumle', baslik: 'Yönergeli Cümle Yazma',  ikon: Ikon.cumle,  anahtar: 'yazma-yonergeli-cumle', toplam: 78 },
-      { yol: '/yazma-serbest',         baslik: 'Serbest Yazma',          ikon: Ikon.serbest }
-    ]
-  },
-  {
     id: 'modul3',
-    baslik: 'Modül 3',
+    baslik: 'Modül 2',
     altBaslik: 'Kısaltma Sistemi',
     ikon: Ikon.modul3,
     ogeler: [
@@ -365,13 +353,25 @@ export const MODULLER = [
   },
   {
     id: 'modul4',
-    baslik: 'Modül 4',
+    baslik: 'Modül 3',
     altBaslik: 'Noktalama ve Özel İşaretler',
     ikon: Ikon.modul4,
     ogeler: [
       { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul, anahtar: 'noktalama-isaretleri', toplam: 15 },
       { yol: '/ozel-isaretler',       baslik: 'Diğer Özel İşaretler',  ikon: Ikon.ozelIsaret,     anahtar: 'ozel-isaretler',       toplam: 11 },
       { yol: '/test-noktalama',       baslik: 'Test / Sınav',           ikon: Ikon.test }
+    ]
+  },
+  {
+    id: 'modul2',
+    baslik: 'Modül 4',
+    altBaslik: 'Braille ile Yazma',
+    ikon: Ikon.modul2,
+    ogeler: [
+      { yol: '/yazma-egitim',          baslik: 'Perkins Klavye Eğitimi', ikon: Ikon.klavye },
+      { yol: '/yazma-yonergeli',       baslik: 'Yönergeli Yazma',        ikon: Ikon.yazma,  anahtar: 'yazma-yonergeli',       toplam: 500 },
+      { yol: '/yazma-yonergeli-cumle', baslik: 'Yönergeli Cümle Yazma',  ikon: Ikon.cumle,  anahtar: 'yazma-yonergeli-cumle', toplam: 78 },
+      { yol: '/yazma-serbest',         baslik: 'Serbest Yazma',          ikon: Ikon.serbest }
     ]
   },
   {

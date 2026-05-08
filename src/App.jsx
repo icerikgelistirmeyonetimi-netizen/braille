@@ -48,6 +48,31 @@ import DesktopShell from './components/DesktopShell.jsx';
 
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
+
+  // Telefon yana çevrildiğinde tam ekran; dikeyea döndüğünde çık
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: landscape) and (max-height: 600px)');
+
+    const tamEkranGir = () => {
+      const el = document.documentElement;
+      if (!document.fullscreenElement) {
+        const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+        if (fn) fn.call(el).catch(() => {});
+      }
+    };
+    const tamEkranCik = () => {
+      if (document.fullscreenElement) {
+        const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
+        if (fn) fn.call(document).catch(() => {});
+      }
+    };
+
+    const handler = (e) => { if (e.matches) tamEkranGir(); else tamEkranCik(); };
+    mq.addEventListener('change', handler);
+    // Sayfa zaten landscape açıldıysa
+    if (mq.matches) tamEkranGir();
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   return (
     <div className="app">
       <a href="#main" className="skip-link">İçeriğe atla</a>

@@ -37,12 +37,49 @@ export default function BrailleKlavye({
   onEnter,
   vurguNoktalar = [],
   klavyeAcik = true,
-  klavyeIpucu = false
+  klavyeIpucu = false,
+  tabletModu = false,
+  siralikTiklama = false
 }) {
   // O an basılı tutulan noktalar (henüz commit edilmemiş)
   const [basili, setBasili] = useState(new Set());
   // En son commit edilen kombinasyon (kısa süre vurgulamak için)
   const [sonHucre, setSonHucre] = useState([]);
+  // Sıralı fare tıklaması: seçili noktalar
+  const [tiklilar, setTiklilar] = useState(new Set());
+  const tiklilarRef = useRef(new Set());
+  const debounceRef = useRef(null);
+  // Telefon yatayda döndüğünde otomatik tablet yerleşimi
+  // (popup klavye tam olarak bu medya sorgusuyla açılır)
+  const MQ_LANDSCAPE = '(orientation: landscape) and (max-height: 600px)';
+  const [mobileYatay, setMobileYatay] = useState(() =>
+    typeof window !== 'undefined' &&
+    window.matchMedia(MQ_LANDSCAPE).matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(MQ_LANDSCAPE);
+    const handler = (e) => setMobileYatay(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  const tiklaToggle = (n) => {
+    setTiklilar((s) => {
+      const y = new Set(s);
+      if (y.has(n)) y.delete(n); else y.add(n);
+      tiklilarRef.current = y;
+      return y;
+    });
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const current = tiklilarRef.current;
+      if (current.size > 0) {
+        tiklilarRef.current = new Set();
+        setTiklilar(new Set());
+        commitHucre(current);
+      }
+    }, 600);
+  };
 
   // Mobil dokunmada aktif parmak (touch identifier) sayısı
   const aktifParmaklar = useRef(new Set());
@@ -203,17 +240,19 @@ export default function BrailleKlavye({
   ];
   // Daha kullanışlı: tek tek 6 büyük tuş, ikili sütunlu, üç satır
   // Satır sıralaması: üst -> 1, 4 ; orta -> 2, 5 ; alt -> 3, 6
-  const satirlar = [
-    [1, 4],
-    [2, 5],
-    [3, 6]
-  ];
+  // Tablet modunda sütunlar yatay çevrilir: sol el 4-5-6, sağ el 1-2-3
+  // (tableti düz tutup üstten yazınca eller fiziksel olarak ters tarafa denk gelir)
+  // Tablet modunda ya da telefon yatayda: sol el 4-5-6, sağ el 1-2-3
+  const satirlar = (tabletModu || mobileYatay)
+    ? [[4, 1], [5, 2], [6, 3]]
+    : [[1, 4], [2, 5], [3, 6]];
 
   const noktaSinif = (n) => {
     const c = ['klv-nokta'];
     if (basili.has(n)) c.push('basili');
     if (sonHucre.includes(n)) c.push('flash');
     if (vurguNoktalar.includes(n)) c.push('vurgu');
+    if (siralikTiklama && tiklilar.has(n)) c.push('tikli');
     return c.join(' ');
   };
 
@@ -239,8 +278,9 @@ export default function BrailleKlavye({
                 className={noktaSinif(n)}
                 data-klavye-nokta={n}
                 aria-label={`${n} numaralı nokta${klavyeIpucu ? `, klavye ${tusEtiket} tuşu` : ''}`}
-                aria-pressed={basili.has(n)}
+                aria-pressed={basili.has(n) || (siralikTiklama && tiklilar.has(n))}
                 onContextMenu={(e) => e.preventDefault()}
+                onClick={siralikTiklama ? () => tiklaToggle(n) : undefined}
                 tabIndex={-1}
               >
                 {klavyeIpucu ? (

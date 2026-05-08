@@ -89,6 +89,16 @@ export default function YazmaKarisik() {
   const [ipucuGoster, setIpucuGoster] = useState(false);
   const [puan, setPuan] = useState(0);
   const [bittimi, setBittimi] = useState(false);
+  // Tablet modu: klavye sütunları yatay çevrilir (tablette eller ters tarafa denk gelir)
+  const [tabletModu, setTabletModu] = useState(
+    () => localStorage.getItem('tabletModu') === '1'
+  );
+  const tabletModuToggle = () => setTabletModu((v) => {
+    const yeni = !v;
+    localStorage.setItem('tabletModu', yeni ? '1' : '0');
+    konus(yeni ? 'Tablet modu açık.' : 'Tablet modu kapalı.', { kesintiyle: true });
+    return yeni;
+  });
   // Doğru cevap seslendirmesi sırasında girişleri kilitle
   const kilitliRef = useRef(false);
 
@@ -376,6 +386,8 @@ export default function YazmaKarisik() {
             onSil={onSil}
             vurguNoktalar={ipucuGoster ? beklenenHucre || [] : []}
             klavyeIpucu={ipucuGoster}
+            tabletModu={tabletModu}
+            siralikTiklama
           />
         </div>
       </div>
@@ -389,6 +401,13 @@ export default function YazmaKarisik() {
             if (kilitliRef.current) return;
             dogruCevabiAcikla();
           }}>Cevabı Söyle</button>
+          <button
+            type="button"
+            className={tabletModu ? 'aktif' : ''}
+            aria-pressed={tabletModu}
+            onClick={tabletModuToggle}
+            title="Tablette yazarken sol/sağ noktaları çevir"
+          >Tablet Modu</button>
         </div>
       </div>
 
@@ -400,6 +419,8 @@ export default function YazmaKarisik() {
           onSil={onSil}
           vurguNoktalar={ipucuGoster ? beklenenHucre || [] : []}
           klavyeIpucu={ipucuGoster}
+          tabletModu={tabletModu}
+          siralikTiklama
         />
       </div>
     </div>

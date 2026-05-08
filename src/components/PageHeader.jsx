@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import GorunumGecisi from './GorunumGecisi.jsx';
+import KarisikYazmaButonu from './KarisikYazmaButonu.jsx';
 
 export default function PageHeader({ baslik }) {
   const navigate = useNavigate();
@@ -39,6 +40,7 @@ export default function PageHeader({ baslik }) {
       >
         {baslik}
       </h1>
+      <KarisikYazmaButonu />
       <GorunumGecisi />
     </header>
   );

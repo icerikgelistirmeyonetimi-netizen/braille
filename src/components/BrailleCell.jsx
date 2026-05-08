@@ -30,7 +30,8 @@ export default function BrailleCell({
   kesfedilebilir = true,
   onNoktaTikla,
   baslik,
-  baslikAriaLabel
+  baslikAriaLabel,
+  baslikStyle
 }) {
   const noktaSira = [1, 4, 2, 5, 3, 6]; // grid sırası: satır satır
   const sonOkunan = useRef(null);
@@ -105,7 +106,7 @@ export default function BrailleCell({
         className="cell-title"
         aria-label={baslik ? (baslikAriaLabel || baslik) : undefined}
         aria-hidden={baslik ? undefined : true}
-        style={baslik ? undefined : { display: 'none' }}
+        style={baslik ? baslikStyle : { display: 'none' }}
       >
         {baslik || '\u00A0'}
       </div>

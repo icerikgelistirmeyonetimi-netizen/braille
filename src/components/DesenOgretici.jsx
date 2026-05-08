@@ -15,7 +15,7 @@ import { deseniGonder, deseniTemizle } from '../utils/arduino.js';
  *  - bolumAnahtari?: string
  *  - bittiMesaji?: string
  */
-export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahtari, bittiMesaji }) {
+export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahtari, bittiMesaji, rtl }) {
   const [indeks, setIndeks] = useState(() => {
     const kaydedilen = indeksAl(bolumAnahtari);
     return kaydedilen < ogeler.length ? kaydedilen : 0;
@@ -224,6 +224,7 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
         <BrailleCell
           baslik={aktifOge.ad}
           baslikAriaLabel={aktifOge.ariaAd || aktifOge.ad}
+          baslikStyle={rtl ? { fontFamily: "'Amasya', serif", direction: 'rtl' } : undefined}
           tiklanabilir
           onNoktaTikla={noktayaTikla}
           hedefNoktalar={aktifOge.noktalar}

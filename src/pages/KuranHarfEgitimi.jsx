@@ -17,6 +17,7 @@ export default function KuranHarfEgitimi() {
       kategoriAdi="Arap harfi"
       bolumAnahtari="kuran-harfler"
       bittiMesaji="Tebrikler! Kur'an braillesi harflerini tamamladınız."
+      rtl
     />
   );
 }

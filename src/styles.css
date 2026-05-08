@@ -187,8 +187,8 @@ h1, h2, h3 { color: var(--fg); }
      içerik genişliğine kadar daralıyordu. Üst bölümde stretch kullan. */
   .ds-content .yazma-bolum-ust { align-items: stretch; width: 100%; }
 
-  /* PageHeader'daki GorunumGecisi shell header'da zaten var */
-  .ds-wrapper .header-bar .gorunum-btn:not(.karisik-yazma-btn) { display: none; }
+  /* PageHeader'daki butonlar shell header'da zaten var — gizle */
+  .ds-wrapper .header-bar .gorunum-btn { display: none; }
 }
 
 /* ---------- Layout ---------- */
@@ -1173,6 +1173,18 @@ h1, h2, h3 { color: var(--fg); }
 }
 .klv-aksiyon.klv-bosluk { flex: 1; min-width: 140px; }
 
+/* Sıralı fare tıklaması — seçili nokta */
+.klv-nokta.tikli {
+  background: color-mix(in srgb, var(--accent) 28%, var(--panel));
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.klv-nokta.tikli .klv-nokta-no { color: var(--accent); }
+[data-theme="lowVision"] .klv-nokta.tikli {
+  background: var(--accent);
+  color: #000;
+}
+
 [data-theme="lowVision"] .klv-nokta {
   background: #000;
   color: var(--accent);
@@ -1231,6 +1243,12 @@ h1, h2, h3 { color: var(--fg); }
 }
 .yazma-metin .kalan { color: var(--muted); }
 .yazma-serbest-cikti { min-height: 90px; }
+.kisaltma-bekleyen {
+  display: inline-block;
+  color: var(--muted);
+  animation: kisaltma-yanip-sone 0.8s steps(1) infinite;
+}
+@keyframes kisaltma-yanip-sone { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
 .yazma-ipucu {
   width: 100%;
