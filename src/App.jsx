@@ -49,17 +49,23 @@ import DesktopShell from './components/DesktopShell.jsx';
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
 
-  // Mobilde ilk dokunuşta otomatik fullscreen
+  // Mobilde fullscreen: sayfa yüklenince dene, olmadıysa ilk dokunuşta tekrar dene
   useEffect(() => {
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
     if (!isMobile) return;
+
     const giris = () => {
       if (document.fullscreenElement || document.webkitFullscreenElement) return;
       const el = document.documentElement;
       const fn = el.requestFullscreen || el.webkitRequestFullscreen;
       if (fn) fn.call(el).catch(() => {});
     };
-    document.addEventListener('touchstart', giris, { passive: true, once: false });
+
+    // Sayfa açılır açılmaz dene (bazı bağlamlarda çalışır)
+    giris();
+
+    // Çalışmadıysa ilk dokunuşta tekrar dene
+    document.addEventListener('touchstart', giris, { passive: true });
     return () => document.removeEventListener('touchstart', giris);
   }, []);
 
