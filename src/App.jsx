@@ -52,52 +52,32 @@ export default function App() {
   // Telefon yana çevrildiğinde tam ekran; dikeye döndüğünde çık
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape) and (max-height: 600px)');
-    let bekliyor = false; // landscape'e geçince sonraki dokunuşu bekle
 
     const tamEkranGir = () => {
+      if (document.fullscreenElement) return;
       const el = document.documentElement;
-      if (!document.fullscreenElement) {
-        const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
-        if (fn) fn.call(el).catch(() => {});
-      }
+      const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+      if (fn) fn.call(el).catch(() => {});
     };
     const tamEkranCik = () => {
-      bekliyor = false;
-      if (document.fullscreenElement) {
-        const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
-        if (fn) fn.call(document).catch(() => {});
-      }
+      if (!document.fullscreenElement) return;
+      const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
+      if (fn) fn.call(document).catch(() => {});
     };
 
-    // Bir sonraki dokunuşta fullscreen iste (kullanıcı hareketi gerekli)
-    const dokunustaGir = () => {
-      if (!bekliyor) return;
-      bekliyor = false;
-      tamEkranGir();
-    };
-    document.addEventListener('touchstart', dokunustaGir, { passive: true });
-    document.addEventListener('click', dokunustaGir);
+    // Her dokunuş/tıklamada: landscape ise ve fullscreen değilse gir
+    const dokunusta = () => { if (mq.matches) tamEkranGir(); };
+    document.addEventListener('touchstart', dokunusta, { passive: true });
+    document.addEventListener('click', dokunusta);
 
-    const handler = (e) => {
-      if (e.matches) {
-        // Önce doğrudan dene; başarısız olursa sonraki dokunuşa bırak
-        const el = document.documentElement;
-        const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
-        if (fn) {
-          fn.call(el).catch(() => { bekliyor = true; });
-        } else {
-          bekliyor = true;
-        }
-      } else {
-        tamEkranCik();
-      }
-    };
-    mq.addEventListener('change', handler);
-    if (mq.matches) { bekliyor = true; tamEkranGir(); }
+    // Dikeye dönünce tam ekrandan çık
+    const mqHandler = (e) => { if (!e.matches) tamEkranCik(); };
+    mq.addEventListener('change', mqHandler);
+
     return () => {
-      mq.removeEventListener('change', handler);
-      document.removeEventListener('touchstart', dokunustaGir);
-      document.removeEventListener('click', dokunustaGir);
+      document.removeEventListener('touchstart', dokunusta);
+      document.removeEventListener('click', dokunusta);
+      mq.removeEventListener('change', mqHandler);
     };
   }, []);
   return (
