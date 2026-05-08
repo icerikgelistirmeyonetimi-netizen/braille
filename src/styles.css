@@ -436,6 +436,20 @@ h1, h2, h3 { color: var(--fg); }
   position: relative;
 }
 
+/* Dar ekranlarda header butonları sıkıştır */
+@media (max-width: 420px) {
+  .header-bar { gap: 6px; }
+  .header-bar .gorunum-btn,
+  .header-bar .back-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .header-bar .gorunum-ikon,
+  .header-bar .back-ikon { width: 18px; height: 18px; }
+}
+
 /* Karışık yazma seçim butonları progress bar yerine */
 .banner-grup-secim {
   display: flex;
