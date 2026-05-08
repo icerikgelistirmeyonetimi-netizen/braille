@@ -41,9 +41,11 @@ export default function PageHeader({ baslik }) {
       >
         {baslik}
       </h1>
-      <KarisikYazmaButonu />
-      <FullscreenButonu />
-      <GorunumGecisi />
+      <div className="header-aksiyon">
+        <KarisikYazmaButonu />
+        <FullscreenButonu />
+        <GorunumGecisi />
+      </div>
     </header>
   );
 }

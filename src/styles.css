@@ -435,10 +435,29 @@ h1, h2, h3 { color: var(--fg); }
   border-bottom: 2px solid var(--panel-border);
   position: relative;
 }
+.header-aksiyon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 
 /* Dar ekranlarda header butonları sıkıştır */
 @media (max-width: 420px) {
-  .header-bar { gap: 6px; }
+  .header-bar { gap: 6px; position: relative; }
+  /* Buton grubu başlık üzerine absolute — başlık kesilirse gradient gizler */
+  .header-aksiyon {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(to left, var(--bg) 70%, transparent);
+    padding-left: 24px;
+    z-index: 1;
+  }
   .header-bar .gorunum-btn,
   .header-bar .back-btn {
     width: 36px;

@@ -54,15 +54,8 @@ export default function AnaMenu() {
       )}
       {!turAcik && <TanitimTuru />}
 
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+      <header className="header-bar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
           <span className="logo" aria-hidden="true">
             <svg viewBox="0 0 64 64" focusable="false">
               <rect x="4" y="4" width="56" height="56" rx="14"
@@ -79,7 +72,7 @@ export default function AnaMenu() {
             Braille Eğitim
           </h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="header-aksiyon">
           <FullscreenButonu />
           <GorunumGecisi />
         </div>
