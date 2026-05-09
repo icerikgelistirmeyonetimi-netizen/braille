@@ -329,6 +329,28 @@ export const Ikon = {
       <path d="M22 38 h20" />
     </svg>
   ),
+  belgeBrf: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 8 h24 l12 12 v36 a2 2 0 0 1-2 2 H14 a2 2 0 0 1-2-2 V10 a2 2 0 0 1 2-2 z" />
+      <path d="M38 8 v12 h12" />
+      <path d="M20 32 h10 M20 40 h16 M20 48 h12" />
+      <path d="M44 38 l6 6 -6 6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  brfOku: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 8 h24 l12 12 v36 a2 2 0 0 1-2 2 H14 a2 2 0 0 1-2-2 V10 a2 2 0 0 1 2-2 z" />
+      <path d="M38 8 v12 h12" />
+      <circle cx="22" cy="34" r="3" fill="currentColor" stroke="none"/>
+      <circle cx="22" cy="44" r="3" fill="currentColor" stroke="none"/>
+      <circle cx="32" cy="29" r="3" fill="currentColor" stroke="none"/>
+      <circle cx="32" cy="39" r="3" fill="currentColor" stroke="none"/>
+      <circle cx="42" cy="34" r="3" fill="currentColor" stroke="none"/>
+      <circle cx="42" cy="44" r="3" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
 };
 
 export const MODULLER = [
@@ -442,7 +464,9 @@ export const MODULLER = [
     altBaslik: 'BRF Dönüştürücü',
     ikon: Ikon.araclar,
     ogeler: [
-      { yol: '/araclar', baslik: 'Metin ↔ BRF', ikon: Ikon.araclar }
+      { yol: '/araclar',    baslik: 'Metin → BRF',   ikon: Ikon.araclar },
+      { yol: '/belge-brf',  baslik: 'Belge → BRF',   ikon: Ikon.belgeBrf },
+      { yol: '/brf-oku',    baslik: 'BRF → Metin',   ikon: Ikon.brfOku },
     ]
   }
 ];

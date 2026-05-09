@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
@@ -9,6 +9,7 @@ import {
   KELIME_KISALTMALARI,
   IKI_HARFLI_KISALTMALAR,
   HECE_KISALTMALARI,
+  NOKTALAMA,
 } from '../data/braille.js';
 import {
   hucreyiKarakteryap,
@@ -96,6 +97,119 @@ const _HECE_TERS = new Map(
     h.hece
   ])
 );
+
+const _NOKTA_TERS = new Map(
+  NOKTALAMA.map((n) => [
+    [...n.noktalar].sort((a,b)=>a-b).join(','),
+    n
+  ])
+);
+
+/**
+ * Tıklanan braille hücresinin anlamını döndürür.
+ * Bağlam takibi (sayı modu / büyük harf bekleme) için idx öncesindeki
+ * hücreler taranır.
+ */
+function hucreAnlami(hucreler, idx, kisaltmaAktif) {
+  const dotKey = (pts) => [...pts].sort((a, b) => a - b).join(',');
+
+  // Durum takibi
+  let sayiModu = false;
+  let buyukHarfBekle = false;
+  for (let i = 0; i < idx; i++) {
+    const h = hucreler[i];
+    if (h.length === 0) { sayiModu = false; buyukHarfBekle = false; continue; }
+    if (sayiIsaretiMi(h)) { sayiModu = true; buyukHarfBekle = false; continue; }
+    if (buyukHarfIsaretiMi(h)) { buyukHarfBekle = true; continue; }
+    if (sayiModu) { if (hucreyiRakamayap(h)) continue; sayiModu = false; }
+    buyukHarfBekle = false;
+  }
+
+  const noktalar = hucreler[idx];
+  const noktaStr = noktalar.length === 0 ? '—' : noktalar.join(' · ');
+  const k = dotKey(noktalar);
+
+  if (noktalar.length === 0) {
+    return { tip: 'bosluk', baslik: 'Boşluk', detay: 'Kelimeler arasındaki boşluk.', noktaStr };
+  }
+  if (buyukHarfIsaretiMi(noktalar)) {
+    return { tip: 'isaret', baslik: 'Büyük Harf İşareti', detay: 'Nokta 4 · 6. Sonraki harf büyük okunur.', noktaStr };
+  }
+  if (sayiIsaretiMi(noktalar)) {
+    return { tip: 'isaret', baslik: 'Sayı İşareti', detay: 'Nokta 3 · 4 · 5 · 6. Sonraki hücreler rakam olarak okunur.', noktaStr };
+  }
+  if (sayiModu) {
+    const r = hucreyiRakamayap(noktalar);
+    if (r) return { tip: 'rakam', baslik: `Rakam: ${r}`, detay: 'Sayı modunda kullanılır.', noktaStr };
+    // sayiModu sona erdi; fall through to normal lookup
+  }
+
+  if (kisaltmaAktif) {
+    // Kelime sınırları: boşluk ([] hücre) veya dizi başı/sonu
+    const prevIsSpace = idx === 0 || hucreler[idx - 1].length === 0;
+    const nextIsSpace = idx >= hucreler.length - 1 || hucreler[idx + 1].length === 0;
+    // Büyük harf işareti öncesinde de sınır sayılır
+    const prevIsBuyuk = idx > 0 && buyukHarfIsaretiMi(hucreler[idx - 1]);
+    const prevBosBuyuk = prevIsSpace || prevIsBuyuk;
+
+    // Kök işareti [5]
+    if (noktalar.length === 1 && noktalar[0] === 5) {
+      return { tip: 'isaret', baslik: 'Kök İşareti (nokta 5)', detay: 'Sonraki hücreyle birlikte kelime kökü kısaltması oluşturur.', noktaStr };
+    }
+    // Kelime parçası işareti [4,5] veya [5,6]
+    if (k === '4,5') return { tip: 'isaret', baslik: 'Kelime Parçası İşareti (4 · 5)', detay: 'Sonraki hücreyle birlikte ek kısaltması oluşturur.', noktaStr };
+    if (k === '5,6') return { tip: 'isaret', baslik: 'Kelime Parçası İşareti (5 · 6)', detay: 'Sonraki hücreyle birlikte ek kısaltması oluşturur.', noktaStr };
+
+    // İki harfli kısaltma: yalnızca tam kelime (her iki yanı da boşluk)
+    // — bu hücre ikinci mi?
+    if (idx > 0 && prevBosBuyuk === false) {
+      const prevK = dotKey(hucreler[idx - 1]);
+      const prevPrevIsSpace = idx < 2 || hucreler[idx - 2].length === 0 || buyukHarfIsaretiMi(hucreler[idx - 2]);
+      if (prevPrevIsSpace && nextIsSpace) {
+        const ikiKey = prevK + '|' + k;
+        const iki = IKI_HARFLI_KISALTMALAR.find((m) => dotKey(m.sol) + '|' + dotKey(m.sag) === ikiKey);
+        if (iki) return { tip: 'kisaltma', baslik: `İki Harfli Kısaltma: "${iki.kelime}"`, detay: `"${iki.harf}" → "${iki.kelime}" (bu hücre ikinci)`, noktaStr };
+      }
+    }
+    // — bu hücre birinci mi?
+    if (idx + 1 < hucreler.length && nextIsSpace === false) {
+      const nextK = dotKey(hucreler[idx + 1]);
+      const nextNextIsSpace = idx + 2 >= hucreler.length || hucreler[idx + 2].length === 0;
+      if (prevBosBuyuk && nextNextIsSpace) {
+        const ikiKey = k + '|' + nextK;
+        const iki = IKI_HARFLI_KISALTMALAR.find((m) => dotKey(m.sol) + '|' + dotKey(m.sag) === ikiKey);
+        if (iki) return { tip: 'kisaltma', baslik: `İki Harfli Kısaltma: "${iki.kelime}"`, detay: `"${iki.harf}" → "${iki.kelime}" (bu hücre birinci)`, noktaStr };
+      }
+    }
+
+    // Hece kısaltması: kelime içinde de geçerli, ama noktalama/harf olarak zaten tanınıyorsa o öncelikli
+    // Önce hece olup olmadığına bak, ama sadece hece kısaltması tablolarında eşleşen desenlerde
+    const hece = _HECE_TERS.get(k);
+    if (hece) return { tip: 'kisaltma', baslik: `Hece Kısaltması: "${hece}"`, detay: `Tek hücreyle "${hece}" hecesini temsil eder.`, noktaStr };
+
+    // Kelime kısaltması (tek harfli): YALNIZCA tam kelimeyse (iki yanı boşluk)
+    if (prevBosBuyuk && nextIsSpace) {
+      const kelime = _KISALTMA_TEK.get(k);
+      if (kelime) {
+        const harf = KELIME_KISALTMALARI.find((m) => dotKey(m.noktalar) === k)?.harf || '';
+        return { tip: 'kisaltma', baslik: `Kelime Kısaltması: "${kelime}"`, detay: `"${harf}" harfi tek başına → "${kelime}" kelimesi`, noktaStr };
+      }
+    }
+  }
+
+  // Noktalama?
+  const np = _NOKTA_TERS.get(k);
+  if (np) return { tip: 'noktalama', baslik: `Noktalama: ${np.isim} (${np.isaret})`, detay: `Nokta ${noktaStr}`, noktaStr };
+
+  // Harf?
+  const harf = hucreyiKarakteryap(noktalar);
+  if (harf && harf !== ' ') {
+    const goster = buyukHarfBekle ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr');
+    return { tip: 'harf', baslik: `Harf: ${goster.toLocaleUpperCase('tr')}`, detay: `Nokta ${noktaStr} → "${goster.toLocaleUpperCase('tr')}" harfi`, noktaStr };
+  }
+
+  return { tip: 'bilinmiyor', baslik: 'Bilinmiyor', detay: `Nokta ${noktaStr} için anlam bulunamadı.`, noktaStr };
+}
 
 function _brfMetinedon(icerik, kisaltmali) {
   // Satır ve sayfa ayraçlarını çıkar; sadece BRF karakterlerini işle
@@ -200,10 +314,18 @@ function _brfMetinedon(icerik, kisaltmali) {
 }
 
 export default function Araclar() {
-  const [aktifSekme, setAktifSekme] = useState('donustur');
   const [perkinsAktif, setPerkinsAktif] = useState(true);
   const [kisaltmaAktif, setKisaltmaAktif] = useState(false);
-  const [konusuyor, setKonusuyor] = useState(false); // hangi alan konuşuyor: false | 'metin' | 'nokta' | 'oku'
+  const [konusuyor, setKonusuyor] = useState(false); // 'metin' | 'nokta' | false
+  const [seciliHucre, setSeciliHucre] = useState(null); // { index, anlam }
+
+  // Escape ile popup kapat
+  useEffect(() => {
+    if (!seciliHucre) return;
+    const kapat = (e) => { if (e.key === 'Escape') setSeciliHucre(null); };
+    window.addEventListener('keydown', kapat);
+    return () => window.removeEventListener('keydown', kapat);
+  }, [seciliHucre]);
 
   // ── Metin → BRF ──
   const [girisMetni, setGirisMetni] = useState('');
@@ -297,32 +419,7 @@ export default function Araclar() {
       return parcalar.join(', ');
     });
 
-  const okuSeslendir = () =>
-    sesToggle('oku', () => okunanMetin);
-
-  // ── BRF → Metin ──
-  const dosyaRef = useRef(null);
-  const [okunanMetin, setOkunanMetin] = useState('');
-  const [dosyaIcerik, setDosyaIcerik] = useState('');
-  const [dosyaAdi, setDosyaAdi] = useState('');
-  const [yukleniyor, setYukleniyor] = useState(false);
-  const [hata, setHata] = useState('');
-
-  const [okuKisaltmaAktif, setOkuKisaltmaAktif] = useState(false);
-
-  const okuKisaltmaToggle = () => {
-    setOkuKisaltmaAktif((v) => {
-      const yeni = !v;
-      if (dosyaIcerik) {
-        const donustur = yeni ? brfMetinedonKisaltmali : brfMetinedon;
-        setOkunanMetin(donustur(dosyaIcerik));
-      }
-      return yeni;
-    });
-  };
-
-  const dosyaSec = (e) => {
-    const dosya = e.target.files?.[0];
+  const processBrfFile = (dosya) => {
     if (!dosya) return;
     if (!dosya.name.toLowerCase().endsWith('.brf')) {
       setHata('Lütfen .brf uzantılı bir dosya seçin.');
@@ -337,8 +434,12 @@ export default function Araclar() {
     reader.onload = (ev) => {
       const icerik = ev.target.result;
       setDosyaIcerik(icerik);
-      const donustur = okuKisaltmaAktif ? brfMetinedonKisaltmali : brfMetinedon;
-      setOkunanMetin(donustur(icerik));
+      // Kısaltma otomatik tespiti: iki mod fark üretiyorsa kısaltma kullanılmış
+      const normal = brfMetinedon(icerik);
+      const kisaltmali = brfMetinedonKisaltmali(icerik);
+      const kisaltmaVar = normal !== kisaltmali;
+      setOkuKisaltmaAktif(kisaltmaVar);
+      setOkunanMetin(kisaltmaVar ? kisaltmali : normal);
       setYukleniyor(false);
     };
     reader.onerror = () => {
@@ -348,42 +449,23 @@ export default function Araclar() {
     reader.readAsText(dosya, 'latin1');
   };
 
-  const sekmeSec = (s) => {
-    setAktifSekme(s);
-    durumRef.current = yeniYazmaDurumu();
+  const dosyaSec = (e) => {
+    processBrfFile(e.target.files?.[0]);
+    e.target.value = '';
   };
 
   return (
     <div className="page yazma-page araclar-page">
 
-      {/* ── Üst: başlık + sekmeler ── */}
+      {/* ── Üst: başlık ── */}
       <div className="yazma-bolum yazma-bolum-ust">
-        <PageHeader baslik="Araçlar" />
-        <div className="araclar-sekmeler">
-          <button
-            type="button"
-            className={'araclar-sekme' + (aktifSekme === 'donustur' ? ' aktif' : '')}
-            aria-pressed={aktifSekme === 'donustur'}
-            onClick={() => sekmeSec('donustur')}
-          >
-            ✍ Metni BRF'e Dönüştür
-          </button>
-          <button
-            type="button"
-            className={'araclar-sekme' + (aktifSekme === 'oku' ? ' aktif' : '')}
-            aria-pressed={aktifSekme === 'oku'}
-            onClick={() => sekmeSec('oku')}
-          >
-            📂 BRF Dosyası Oku
-          </button>
-        </div>
+        <PageHeader baslik="Metin → BRF" />
       </div>
 
       {/* ── Orta: içerik + klavye ── */}
       <div className="yazma-bolum yazma-bolum-orta">
 
-        {aktifSekme === 'donustur' && (
-          <>
+        <>
             <div className="araclar-alan-sarici">
               <textarea
                 ref={textareaRef}
@@ -418,9 +500,50 @@ export default function Araclar() {
                 <div className="araclar-nokta-sarici">
                   <div className="araclar-nokta-gorunus" aria-label="Braille nokta görünümü" aria-hidden="true">
                     {hucreler.map((noktalar, i) => (
-                      <BrailleCell key={i} aktifNoktalar={noktalar} tiklanabilir={false} kesfedilebilir={false} />
+                      <div
+                        key={i}
+                        className={'braille-info-wrap' + (seciliHucre?.index === i ? ' secili' : '')}
+                        role="button"
+                        tabIndex={0}
+                        title="Tıkla: anlam göster"
+                        onClick={() => {
+                          const anlam = hucreAnlami(hucreler, i, kisaltmaAktif);
+                          setSeciliHucre(seciliHucre?.index === i ? null : { index: i, anlam });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            const anlam = hucreAnlami(hucreler, i, kisaltmaAktif);
+                            setSeciliHucre(seciliHucre?.index === i ? null : { index: i, anlam });
+                          }
+                        }}
+                      >
+                        <BrailleCell aktifNoktalar={noktalar} tiklanabilir={false} kesfedilebilir={false} />
+                      </div>
                     ))}
                   </div>
+
+                  {seciliHucre && (
+                    <div className="braille-hucre-popup" role="dialog" aria-label="Hücre anlamı">
+                      <div className="bhp-header">
+                        <span className="bhp-baslik-kucuk">Hücre {seciliHucre.index + 1}</span>
+                        <button
+                          type="button"
+                          className="bhp-kapat"
+                          onClick={() => setSeciliHucre(null)}
+                          aria-label="Kapat"
+                        >✕</button>
+                      </div>
+                      <div className="bhp-noktalar">Nokta: {seciliHucre.anlam.noktaStr}</div>
+                      <div className={'bhp-anlam bhp-tip-' + seciliHucre.anlam.tip}>
+                        {seciliHucre.anlam.baslik}
+                      </div>
+                      {seciliHucre.anlam.detay && (
+                        <div className="bhp-detay">{seciliHucre.anlam.detay}</div>
+                      )}
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     className={'araclar-seslendir-btn araclar-seslendir-nokta' + (konusuyor === 'nokta' ? ' aktif' : '')}
@@ -436,69 +559,12 @@ export default function Araclar() {
                 </div>
               );
             })()}
-          </>
-        )}
-
-        {aktifSekme === 'oku' && (
-          <>
-            <div className="araclar-dosya-alan">
-              <input
-                ref={dosyaRef}
-                type="file"
-                accept=".brf"
-                onChange={dosyaSec}
-                style={{ display: 'none' }}
-                id="brf-dosya-giris"
-              />
-              <button
-                type="button"
-                className="araclar-yukle-btn"
-                onClick={() => dosyaRef.current?.click()}
-              >
-                <span aria-hidden="true">📂</span> BRF Dosyası Seç…
-              </button>
-              {dosyaAdi && (
-                <span className="araclar-dosya-adi">{dosyaAdi}</span>
-              )}
-            </div>
-
-            {hata && <div role="alert" className="araclar-hata">{hata}</div>}
-            {yukleniyor && <div className="araclar-yukleniyor">Okunuyor…</div>}
-
-            {!yukleniyor && (okunanMetin !== '') && (
-              <div className="araclar-alan-sarici">
-                <textarea
-                  className="yazma-metin araclar-metin araclar-okunan araclar-textarea"
-                  value={okunanMetin}
-                  onChange={(e) => setOkunanMetin(e.target.value)}
-                  aria-label="BRF dosyasından okunan metin (düzenlenebilir)"
-                  spellCheck={false}
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                />
-                <button
-                  type="button"
-                  className={'araclar-seslendir-btn' + (konusuyor === 'oku' ? ' aktif' : '')}
-                  onClick={okuSeslendir}
-                  disabled={!okunanMetin.trim()}
-                  aria-label={konusuyor === 'oku' ? 'Durdur' : 'Metni Seslendir'}
-                  title={konusuyor === 'oku' ? 'Durdur' : 'Metni Seslendir'}
-                >
-                  {konusuyor === 'oku'
-                    ? <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-                    : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                  }
-                </button>
-              </div>
-            )}
-          </>
-        )}
+        </>
       </div>
 
       {/* ── Alt: aksiyonlar ── */}
       <div className="yazma-bolum yazma-bolum-alt">
-        {aktifSekme === 'donustur' && (
-          <div className="controls">
+        <div className="controls">
             <button type="button" disabled={!girisMetni.trim()} onClick={brfIndir} aria-label="BRF İndir">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
               <span className="btn-yazi">BRF İndir</span>
@@ -527,34 +593,11 @@ export default function Araclar() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
               <span className="btn-yazi">Kısaltma {kisaltmaAktif ? 'Aktif' : 'Kapalı'}</span>
             </button>
-          </div>
-        )}
-        {aktifSekme === 'oku' && okunanMetin && (
-          <div className="controls">
-            <button
-              type="button"
-              onClick={() => navigator.clipboard?.writeText(okunanMetin).catch(() => {})}
-              aria-label="Panoya Kopyala"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <span className="btn-yazi">Panoya Kopyala</span>
-            </button>
-            <button
-              type="button"
-              className={'araclar-perkins-btn' + (okuKisaltmaAktif ? ' aktif' : '')}
-              onClick={() => okuKisaltmaToggle()}
-              aria-pressed={okuKisaltmaAktif}
-              aria-label={'Kısaltma ' + (okuKisaltmaAktif ? 'Aktif' : 'Kapalı')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
-              <span className="btn-yazi">Kısaltma {okuKisaltmaAktif ? 'Aktif' : 'Kapalı'}</span>
-            </button>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* ── Perkins klavye olay dinleyicisi (görünmez, sadece tuş yakalama) ── */}
-      {aktifSekme === 'donustur' && perkinsAktif && (
+      {perkinsAktif && (
         <div style={{ display: 'none' }} aria-hidden="true">
           <BrailleKlavye
             onHucre={onHucre}

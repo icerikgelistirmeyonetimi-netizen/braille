@@ -44,6 +44,8 @@ import MuzikSureleri from './pages/MuzikSureleri.jsx';
 import MuzikDiziOkuma from './pages/MuzikDiziOkuma.jsx';
 import TestMuzik from './pages/TestMuzik.jsx';
 import Araclar from './pages/Araclar.jsx';
+import BelgeBrf from './pages/BelgeBrf.jsx';
+import BrfOku from './pages/BrfOku.jsx';
 import { sallamayiBaslat } from './utils/sallama.js';
 import DesktopShell from './components/DesktopShell.jsx';
 
@@ -119,6 +121,8 @@ export default function App() {
           <Route path="/muzik-diziler" element={<MuzikDiziOkuma />} />
           <Route path="/test-muzik" element={<TestMuzik />} />
           <Route path="/araclar" element={<Araclar />} />
+          <Route path="/belge-brf" element={<BelgeBrf />} />
+          <Route path="/brf-oku" element={<BrfOku />} />
           <Route path="/ayarlar" element={<Ayarlar />} />
           </Routes>
         </DesktopShell>
