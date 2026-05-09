@@ -6,14 +6,31 @@ import TanitimTuru, { turuSifirla } from '../components/TanitimTuru.jsx';
 import GorunumGecisi from '../components/GorunumGecisi.jsx';
 import FullscreenButonu from '../components/FullscreenButonu.jsx';
 import { Ikon, MODULLER } from '../data/moduller.jsx';
+import { ayarlariAl, ayarlariDinle } from '../utils/ayarlar.js';
 
 export default function AnaMenu() {
   const navigate = useNavigate();
   const [turAcik, setTurAcik] = useState(false);
+  const [gizliModuller, setGizliModuller] = useState(
+    () => ayarlariAl().gizliModuller || []
+  );
+
+  useEffect(() => {
+    const cikis = ayarlariDinle((a) => setGizliModuller(a.gizliModuller || []));
+    return cikis;
+  }, []);
+
+  const gorunurModuller = MODULLER.filter((m) => !gizliModuller.includes(m.id));
+
   const [aktifModul, setAktifModul] = useState(() => {
     try { return sessionStorage.getItem('aktifModul') || 'modul1'; }
     catch { return 'modul1'; }
   });
+
+  // Aktif modül gizlendiyse ilk görünür modüle geç
+  const gecerliAktif = gorunurModuller.find((m) => m.id === aktifModul)
+    ? aktifModul
+    : (gorunurModuller[0]?.id || 'modul1');
 
   useEffect(() => {
     const ANAHTAR = 'braille-hosgeldin-okundu';
@@ -38,7 +55,7 @@ export default function AnaMenu() {
     };
   }, []);
 
-  const modul = MODULLER.find((m) => m.id === aktifModul) || MODULLER[0];
+  const modul = gorunurModuller.find((m) => m.id === gecerliAktif) || gorunurModuller[0];
 
   const modulSec = (id) => {
     setAktifModul(id);
@@ -81,13 +98,13 @@ export default function AnaMenu() {
       <div className="modul-layout">
         <aside className="modul-yan" aria-label="Modüller">
           <div className="modul-yan-baslik" aria-hidden="true">Modüller</div>
-          {MODULLER.map((m) => (
+          {gorunurModuller.map((m) => (
             <button
               key={m.id}
               type="button"
-              className={'modul-sekme' + (m.id === aktifModul ? ' aktif' : '')}
+              className={'modul-sekme' + (m.id === gecerliAktif ? ' aktif' : '')}
               onClick={() => modulSec(m.id)}
-              aria-pressed={m.id === aktifModul}
+              aria-pressed={m.id === gecerliAktif}
               aria-label={`${m.baslik}: ${m.altBaslik}`}
             >
               <span className="modul-sekme-ikon" aria-hidden="true">{m.ikon}</span>
@@ -110,33 +127,33 @@ export default function AnaMenu() {
           </button>
         </aside>
 
-        <section className="modul-icerik" aria-label={`${modul.baslik} bölümleri`}>
-          <h2 className="modul-icerik-baslik">{modul.baslik} — {modul.altBaslik}</h2>
-          <nav className="menu-grid" aria-label={modul.baslik}>
-            {modul.ogeler.map((m) => {
-              const ilerleme = m.anahtar ? indeksAl(m.anahtar) : 0;
-              const tamamlandi = m.toplam && ilerleme >= m.toplam;
-              return (
-                <button
-                  key={m.yol}
-                  type="button"
-                  className="menu-card"
-                  onClick={() => navigate(m.yol)}
-                  aria-label={m.baslik + (tamamlandi ? ', tamamlandı' : m.toplam ? `, ${ilerleme} / ${m.toplam}` : '')}
-                >
-                  <span className="menu-card-ikon" aria-hidden="true">{m.ikon}</span>
-                  <span className="menu-card-yazi">{m.baslik}</span>
-                  {tamamlandi && (
-                    <span className="menu-card-ilerleme tamamlandi" aria-hidden="true">✓ Tamamlandı</span>
-                  )}
-                  {!tamamlandi && m.toplam && (
-                    <span className="menu-card-ilerleme devam" aria-hidden="true">{ilerleme} / {m.toplam}</span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </section>
+        <section className="modul-icerik" aria-label={`${modul?.baslik} bölümleri`}>
+            <h2 className="modul-icerik-baslik">{modul?.baslik} — {modul?.altBaslik}</h2>
+            <nav className="menu-grid" aria-label={modul?.baslik}>
+              {modul?.ogeler.map((m) => {
+                const ilerleme = m.anahtar ? indeksAl(m.anahtar) : 0;
+                const tamamlandi = m.toplam && ilerleme >= m.toplam;
+                return (
+                  <button
+                    key={m.yol}
+                    type="button"
+                    className="menu-card"
+                    onClick={() => navigate(m.yol)}
+                    aria-label={m.baslik + (tamamlandi ? ', tamamlandı' : m.toplam ? `, ${ilerleme} / ${m.toplam}` : '')}
+                  >
+                    <span className="menu-card-ikon" aria-hidden="true">{m.ikon}</span>
+                    <span className="menu-card-yazi">{m.baslik}</span>
+                    {tamamlandi && (
+                      <span className="menu-card-ilerleme tamamlandi" aria-hidden="true">✓ Tamamlandı</span>
+                    )}
+                    {!tamamlandi && m.toplam && (
+                      <span className="menu-card-ilerleme devam" aria-hidden="true">{ilerleme} / {m.toplam}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </section>
       </div>
 
     </div>

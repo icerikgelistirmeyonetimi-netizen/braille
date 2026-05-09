@@ -144,20 +144,19 @@ export default function CokHucreOkuyucu({
 
   const noktayaTikla = (n) => {
     if (basilanlar.includes(n)) return;
-    if (!aktifNoktalar.includes(n)) {
+    if (n !== aktifNoktalar[basilanlar.length]) {
       setYanlis([n]);
-      hataBildir(`${n} numara yanlış.`);
+      hataBildir(aktifNoktalar.includes(n) ? `Sıra yanlış. Önce ${aktifNoktalar[basilanlar.length]} numaraya basın.` : `${n} numara yanlış.`);
       setTimeout(() => setYanlis([]), 700);
       return;
     }
     const yeni = [...basilanlar, n];
     setBasilanlar(yeni);
-    if (aktifNoktalar.every((x) => yeni.includes(x))) {
+    if (yeni.length === aktifNoktalar.length) {
       basariBildir('Doğru!');
       setTimeout(() => sonrakiHucre(), 600);
     } else {
-      const kalan = aktifNoktalar.filter((x) => !yeni.includes(x));
-      konus(`Doğru. Sıradaki nokta: ${kalan[0]} numara.`);
+      konus(`Doğru. Sıradaki nokta: ${aktifNoktalar[yeni.length]} numara.`);
     }
   };
 

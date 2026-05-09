@@ -1795,3 +1795,245 @@ h1, h2, h3 { color: var(--fg); }
   font-size: 1em;
   line-height: 1.55;
 }
+
+/* ============================================================
+   ARAÇLAR SAYFASI
+   ============================================================ */
+
+/* Sekme çubuğu */
+.araclar-sekmeler {
+  display: flex;
+  width: 100%;
+  gap: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 2px solid var(--panel-border);
+  flex-shrink: 0;
+}
+.araclar-sekme {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 0.95em;
+  font-weight: 600;
+  background: var(--panel);
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border-right: 1px solid var(--panel-border);
+}
+.araclar-sekme:last-child { border-right: none; }
+.araclar-sekme:hover { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); color: var(--fg); }
+.araclar-sekme.aktif {
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+}
+
+/* Metin gösterme alanı */
+.araclar-metin {
+  width: 100%;
+  max-width: 100%;
+  min-height: 80px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.araclar-textarea {
+  resize: vertical;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 1em;
+  line-height: 1.55;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+.araclar-okunan {
+  min-height: 120px;
+  max-height: 40vh;
+}
+
+/* BRF önizleme */
+.araclar-brf-onizleme {
+  width: 100%;
+  flex-shrink: 0;
+}
+.araclar-brf-baslik {
+  font-weight: 600;
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+.araclar-brf-pre {
+  background: var(--panel);
+  border: 1.5px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+/* Dosya yükleme */
+.araclar-dosya-alan {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.araclar-yukle-btn {
+  padding: 12px 22px;
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.araclar-yukle-btn:hover { opacity: 0.88; }
+.araclar-nokta-gorunus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 2px solid var(--panel-border);
+  border-radius: var(--radius);
+  min-height: 48px;
+  align-content: flex-start;
+  --dot-size: 10px;
+  --dot-font: 0px;
+  --cell-gap: 3px;
+  --cell-pad: 5px;
+}
+.araclar-nokta-gorunus .cell {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: var(--cell-pad);
+  gap: var(--cell-gap);
+}
+.araclar-nokta-gorunus .dot {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-width: 1.5px;
+  box-shadow: none;
+  font-size: 0;
+  pointer-events: none;
+}
+.araclar-nokta-gorunus .dot.on {
+  box-shadow: none;
+}
+.araclar-nokta-gorunus .cell-wrapper {
+  margin: 0;
+}
+.araclar-nokta-gorunus .cell-title { display: none; }
+.yazma-page.araclar-page .yazma-bolum-orta {
+  justify-content: flex-start;
+  align-items: stretch;
+  min-height: 0;
+}
+/* Braille nokta alanı sarıcı: kalan yeri kapla, butonu kesmemek için overflow visible */
+.araclar-nokta-sarici {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  position: relative;
+}
+.araclar-nokta-sarici .araclar-nokta-gorunus {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.btn-ikon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.btn-yazi { vertical-align: middle; }
+
+@media (max-width: 480px) {
+  .araclar-page .btn-yazi { display: none; }
+  .araclar-page .controls button { padding: 10px 12px; }
+}
+.araclar-alan-sarici {
+  position: relative;
+  width: 100%;
+}
+.araclar-seslendir-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  background: var(--panel, #fff);
+  color: var(--fg, #1a1f2b);
+  border: 1.5px solid var(--panel-border, #ccc);
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.85;
+  box-shadow: none;
+  transition: opacity 0.15s, background 0.15s;
+}
+.araclar-seslendir-btn:hover:not(:disabled) { opacity: 1; background: var(--accent-light, #e8f0fe); color: var(--accent, #2563eb); }
+.araclar-seslendir-btn.aktif:hover { background: var(--accent); color: var(--accent-fg, #fff); filter: brightness(1.15); }
+.araclar-seslendir-btn:disabled { opacity: 0.3; cursor: default; }
+.araclar-seslendir-btn.aktif { background: var(--accent); color: var(--accent-fg, #fff); border-color: var(--accent); opacity: 1; }
+.araclar-seslendir-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+/* nokta buton: sabit konumlu (scroll ile kaymasın), alan sağüstde */
+.araclar-seslendir-nokta { position: absolute; top: 6px; right: 6px; }
+
+.araclar-perkins-btn {
+  padding: 8px 16px;
+  background: var(--panel);
+  color: var(--muted);
+  border: 2px solid var(--panel-border);
+  border-radius: var(--radius);
+  font-size: 0.92em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.araclar-perkins-btn.aktif {
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+  border-color: var(--accent);
+}
+.araclar-dosya-adi {
+  font-size: 0.9em;
+  opacity: 0.7;
+  word-break: break-all;
+}
+.araclar-hata {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #ef4444 15%, var(--panel));
+  color: #b91c1c;
+  font-weight: 600;
+  border: 1.5px solid #ef4444;
+}
+[data-theme="dark"] .araclar-hata,
+[data-theme="lowVision"] .araclar-hata { color: #fca5a5; }
+.araclar-yukleniyor {
+  opacity: 0.65;
+  font-style: italic;
+}

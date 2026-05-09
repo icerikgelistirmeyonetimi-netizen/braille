@@ -71,70 +71,53 @@ export default function Test() {
     return () => window.removeEventListener('yonergeTekrar', tekrar);
   }, [indeks, aktif, bittimi, kaynak, aciklandi]);
 
+  const sonrakiSoruyaGec = () => {
+    if (indeks + 1 >= sorular.length) {
+      setBittimi(true);
+    } else {
+      setIndeks((i) => i + 1);
+      setBasilanlar([]);
+      setYanlis([]);
+      setSoruHata(0);
+      setAciklandi(false);
+    }
+  };
+
+  const cevapSoyle = () => {
+    if (!aktif || aciklandi) return;
+    setAciklandi(true);
+    setYanlis([]);
+    setBasilanlar(aktif.noktalar);
+    const ad = aktif.ariaAd || aktif.ad;
+    const noktaListesi = aktif.noktalar.join(', ');
+    konus(`Doğru cevap: ${ad}. Noktaları: ${noktaListesi}.`, {
+      kesintiyle: true,
+      onSon: () => setTimeout(sonrakiSoruyaGec, 700)
+    });
+  };
+
   const tikla = (n) => {
     if (!aktif || bittimi || aciklandi) return;
     if (basilanlar.includes(n)) return;
-    if (!aktif.noktalar.includes(n)) {
+    if (n !== aktif.noktalar[basilanlar.length]) {
       setYanlis([n]);
       setHataSayisi((h) => h + 1);
       const yeniSoruHata = soruHata + 1;
       setSoruHata(yeniSoruHata);
-      if (yeniSoruHata >= 3) {
-        // Üç yanlış: doğru cevabı açıkla.
-        setAciklandi(true);
-        setYanlis([]);
-        setBasilanlar(aktif.noktalar);
-        const ad = aktif.ariaAd || aktif.ad;
-        const noktaListesi = aktif.noktalar.join(', ');
-        // Önce kısa uyarı, sonra doğru cevabı vurgulu seslendir;
-        // her seslendirme bitince bir sonrakine geç.
-        const sonrakine = () => {
-          if (indeks + 1 >= sorular.length) {
-            setBittimi(true);
-          } else {
-            setIndeks((i) => i + 1);
-            setBasilanlar([]);
-            setYanlis([]);
-            setSoruHata(0);
-            setAciklandi(false);
-          }
-        };
-        konus('Üç yanlış hak doldu.', {
-          kesintiyle: true,
-          onSon: () => {
-            konus(`Doğru cevap: ${ad}. Noktaları: ${noktaListesi}.`, {
-              kesintiyle: true,
-              onSon: () => setTimeout(sonrakine, 700)
-            });
-          }
-        });
-        return;
-      }
-      hataBildir(`${n} numara yanlış.`);
+      konus(`${n} yanlış`, { kesintiyle: true });
       setTimeout(() => setYanlis([]), 700);
       return;
     }
     const yeni = [...basilanlar, n];
     setBasilanlar(yeni);
-    const tamam = aktif.noktalar.every((x) => yeni.includes(x));
+    const tamam = yeni.length === aktif.noktalar.length;
     if (tamam) {
       setPuan((p) => p + 1);
       const ad = aktif.ariaAd || aktif.ad;
-      basariBildir(`Tebrikler! ${ad} doğru.`);
-      setTimeout(() => {
-        if (indeks + 1 >= sorular.length) {
-          setBittimi(true);
-        } else {
-          setIndeks((i) => i + 1);
-          setBasilanlar([]);
-          setYanlis([]);
-          setSoruHata(0);
-          setAciklandi(false);
-        }
-      }, 1400);
+      konus(`${n} doğru. Tebrikler! ${ad} doğru.`, { kesintiyle: true });
+      setTimeout(sonrakiSoruyaGec, 3000);
     } else {
-      const kalan = aktif.noktalar.filter((x) => !yeni.includes(x));
-      konus(`Doğru. Sıradaki nokta: ${kalan[0]} numara.`);
+      konus(`${n} doğru`, { kesintiyle: true });
     }
   };
 
@@ -226,19 +209,10 @@ export default function Test() {
         >
           Soruyu Tekrarla
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (indeks + 1 >= sorular.length) setBittimi(true);
-            else {
-              setIndeks((i) => i + 1);
-              setBasilanlar([]);
-              setYanlis([]);
-              setSoruHata(0);
-              setAciklandi(false);
-            }
-          }}
-        >
+        <button type="button" onClick={cevapSoyle} disabled={aciklandi}>
+          Cevabı Söyle
+        </button>
+        <button type="button" onClick={sonrakiSoruyaGec}>
           Atla →
         </button>
       </div>

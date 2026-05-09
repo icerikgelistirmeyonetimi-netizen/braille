@@ -321,6 +321,14 @@ export const Ikon = {
             fill="currentColor">do-re-mi</text>
     </svg>
   ),
+  araclar: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 14 h36 a4 4 0 0 1 4 4 v28 a4 4 0 0 1 -4 4 H14 a4 4 0 0 1 -4 -4 V18 a4 4 0 0 1 4 -4 z" />
+      <path d="M10 26 h44" />
+      <path d="M22 38 h20" />
+    </svg>
+  ),
 };
 
 export const MODULLER = [
@@ -426,6 +434,15 @@ export const MODULLER = [
       { yol: '/muzik-semboller', baslik: 'Anahtar ve Semboller', ikon: Ikon.muzikSembol, anahtar: 'muzik-semboller', toplam: 7 },
       { yol: '/muzik-diziler',   baslik: 'Dizi Okuma',           ikon: Ikon.muzikDizi,   anahtar: 'muzik-dizi',      toplam: 3 },
       { yol: '/test-muzik',      baslik: 'Test / Sınav',         ikon: Ikon.test }
+    ]
+  },
+  {
+    id: 'modul9',
+    baslik: 'Araçlar',
+    altBaslik: 'BRF Dönüştürücü',
+    ikon: Ikon.araclar,
+    ogeler: [
+      { yol: '/araclar', baslik: 'Metin ↔ BRF', ikon: Ikon.araclar }
     ]
   }
 ];

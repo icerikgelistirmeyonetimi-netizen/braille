@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MODULLER, Ikon } from '../data/moduller.jsx';
 import GorunumGecisi from './GorunumGecisi.jsx';
 import KarisikYazmaButonu from './KarisikYazmaButonu.jsx';
 import FullscreenButonu from './FullscreenButonu.jsx';
+import { ayarlariAl, ayarlariDinle } from '../utils/ayarlar.js';
 
 function getAktifModul(pathname) {
   for (const m of MODULLER) {
@@ -17,12 +18,21 @@ function getAktifModul(pathname) {
 export default function DesktopShell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [gizliModuller, setGizliModuller] = useState(
+    () => ayarlariAl().gizliModuller || []
+  );
+
+  useEffect(() => {
+    const cikis = ayarlariDinle((a) => setGizliModuller(a.gizliModuller || []));
+    return cikis;
+  }, []);
 
   // Ana sayfada shell yok — AnaMenu kendi layout'unu yönetir
   if (location.pathname === '/') return <>{children}</>;
 
   const aktifModul = getAktifModul(location.pathname);
   const ayarlardaMi = location.pathname === '/ayarlar';
+  const gorunurModuller = MODULLER.filter((m) => !gizliModuller.includes(m.id));
 
   return (
     <div className="ds-wrapper">
@@ -56,7 +66,7 @@ export default function DesktopShell({ children }) {
       {/* ── Sol sidebar ── */}
       <aside className="ds-sidebar" aria-label="Modüller">
         <div className="modul-yan-baslik" aria-hidden="true">Modüller</div>
-        {MODULLER.map((m) => (
+        {gorunurModuller.map((m) => (
           <button
             key={m.id}
             type="button"

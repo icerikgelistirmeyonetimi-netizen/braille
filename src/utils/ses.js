@@ -24,6 +24,7 @@ try {
 
 let tercihEdilenSes = null;
 let sesKilidiAcildi = false;
+let _pendingSpeakTimer = null;
 
 function sesleriYukle() {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -109,7 +110,6 @@ export function konus(metin, opt = {}) {
     }
     return;
   }
-  if (kesintiyle) window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(metin);
   u.lang = 'tr-TR';
   u.rate = hiz ?? a.konusmaHizi;
@@ -123,9 +123,21 @@ export function konus(metin, opt = {}) {
       try { onSon(); } catch (_) { /* */ }
     };
     u.onend = son;
-    u.onerror = son;
+    // onerror'u yalnızca gerçek hatada tetikle, cancel sonrası 'interrupted' sayılmasın
+    u.onerror = (e) => { if (e.error !== 'interrupted' && e.error !== 'canceled') son(); };
   }
-  window.speechSynthesis.speak(u);
+  if (kesintiyle) {
+    // Chrome'da cancel() hemen ardından speak() bazen sessizce düşüyor;
+    // 60ms gecikme bu yarış koşulunu önler.
+    if (_pendingSpeakTimer) { clearTimeout(_pendingSpeakTimer); _pendingSpeakTimer = null; }
+    window.speechSynthesis.cancel();
+    _pendingSpeakTimer = setTimeout(() => {
+      _pendingSpeakTimer = null;
+      window.speechSynthesis.speak(u);
+    }, 60);
+  } else {
+    window.speechSynthesis.speak(u);
+  }
 }
 
 export function konusmayiDurdur() {

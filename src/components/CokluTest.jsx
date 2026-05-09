@@ -96,6 +96,22 @@ export default function CokluTest({ baslik, kaynaklar }) {
     }
   };
 
+  const cevapSoyle = () => {
+    if (!aktif || aciklandi) return;
+    setAciklandi(true);
+    setYanlis({ hucre: -1, noktalar: [] });
+    setBasilanlar(aktif.hucreler.map((h) => [...h]));
+    setHucreIndeksi(aktif.hucreler.length - 1);
+    const ad = aktif.ariaAd || aktif.ad;
+    const noktaMetin = aktif.hucreler
+      .map((h, i) => `${HUCRE_ETIKET[i] || (i + 1) + '.'} hücre ${h.join(', ')}`)
+      .join('; ');
+    konus(`Doğru cevap: ${ad}. Noktalar: ${noktaMetin}.`, {
+      kesintiyle: true,
+      onSon: () => setTimeout(sonrakiSoruyaGec, 700)
+    });
+  };
+
   const tikla = (hi, n) => {
     if (!aktif || bittimi || aciklandi) return;
     if (hi !== hucreIndeksi) {
@@ -106,54 +122,33 @@ export default function CokluTest({ baslik, kaynaklar }) {
     const mevcut = basilanlar[hi] || [];
     if (mevcut.includes(n)) return;
     const beklenen = aktif.hucreler[hi];
-    if (!beklenen.includes(n)) {
+    if (n !== beklenen[mevcut.length]) {
       setYanlis({ hucre: hi, noktalar: [n] });
       setHataSayisi((h) => h + 1);
       const yeniSoruHata = soruHata + 1;
       setSoruHata(yeniSoruHata);
-      if (yeniSoruHata >= 3) {
-        setAciklandi(true);
-        setYanlis({ hucre: -1, noktalar: [] });
-        setBasilanlar(aktif.hucreler.map((h) => [...h]));
-        setHucreIndeksi(aktif.hucreler.length - 1);
-        const ad = aktif.ariaAd || aktif.ad;
-        const noktaMetin = aktif.hucreler
-          .map((h, i) => `${HUCRE_ETIKET[i] || (i + 1) + '.'} hücre ${h.join(', ')}`)
-          .join('; ');
-        konus('Üç yanlış hak doldu.', {
-          kesintiyle: true,
-          onSon: () => {
-            konus(`Doğru cevap: ${ad}. Noktalar: ${noktaMetin}.`, {
-              kesintiyle: true,
-              onSon: () => setTimeout(sonrakiSoruyaGec, 700)
-            });
-          }
-        });
-        return;
-      }
-      hataBildir(`${n} numara yanlış.`);
+      konus(`${n} yanlış`, { kesintiyle: true });
       setTimeout(() => setYanlis({ hucre: -1, noktalar: [] }), 700);
       return;
     }
     const yeni = [...mevcut, n];
     const yeniBasilanlar = basilanlar.map((b, i) => (i === hi ? yeni : b));
     setBasilanlar(yeniBasilanlar);
-    const hucreTamam = beklenen.every((x) => yeni.includes(x));
+    const hucreTamam = yeni.length === beklenen.length;
     if (hucreTamam) {
       const sonHucre = hi + 1 >= aktif.hucreler.length;
       if (sonHucre) {
         setPuan((p) => p + 1);
         const adi = aktif.ariaAd || aktif.ad;
-        basariBildir(`Tebrikler! ${adi} doğru.`);
-        setTimeout(sonrakiSoruyaGec, 1400);
+        konus(`${n} doğru. Tebrikler! ${adi} doğru.`, { kesintiyle: true });
+        setTimeout(sonrakiSoruyaGec, 3000);
       } else {
         const sira = HUCRE_ETIKET[hi + 1] || `${hi + 2}.`;
-        konus(`Doğru. Şimdi ${sira} hücreye geçin.`);
+        konus(`${n} doğru. Şimdi ${sira} hücreye geçin.`);
         setTimeout(() => setHucreIndeksi(hi + 1), 400);
       }
     } else {
-      const kalan = beklenen.filter((x) => !yeni.includes(x));
-      konus(`Doğru. Sıradaki nokta: ${kalan[0]} numara.`);
+      konus(`${n} doğru`, { kesintiyle: true });
     }
   };
 
@@ -265,6 +260,7 @@ export default function CokluTest({ baslik, kaynaklar }) {
         >
           Soruyu Tekrarla
         </button>
+        <button type="button" onClick={cevapSoyle} disabled={aciklandi}>Cevabı Söyle</button>
         <button type="button" onClick={sonrakiSoruyaGec}>Atla →</button>
       </div>
     </div>

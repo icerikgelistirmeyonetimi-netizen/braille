@@ -153,16 +153,16 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
 
   const noktayaTikla = (n) => {
     if (basilanlar.includes(n)) return;
-    const dogruMu = aktifOge.noktalar.includes(n);
-    if (!dogruMu) {
+    const beklenenSiradaki = aktifOge.noktalar[basilanlar.length];
+    if (n !== beklenenSiradaki) {
       setYanlis([n]);
-      hataBildir(`${n} numara yanlış. Tekrar deneyin.`);
+      hataBildir(aktifOge.noktalar.includes(n) ? `Sıra yanlış. Önce ${beklenenSiradaki} numaraya basın.` : `${n} numara yanlış. Tekrar deneyin.`);
       setTimeout(() => setYanlis([]), 700);
       return;
     }
     const yeni = [...basilanlar, n];
     setBasilanlar(yeni);
-    const tamamMi = aktifOge.noktalar.every((x) => yeni.includes(x));
+    const tamamMi = yeni.length === aktifOge.noktalar.length;
     if (tamamMi) {
       if (bolumAnahtari) ogrenildiIsaretle(bolumAnahtari, aktifOge.ad);
       konusmayiDurdur();
@@ -170,8 +170,7 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
       basariBildir('Tebrikler!');
       setTimeout(() => setIndeks((i) => i + 1), 800);
     } else {
-      const kalan = aktifOge.noktalar.filter((x) => !yeni.includes(x));
-      konus(`Doğru. Sıradaki nokta: ${kalan[0]} numara.`);
+      konus(`Doğru. Sıradaki nokta: ${aktifOge.noktalar[yeni.length]} numara.`);
     }
   };
 

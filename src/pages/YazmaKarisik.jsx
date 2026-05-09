@@ -101,6 +101,7 @@ export default function YazmaKarisik() {
   });
   // Doğru cevap seslendirmesi sırasında girişleri kilitle
   const kilitliRef = useRef(false);
+  const sonDotRef = useRef(null);
 
   const aktif = sorular[indeks];
   const beklenenHucre = aktif ? aktif.hucreler[hucreIndeksi] : null;
@@ -179,26 +180,58 @@ export default function YazmaKarisik() {
     });
   };
 
+  const onTiklaDogrula = (n, mevcutSira) => {
+    if (!beklenenHucre) return true;
+    const siradaki = beklenenHucre[mevcutSira.length];
+    if (n !== siradaki) {
+      konus(`${n} yanlış`, { kesintiyle: true });
+      return false;
+    }
+    // Son nokta mı? onHucre ile birleştirilecek, şimdi söyleme
+    if (mevcutSira.length + 1 >= beklenenHucre.length) {
+      sonDotRef.current = n;
+    } else {
+      konus(`${n} doğru`, { kesintiyle: true });
+    }
+    return true;
+  };
+
   const onHucre = (noktalar) => {
     if (kilitliRef.current || bittimi || !aktif) return;
     if (noktaEsit(noktalar, beklenenHucre)) {
-      // Doğru hücre — aynı frame içinde 2. tetiklemeyi engellemek için kilitle
       kilitliRef.current = true;
-      konus(noktalar.join(', '), { kesintiyle: true });
+      const lastDot = sonDotRef.current;
+      sonDotRef.current = null;
+      const onayMetin = lastDot != null ? `${lastDot} doğru` : noktalar.join(', ');
       if (hucreIndeksi + 1 >= aktif.hucreler.length) {
-        // Soru tamamlandı
+        // Soru tamamlandı — onSon ile geç, fallback güvencesi ekle
         setPuan((p) => p + 1);
-        konus(`${aktif.ariaAd} doğru.`, {
+        let gecildi = false;
+        const gecis = () => {
+          if (gecildi) return;
+          gecildi = true;
+          kilitliRef.current = false;
+          sonrakiSoruyaGec();
+        };
+        konus(`${onayMetin}. ${aktif.ariaAd} doğru.`, {
           kesintiyle: true,
-          onSon: () => setTimeout(() => {
-            kilitliRef.current = false;
-            sonrakiSoruyaGec();
-          }, 400)
+          onSon: () => setTimeout(gecis, 300)
         });
+        setTimeout(gecis, 4000); // fallback
       } else {
-        setHucreIndeksi((h) => h + 1);
-        // Kısa süre sonra kilidi aç (aynı olay tekrar işlenmesin)
-        setTimeout(() => { kilitliRef.current = false; }, 250);
+        // Sonraki hücreye geç — önce ses, sonra state değiştir
+        let gecildi = false;
+        const gecis = () => {
+          if (gecildi) return;
+          gecildi = true;
+          setHucreIndeksi((h) => h + 1);
+          setTimeout(() => { kilitliRef.current = false; }, 100);
+        };
+        konus(onayMetin, {
+          kesintiyle: true,
+          onSon: () => setTimeout(gecis, 200)
+        });
+        setTimeout(gecis, 2500); // fallback
       }
       return;
     }
@@ -206,20 +239,9 @@ export default function YazmaKarisik() {
     const yeniDeneme = soruDeneme + 1;
     setHataSayisi((h) => h + 1);
     setSoruDeneme(yeniDeneme);
-    if (yeniDeneme >= 3) {
-      dogruCevabiAcikla();
-    } else if (yeniDeneme === 2 && !ipucuGoster) {
-      setIpucuGoster(true);
-      kilitliRef.current = true;
-      konus(`Yanlış. Yardım: ${yardimMetni()}`, {
-        kesintiyle: true,
-        onSon: () => { kilitliRef.current = false; }
-      });
-    } else {
-      hataBildir(
-        `Yanlış. Bastığınız noktalar ${noktalar.join(', ') || 'yok'}.`
-      );
-    }
+    hataBildir(
+      `Yanlış. Bastığınız noktalar ${noktalar.join(', ') || 'yok'}.`
+    );
   };
 
   const onBosluk = () => {
@@ -388,6 +410,8 @@ export default function YazmaKarisik() {
             klavyeIpucu={ipucuGoster}
             tabletModu={tabletModu}
             siralikTiklama
+            onTikla={onTiklaDogrula}
+            beklenenSayi={beklenenHucre?.length || 0}
           />
         </div>
       </div>
@@ -421,6 +445,8 @@ export default function YazmaKarisik() {
           klavyeIpucu={ipucuGoster}
           tabletModu={tabletModu}
           siralikTiklama
+          onTikla={onTiklaDogrula}
+          beklenenSayi={beklenenHucre?.length || 0}
         />
       </div>
     </div>

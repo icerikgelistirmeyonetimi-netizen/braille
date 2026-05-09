@@ -117,15 +117,16 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
   const noktayaTikla = (n) => {
     const aktifHucreNoktalar = k.hucreler[hucreIndeksi] || [];
     if (basilanlar.includes(n)) return;
-    if (!aktifHucreNoktalar.includes(n)) {
+    const beklenenSiradaki = aktifHucreNoktalar[basilanlar.length];
+    if (n !== beklenenSiradaki) {
       setYanlis([n]);
-      hataBildir(`${n} numara yanlış.`);
+      hataBildir(aktifHucreNoktalar.includes(n) ? `Sıra yanlış. Önce ${beklenenSiradaki} numaraya basın.` : `${n} numara yanlış.`);
       setTimeout(() => setYanlis([]), 700);
       return;
     }
     const yeni = [...basilanlar, n];
     setBasilanlar(yeni);
-    const tamamMi = aktifHucreNoktalar.every((x) => yeni.includes(x));
+    const tamamMi = yeni.length === aktifHucreNoktalar.length;
     if (tamamMi) {
       const sonHucreDir = hucreIndeksi >= k.hucreler.length - 1;
       if (sonHucreDir) {
@@ -136,8 +137,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
         setTimeout(() => setHucreIndeksi((i) => i + 1), 500);
       }
     } else {
-      const kalan = aktifHucreNoktalar.filter((x) => !yeni.includes(x));
-      konus(`Doğru. Sıradaki nokta: ${kalan[0]} numara.`);
+      konus(`Doğru. Sıradaki nokta: ${aktifHucreNoktalar[yeni.length]} numara.`);
     }
   };
 

@@ -39,7 +39,10 @@ export default function BrailleKlavye({
   klavyeAcik = true,
   klavyeIpucu = false,
   tabletModu = false,
-  siralikTiklama = false
+  siralikTiklama = false,
+  onTikla = null,
+  beklenenSayi = 0,
+  perkinsModu = false,
 }) {
   // O an basılı tutulan noktalar (henüz commit edilmemiş)
   const [basili, setBasili] = useState(new Set());
@@ -64,13 +67,29 @@ export default function BrailleKlavye({
   }, []);
 
   const tiklaToggle = (n) => {
-    setTiklilar((s) => {
-      const y = new Set(s);
-      if (y.has(n)) y.delete(n); else y.add(n);
-      tiklilarRef.current = y;
-      return y;
-    });
+    // Sıralı modda aynı noktaya tekrar tıklama yok sayılır
+    if (tiklilarRef.current.has(n)) return;
+
+    // Sıra doğrulama
+    if (onTikla && onTikla(n, [...tiklilarRef.current]) === false) return;
+
+    // Ref'i senkron güncelle, ardından state'i
+    const yeni = new Set(tiklilarRef.current);
+    yeni.add(n);
+    tiklilarRef.current = yeni;
+    setTiklilar(new Set(yeni));
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // Beklenen sayıya ulaşıldıysa anında commit et
+    if (beklenenSayi > 0 && yeni.size >= beklenenSayi) {
+      tiklilarRef.current = new Set();
+      setTiklilar(new Set());
+      commitHucre(yeni);
+      return;
+    }
+
+    // Fallback: 3 saniye sonra otomatik commit
     debounceRef.current = setTimeout(() => {
       const current = tiklilarRef.current;
       if (current.size > 0) {
@@ -78,7 +97,7 @@ export default function BrailleKlavye({
         setTiklilar(new Set());
         commitHucre(current);
       }
-    }, 600);
+    }, 3000);
   };
 
   // Mobil dokunmada aktif parmak (touch identifier) sayısı
@@ -115,7 +134,10 @@ export default function BrailleKlavye({
       if (e.repeat) return;
       const hedef = e.target;
       if (hedef && (hedef.tagName === 'INPUT' || hedef.tagName === 'TEXTAREA' || hedef.isContentEditable)) {
-        return;
+        // perkinsModu aktifse Perkins tuşlarını (F/D/S/J/K/L + Space + Backspace) yakala
+        if (!perkinsModu || !(e.code in TUS_NOKTA || e.code === 'Space' || e.code === 'Backspace' || e.code === 'Enter' || e.code === 'NumpadEnter')) {
+          return;
+        }
       }
       if (e.code in TUS_NOKTA) {
         e.preventDefault();

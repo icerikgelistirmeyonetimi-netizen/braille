@@ -7,7 +7,8 @@ const VARSAYILAN = {
   yaziBoyutu: 17,      // px (16 - 32)
   sesAcik: true,
   titresimAcik: true,
-  tema: 'normal'       // 'normal' | 'lowVision'
+  tema: 'normal',      // 'normal' | 'lowVision'
+  gizliModuller: []    // gizlenen modüllerin id listesi
 };
 
 // Eski tema isimlerini yeni şemaya çevir (geri uyumluluk).
