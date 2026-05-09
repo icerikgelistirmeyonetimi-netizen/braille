@@ -1,8 +1,10 @@
-import React, { useRef, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import mammoth from 'mammoth';
+import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import { metniBrailleyeCevir, metniBrailleyeCevirKisaltmali } from '../utils/brailleCevir.js';
+import { hucreAnlami } from './Araclar.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 
 const SATIRDA_HUCRE = 40;
@@ -17,13 +19,60 @@ function noktalariBRF(noktalar) {
   return String.fromCharCode(0x20 + bits);
 }
 
+// Hücre anlamından kısa etiket türet (genişlet modunda hücre altında gösterilir)
+export function kisaEtiket(anlam) {
+  if (!anlam || anlam.tip === 'bosluk') return '';
+  // İşaret hücreleri (kök/parça/sayı/büyük) → tek sembol
+  if (anlam.tip === 'isaret') {
+    if (anlam.baslik.includes('Tümü Büyük')) return '⇧⇧';
+    if (anlam.baslik.includes('Büyük Harf')) return '⇧';
+    if (anlam.baslik.includes('Sayı')) return '#';
+    if (anlam.baslik.includes('Kök') || anlam.baslik.includes('Parça')) return '*';
+    return '*';
+  }
+  // Kısaltma: hucreAnlami doğrudan kasalı etiket sağladıysa onu kullan
+  if (anlam.etiket) return anlam.etiket;
+  // Harf: doğru kasada (büyük/küçük) göster
+  if (anlam.tip === 'harf' && anlam.harf) return anlam.harf;
+  if (anlam.tip === 'harf') {
+    const hm = anlam.baslik.match(/Harf:\s*(.+)/);
+    if (hm) return hm[1].trim();
+  }
+  // Tırnak içindeki değer (yedek)
+  const tm = anlam.baslik.match(/[\u201C\u201D"]([^\u201C\u201D"]+)[\u201C\u201D"]/);
+  if (tm) return tm[1];
+  if (anlam.tip === 'noktalama') {
+    if (anlam.isaret) return anlam.isaret;
+    const pm = anlam.baslik.match(/\(([^)]+)\)/);
+    if (pm) return pm[1];
+  }
+  if (anlam.tip === 'rakam') {
+    const rm = anlam.baslik.match(/Rakam:\s*(.+)/);
+    if (rm) return rm[1].trim();
+  }
+  return anlam.baslik;
+}
+
 function metniBRFe(metin, cevirFn) {
   const { hucreler } = cevirFn(metin, { buyukHarfIsareti: true, sayiIsareti: true });
   const satirlar = [];
   let satir = '';
+  let sonBosluk = -1; // satır içinde son boş hücre konumu (boşluk)
   for (const hucre of hucreler) {
-    satir += noktalariBRF(hucre);
-    if (satir.length >= SATIRDA_HUCRE) { satirlar.push(satir); satir = ''; }
+    const ch = noktalariBRF(hucre);
+    satir += ch;
+    if (hucre.length === 0) sonBosluk = satir.length; // boşluk konumu (sonrası)
+    if (satir.length >= SATIRDA_HUCRE) {
+      // Kelime ortasında kırma: en yakın boşluk varsa orada böl
+      if (sonBosluk > 0 && sonBosluk < satir.length) {
+        satirlar.push(satir.slice(0, sonBosluk - 1)); // boşluğu da at (satır sonu = sınır)
+        satir = satir.slice(sonBosluk);
+      } else {
+        satirlar.push(satir);
+        satir = '';
+      }
+      sonBosluk = -1;
+    }
   }
   if (satir.length) satirlar.push(satir);
   const chunks = [];
@@ -54,10 +103,89 @@ export default function BelgeBrf() {
   const [yukleniyor, setYukleniyor] = useState(false);
   const [hata, setHata] = useState('');
   const [kisaltmaAktif, setKisaltmaAktif] = useState(false);
-  const [konusuyor, setKonusuyor] = useState(false);
+
+  const SISTEM_VARSAYILAN = { hece: true, birHarf: true, ikiHarf: true, kok: true, parca: true };
+  const [kisaltmaSistemler, setKisaltmaSistemler] = useState(() => {
+    const saved = localStorage.getItem('belgeBrfKisaltmaSistemler');
+    if (!saved) return { ...SISTEM_VARSAYILAN };
+    try { return { ...SISTEM_VARSAYILAN, ...JSON.parse(saved) }; } catch { return { ...SISTEM_VARSAYILAN }; }
+  });
+  const [sistemPaneli, setSistemPaneli] = useState(false);
+  const sistemPaneliRef = useRef(null);
+
+  const sistemToggle = (key) => setKisaltmaSistemler((prev) => {
+    const yeni = { ...prev, [key]: !prev[key] };
+    localStorage.setItem('belgeBrfKisaltmaSistemler', JSON.stringify(yeni));
+    return yeni;
+  });
+
+  useEffect(() => {
+    if (!sistemPaneli) return;
+    const handle = (e) => {
+      if (sistemPaneliRef.current && !sistemPaneliRef.current.contains(e.target))
+        setSistemPaneli(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [sistemPaneli]);
+
+  const [konusuyor, setKonusuyor] = useState(false); // 'metin' | 'nokta' | false
   const [dragOver, setDragOver] = useState(false);
   const [aktifTab, setAktifTab] = useState('metin');
   const [brailleSayfa, setBrailleSayfa] = useState(0);
+  const [sayfaInput, setSayfaInput] = useState('');
+  const brailleKutuRef = useRef(null);
+  const jpgIndir = useCallback(async () => {
+    const el = brailleKutuRef.current;
+    if (!el) return;
+    // Geçici: scroll'u kapat, dot içindeki rakamları gizle
+    el.classList.add('jpg-export');
+    const oncekiOverflowY = el.style.overflowY;
+    const oncekiMaxH = el.style.maxHeight;
+    const oncekiH = el.style.height;
+    el.style.overflowY = 'visible';
+    el.style.maxHeight = 'none';
+    el.style.height = 'auto';
+    // Repaint için bir frame bekle
+    await new Promise((r) => requestAnimationFrame(() => r()));
+    const w = el.scrollWidth;
+    const h = el.scrollHeight;
+    try {
+      const dataUrl = await toJpeg(el, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        cacheBust: true,
+        width: w,
+        height: h,
+        style: { width: w + 'px', height: h + 'px' },
+      });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `braille-sayfa-${brailleSayfa + 1}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error('JPG indirme hatası:', e);
+    } finally {
+      el.classList.remove('jpg-export');
+      el.style.overflowY = oncekiOverflowY;
+      el.style.maxHeight = oncekiMaxH;
+      el.style.height = oncekiH;
+    }
+  }, [brailleSayfa]);
+  const [seciliHucre, setSeciliHucre] = useState(null); // { index, anlam }
+  const [genisletAktif, setGenisletAktif] = useState(false);
+
+  useEffect(() => {
+    if (!seciliHucre) return;
+    const kapat = (e) => { if (e.key === 'Escape') setSeciliHucre(null); };
+    window.addEventListener('keydown', kapat);
+    return () => window.removeEventListener('keydown', kapat);
+  }, [seciliHucre]);
+
+  // Sayfa değişince seçili hücreyi temizle
+  useEffect(() => { setSeciliHucre(null); }, [brailleSayfa, aktifTab, kisaltmaAktif]);
 
   const processFile = async (dosya) => {
     const ad = dosya.name.toLowerCase();
@@ -89,8 +217,7 @@ export default function BelgeBrf() {
 
   const brfIndir = () => {
     if (!belgeMetni.trim()) return;
-    const fn = kisaltmaAktif ? metniBrailleyeCevirKisaltmali : metniBrailleyeCevir;
-    const brf = metniBRFe(belgeMetni, fn);
+    const brf = metniBRFe(belgeMetni, cevirFn);
     const blob = new Blob([brf], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -102,23 +229,56 @@ export default function BelgeBrf() {
     URL.revokeObjectURL(url);
   };
 
-  const sesToggle = () => {
-    if (konusuyor) { konusmayiDurdur(); setKonusuyor(false); return; }
-    if (!belgeMetni.trim()) return;
-    setKonusuyor(true);
-    konus(belgeMetni, { kesintiyle: true, onSon: () => setKonusuyor(false) });
+  const sesToggle = (alan, metinFn) => {
+    if (konusuyor === alan) { konusmayiDurdur(); setKonusuyor(false); return; }
+    const metin = metinFn();
+    if (!metin || !metin.trim()) return;
+    setKonusuyor(alan);
+    konus(metin, { kesintiyle: true, onSon: () => setKonusuyor(false) });
   };
+
+  const metniSeslendir = () => sesToggle('metin', () => belgeMetni);
+
+  const noktalariSeslendir = () => sesToggle('nokta', () => {
+    if (!belgeMetni.trim()) return '';
+    const { hucreler: hh, esleme } = cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true });
+    const parcalar = [];
+    for (let i = 0; i < hh.length; i++) {
+      const n = hh[i];
+      const kaynak = esleme ? esleme[i] : -1;
+      if (n.length === 0) { parcalar.push('boşluk'); continue; }
+      const noktaMetni = n.join(' ');
+      const anlam = hucreAnlami(hh, i, kisaltmaAktif);
+      if (anlam.tip === 'isaret') {
+        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
+        continue;
+      }
+      if (anlam.tip === 'kisaltma') {
+        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik.replace(/"/g, '')}`);
+        continue;
+      }
+      if (anlam.tip === 'noktalama') {
+        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
+        continue;
+      }
+      const harfMetni = kaynak >= 0 ? belgeMetni[kaynak] : '';
+      parcalar.push(harfMetni ? `nokta ${noktaMetni}, ${harfMetni}` : `nokta ${noktaMetni}`);
+    }
+    return parcalar.join('. ');
+  });
 
   const temizle = () => {
     setBelgeMetni(''); setBelgeAdi(''); setHata('');
     setKonusuyor(false); konusmayiDurdur(); setAktifTab('metin'); setBrailleSayfa(0);
   };
 
-  const cevirFn = kisaltmaAktif ? metniBrailleyeCevirKisaltmali : metniBrailleyeCevir;
+  const cevirFn = kisaltmaAktif
+    ? (m, o) => metniBrailleyeCevirKisaltmali(m, { ...o, ...kisaltmaSistemler })
+    : metniBrailleyeCevir;
   const hucreler = useMemo(() => {
     if (!belgeMetni) return [];
     return cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true }).hucreler;
-  }, [belgeMetni, kisaltmaAktif]);
+  }, [belgeMetni, kisaltmaAktif, kisaltmaSistemler]);
 
   const toplamSayfa = Math.max(1, Math.ceil(hucreler.length / BRAILLE_SAYFA_BOYUTU));
   const sayfaBaslangic = brailleSayfa * BRAILLE_SAYFA_BOYUTU;
@@ -266,14 +426,14 @@ export default function BelgeBrf() {
               />
               <button
                 type="button"
-                className={'araclar-seslendir-btn' + (konusuyor ? ' aktif' : '')}
+                className={'araclar-seslendir-btn' + (konusuyor === 'metin' ? ' aktif' : '')}
                 style={{ position: 'absolute', top: 8, right: 8 }}
-                onClick={sesToggle}
+                onClick={metniSeslendir}
                 disabled={!belgeMetni.trim()}
-                aria-label={konusuyor ? 'Durdur' : 'Metni Seslendir'}
-                title={konusuyor ? 'Durdur' : 'Metni Seslendir'}
+                aria-label={konusuyor === 'metin' ? 'Durdur' : 'Metni Seslendir'}
+                title={konusuyor === 'metin' ? 'Durdur' : 'Metni Seslendir'}
               >
-                {konusuyor
+                {konusuyor === 'metin'
                   ? <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
                   : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
                 }
@@ -283,42 +443,183 @@ export default function BelgeBrf() {
             {/* Braille görünümü */}
             {aktifTab === 'braille' && (
               <div className="araclar-nokta-sarici">
-                <div className="araclar-nokta-gorunus" aria-label="Braille nokta görünümü">
-                  {sayfaHucreler.map((noktalar, i) => (
-                    <BrailleCell key={sayfaBaslangic + i} aktifNoktalar={noktalar} tiklanabilir={false} kesfedilebilir={false} />
-                  ))}
+                <div ref={brailleKutuRef} className={'araclar-nokta-gorunus belge-braille-kutu' + (genisletAktif ? ' genisletilmis' : '')} aria-label="Braille nokta görünümü">
+                  {sayfaHucreler.map((noktalar, i) => {
+                    const globalIdx = sayfaBaslangic + i;
+                    const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif);
+                    const kisaltmaHucre = kisaltmaAktif && (
+                      anlam.tip === 'kisaltma' ||
+                      (anlam.tip === 'isaret' && (
+                        anlam.baslik === 'Kelime Kökü İşareti' ||
+                        anlam.baslik === 'Kelime Parçası İşareti'
+                      ))
+                    );
+                    const noktalamaHucre = anlam.tip === 'noktalama';
+                    // Sayı/büyük/tümü büyük gibi özel işaretler → siyah göster
+                    const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre;
+                    const sinif = 'belge-braille-hucre' +
+                      (seciliHucre?.index === globalIdx ? ' secili' : '') +
+                      (kisaltmaHucre ? ' kisaltma-hucre' : '') +
+                      (noktalamaHucre ? ' noktalama-hucre' : '') +
+                      (ozelIsaretHucre ? ' ozel-isaret-hucre' : '');
+                    const etiket = genisletAktif ? kisaEtiket(anlam) : '';
+                    return (
+                      <div
+                        key={globalIdx}
+                        className={sinif}
+                        role="button"
+                        tabIndex={0}
+                        title="Tıkla: anlam göster"
+                        onClick={() => {
+                          setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
+                          }
+                        }}
+                      >
+                        <BrailleCell aktifNoktalar={noktalar} tiklanabilir={false} kesfedilebilir={false} />
+                        {genisletAktif && (
+                          <div className="belge-hucre-etiket" aria-hidden="true">{etiket || '\u00A0'}</div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                {toplamSayfa > 1 && (
-                  <div className="belge-braille-sayfalama">
+                {seciliHucre && (
+                  <div className="braille-hucre-popup" role="dialog" aria-label="Hücre anlamı">
+                    <div className="bhp-header">
+                      <span className="bhp-baslik-kucuk">Hücre {seciliHucre.index + 1}</span>
+                      <button
+                        type="button"
+                        className="bhp-kapat"
+                        onClick={() => setSeciliHucre(null)}
+                        aria-label="Kapat"
+                      >✕</button>
+                    </div>
+                    <div className="bhp-noktalar">Nokta: {seciliHucre.anlam.noktaStr}</div>
+                    <div className={'bhp-anlam bhp-tip-' + seciliHucre.anlam.tip}>
+                      {seciliHucre.anlam.baslik}
+                    </div>
+                    {seciliHucre.anlam.detay && (
+                      <div className="bhp-detay">{seciliHucre.anlam.detay}</div>
+                    )}
+                  </div>
+                )}
+                <div className="belge-braille-altbar">
+                  <span className="belge-altbar-sol" />
+                  {toplamSayfa > 1 ? (
+                    <div className="belge-braille-sayfalama">
+                      <button
+                        type="button"
+                        className="belge-sayfa-btn"
+                        onClick={() => setBrailleSayfa((p) => Math.max(0, p - 1))}
+                        disabled={brailleSayfa === 0}
+                        aria-label="Önceki sayfa"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                             strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
+                          <polyline points="15 18 9 12 15 6"/>
+                        </svg>
+                      </button>
+                      <form
+                        className="belge-sayfa-form"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const n = parseInt(sayfaInput, 10);
+                          if (!isNaN(n) && n >= 1 && n <= toplamSayfa) {
+                            setBrailleSayfa(n - 1);
+                          }
+                          setSayfaInput('');
+                        }}
+                      >
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          className="belge-sayfa-input"
+                          value={sayfaInput}
+                          placeholder={String(brailleSayfa + 1)}
+                          onChange={(e) => setSayfaInput(e.target.value.replace(/\D/g, ''))}
+                          onBlur={() => {
+                            const n = parseInt(sayfaInput, 10);
+                            if (!isNaN(n) && n >= 1 && n <= toplamSayfa) setBrailleSayfa(n - 1);
+                            setSayfaInput('');
+                          }}
+                          aria-label="Sayfa numarasına git"
+                        />
+                        <span className="belge-sayfa-toplam">/ {toplamSayfa}</span>
+                      </form>
+                      <button
+                        type="button"
+                        className="belge-sayfa-btn"
+                        onClick={() => setBrailleSayfa((p) => Math.min(toplamSayfa - 1, p + 1))}
+                        disabled={brailleSayfa === toplamSayfa - 1}
+                        aria-label="Sonraki sayfa"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                             strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ) : <span />}
+                  <div className="belge-altbar-sag">
                     <button
                       type="button"
-                      className="belge-sayfa-btn"
-                      onClick={() => setBrailleSayfa((p) => Math.max(0, p - 1))}
-                      disabled={brailleSayfa === 0}
-                      aria-label="Önceki sayfa"
+                      className={'belge-genislet-btn' + (genisletAktif ? ' aktif' : '')}
+                      onClick={() => setGenisletAktif((v) => !v)}
+                      aria-pressed={genisletAktif}
+                      aria-label={genisletAktif ? 'Etiketleri gizle (Daralt)' : 'Hücre altlarına etiket göster (Genişlet)'}
+                      title={genisletAktif ? 'Daralt' : 'Genişlet'}
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                           strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
-                        <polyline points="15 18 9 12 15 6"/>
-                      </svg>
+                      {genisletAktif ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                             strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
+                          <polyline points="4 14 10 14 10 20"/>
+                          <polyline points="20 10 14 10 14 4"/>
+                          <line x1="14" y1="10" x2="21" y2="3"/>
+                          <line x1="3" y1="21" x2="10" y2="14"/>
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                             strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
+                          <polyline points="15 3 21 3 21 9"/>
+                          <polyline points="9 21 3 21 3 15"/>
+                          <line x1="21" y1="3" x2="14" y2="10"/>
+                          <line x1="3" y1="21" x2="10" y2="14"/>
+                        </svg>
+                      )}
                     </button>
-                    <span className="belge-sayfa-bilgi">
-                      {brailleSayfa + 1} / {toplamSayfa}
-                    </span>
                     <button
                       type="button"
-                      className="belge-sayfa-btn"
-                      onClick={() => setBrailleSayfa((p) => Math.min(toplamSayfa - 1, p + 1))}
-                      disabled={brailleSayfa === toplamSayfa - 1}
-                      aria-label="Sonraki sayfa"
+                      className="belge-genislet-btn belge-jpg-btn"
+                      onClick={jpgIndir}
+                      aria-label="Sayfayı JPG olarak indir"
+                      title="JPG indir"
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                            strokeLinecap="round" strokeLinejoin="round" width="16" height="16" aria-hidden="true">
-                        <polyline points="9 18 15 12 9 6"/>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
                       </svg>
                     </button>
                   </div>
-                )}
+                </div>
+                <button
+                  type="button"
+                  className={'araclar-seslendir-btn araclar-seslendir-nokta' + (konusuyor === 'nokta' ? ' aktif' : '')}
+                  onClick={noktalariSeslendir}
+                  aria-label={konusuyor === 'nokta' ? 'Durdur' : 'Braille Noktaları Oku'}
+                  title={konusuyor === 'nokta' ? 'Durdur' : 'Braille Noktaları Oku'}
+                >
+                  {konusuyor === 'nokta'
+                    ? <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                    : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                  }
+                </button>
               </div>
             )}
           </>
@@ -336,19 +637,52 @@ export default function BelgeBrf() {
               </svg>
               <span className="btn-yazi">BRF İndir</span>
             </button>
-            <button
-              type="button"
-              className={'araclar-perkins-btn' + (kisaltmaAktif ? ' aktif' : '')}
-              onClick={() => setKisaltmaAktif((v) => !v)}
-              aria-pressed={kisaltmaAktif}
-              aria-label={'Kısaltma ' + (kisaltmaAktif ? 'Aktif' : 'Kapalı')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                   strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
-                <path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>
-              </svg>
-              <span className="btn-yazi">Kısaltma {kisaltmaAktif ? 'Aktif' : 'Kapalı'}</span>
-            </button>
+            <div className="kisaltma-btn-grup" ref={sistemPaneliRef}>
+              <button
+                type="button"
+                className={'araclar-perkins-btn' + (kisaltmaAktif ? ' aktif' : '')}
+                onClick={() => setKisaltmaAktif((v) => !v)}
+                aria-pressed={kisaltmaAktif}
+                aria-label={'Kısaltma ' + (kisaltmaAktif ? 'Aktif' : 'Kapalı')}
+                style={{ borderRadius: 'var(--radius) 0 0 var(--radius)' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                     strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
+                  <path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>
+                </svg>
+                <span className="btn-yazi">Kısaltma</span>
+              </button>
+              <button
+                type="button"
+                className={'kisaltma-sistem-acilis-btn araclar-perkins-btn' + (kisaltmaAktif && sistemPaneli ? ' aktif' : '') + (kisaltmaAktif ? '' : ' disabled')}
+                onClick={() => kisaltmaAktif && setSistemPaneli((v) => !v)}
+                aria-expanded={sistemPaneli}
+                aria-label="Kısaltma sistemleri"
+                title="Hangi kısaltma sistemleri aktif?"
+                style={{ borderRadius: '0 var(--radius) var(--radius) 0' }}
+              >▾</button>
+              {kisaltmaAktif && sistemPaneli && (
+                <div className="kisaltma-sistem-panel" role="menu">
+                  <p className="kisaltma-sistem-panel-baslik">Kısaltma Sistemleri</p>
+                  {[
+                    { key: 'hece',    label: 'Hece Kısaltmaları' },
+                    { key: 'birHarf', label: 'Bir Harfli Kısaltmalar' },
+                    { key: 'ikiHarf', label: 'İki Harfli Kısaltmalar' },
+                    { key: 'kok',     label: 'Kelime Kökü Kısaltmaları' },
+                    { key: 'parca',   label: 'Kelime Parçası Kısaltmaları' },
+                  ].map(({ key, label }) => (
+                    <label key={key} className="kisaltma-sistem-satir">
+                      <input
+                        type="checkbox"
+                        checked={kisaltmaSistemler[key]}
+                        onChange={() => sistemToggle(key)}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

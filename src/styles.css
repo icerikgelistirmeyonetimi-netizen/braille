@@ -923,6 +923,25 @@ h1, h2, h3 { color: var(--fg); }
   justify-content: center;
   gap: 6px;
 }
+/* kisaltma-btn-grup grid hücresini tam doldursun */
+.controls > .kisaltma-btn-grup {
+  display: flex;
+  min-width: 0;
+  font-size: clamp(0.78em, 3.2vw, 1em);
+}
+.controls > .kisaltma-btn-grup > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.controls > .kisaltma-btn-grup > button:first-child {
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
 /* Dar ekranda metin etiketleri gizle */
 .controls > button .btn-etiket {
   display: none;
@@ -1283,6 +1302,69 @@ h1, h2, h3 { color: var(--fg); }
   animation: kisaltma-yanip-sone 0.8s steps(1) infinite;
 }
 @keyframes kisaltma-yanip-sone { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* Kısaltma sistemi dropdown */
+.kisaltma-btn-grup {
+  position: relative;
+  display: inline-flex;
+  gap: 2px;
+  white-space: nowrap;
+}
+.kisaltma-btn-grup > button:first-child {
+  white-space: nowrap;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.kisaltma-sistem-acilis-btn {
+  border-radius: 0 var(--radius) var(--radius) 0 !important;
+  padding: 0 10px !important;
+  min-width: unset !important;
+  font-size: 1.1em;
+  line-height: 1;
+}
+.kisaltma-sistem-acilis-btn.disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.kisaltma-sistem-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: var(--panel);
+  border: 2px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  min-width: 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  z-index: 300;
+}
+.kisaltma-sistem-panel-baslik {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 4px;
+}
+.kisaltma-sistem-satir {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.95em;
+  padding: 4px 0;
+  color: var(--fg);
+  user-select: none;
+}
+.kisaltma-sistem-satir input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
 
 .yazma-ipucu {
   width: 100%;
@@ -1900,7 +1982,7 @@ h1, h2, h3 { color: var(--fg); }
 .araclar-nokta-gorunus {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 8px;
+  gap: 2px 2px;
   padding: 10px 12px;
   background: var(--panel);
   border: 2px solid var(--panel-border);
@@ -1934,6 +2016,14 @@ h1, h2, h3 { color: var(--fg); }
   margin: 0;
 }
 .araclar-nokta-gorunus .cell-title { display: none; }
+.araclar-nokta-gorunus.jpg-export .dot {
+  font-size: 0 !important;
+  color: transparent !important;
+  text-indent: -9999px !important;
+}
+.araclar-nokta-gorunus.jpg-export .dot::first-letter {
+  color: transparent !important;
+}
 .yazma-page.araclar-page .yazma-bolum-orta {
   justify-content: flex-start;
   align-items: stretch;
@@ -1970,6 +2060,13 @@ h1, h2, h3 { color: var(--fg); }
 .araclar-alan-sarici {
   position: relative;
   width: 100%;
+}
+/* Tab içerikli sarıcı (BrfOku Metin/Braille sekmeleri): kalan yüksekliği kapla */
+.belge-tab-icerik-sarici {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .araclar-seslendir-btn {
   position: absolute;
@@ -2311,6 +2408,208 @@ h1, h2, h3 { color: var(--fg); }
 .braille-info-wrap.secili {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   border-color: var(--accent);
+}
+.braille-info-wrap.kisaltma-hucre .dot {
+  border-color: var(--panel-border);
+}
+.braille-info-wrap.kisaltma-hucre .dot.on {
+  background: #e03535;
+  border-color: #e03535;
+  box-shadow: none;
+  color: #fff;
+}
+.braille-info-wrap.kisaltma-hucre:hover,
+.braille-info-wrap.kisaltma-hucre:focus-visible {
+  background: color-mix(in srgb, #e03535 12%, transparent);
+  border-color: color-mix(in srgb, #e03535 50%, transparent);
+}
+.braille-info-wrap.kisaltma-hucre.secili {
+  background: color-mix(in srgb, #e03535 18%, transparent);
+  border-color: #e03535;
+}
+.braille-info-wrap.noktalama-hucre .dot {
+  border-color: var(--panel-border);
+}
+.braille-info-wrap.noktalama-hucre .dot.on {
+  background: #16a34a;
+  border-color: #16a34a;
+  box-shadow: none;
+  color: #fff;
+}
+.braille-info-wrap.noktalama-hucre:hover,
+.braille-info-wrap.noktalama-hucre:focus-visible {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  border-color: color-mix(in srgb, #16a34a 50%, transparent);
+}
+.braille-info-wrap.noktalama-hucre.secili {
+  background: color-mix(in srgb, #16a34a 18%, transparent);
+  border-color: #16a34a;
+}
+
+/* Belge → BRF hücre renklendirme (kısaltma kırmızı, noktalama yeşil) */
+.belge-braille-kutu { position: relative; }
+.belge-braille-altbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-top: 8px;
+  gap: 8px;
+}
+.belge-braille-altbar .belge-braille-sayfalama { margin-top: 0; justify-self: center; }
+.belge-altbar-sol { display: block; }
+.belge-altbar-sag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+}
+.belge-sayfa-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 4px;
+}
+.belge-sayfa-input {
+  width: 44px;
+  height: 28px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--panel);
+  color: var(--text);
+  border: 1.5px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 0 4px;
+}
+.belge-sayfa-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.belge-sayfa-toplam {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.85;
+}
+.belge-genislet-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  color: var(--text);
+  border: 1.5px solid var(--panel-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.belge-genislet-btn:hover,
+.belge-genislet-btn:focus-visible {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+  outline: none;
+}
+.belge-genislet-btn.aktif {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.belge-hucre-etiket {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--text);
+  max-width: 64px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.belge-braille-hucre.kisaltma-hucre .belge-hucre-etiket { color: #e03535; }
+.belge-braille-hucre.noktalama-hucre .belge-hucre-etiket { color: #16a34a; }
+.araclar-nokta-gorunus.genisletilmis {
+  gap: 6px 6px;
+  align-items: flex-start;
+}
+.araclar-nokta-gorunus.genisletilmis .belge-braille-hucre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.belge-braille-hucre {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0;
+  border: 1.5px solid transparent;
+  transition: background 120ms, border-color 120ms;
+}
+.belge-braille-hucre:hover,
+.belge-braille-hucre:focus-visible {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  outline: none;
+}
+.belge-braille-hucre.secili {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+}
+.belge-braille-hucre.kisaltma-hucre .dot {
+  border-color: var(--panel-border);
+}
+.belge-braille-hucre.kisaltma-hucre .dot.on {
+  background: #e03535;
+  border-color: #e03535;
+  box-shadow: none;
+  color: #fff;
+}
+.belge-braille-hucre.kisaltma-hucre:hover,
+.belge-braille-hucre.kisaltma-hucre:focus-visible {
+  background: color-mix(in srgb, #e03535 12%, transparent);
+  border-color: color-mix(in srgb, #e03535 50%, transparent);
+}
+.belge-braille-hucre.kisaltma-hucre.secili {
+  background: color-mix(in srgb, #e03535 18%, transparent);
+  border-color: #e03535;
+}
+.belge-braille-hucre.noktalama-hucre .dot {
+  border-color: var(--panel-border);
+}
+.belge-braille-hucre.noktalama-hucre .dot.on {
+  background: #16a34a;
+  border-color: #16a34a;
+  box-shadow: none;
+  color: #fff;
+}
+.belge-braille-hucre.noktalama-hucre:hover,
+.belge-braille-hucre.noktalama-hucre:focus-visible {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  border-color: color-mix(in srgb, #16a34a 50%, transparent);
+}
+.belge-braille-hucre.noktalama-hucre.secili {
+  background: color-mix(in srgb, #16a34a 18%, transparent);
+  border-color: #16a34a;
+}
+/* Özel işaret hücreleri (büyük harf, sayı işareti, tümü büyük) → siyah */
+.belge-braille-hucre.ozel-isaret-hucre .belge-hucre-etiket { color: #111; }
+.belge-braille-hucre.ozel-isaret-hucre .dot {
+  border-color: var(--panel-border);
+}
+.belge-braille-hucre.ozel-isaret-hucre .dot.on {
+  background: #111;
+  border-color: #111;
+  box-shadow: none;
+  color: #fff;
+}
+.belge-braille-hucre.ozel-isaret-hucre:hover,
+.belge-braille-hucre.ozel-isaret-hucre:focus-visible {
+  background: color-mix(in srgb, #111 10%, transparent);
+  border-color: color-mix(in srgb, #111 45%, transparent);
+}
+.belge-braille-hucre.ozel-isaret-hucre.secili {
+  background: color-mix(in srgb, #111 16%, transparent);
+  border-color: #111;
 }
 
 /* Braille hücre anlam popup */

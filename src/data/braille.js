@@ -61,7 +61,13 @@ export const NOKTALAMA = [
   { isaret: '?', isim: 'soru işareti', noktalar: [2, 6] },
   { isaret: '!', isim: 'ünlem işareti', noktalar: [2, 3, 5] },
   { isaret: '-', isim: 'tire', noktalar: [3, 6] },
-  { isaret: "'", isim: 'kesme işareti', noktalar: [3] }
+  { isaret: "'", isim: 'kesme işareti', noktalar: [3] },
+  { isaret: '\u2019', isim: 'kesme işareti (kıvrık)', noktalar: [3] },
+  { isaret: '\u201C', isim: 'tırnak açma', noktalar: [2, 3, 6] },
+  { isaret: '\u201D', isim: 'tırnak kapama', noktalar: [3, 5, 6] },
+  { isaret: '\u0022', isim: 'düz tırnak', noktalar: [2, 3, 6] },
+  { isaret: '(', isim: 'parantez açma', noktalar: [2, 3, 5, 6] },
+  { isaret: ')', isim: 'parantez kapama', noktalar: [2, 3, 5, 6] },
 ];
 
 // Türkçe Braille'de kullanılan bazı yaygın kısaltmalar (örnek seti).

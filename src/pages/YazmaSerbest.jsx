@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
@@ -22,6 +22,33 @@ export default function YazmaSerbest() {
   const bekleyenRef = useRef(null); // number[] | null
   const [bekleyenGoster, setBekleyenGoster] = useState(false);
 
+  // Hangi kısaltma sistemleri aktif (localStorage'a kaydedilir)
+  const SISTEM_VARSAYILAN = { hece: true, birHarf: true, ikiHarf: true, kok: true, parca: true };
+  const [kisaltmaSistemler, setKisaltmaSistemler] = useState(() => {
+    const saved = localStorage.getItem('serbestKisaltmaSistemler');
+    if (!saved) return { ...SISTEM_VARSAYILAN };
+    try { return { ...SISTEM_VARSAYILAN, ...JSON.parse(saved) }; } catch { return { ...SISTEM_VARSAYILAN }; }
+  });
+  const [sistemPaneli, setSistemPaneli] = useState(false);
+  const sistemPaneliRef = useRef(null);
+
+  const sistemToggle = (key) => setKisaltmaSistemler((prev) => {
+    const yeni = { ...prev, [key]: !prev[key] };
+    localStorage.setItem('serbestKisaltmaSistemler', JSON.stringify(yeni));
+    return yeni;
+  });
+
+  // Panel dışına tıklandığında kapat
+  useEffect(() => {
+    if (!sistemPaneli) return;
+    const handle = (e) => {
+      if (sistemPaneliRef.current && !sistemPaneliRef.current.contains(e.target))
+        setSistemPaneli(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [sistemPaneli]);
+
   const kisaltmaModuToggle = () => setKisaltmaModu((v) => {
     const yeni = !v;
     localStorage.setItem('serbestKisaltmaModu', yeni ? '1' : '0');
@@ -32,53 +59,54 @@ export default function YazmaSerbest() {
     return yeni;
   });
 
-  // Mevcut bekleyeni normal harf/kısaltma olarak metne ekle
+  // Mevcut bekleyeni normal harf olarak metne ekle (kısaltma AÇILMAZ)
+  // Çünkü ardından boşluk değil, başka bir hücre geldi → bağımsız kelime değil.
   const bekleyeniBitir = () => {
     const bek = bekleyenRef.current;
     bekleyenRef.current = null;
     setBekleyenGoster(false);
     if (!bek) return;
-    const birHarf = birHarfAra(bek);
-    if (birHarf) {
-      setMetin((m) => m + birHarf + ' ');
-      return;
-    }
-    // Normal karakter olarak işle
     const r = hucreyiIsle(durumRef.current, bek);
     if (r.tip !== 'bilinmeyen' && r.deger) setMetin((m) => m + r.deger);
   };
 
   // Kısaltma modunda tek bir hücreyi işle (bekleyen yokken çağırılır)
-  const kisaltmaTekHucresi = (noktalar) => {
+  const kisaltmaTekHucresi = (noktalar, sistemler) => {
     // 1. Hece kısaltması (önce çünkü benzersiz desenler)
-    const hece = heceAra(noktalar);
-    if (hece) {
-      setMetin((m) => m + hece);
-      konus(hece, { kesintiyle: true });
-      return;
+    if (sistemler.hece) {
+      const hece = heceAra(noktalar);
+      if (hece) {
+        setMetin((m) => m + hece);
+        konus(hece, { kesintiyle: true });
+        return;
+      }
     }
     // 2. Kök işareti ([5]) → buffer'la
-    if (kokIsaretiMi(noktalar)) {
+    if (sistemler.kok && kokIsaretiMi(noktalar)) {
       bekleyenRef.current = noktalar;
       setBekleyenGoster(true);
       konus('kök işareti, ikinci hücreyi bekliyor', { kesintiyle: true });
       return;
     }
     // 3. İki harfli / parça kısaltmasının ilk hücresi → buffer'la
-    if (ikiHarfBirinciMi(noktalar) || parcaBirinciMi(noktalar)) {
+    const ikiHarfAday = sistemler.ikiHarf && ikiHarfBirinciMi(noktalar);
+    const parcaAday   = sistemler.parca   && parcaBirinciMi(noktalar);
+    if (ikiHarfAday || parcaAday) {
       bekleyenRef.current = noktalar;
       setBekleyenGoster(true);
-      // Kısa titreme gibi geri bildirim; sesli oku
-      const birHarfAnlam = birHarfAra(noktalar);
+      const birHarfAnlam = sistemler.birHarf ? birHarfAra(noktalar) : null;
       konus(birHarfAnlam ? `${birHarfAnlam}?` : '...', { kesintiyle: true });
       return;
     }
-    // 4. Bir harfli kısaltma
-    const birHarf = birHarfAra(noktalar);
-    if (birHarf) {
-      setMetin((m) => m + birHarf + ' ');
-      konus(birHarf, { kesintiyle: true });
-      return;
+    // 4. Bir harfli kısaltma adayı → beklet; boşluk gelince bağımsız kelimeyse açılır
+    if (sistemler.birHarf) {
+      const birHarf = birHarfAra(noktalar);
+      if (birHarf) {
+        bekleyenRef.current = noktalar;
+        setBekleyenGoster(true);
+        konus(birHarf + '?', { kesintiyle: true });
+        return;
+      }
     }
     // 5. Normal karakter
     normalIsle(noktalar);
@@ -121,6 +149,7 @@ export default function YazmaSerbest() {
 
   const onHucre = (noktalar) => {
     if (kisaltmaModu) {
+      const s = kisaltmaSistemler;
       // Bekleyen hücre varken yeni hücre geldi
       if (bekleyenRef.current !== null) {
         const bek = bekleyenRef.current;
@@ -128,7 +157,7 @@ export default function YazmaSerbest() {
         setBekleyenGoster(false);
 
         // Kök işareti + sağ hücre
-        if (kokIsaretiMi(bek)) {
+        if (s.kok && kokIsaretiMi(bek)) {
           const kelime = kokAra(noktalar);
           if (kelime) {
             setMetin((m) => m + kelime + ' ');
@@ -137,41 +166,39 @@ export default function YazmaSerbest() {
           }
           // Kök tamamlanamadı; bekleyeni sil, yeni hücreyi tekrar değerlendir
           konus('kök tamamlanamadı', { kesintiyle: true });
-          kisaltmaTekHucresi(noktalar);
+          kisaltmaTekHucresi(noktalar, s);
           return;
         }
 
         // İki harfli kısaltma
-        const ikiHarf = ikiHarfAra(bek, noktalar);
-        if (ikiHarf) {
-          setMetin((m) => m + ikiHarf + ' ');
-          konus(ikiHarf, { kesintiyle: true });
-          return;
+        if (s.ikiHarf) {
+          const ikiHarf = ikiHarfAra(bek, noktalar);
+          if (ikiHarf) {
+            setMetin((m) => m + ikiHarf + ' ');
+            konus(ikiHarf, { kesintiyle: true });
+            return;
+          }
         }
 
         // Kelime parçası kısaltma
-        const parca = parcaAra(bek, noktalar);
-        if (parca) {
-          setMetin((m) => m + '-' + parca);
-          konus(parca, { kesintiyle: true });
-          return;
+        if (s.parca) {
+          const parca = parcaAra(bek, noktalar);
+          if (parca) {
+            setMetin((m) => m + '-' + parca);
+            konus(parca, { kesintiyle: true });
+            return;
+          }
         }
 
-        // Bekleyen çözülmedi: bekleyeni commit et, yeni hücreyi baştan işle
-        const birHarfBek = birHarfAra(bek);
-        if (birHarfBek) {
-          setMetin((m) => m + birHarfBek + ' ');
-          konus(birHarfBek, { kesintiyle: false });
-        } else {
-          const r = hucreyiIsle(durumRef.current, bek);
-          if (r.tip !== 'bilinmeyen' && r.deger) setMetin((m) => m + r.deger);
-        }
-        kisaltmaTekHucresi(noktalar);
+        // Bekleyen çözülmedi: bağımsız kelime değil → normal harf olarak çıkar
+        const r = hucreyiIsle(durumRef.current, bek);
+        if (r.tip !== 'bilinmeyen' && r.deger) setMetin((m) => m + r.deger);
+        kisaltmaTekHucresi(noktalar, s);
         return;
       }
 
       // Bekleyen yok → tek hücre işle
-      kisaltmaTekHucresi(noktalar);
+      kisaltmaTekHucresi(noktalar, s);
       return;
     }
 
@@ -180,8 +207,27 @@ export default function YazmaSerbest() {
   };
 
   const onBosluk = () => {
-    // Bekleyen varsa önce commit et
-    bekleyeniBitir();
+    const bek = bekleyenRef.current;
+    bekleyenRef.current = null;
+    setBekleyenGoster(false);
+    if (bek) {
+      // Boşluk öncesinde bekleyen varsa: bağımsız kelime → birHarf kısaltmasını dene
+      if (kisaltmaSistemler.birHarf) {
+        const birHarf = birHarfAra(bek);
+        if (birHarf) {
+          const prevIsSpace = metin.length === 0 || metin.endsWith(' ');
+          if (prevIsSpace) {
+            // Tam bağımsız kelime → kısaltmayı aç (boşluk dahil)
+            setMetin((m) => m + birHarf + ' ');
+            konus(birHarf, { kesintiyle: true });
+            return;
+          }
+        }
+      }
+      // Kısaltma açılmadı → normal harf çıkar, ardından boşluk ekle
+      const r = hucreyiIsle(durumRef.current, bek);
+      if (r.tip !== 'bilinmeyen' && r.deger) setMetin((m) => m + r.deger);
+    }
     setMetin((m) => m + ' ');
     konus('boşluk', { kesintiyle: true });
   };
@@ -256,13 +302,44 @@ export default function YazmaSerbest() {
         <div className="controls">
           <button type="button" onClick={tumunuOku}>Tümünü Oku</button>
           <button type="button" onClick={temizle}>Temizle</button>
-          <button
-            type="button"
-            className={kisaltmaModu ? 'aktif' : ''}
-            aria-pressed={kisaltmaModu}
-            onClick={kisaltmaModuToggle}
-            title="Kısaltmaları tanı ve kısaltma kullanarak yaz"
-          >Kısaltma Modu</button>
+          <div className="kisaltma-btn-grup" ref={sistemPaneliRef}>
+            <button
+              type="button"
+              className={kisaltmaModu ? 'aktif' : ''}
+              aria-pressed={kisaltmaModu}
+              onClick={kisaltmaModuToggle}
+              title="Kısaltmaları tanı ve kısaltma kullanarak yaz"
+            >Kısaltma</button>
+            <button
+              type="button"
+              className={'kisaltma-sistem-acilis-btn' + (kisaltmaModu && sistemPaneli ? ' aktif' : '') + (kisaltmaModu ? '' : ' disabled')}
+              onClick={() => kisaltmaModu && setSistemPaneli((v) => !v)}
+              title="Hangi kısaltma sistemleri aktif?"
+              aria-expanded={sistemPaneli}
+              aria-label="Kısaltma sistemleri"
+            >▾</button>
+            {kisaltmaModu && sistemPaneli && (
+              <div className="kisaltma-sistem-panel" role="menu">
+                <p className="kisaltma-sistem-panel-baslik">Kısaltma Sistemleri</p>
+                {[
+                  { key: 'hece',     label: 'Hece Kısaltmaları' },
+                  { key: 'birHarf',  label: 'Bir Harfli Kısaltmalar' },
+                  { key: 'ikiHarf',  label: 'İki Harfli Kısaltmalar' },
+                  { key: 'kok',      label: 'Kelime Kökü Kısaltmaları' },
+                  { key: 'parca',    label: 'Kelime Parçası Kısaltmaları' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="kisaltma-sistem-satir">
+                    <input
+                      type="checkbox"
+                      checked={kisaltmaSistemler[key]}
+                      onChange={() => sistemToggle(key)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
