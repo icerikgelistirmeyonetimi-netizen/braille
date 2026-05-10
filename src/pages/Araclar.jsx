@@ -19,6 +19,9 @@ import {
   hucreyiRakamayap,
   buyukHarfIsaretiMi,
   sayiIsaretiMi,
+  ikiHarfliKisaltmaPrefixEslesmesi,
+  ikiHarfliKisaltmaOkunusunuYumusat,
+  kelimeKokuOkunusunuYorIcinDuzelt,
 } from '../utils/brailleCevir.js';
 
 // ─── BRF kodlama / çözme ───────────────────────────────────────────────────
@@ -37,9 +40,11 @@ function kisaEtiket(anlam) {
     if (anlam.baslik.includes('Tümü Büyük')) return '⇧⇧';
     if (anlam.baslik.includes('Büyük Harf')) return '⇧';
     if (anlam.baslik.includes('Sayı')) return '#';
+    if (anlam.baslik.includes('Ayırma')) return '3';
     if (anlam.baslik.includes('Kök') || anlam.baslik.includes('Parça')) return '*';
     return '*';
   }
+  if (anlam.etiket === '') return '';
   if (anlam.etiket) return anlam.etiket;
   if (anlam.tip === 'harf' && anlam.harf) return anlam.harf;
   if (anlam.tip === 'harf') {
@@ -78,6 +83,49 @@ function brfNoktalaradon(ch) {
     if (bits & (1 << i)) noktalar.push(i + 1);
   }
   return noktalar;
+}
+
+// Tek başına kalan tek harfli "kelimeleri" tırnak içine al ki
+// kısaltmalı modda bir harfli kısaltma sanılmasın (örn. a → “a”).
+// Sadece kısaltmalı modda çağrılmalı.
+export function tekHarfTirnakla(metin) {
+  if (!metin) return metin;
+  // Sağ sınır yalnız boşluk veya satır sonu olmalı; nokta/virgül gelirse (örn. "A.")
+  // dokunma — başlık/kısaltma yazımını bozmamak için.
+  return metin.replace(/(^|[\s\(\[\{])(\p{L})(?=$|\s)/gu, '$1“$2”');
+}
+
+// Textarea onChange yardımcısı: kullanıcı boşluk/noktalama girdiğinde,
+// kısaltmalı modda tek başına kalan harfleri tırnaklayarak günceller.
+// İmleç konumunu eklenen karakter sayısı kadar kaydırır.
+export function metinTirnakliGuncelle(yeni, eski, ta, kisaltmaAktif, setMetin) {
+  if (!kisaltmaAktif || yeni.length <= eski.length) {
+    setMetin(yeni);
+    return;
+  }
+  const cursor = ta ? ta.selectionStart : yeni.length;
+  const sonChar = yeni[cursor - 1] || '';
+  // Sadece tetikleyici karakter girildiğinde dönüştür
+  // Sadece boşluk/satır sonu girildiğinde çalış — nokta/virgül gibi işaretler güvenli
+  // varsayılmamalı (örn. "A." başlık yazımı).
+  if (!/\s/.test(sonChar)) {
+    setMetin(yeni);
+    return;
+  }
+  const oncesi = yeni.slice(0, cursor);
+  const sonrasi = yeni.slice(cursor);
+  const oncesiYeni = tekHarfTirnakla(oncesi);
+  if (oncesiYeni === oncesi) {
+    setMetin(yeni);
+    return;
+  }
+  const eklenen = oncesiYeni.length - oncesi.length;
+  setMetin(oncesiYeni + sonrasi);
+  if (ta) {
+    requestAnimationFrame(() => {
+      ta.selectionStart = ta.selectionEnd = cursor + eklenen;
+    });
+  }
 }
 
 function metniBRFe(metin, cevirFn = metniBrailleyeCevir) {
@@ -165,6 +213,8 @@ const _TUM_UNLU  = new Set([..._ARKA_UNLU, ..._ON_UNLU]);
 function _unluUyumuSec(ekler, oncekiMetin) {
   const variants = ekler.split(',').map((s) => s.trim());
   if (variants.length <= 1) return variants[0] || '';
+  const oncekiKucuk = (oncekiMetin || '').toLocaleLowerCase('tr');
+  if (oncekiKucuk.endsWith('bu') && variants.includes('gün')) return 'gün';
   let sonUnlu = null;
   for (let k = oncekiMetin.length - 1; k >= 0; k--) {
     if (_TUM_UNLU.has(oncekiMetin[k])) { sonUnlu = oncekiMetin[k]; break; }
@@ -194,8 +244,29 @@ function _unluUyumuSec(ekler, oncekiMetin) {
  * Bağlam takibi (sayı modu / büyük harf bekleme) için idx öncesindeki
  * hücreler taranır.
  */
-export function hucreAnlami(hucreler, idx, kisaltmaAktif) {
+export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
   const dotKey = (pts) => [...pts].sort((a, b) => a - b).join(',');
+  // İsteğe bağlı: kaynak metin ve hücre-kaynak eşleme. Verildiğinde kısaltma
+  // tespitini gerçek kaynak kelimeyle doğrular; örn. iki harfli kısaltma prefix'i
+  // sıradan iki harfle karışmasın.
+  const _kaynak = opts && typeof opts.kaynak === 'string' ? opts.kaynak : null;
+  const _esleme = opts && Array.isArray(opts.esleme) ? opts.esleme : null;
+  const _kaynakKelime = (cellIdx) => {
+    if (!_kaynak || !_esleme) return null; // bilinmiyor → eski davranış
+    const ki = _esleme[cellIdx];
+    if (typeof ki !== 'number' || ki < 0 || ki >= _kaynak.length) return null;
+    const isHarf = (c) => /\p{L}/u.test(c);
+    if (!isHarf(_kaynak[ki])) return null;
+    let s = ki; while (s > 0 && isHarf(_kaynak[s - 1])) s--;
+    let e = ki; while (e + 1 < _kaynak.length && isHarf(_kaynak[e + 1])) e++;
+    return _kaynak.slice(s, e + 1).toLocaleLowerCase('tr');
+  };
+  const _kaynakKelimeBaslar = (cellIdx, kelime) => {
+    const kaynakKelime = _kaynakKelime(cellIdx);
+    if (kaynakKelime === null) return true;
+    const hedef = kelime.toLocaleLowerCase('tr');
+    return kaynakKelime === hedef || ikiHarfliKisaltmaPrefixEslesmesi(kaynakKelime, hedef) !== null;
+  };
 
   // Durum takibi
   let sayiModu = false;
@@ -247,16 +318,16 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif) {
     return { tip: 'bosluk', baslik: 'Boşluk', detay: 'Kelimeler arasındaki boşluk.', noktaStr };
   }
   if (buyukHarfIsaretiMi(noktalar)) {
-    // Yan yana iki [4,6] ise "tümü büyük"
+    // Yan yana iki [6] ise "tümü büyük"
     const onceki = idx > 0 ? hucreler[idx - 1] : null;
     const sonraki = idx + 1 < hucreler.length ? hucreler[idx + 1] : null;
     if (onceki && buyukHarfIsaretiMi(onceki)) {
-      return { tip: 'isaret', baslik: 'Tümü Büyük İşareti', detay: 'Önceki [4·6] ile birlikte: bu kelimedeki tüm harfler büyük okunur.', noktaStr };
+      return { tip: 'isaret', baslik: 'Tümü Büyük İşareti', detay: 'Önceki [6] ile birlikte: bu kelimedeki tüm harfler büyük okunur.', noktaStr };
     }
     if (sonraki && buyukHarfIsaretiMi(sonraki)) {
-      return { tip: 'isaret', baslik: 'Tümü Büyük İşareti', detay: 'Sonraki [4·6] ile birlikte: kelimedeki tüm harfler büyük okunur.', noktaStr };
+      return { tip: 'isaret', baslik: 'Tümü Büyük İşareti', detay: 'Sonraki [6] ile birlikte: kelimedeki tüm harfler büyük okunur.', noktaStr };
     }
-    return { tip: 'isaret', baslik: 'Büyük Harf İşareti', detay: 'Nokta 4 · 6. Sonraki harf büyük okunur.', noktaStr };
+    return { tip: 'isaret', baslik: 'Büyük Harf İşareti', detay: 'Nokta 6. Sonraki harf büyük okunur.', noktaStr };
   }
   // Sayı işareti yalnızca kelime başında (önceki hücre boşluk/yok) VE
   // ardından bir rakam (a-j) hücresi geliyorsa geçerlidir. Aksi halde
@@ -278,14 +349,42 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif) {
   }
 
   if (kisaltmaAktif) {
-    // Kelime sınırları: boşluk ([] hücre) veya dizi başı/sonu
-    const prevIsSpace = idx === 0 || hucreler[idx - 1].length === 0;
-    const nextIsSpace = idx >= hucreler.length - 1 || hucreler[idx + 1].length === 0;
+    // Kelime sınırları: boşluk ([] hücre), dizi başı/sonu veya noktalama hücresi.
+    // Noktalama hücresi de kelime sınırı sayılır ki "aynı." gibi kısaltma+noktalama
+    // dizilişlerinde kısaltma yine tanınsın.
+    // Bazı noktalamalar hece desenleriyle çakışır (örn. "." = "ka" deseni). Bu durumda
+    // bağlama bak: ardından boşluk/satır sonu veya başka bir noktalama deseni geliyorsa
+    // kelime sonu kabul edip noktalama say.
+    const _tekHarfAyirmaIsaretiMi = (cellIdx) => {
+      if (cellIdx <= 0 || cellIdx + 1 >= hucreler.length) return false;
+      if (dotKey(hucreler[cellIdx]) !== '3') return false;
+      const prevK = dotKey(hucreler[cellIdx - 1]);
+      if (!_KISALTMA_TEK.has(prevK)) return false;
+      const next = hucreler[cellIdx + 1];
+      if (!next || next.length === 0) return false;
+      const prevPrev = cellIdx >= 2 ? hucreler[cellIdx - 2] : null;
+      return cellIdx < 2 || !prevPrev || prevPrev.length === 0 || buyukHarfIsaretiMi(prevPrev);
+    };
+    const _isNoktalamaHucre = (h, i) => {
+      if (!h || h.length === 0) return false;
+      const kk = dotKey(h);
+      if (!_NOKTA_TERS.has(kk)) return false;
+      if (kk === '3' && _tekHarfAyirmaIsaretiMi(i)) return false;
+      if (!_HECE_TERS.has(kk)) return true;
+      const next = i + 1 < hucreler.length ? hucreler[i + 1] : null;
+      if (!next || next.length === 0) return true;
+      const nk = dotKey(next);
+      return _NOKTA_TERS.has(nk);
+    };
+    const prevIsSpace = idx === 0 || hucreler[idx - 1].length === 0
+      || _isNoktalamaHucre(hucreler[idx - 1], idx - 1);
+    const nextIsSpace = idx >= hucreler.length - 1 || hucreler[idx + 1].length === 0
+      || _isNoktalamaHucre(hucreler[idx + 1], idx + 1);
     // Büyük harf işareti öncesinde de sınır sayılır
     const prevIsBuyuk = idx > 0 && buyukHarfIsaretiMi(hucreler[idx - 1]);
     const prevBosBuyuk = prevIsSpace || prevIsBuyuk;
 
-    // Kelime başında [4,6][4,6] (tümü büyük) ya da tek [4,6] (ilk harf büyük) bul
+    // Kelime başında [6][6] (tümü büyük) ya da tek [6] (ilk harf büyük) bul
     // → Bu kısaltma için kasa belirle
     let kelBas = idx;
     while (kelBas > 0 && hucreler[kelBas - 1].length > 0) kelBas--;
@@ -321,6 +420,36 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif) {
     if (k === '4,5' || k === '5,6') {
       return { tip: 'isaret', baslik: 'Kelime Parçası İşareti', detay: `Nokta ${k.replace(',', ' · ')}. Sonraki hücreyle birlikte ek kısaltması oluşturur.`, noktaStr };
     }
+
+    // Tek harfli kısaltma + ek ayırma işareti: [3]
+    // [3] aynı zamanda kesme işareti olduğundan yalnızca bağlam uygunsa bu adla göster.
+    if (k === '3' && idx > 0 && idx + 1 < hucreler.length) {
+      const prev = hucreler[idx - 1];
+      const next = hucreler[idx + 1];
+      const prevK = dotKey(prev);
+      const prevPrev = idx >= 2 ? hucreler[idx - 2] : null;
+      const prevBoundary = idx < 2 || !prevPrev || prevPrev.length === 0 || buyukHarfIsaretiMi(prevPrev);
+      const kaynakIdx = _esleme ? _esleme[idx] : -1;
+      const kaynakAyiriciOlabilir = !_kaynak || typeof kaynakIdx !== 'number' || kaynakIdx < 0 || /\p{L}/u.test(_kaynak[kaynakIdx] || '');
+      if (_KISALTMA_TEK.has(prevK) && prevBoundary && next && next.length > 0 && kaynakAyiriciOlabilir) {
+        return { tip: 'isaret', baslik: 'Tek Harfli Kısaltma Ayırma İşareti', detay: 'Nokta 3. Tek harfli kısaltmadan sonra gelen ek/devamdan önce kullanılır.', noktaStr };
+      }
+    }
+
+    // Tek harfli kısaltma kelime başında ek/devam alıyorsa ilk hücrenin
+    // altında harfi değil, kısaltmanın açılımını göster (örn. can+sız, göre+ce).
+    if (prevBosBuyuk && idx + 1 < hucreler.length && dotKey(hucreler[idx + 1]) === '3') {
+      const kayit = KELIME_KISALTMALARI.find((m) => dotKey(m.noktalar) === k);
+      if (kayit) {
+        const kaynakKelime = _kaynakKelime(idx);
+        const hedef = kayit.kelime.toLocaleLowerCase('tr');
+        if (kaynakKelime === null || kaynakKelime === hedef || kaynakKelime.startsWith(hedef)) {
+          const kel = kasala(kayit.kelime);
+          return { tip: 'kisaltma', baslik: `Bir Harfli Kısaltma: "${kel}"`, detay: `"${kayit.harf}" harfi kelime başında "${kel}" kısaltmasını gösterir; ardından gelen nokta 3 ek/devam ayırıcısıdır.`, noktaStr, etiket: kel };
+        }
+      }
+    }
+
     // Bu hücre bir parça kısaltmasının sag hücresi mi? (önceki hücre [4,5] veya [5,6])
     if (idx > 0) {
       const prevK = dotKey(hucreler[idx - 1]);
@@ -333,28 +462,27 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif) {
       }
     }
 
-    // İki harfli kısaltma: yalnızca tam kelime (her iki yanı da boşluk)
+    // İki harfli kısaltma: tam kelime veya kelime başında ek/devam almış prefix.
     // — bu hücre ikinci mi?
     if (idx > 0 && prevBosBuyuk === false) {
       const prevK = dotKey(hucreler[idx - 1]);
-      const prevPrevIsSpace = idx < 2 || hucreler[idx - 2].length === 0 || buyukHarfIsaretiMi(hucreler[idx - 2]);
-      if (prevPrevIsSpace && nextIsSpace) {
+      const prevPrevIsSpace = idx < 2 || hucreler[idx - 2].length === 0 || buyukHarfIsaretiMi(hucreler[idx - 2]) || _isNoktalamaHucre(hucreler[idx - 2], idx - 2);
+      if (prevPrevIsSpace) {
         const ikiKey = prevK + '|' + k;
         const iki = IKI_HARFLI_KISALTMALAR.find((m) => dotKey(m.sol) + '|' + dotKey(m.sag) === ikiKey);
-        if (iki) {
+        if (iki && _kaynakKelimeBaslar(idx, iki.kelime)) {
           const kel = kasala(iki.kelime);
-          return { tip: 'kisaltma', baslik: `İki Harfli Kısaltma: "${kel}"`, detay: `"${iki.harf}" → "${kel}" (bu hücre ikinci)`, noktaStr, etiket: kel };
+          return { tip: 'kisaltma', baslik: `İki Harfli Kısaltma: "${kel}"`, detay: `"${iki.harf}" → "${kel}" (bu hücre ikinci)`, noktaStr, etiket: '' };
         }
       }
     }
     // — bu hücre birinci mi?
     if (idx + 1 < hucreler.length && nextIsSpace === false) {
       const nextK = dotKey(hucreler[idx + 1]);
-      const nextNextIsSpace = idx + 2 >= hucreler.length || hucreler[idx + 2].length === 0;
-      if (prevBosBuyuk && nextNextIsSpace) {
+      if (prevBosBuyuk) {
         const ikiKey = k + '|' + nextK;
         const iki = IKI_HARFLI_KISALTMALAR.find((m) => dotKey(m.sol) + '|' + dotKey(m.sag) === ikiKey);
-        if (iki) {
+        if (iki && _kaynakKelimeBaslar(idx, iki.kelime)) {
           const kel = kasala(iki.kelime);
           return { tip: 'kisaltma', baslik: `İki Harfli Kısaltma: "${kel}"`, detay: `"${iki.harf}" → "${kel}" (bu hücre birinci)`, noktaStr, etiket: kel };
         }
@@ -405,9 +533,12 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif) {
     if (prevBosBuyuk && nextIsSpace) {
       const kelime = _KISALTMA_TEK.get(k);
       if (kelime) {
-        const harf = KELIME_KISALTMALARI.find((m) => dotKey(m.noktalar) === k)?.harf || '';
-        const kel = kasala(kelime);
-        return { tip: 'kisaltma', baslik: `Kelime Kısaltması: "${kel}"`, detay: `"${harf}" harfi tek başına → "${kel}" kelimesi`, noktaStr, etiket: kel };
+        const kaynakKelime = _kaynakKelime(idx);
+        if (kaynakKelime === null || kaynakKelime === kelime.toLocaleLowerCase('tr')) {
+          const harf = KELIME_KISALTMALARI.find((m) => dotKey(m.noktalar) === k)?.harf || '';
+          const kel = kasala(kelime);
+          return { tip: 'kisaltma', baslik: `Bir Harfli Kısaltma: "${kel}"`, detay: `"${harf}" harfi tek başına → "${kel}" kelimesi`, noktaStr, etiket: kel };
+        }
       }
     }
   }
@@ -463,8 +594,8 @@ function _brfMetinedon(icerik, kisaltmali) {
       const bloklariIsle = (bRaw, sonrakiIlkHucre) => {
         if (bRaw.length === 0) return;
         // Blok başındaki büyük harf işaretlerini ayır:
-        //  [4,6][4,6] → tümü büyük (TÜM_BUYUK)
-        //  [4,6]      → ilk harf büyük (ILK_BUYUK)
+        //  [6][6] → tümü büyük (TÜM_BUYUK)
+        //  [6]    → ilk harf büyük (ILK_BUYUK)
         let bashCase = 'normal';
         let b = bRaw;
         if (b.length >= 2 && buyukHarfIsaretiMi(b[0]) && buyukHarfIsaretiMi(b[1])) {
@@ -497,10 +628,38 @@ function _brfMetinedon(icerik, kisaltmali) {
         const buf = [];
         let ci = 0;
         let sM = false, bH = false, bHTumu = false;
+        let ikiHarfPrefixIndex = -1;
+        let kokPrefixIndex = -1;
         // Blok-başı kasası kelimenin tamamına uygulanacağı için iç çevirim küçük yapılır;
-        // ama metin içi [4,6] (orta-blok) yine de aktif olmalı.
+        // ama metin içi [6] (orta-blok) yine de aktif olmalı.
         if (bashCase === 'tumu') bHTumu = true;
         else if (bashCase === 'ilk') bH = true;
+        // İki harfli kısaltma + ek/devam: kısaltma başta genişletilir,
+        // kalan hücreler normal ek/devam olarak okunur.
+        if (b.length >= 3 && ilkKey !== '5' && ilkKey !== '4,5' && ilkKey !== '5,6') {
+          const ikiKey = ilkKey + '|' + [...b[1]].sort((x, y) => x - y).join(',');
+          if (_KISALTMA_IKI.has(ikiKey)) {
+            let ikiKelime = _KISALTMA_IKI.get(ikiKey);
+            if (bHTumu) ikiKelime = ikiKelime.toLocaleUpperCase('tr');
+            else if (bH) ikiKelime = ikiKelime.charAt(0).toLocaleUpperCase('tr') + ikiKelime.slice(1).toLocaleLowerCase('tr');
+            buf.push(ikiKelime);
+            ikiHarfPrefixIndex = buf.length - 1;
+            bH = false;
+            ci = 2;
+          }
+        }
+        // Tek harfli kısaltma + [3] ayırma işareti + ek/devam.
+        if (b.length >= 3 && _KISALTMA_TEK.has(ilkKey)) {
+          const ikinciKey = [...b[1]].sort((x, y) => x - y).join(',');
+          if (ikinciKey === '3') {
+            let tek = _KISALTMA_TEK.get(ilkKey);
+            if (bHTumu) tek = tek.toLocaleUpperCase('tr');
+            else if (bH) tek = tek.charAt(0).toLocaleUpperCase('tr') + tek.slice(1).toLocaleLowerCase('tr');
+            buf.push(tek);
+            bH = false;
+            ci = 2;
+          }
+        }
         const harfYaz = (h) => {
           if (!h) return;
           if (bHTumu) buf.push(h.toLocaleUpperCase('tr'));
@@ -520,6 +679,7 @@ function _brfMetinedon(icerik, kisaltmali) {
             if (bH) { kk = kk.charAt(0).toLocaleUpperCase('tr') + kk.slice(1); bH = false; }
             else if (bHTumu) kk = kk.toLocaleUpperCase('tr');
             buf.push(kk);
+            kokPrefixIndex = buf.length - 1;
             ci = 2;
           }
         }
@@ -582,6 +742,14 @@ function _brfMetinedon(icerik, kisaltmali) {
             harfYaz(h);
           }
           ci++;
+        }
+        if (ikiHarfPrefixIndex >= 0) {
+          const sonrakiMetin = buf.slice(ikiHarfPrefixIndex + 1).join('');
+          buf[ikiHarfPrefixIndex] = ikiHarfliKisaltmaOkunusunuYumusat(buf[ikiHarfPrefixIndex], sonrakiMetin);
+        }
+        if (kokPrefixIndex >= 0) {
+          const sonrakiMetin = buf.slice(kokPrefixIndex + 1).join('');
+          buf[kokPrefixIndex] = kelimeKokuOkunusunuYorIcinDuzelt(buf[kokPrefixIndex], sonrakiMetin);
         }
         cikis.push(buf.join(''));
       };
@@ -722,14 +890,19 @@ export default function Araclar() {
 
   // İndir: dönüştür + kaydet
   const cevirFn = kisaltmaAktif
-    ? (m, o) => metniBrailleyeCevirKisaltmali(m, { ...o, ...kisaltmaSistemler })
+    ? (m, o) => metniBrailleyeCevirKisaltmali(tekHarfTirnakla(m), { ...o, ...kisaltmaSistemler })
     : metniBrailleyeCevir;
 
   // Önbellekli hücre dizisi (sayfalama + render için)
-  const hucrelerCache = useMemo(() => {
-    if (!girisMetni) return [];
-    return cevirFn(girisMetni, { buyukHarfIsareti: true, sayiIsareti: true }).hucreler;
+  const cevirSonuc = useMemo(() => {
+    if (!girisMetni) return { hucreler: [], esleme: [], kaynak: '' };
+    const kaynak = kisaltmaAktif ? tekHarfTirnakla(girisMetni) : girisMetni;
+    const r = cevirFn(girisMetni, { buyukHarfIsareti: true, sayiIsareti: true });
+    return { hucreler: r.hucreler, esleme: r.esleme, kaynak };
   }, [girisMetni, kisaltmaAktif, kisaltmaSistemler]);
+  const hucrelerCache = cevirSonuc.hucreler;
+  const eslemeCache = cevirSonuc.esleme;
+  const kaynakCache = cevirSonuc.kaynak;
 
   const toplamSayfa = Math.max(1, Math.ceil(hucrelerCache.length / BRAILLE_SAYFA_BOYUTU));
   const sayfaBaslangic = brailleSayfa * BRAILLE_SAYFA_BOYUTU;
@@ -817,6 +990,7 @@ export default function Araclar() {
   const noktalarıSeslendir = () =>
     sesToggle('nokta', () => {
       if (!girisMetni.trim()) return '';
+      const kaynakMetin = kisaltmaAktif ? tekHarfTirnakla(girisMetni) : girisMetni;
       const { hucreler, esleme } = cevirFn(girisMetni, { buyukHarfIsareti: true, sayiIsareti: true });
       const parcalar = [];
       for (let i = 0; i < hucreler.length; i++) {
@@ -825,8 +999,8 @@ export default function Araclar() {
         if (n.length === 0) { parcalar.push('boşluk'); continue; }
         const noktaMetni = n.join(' ');
         if (kisaltmaAktif) {
-          const anlam = hucreAnlami(hucreler, i, true);
-          if (anlam.tip === 'isaret' && (anlam.baslik === 'Kelime Kökü İşareti' || anlam.baslik === 'Kelime Parçası İşareti')) {
+          const anlam = hucreAnlami(hucreler, i, true, { kaynak: kaynakMetin, esleme });
+          if (anlam.tip === 'isaret') {
             parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
             continue;
           }
@@ -835,7 +1009,7 @@ export default function Araclar() {
             continue;
           }
         }
-        const harfMetni = kaynak >= 0 ? girisMetni[kaynak] : '';
+        const harfMetni = kaynak >= 0 ? kaynakMetin[kaynak] : '';
         parcalar.push(harfMetni ? `${harfMetni}: ${noktaMetni}` : `nokta ${noktaMetni}`);
       }
       return parcalar.join(', ');
@@ -893,7 +1067,7 @@ export default function Araclar() {
                 ref={textareaRef}
                 className="yazma-metin araclar-metin araclar-textarea"
                 value={girisMetni}
-                onChange={(e) => setGirisMetni(e.target.value)}
+                onChange={(e) => metinTirnakliGuncelle(e.target.value, girisMetni, e.target, kisaltmaAktif, setGirisMetni)}
                 placeholder="Metin girin…"
                 aria-label="Dönüştürülecek metin"
                 spellCheck={false}
@@ -921,7 +1095,7 @@ export default function Araclar() {
                 <div ref={brailleKutuRef} className={'araclar-nokta-gorunus belge-braille-kutu' + (genisletAktif ? ' genisletilmis' : '')} aria-label="Braille nokta görünümü">
                   {sayfaHucreler.map((noktalar, i) => {
                     const globalIdx = sayfaBaslangic + i;
-                    const anlam = hucreAnlami(hucrelerCache, globalIdx, kisaltmaAktif);
+                    const anlam = hucreAnlami(hucrelerCache, globalIdx, kisaltmaAktif, { kaynak: kaynakCache, esleme: eslemeCache });
                     const kisaltmaHucre = kisaltmaAktif && (
                       anlam.tip === 'kisaltma' ||
                       (anlam.tip === 'isaret' && (
@@ -1176,6 +1350,20 @@ export default function Araclar() {
             onSil={onSil}
             onEnter={brfIndir}
             perkinsModu
+          />
+        </div>
+      )}
+
+      {/* Yatay mobilde Modül 2'deki tam ekran Perkins klavye görünümü */}
+      {perkinsAktif && (
+        <div className="klavye-popup" role="dialog" aria-label="Braille ekran klavyesi">
+          <BrailleKlavye
+            onHucre={onHucre}
+            onBosluk={onBosluk}
+            onSil={onSil}
+            onEnter={brfIndir}
+            klavyeAcik={false}
+            siralikTiklama
           />
         </div>
       )}

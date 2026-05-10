@@ -10,6 +10,8 @@ import {
   hucreyiRakamayap,
   buyukHarfIsaretiMi,
   sayiIsaretiMi,
+  ikiHarfliKisaltmaOkunusunuYumusat,
+  kelimeKokuOkunusunuYorIcinDuzelt,
 } from '../utils/brailleCevir.js';
 import {
   KELIME_KISALTMALARI,
@@ -87,6 +89,8 @@ const _TUM_UNLU  = new Set([..._ARKA_UNLU, ..._ON_UNLU]);
 function _unluUyumuSec(ekler, oncekiMetin) {
   const variants = ekler.split(',').map((s) => s.trim());
   if (variants.length <= 1) return variants[0] || '';
+  const oncekiKucuk = (oncekiMetin || '').toLocaleLowerCase('tr');
+  if (oncekiKucuk.endsWith('bu') && variants.includes('gün')) return 'gün';
   let sonUnlu = null;
   for (let k = oncekiMetin.length - 1; k >= 0; k--) {
     if (_TUM_UNLU.has(oncekiMetin[k])) { sonUnlu = oncekiMetin[k]; break; }
@@ -150,8 +154,8 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
       const bloklariIsle = (bRaw, sonrakiIlkHucre) => {
         if (bRaw.length === 0) return;
         // Blok başındaki büyük harf işaretini ayır:
-        //  [4,6][4,6] → tüm kelime büyük (TÜM_BUYUK)
-        //  [4,6]      → ilk harf büyük (ILK_BUYUK)
+        //  [6][6] → tüm kelime büyük (TÜM_BUYUK)
+        //  [6]    → ilk harf büyük (ILK_BUYUK)
         // Böylece kalan kısmı kısaltma testleri tam-kelime olarak görür.
         let bashCase = 'normal';
         let b = bRaw;
@@ -183,6 +187,36 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
         let ci = 0;
         // bashCase'i harfYaz akışına aktar: kısaltma eşleşmezse harf-harf yolda büyük harf korunur
         let sM = false, bH = (bashCase === 'ilk'), bHTumu = (bashCase === 'tumu');
+        let ikiHarfPrefixIndex = -1;
+        let kokPrefixIndex = -1;
+        // İki harfli kısaltma + ek/devam: kısaltma başta genişletilir,
+        // kalan hücreler normal ek/devam olarak okunur.
+        if (ikiHarfAktif && b.length >= 3 && ilkKey !== '5' && ilkKey !== '4,5' && ilkKey !== '5,6') {
+          const ikiKey = ilkKey + '|' + [...b[1]].sort((x, y) => x - y).join(',');
+          if (_KISALTMA_IKI.has(ikiKey)) {
+            let ikiKelime = _KISALTMA_IKI.get(ikiKey);
+            if (bHTumu) ikiKelime = ikiKelime.toLocaleUpperCase('tr');
+            else if (bH) ikiKelime = ikiKelime.charAt(0).toLocaleUpperCase('tr') + ikiKelime.slice(1).toLocaleLowerCase('tr');
+            buf.push(ikiKelime);
+            ikiHarfPrefixIndex = buf.length - 1;
+            bH = false;
+            ci = 2;
+          }
+        }
+        // Bir harfli kısaltma + [3] ayırma işareti + ek/devam.
+        // Metin -> BRF tarafı "zaman+kinden", "var+dı", "şey+i" gibi
+        // ekli kullanımları [kısaltma] [3] [devam] biçiminde yazar.
+        if (birHarfAktif && b.length >= 3 && ci === 0 && _KISALTMA_TEK.has(ilkKey)) {
+          const ikinciKey = [...b[1]].sort((x, y) => x - y).join(',');
+          if (ikinciKey === '3') {
+            let tekKelime = _KISALTMA_TEK.get(ilkKey);
+            if (bHTumu) tekKelime = tekKelime.toLocaleUpperCase('tr');
+            else if (bH) tekKelime = tekKelime.charAt(0).toLocaleUpperCase('tr') + tekKelime.slice(1).toLocaleLowerCase('tr');
+            buf.push(tekKelime);
+            bH = false;
+            ci = 2;
+          }
+        }
         // Kök işareti başta: [5] + sag hücresi
         if (kokAktif && b.length >= 2 && ilkKey === '5') {
           const sagKey = [...b[1]].sort((x, y) => x - y).join(',');
@@ -193,6 +227,7 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
             if (bashCase === 'tumu') kk = kk.toLocaleUpperCase('tr');
             else if (bashCase === 'ilk') kk = kk.charAt(0).toLocaleUpperCase('tr') + kk.slice(1);
             buf.push(kk);
+            kokPrefixIndex = buf.length - 1;
             // bashCase tüketildi (kalan harfler küçük kalsın)
             if (bashCase === 'ilk') { bashCase = 'normal'; bH = false; }
             ci = 2;
@@ -223,7 +258,7 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
             // değilse: aşağıdaki hece tablosu yakalayacak ("ki")
           }
           if (buyukHarfIsaretiMi(noktalar)) {
-            // Yan yana iki [4,6] → tüm kelime büyük
+            // Yan yana iki [6] → tüm kelime büyük
             if (ci + 1 < b.length && buyukHarfIsaretiMi(b[ci + 1])) {
               bHTumu = true; ci += 2;
             } else {
@@ -277,6 +312,14 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
             harfYaz(h);
           }
           ci++;
+        }
+        if (ikiHarfPrefixIndex >= 0) {
+          const sonrakiMetin = buf.slice(ikiHarfPrefixIndex + 1).join('');
+          buf[ikiHarfPrefixIndex] = ikiHarfliKisaltmaOkunusunuYumusat(buf[ikiHarfPrefixIndex], sonrakiMetin);
+        }
+        if (kokPrefixIndex >= 0) {
+          const sonrakiMetin = buf.slice(kokPrefixIndex + 1).join('');
+          buf[kokPrefixIndex] = kelimeKokuOkunusunuYorIcinDuzelt(buf[kokPrefixIndex], sonrakiMetin);
         }
         cikis.push(buf.join(''));
       };

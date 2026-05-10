@@ -4,7 +4,7 @@ import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import { metniBrailleyeCevir, metniBrailleyeCevirKisaltmali } from '../utils/brailleCevir.js';
-import { hucreAnlami } from './Araclar.jsx';
+import { hucreAnlami, tekHarfTirnakla, metinTirnakliGuncelle } from './Araclar.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 
 const SATIRDA_HUCRE = 40;
@@ -27,9 +27,11 @@ export function kisaEtiket(anlam) {
     if (anlam.baslik.includes('Tümü Büyük')) return '⇧⇧';
     if (anlam.baslik.includes('Büyük Harf')) return '⇧';
     if (anlam.baslik.includes('Sayı')) return '#';
+    if (anlam.baslik.includes('Ayırma')) return '3';
     if (anlam.baslik.includes('Kök') || anlam.baslik.includes('Parça')) return '*';
     return '*';
   }
+  if (anlam.etiket === '') return '';
   // Kısaltma: hucreAnlami doğrudan kasalı etiket sağladıysa onu kullan
   if (anlam.etiket) return anlam.etiket;
   // Harf: doğru kasada (büyük/küçük) göster
@@ -241,6 +243,7 @@ export default function BelgeBrf() {
 
   const noktalariSeslendir = () => sesToggle('nokta', () => {
     if (!belgeMetni.trim()) return '';
+    const kaynakMetin = kisaltmaAktif ? tekHarfTirnakla(belgeMetni) : belgeMetni;
     const { hucreler: hh, esleme } = cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true });
     const parcalar = [];
     for (let i = 0; i < hh.length; i++) {
@@ -248,7 +251,7 @@ export default function BelgeBrf() {
       const kaynak = esleme ? esleme[i] : -1;
       if (n.length === 0) { parcalar.push('boşluk'); continue; }
       const noktaMetni = n.join(' ');
-      const anlam = hucreAnlami(hh, i, kisaltmaAktif);
+      const anlam = hucreAnlami(hh, i, kisaltmaAktif, { kaynak: kaynakMetin, esleme });
       if (anlam.tip === 'isaret') {
         parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
         continue;
@@ -261,7 +264,7 @@ export default function BelgeBrf() {
         parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
         continue;
       }
-      const harfMetni = kaynak >= 0 ? belgeMetni[kaynak] : '';
+      const harfMetni = kaynak >= 0 ? kaynakMetin[kaynak] : '';
       parcalar.push(harfMetni ? `nokta ${noktaMetni}, ${harfMetni}` : `nokta ${noktaMetni}`);
     }
     return parcalar.join('. ');
@@ -273,12 +276,17 @@ export default function BelgeBrf() {
   };
 
   const cevirFn = kisaltmaAktif
-    ? (m, o) => metniBrailleyeCevirKisaltmali(m, { ...o, ...kisaltmaSistemler })
+    ? (m, o) => metniBrailleyeCevirKisaltmali(tekHarfTirnakla(m), { ...o, ...kisaltmaSistemler })
     : metniBrailleyeCevir;
-  const hucreler = useMemo(() => {
-    if (!belgeMetni) return [];
-    return cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true }).hucreler;
+  const cevirSonuc = useMemo(() => {
+    if (!belgeMetni) return { hucreler: [], esleme: [], kaynak: '' };
+    const kaynak = kisaltmaAktif ? tekHarfTirnakla(belgeMetni) : belgeMetni;
+    const r = cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true });
+    return { hucreler: r.hucreler, esleme: r.esleme, kaynak };
   }, [belgeMetni, kisaltmaAktif, kisaltmaSistemler]);
+  const hucreler = cevirSonuc.hucreler;
+  const eslemeCache = cevirSonuc.esleme;
+  const kaynakCache = cevirSonuc.kaynak;
 
   const toplamSayfa = Math.max(1, Math.ceil(hucreler.length / BRAILLE_SAYFA_BOYUTU));
   const sayfaBaslangic = brailleSayfa * BRAILLE_SAYFA_BOYUTU;
@@ -418,7 +426,7 @@ export default function BelgeBrf() {
               <textarea
                 className="belge-metin-textarea"
                 value={belgeMetni}
-                onChange={(e) => setBelgeMetni(e.target.value)}
+                onChange={(e) => metinTirnakliGuncelle(e.target.value, belgeMetni, e.target, kisaltmaAktif, setBelgeMetni)}
                 aria-label="Belgeden okunan metin (düzenlenebilir)"
                 spellCheck={false}
                 autoCorrect="off"
@@ -446,7 +454,7 @@ export default function BelgeBrf() {
                 <div ref={brailleKutuRef} className={'araclar-nokta-gorunus belge-braille-kutu' + (genisletAktif ? ' genisletilmis' : '')} aria-label="Braille nokta görünümü">
                   {sayfaHucreler.map((noktalar, i) => {
                     const globalIdx = sayfaBaslangic + i;
-                    const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif);
+                    const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif, { kaynak: kaynakCache, esleme: eslemeCache });
                     const kisaltmaHucre = kisaltmaAktif && (
                       anlam.tip === 'kisaltma' ||
                       (anlam.tip === 'isaret' && (

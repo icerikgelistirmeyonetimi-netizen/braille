@@ -26,13 +26,13 @@ const HARF_TABLO = (() => {
 const RAKAM_TABLO = new Map(RAKAMLAR.map((r) => [r.rakam, r.noktalar]));
 const NOKTA_TABLO = new Map(NOKTALAMA.map((n) => [n.isaret, n.noktalar]));
 
-const BUYUK_HARF_ISARETI = [4, 6];   // Türk Braille konvansiyonu
+const BUYUK_HARF_ISARETI = [6];      // MEB Türkçe Braille büyük harf işareti
 const SAYI_ISARETI       = [3, 4, 5, 6];
 
 /**
  * Bir kelimenin tüm harflerinin büyük olup olmadığını döner.
  * En az 2 harf içermeli ve tüm harf karakterleri büyük olmalı.
- * (Kelime ≥2 büyük harften oluştuğunda "Tümü Büyük İşareti" — iki yan yana [4,6] —
+ * (Kelime ≥2 büyük harften oluştuğunda "Tümü Büyük İşareti" — iki yan yana [6] —
  * her harf için ayrı işaret yerine bir kez kullanılır.)
  */
 export function kelimeTumuBuyukMu(kelime) {
@@ -67,7 +67,7 @@ export function metniBrailleyeCevir(metin, opt = {}) {
 
   let sayiModu = false;
   let tirnakAcik = false; // düz " için açma/kapama toggle
-  let tumuBuyukKalan = 0; // bu sayıya kadar gelen harfler için per-letter [4,6] verme
+  let tumuBuyukKalan = 0; // bu sayıya kadar gelen harfler için per-letter [6] verme
 
   for (let i = 0; i < metin.length; i++) {
     const ch = metin[i];
@@ -87,7 +87,7 @@ export function metniBrailleyeCevir(metin, opt = {}) {
     // Harfler (Türkçe destekli)
     const ust = ch.toLocaleUpperCase('tr');
     if (HARF_TABLO.has(ust)) {
-      // Kelime başında ALL CAPS kontrolü → çift [4,6]
+      // Kelime başında ALL CAPS kontrolü → çift [6]
       if (buyukHarfIsareti && tumuBuyukKalan === 0) {
         const kelimeBasi = i === 0 || !HARF_TABLO.has(metin[i - 1]?.toLocaleUpperCase('tr'));
         if (kelimeBasi) {
@@ -240,23 +240,158 @@ import {
   KELIME_KOKU_KISALTMALARI,
   KELIME_PARCASI_KISALTMALARI,
 } from '../data/braille.js';
-import { TURKCE_KELIMELER } from '../data/turkceSozluk.js';
 
 // Kelime sonunda kullanılamayan hece kısaltmaları (MEB kılavuzu)
 const HECE_SON_YASAK = new Set(['ba', 'be', 'bu', 'ka', 'ha', 'ki']);
+const TEK_HARF_EK_AYIRMA_ISARETI = [3];
+const TURKCE_UNLULER = new Set(['a', 'e', 'ı', 'i', 'o', 'ö', 'u', 'ü']);
+const YUMUSAYAN_IKI_HARFLI_KELIMELER = new Set([
+  'cevap',
+  'çocuk',
+  'çeşit',
+  'kitap',
+  'küçük',
+  'sebep',
+  'sıcak',
+  'soğuk',
+  'toprak',
+]);
+const YUMUSAMA_ADAYLARI = {
+  p: ['b'],
+  ç: ['c'],
+  t: ['d'],
+  k: ['ğ', 'g'],
+};
+
+function _sonHarfiYumusat(kelime) {
+  if (!kelime) return kelime;
+  const chars = [...kelime];
+  const son = chars[chars.length - 1];
+  const kucukSon = son.toLocaleLowerCase('tr');
+  const yumusak = { p: 'b', ç: 'c', t: 'd', k: 'ğ' }[kucukSon];
+  if (!yumusak) return kelime;
+  chars[chars.length - 1] = son === son.toLocaleUpperCase('tr') && son !== son.toLocaleLowerCase('tr')
+    ? yumusak.toLocaleUpperCase('tr')
+    : yumusak;
+  return chars.join('');
+}
+
+export function ikiHarfliKisaltmaPrefixEslesmesi(kaynakKelime, kisaltmaKelime) {
+  const kaynak = (kaynakKelime || '').toLocaleLowerCase('tr');
+  const kok = (kisaltmaKelime || '').toLocaleLowerCase('tr');
+  if (!kaynak || !kok || kaynak.length <= kok.length) return null;
+  if (kaynak.startsWith(kok)) return { kalan: kaynak.slice(kok.length), yumusama: false };
+  if (!YUMUSAYAN_IKI_HARFLI_KELIMELER.has(kok)) return null;
+  const son = kok[kok.length - 1];
+  const adaylar = YUMUSAMA_ADAYLARI[son] || [];
+  for (const yumusak of adaylar) {
+    const yumusamisKok = kok.slice(0, -1) + yumusak;
+    if (!kaynak.startsWith(yumusamisKok)) continue;
+    const kalan = kaynak.slice(yumusamisKok.length);
+    if (kalan && TURKCE_UNLULER.has(kalan[0])) {
+      return { kalan, yumusama: true };
+    }
+  }
+  return null;
+}
+
+export function ikiHarfliKisaltmaOkunusunuYumusat(kelime, sonrakiMetin) {
+  const kok = (kelime || '').toLocaleLowerCase('tr');
+  const sonrakiIlk = (sonrakiMetin || '')[0]?.toLocaleLowerCase('tr');
+  if (!YUMUSAYAN_IKI_HARFLI_KELIMELER.has(kok) || !TURKCE_UNLULER.has(sonrakiIlk)) {
+    return kelime;
+  }
+  return _sonHarfiYumusat(kelime);
+}
+
+function _yorOncesiKokUnlusu(kokKelime) {
+  const chars = [...(kokKelime || '')];
+  const son = chars[chars.length - 1]?.toLocaleLowerCase('tr');
+  if (son !== 'a' && son !== 'e') return null;
+  let oncekiUnlu = null;
+  for (let i = chars.length - 2; i >= 0; i--) {
+    const ch = chars[i].toLocaleLowerCase('tr');
+    if (TURKCE_UNLULER.has(ch)) { oncekiUnlu = ch; break; }
+  }
+  if (son === 'a') return oncekiUnlu === 'o' || oncekiUnlu === 'u' ? 'u' : 'ı';
+  return oncekiUnlu === 'ö' || oncekiUnlu === 'ü' ? 'ü' : 'i';
+}
+
+export function kelimeKokuKisaltmaPrefixEslesmesi(kaynakKelime, kokKelime) {
+  const kaynak = (kaynakKelime || '').toLocaleLowerCase('tr');
+  const kok = (kokKelime || '').toLocaleLowerCase('tr');
+  if (!kaynak || !kok || kaynak.length <= kok.length) return null;
+  if (kaynak.startsWith(kok)) return { kalan: kaynak.slice(kok.length), yorDonusumu: false };
+  const yorUnlusu = _yorOncesiKokUnlusu(kok);
+  if (!yorUnlusu) return null;
+  const donusmusKok = kok.slice(0, -1) + yorUnlusu;
+  if (!kaynak.startsWith(donusmusKok)) return null;
+  const kalan = kaynak.slice(donusmusKok.length);
+  if (!kalan.startsWith('yor')) return null;
+  return { kalan, yorDonusumu: true };
+}
+
+export function kelimeKokuOkunusunuYorIcinDuzelt(kokKelime, sonrakiMetin) {
+  const sonraki = (sonrakiMetin || '').toLocaleLowerCase('tr');
+  if (!sonraki.startsWith('yor')) return kokKelime;
+  const yorUnlusu = _yorOncesiKokUnlusu(kokKelime);
+  if (!yorUnlusu) return kokKelime;
+  const son = kokKelime[kokKelime.length - 1];
+  const yeniUnlu = son === son?.toLocaleUpperCase('tr') && son !== son?.toLocaleLowerCase('tr')
+    ? yorUnlusu.toLocaleUpperCase('tr')
+    : yorUnlusu;
+  return kokKelime.slice(0, -1) + yeniUnlu;
+}
 
 // Arama tabloları
 const KELIME_KISALTMA_MAP = new Map(
   KELIME_KISALTMALARI.map((k) => [k.kelime.toLocaleLowerCase('tr'), k.noktalar])
 );
+const TEK_HARF_PREFIX_SORTED = [...KELIME_KISALTMALARI]
+  .map((k) => ({ ...k, kucuk: k.kelime.toLocaleLowerCase('tr') }))
+  .sort((a, b) => b.kucuk.length - a.kucuk.length);
 const IKI_HARFLI_MAP = new Map(
   IKI_HARFLI_KISALTMALAR.map((k) => [k.kelime.toLocaleLowerCase('tr'), [k.sol, k.sag]])
 );
+const IKI_HARF_PREFIX_SORTED = [...IKI_HARFLI_KISALTMALAR]
+  .map((k) => ({ ...k, kucuk: k.kelime.toLocaleLowerCase('tr') }))
+  .sort((a, b) => b.kucuk.length - a.kucuk.length);
 // Hece kısaltmalarını uzundan kısaya sıralı tablo (en uzun eşleşme önce)
 const HECE_SORTED = [...HECE_KISALTMALARI].sort((a, b) => b.hece.length - a.hece.length);
 
 // Kök kısaltmaları: uzundan kısaya sıralı (en uzun eşleşme önce)
 const KOK_SORTED = [...KELIME_KOKU_KISALTMALARI].sort((a, b) => b.kelime.length - a.kelime.length);
+
+const KOK_BAGLAYICILAR = ['', 'a', 'e', 'ı', 'i', 'u', 'ü', 'ya', 'ye', 'yı', 'yi', 'yu', 'yü'];
+
+function _kalanIkinciKokleBaslar(kalanKucuk) {
+  for (const baglayici of KOK_BAGLAYICILAR) {
+    if (!kalanKucuk.startsWith(baglayici)) continue;
+    const aday = kalanKucuk.slice(baglayici.length);
+    for (const { kelime } of KOK_SORTED) {
+      const kok = kelime.toLocaleLowerCase('tr');
+      if (aday.length > kok.length && aday.startsWith(kok)) return true;
+    }
+  }
+  return false;
+}
+
+function _kalanKokOnceligiGerektirir(kalanKucuk) {
+  if (_kalanIkinciKokleBaslar(kalanKucuk)) return true;
+  if (/^(yor|[aeıiuü]yor)/u.test(kalanKucuk)) return true;
+  return PARCA_SUFFIXES_SORTED.some((suffix) => kalanKucuk === suffix || kalanKucuk.startsWith(suffix));
+}
+
+function _kokEslesmesiBul(kucuk, yalnizOncelikli = false) {
+  for (const kok of KOK_SORTED) {
+    const eslesme = kelimeKokuKisaltmaPrefixEslesmesi(kucuk, kok.kelime);
+    if (!eslesme) continue;
+    if (!yalnizOncelikli || eslesme.yorDonusumu || _kalanKokOnceligiGerektirir(eslesme.kalan)) {
+      return { kok, eslesme };
+    }
+  }
+  return null;
+}
 
 // Kelime parçası (suffix/ek) kısaltmaları:
 // ekler alanı "lara, lere" gibi virgüllü liste; her suffix → { sol, sag } eşler
@@ -271,22 +406,44 @@ const PARCA_SUFFIX_MAP = (() => {
 })();
 // Suffix listesini uzundan kısaya sırala
 const PARCA_SUFFIXES_SORTED = [...PARCA_SUFFIX_MAP.keys()].sort((a, b) => b.length - a.length);
+const PARCA_VARIANTS_SORTED = [...PARCA_SUFFIX_MAP.entries()]
+  .map(([ek, hucreler]) => ({ ek, ...hucreler }))
+  .sort((a, b) => b.ek.length - a.ek.length);
+
+function _kelimeSessizleBaslar(kelime) {
+  const ilk = (kelime || '')[0]?.toLocaleLowerCase('tr');
+  return !!ilk && /\p{L}/u.test(ilk) && !TURKCE_UNLULER.has(ilk);
+}
+
+function _parcaKullanilabilirMi(kelime, baslangic, uzunluk, opt) {
+  const offset = opt._offset ?? 0;
+  const gercekBaslangic = offset + baslangic;
+  const oncesiVar = gercekBaslangic > 0 || opt.afterKok || opt.afterTekHarf || opt.afterIkiHarf || opt.afterParca;
+  const sonrasiVar = baslangic + uzunluk < kelime.length;
+  if (!oncesiVar) return false;
+  if (!oncesiVar && !sonrasiVar) return false;
+  if (gercekBaslangic === 1 && opt._wordStartsConsonant) return false;
+  return true;
+}
 
 /**
  * Tek bir kelimeyi (noktalama/boşluk olmayan) kısaltma kurallarıyla dönüştürür.
  *
  * Konum kısıtlamaları:
  *  - Kök kısaltması ([5]+sag) : yalnızca kelime BAŞINDA (ardında en az 1 karakter olmalı)
- *  - Parça kısaltması ([4,5] veya [5,6]+sag) : yalnızca kelime SONUNDA (önünde en az 1 karakter)
+ *  - Parça kısaltması ([4,5] veya [5,6]+sag) : kelime başında, tek başına
+ *    veya sessizle başlayan kelimenin ilk harfinden hemen sonra kullanılamaz.
  *  - Hece kısaltması : kelime başında/ortasında serbestçe;
  *    sonda yalnızca HECE_SON_YASAK dışındakiler
  *
  * Öncelik sırası:
  *  1. Tam kelime → iki harfli kısaltma (2 hücre)
  *  2. Tam kelime → tek harfli kısaltma (1 hücre)
- *  3. Kelime başında en uzun kök kısaltması; kalan özyinelemeli
- *  4. Kelime sonundan suffix kısaltmaları soyulur
- *  5. Kalan stem: en uzun hece kısaltması, yoksa normal harf
+ *  3. Kelime başında iki harfli kısaltma + ek/devam
+ *  4. Kelime başında tek harfli kısaltma + [3] ayırma işareti + ek/devam
+ *  5. Kelime başında en uzun kök kısaltması; kalan özyinelemeli
+ *  6. Kelime parçası kısaltmaları konum kurallarıyla soldan sağa uygulanır
+ *  7. Kalan stem: en uzun hece kısaltması, yoksa normal harf
  *
  * @param {string} kelime  — orijinal büyük/küçük harf karışık olabilir
  * @param {object} opt
@@ -295,6 +452,25 @@ const PARCA_SUFFIXES_SORTED = [...PARCA_SUFFIX_MAP.keys()].sort((a, b) => b.leng
 function kelimeyiKisaltmayaCevir(kelime, opt) {
   const kucuk = kelime.toLocaleLowerCase('tr');
   const { ikiHarf = true, birHarf = true, hece = true, kok = true, parca = true } = opt;
+  const offset = opt._offset ?? 0;
+  const wordStartsConsonant = opt._wordStartsConsonant ?? _kelimeSessizleBaslar(kucuk);
+
+  const devamOpt = (kalanKucuk, ekOpt) => ({
+    ...opt,
+    ...ekOpt,
+    _offset: offset + (kucuk.length - kalanKucuk.length),
+    _wordStartsConsonant: wordStartsConsonant,
+  });
+
+  const kokHucreleri = (kokKaydi, kalanKucuk) => {
+    const kalanHucreler = kelimeyiKisaltmayaCevir(kalanKucuk, devamOpt(kalanKucuk, {
+      ikiHarf: false,
+      birHarf: false,
+      kok: false,
+      afterKok: true,
+    }));
+    return [[5], kokKaydi.sag, ...kalanHucreler];
+  };
 
   // 1. Tam kelime → iki harfli kısaltma
   if (ikiHarf && IKI_HARFLI_MAP.has(kucuk)) {
@@ -307,64 +483,81 @@ function kelimeyiKisaltmayaCevir(kelime, opt) {
     return [KELIME_KISALTMA_MAP.get(kucuk)];
   }
 
-  // 3. Kelime kökü kısaltması — yalnızca kelime BAŞINDA, ardında en az 1 karakter olmalı
+  // Kök bileşiği veya -yor ses değişimi varsa kök kısaltması diğer prefix
+  // kısaltmalardan önce gelir (örn. görebilmek, istiyor, harcıyor).
   if (kok) {
-    for (const { kelime: kokKelime, sag } of KOK_SORTED) {
-      if (kucuk.length > kokKelime.length && kucuk.startsWith(kokKelime)) {
-        const kalanKucuk = kucuk.slice(kokKelime.length);
-        // Kalan kısmı işle; kök tekrar aranmasın; afterKok=true ile tam-suffix eşleşmesine izin ver
-        const kalanHucreler = kelimeyiKisaltmayaCevir(kalanKucuk, { ...opt, kok: false, afterKok: true });
-        return [[5], sag, ...kalanHucreler];
-      }
+    const oncelikliKok = _kokEslesmesiBul(kucuk, true);
+    if (oncelikliKok) {
+      return kokHucreleri(oncelikliKok.kok, oncelikliKok.eslesme.kalan);
     }
   }
 
-  // 4. Kelime parçası (suffix) kısaltmalarını sağdan soy — yalnızca kelime SONUNDA,
-  //    önünde en az 1 karakter olmalı (afterKok=true ise tam-suffix eşleşmesine izin verilir).
-  //    suffixCellsFlat: [sol1, sag1, sol2, sag2, ...] (soldan sağa sıralı)
-  const { afterKok = false } = opt;
-  // afterKok=true: kök işaretinden hemen sonra gelen kısım, tam suffix olabilir (min stem=0)
-  // afterKok=false: normal kelime, suffix öncesinde en az 1 karakter olmalı (min stem=1)
-  const minOnce = afterKok ? 0 : 1;
-  const suffixCellsFlat = [];
-  let stemKucuk = kucuk;
-  if (parca) {
-    let devam = true;
-    while (devam && stemKucuk.length > minOnce) {
-      devam = false;
-      for (const suffix of PARCA_SUFFIXES_SORTED) {
-        if (stemKucuk.length - suffix.length >= minOnce && stemKucuk.endsWith(suffix)) {
-          const yeniStem = stemKucuk.slice(0, -suffix.length);
-          // Sözlük doğrulaması: ek soyduktan sonra geriye kalan kök Turkçe bir kelime değilse soyma
-          // (örn. "balık" → "lık" eki soyulursa "ba" kalır, sözlükte yok → soyma)
-          // afterKok=true durumunda yeniStem boş olabilir (kök+suffix sıkı birleşim) → doğrulama atlanır.
-          if (yeniStem.length > 0 && !TURKCE_KELIMELER.has(yeniStem)) {
-            continue;
-          }
-          const { sol, sag } = PARCA_SUFFIX_MAP.get(suffix);
-          // Başa ekle: soyma sağdan sola gidiyor, çıktı soldan sağa olacak
-          suffixCellsFlat.unshift(sag);
-          suffixCellsFlat.unshift(sol);
-          stemKucuk = yeniStem;
-          devam = true;
-          break;
-        }
-      }
+  // 3. Kelime başında iki harfli kısaltma + ek/devam
+  // MEB kuralı: İki harfli kısaltmalar kelime başında ek alacak biçimde
+  // kullanılabilir; ek/devamdan önce ayrıca ayırıcı işaret konmaz.
+  if (ikiHarf) {
+    for (const { kucuk: kisaltmaKelime, sol, sag } of IKI_HARF_PREFIX_SORTED) {
+      const eslesme = ikiHarfliKisaltmaPrefixEslesmesi(kucuk, kisaltmaKelime);
+      if (!eslesme) continue;
+      const kalanKucuk = eslesme.kalan;
+      const kalanHucreler = kelimeyiKisaltmayaCevir(kalanKucuk, devamOpt(kalanKucuk, {
+        ikiHarf: false,
+        birHarf: false,
+        kok: false,
+        afterIkiHarf: true,
+      }));
+      return [sol, sag, ...kalanHucreler];
     }
   }
 
-  // 5. Stem kısmını hece + normal harf ile işle
-  //    stemKucuk, kucuk'un bir öneki (prefix) olduğundan stemKucuk[i] = kelime[i]
+  // 4. Kelime başında tek harfli kısaltma + ek/devam
+  // MEB kuralı: Bir harfli kısaltmalar kelimenin başında kullanılabilir;
+  // sonlarına ek aldığında kısaltma ile ek arasına üçüncü nokta konur.
+  if (birHarf) {
+    for (const { kucuk: kisaltmaKelime, noktalar } of TEK_HARF_PREFIX_SORTED) {
+      if (kucuk.length <= kisaltmaKelime.length || !kucuk.startsWith(kisaltmaKelime)) continue;
+      const kalanKucuk = kucuk.slice(kisaltmaKelime.length);
+      const kalanHucreler = kelimeyiKisaltmayaCevir(kalanKucuk, devamOpt(kalanKucuk, {
+        ikiHarf: false,
+        birHarf: false,
+        kok: false,
+        afterTekHarf: true,
+      }));
+      return [noktalar, TEK_HARF_EK_AYIRMA_ISARETI, ...kalanHucreler];
+    }
+  }
+
+  // 5. Kelime kökü kısaltması — yalnızca kelime BAŞINDA, ardında en az 1 karakter olmalı
+  if (kok) {
+    const kokEslesmesi = _kokEslesmesiBul(kucuk);
+    if (kokEslesmesi) {
+      return kokHucreleri(kokEslesmesi.kok, kokEslesmesi.eslesme.kalan);
+    }
+  }
+
+  // 6-7. Stem kısmını parça + hece + normal harf ile işle.
+  // Parça kısaltmaları soldan sağa ve en uzun eşleşme önceliğiyle denenir.
   const stemHucreler = [];
   let i = 0;
-  const n = stemKucuk.length;
+  const n = kucuk.length;
   while (i < n) {
     const kalanUzunluk = n - i;
     let eslesti = false;
-    if (hece) {
+    if (parca) {
+      for (const { ek, sol, sag } of PARCA_VARIANTS_SORTED) {
+        if (ek.length > kalanUzunluk) continue;
+        if (kucuk.slice(i, i + ek.length) !== ek) continue;
+        if (!_parcaKullanilabilirMi(kucuk, i, ek.length, { ...opt, _offset: offset, _wordStartsConsonant: wordStartsConsonant })) continue;
+        stemHucreler.push(sol, sag);
+        i += ek.length;
+        eslesti = true;
+        break;
+      }
+    }
+    if (!eslesti && hece) {
       for (const { hece: heceStr, noktalar } of HECE_SORTED) {
         if (heceStr.length > kalanUzunluk) continue;
-        if (stemKucuk.slice(i, i + heceStr.length) !== heceStr) continue;
+        if (kucuk.slice(i, i + heceStr.length) !== heceStr) continue;
         const kelimeSonuMu = i + heceStr.length === n;
         if (kelimeSonuMu && HECE_SON_YASAK.has(heceStr)) continue;
         stemHucreler.push(noktalar);
@@ -375,7 +568,7 @@ function kelimeyiKisaltmayaCevir(kelime, opt) {
     }
     if (!eslesti) {
       // Normal harf — orijinal büyük/küçük harf için kelime[i] kullan
-      const origCh = kelime[i] ?? stemKucuk[i];
+      const origCh = kelime[i] ?? kucuk[i];
       const ust = origCh.toLocaleUpperCase('tr');
       const noktalar = HARF_TABLO.get(ust);
       if (noktalar) {
@@ -390,7 +583,7 @@ function kelimeyiKisaltmayaCevir(kelime, opt) {
     }
   }
 
-  return [...stemHucreler, ...suffixCellsFlat];
+  return stemHucreler;
 }
 
 /**
@@ -439,7 +632,8 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
 
   let sayiModu = false;
 
-  for (const tok of tokenler) {
+  for (let ti = 0; ti < tokenler.length; ti++) {
+    const tok = tokenler[ti];
     if (tok.tip === 'bosluk') {
       ekle([], tok.idx);
       sayiModu = false;
@@ -456,7 +650,7 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
       sayiModu = false;
       const kel = tok.deger;
       const kucukKel = kel.toLocaleLowerCase('tr');
-      // Tümü büyük? → çift [4,6] ekle, kelimeyi küçük olarak işle (per-letter [4,6] tetiklenmesin)
+      // Tümü büyük? → çift [6] ekle, kelimeyi küçük olarak işle (per-letter [6] tetiklenmesin)
       const tumuBuyuk = buyukHarfIsareti && kelimeTumuBuyukMu(kel);
       if (tumuBuyuk) {
         ekle(BUYUK_HARF_ISARETI, -1);
