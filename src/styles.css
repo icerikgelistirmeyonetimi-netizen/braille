@@ -431,6 +431,8 @@ h1, h2, h3 { color: var(--fg); }
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  min-width: 0;
   padding-bottom: 0;
   border-bottom: 2px solid var(--panel-border);
   position: relative;
@@ -1694,6 +1696,9 @@ h1, h2, h3 { color: var(--fg); }
   align-items: center;
   justify-content: center;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   gap: 8px;
 }
 
@@ -2033,6 +2038,8 @@ h1, h2, h3 { color: var(--fg); }
 .araclar-nokta-sarici {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: visible;
@@ -2065,6 +2072,8 @@ h1, h2, h3 { color: var(--fg); }
 .belge-tab-icerik-sarici {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -2182,6 +2191,8 @@ h1, h2, h3 { color: var(--fg); }
   border-radius: 12px;
   flex-shrink: 0;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
 }
 .belge-tab {
@@ -2325,12 +2336,15 @@ h1, h2, h3 { color: var(--fg); }
   border: 1.5px solid color-mix(in srgb, var(--accent) 25%, var(--panel-border));
   border-radius: 10px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
   flex-shrink: 0;
   color: var(--accent);
 }
 .belge-dosya-adi {
   flex: 1;
+  min-width: 0;
   font-size: 0.88em;
   font-weight: 600;
   color: var(--fg);
@@ -2366,6 +2380,8 @@ h1, h2, h3 { color: var(--fg); }
 .belge-metin-sarici {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -2454,6 +2470,8 @@ h1, h2, h3 { color: var(--fg); }
   align-items: center;
   margin-top: 8px;
   gap: 8px;
+  min-width: 0;
+  width: 100%;
 }
 .belge-braille-altbar .belge-braille-sayfalama { margin-top: 0; justify-self: center; }
 .belge-altbar-sol { display: block; }
@@ -2462,6 +2480,7 @@ h1, h2, h3 { color: var(--fg); }
   align-items: center;
   gap: 6px;
   justify-self: end;
+  min-width: 0;
 }
 .belge-sayfa-form {
   display: inline-flex;
