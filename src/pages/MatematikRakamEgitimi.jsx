@@ -3,20 +3,24 @@ import DesenOgretici from '../components/DesenOgretici.jsx';
 import { MATEMATIK_RAKAMLAR, RAKAM_GOSTERGESI } from '../data/matematik.js';
 
 // Rakam göstergesi (3-4-5-6) ardından gelen harf hücresi rakam olur.
-// Bu sayfa rakam başına TEK hücre gösterir; gerçek yazıda önce rakam
-// göstergesi yer aldığını DesenOgretici altındaki açıklamada belirtir.
 export default function MatematikRakamEgitimi() {
   const ogeler = MATEMATIK_RAKAMLAR.map((r) => ({
     ad: r.rakam,
-    ariaAd: `${r.ad} rakamı`,
+    ariaAd: r.ad,
     noktalar: r.noktalar,
-    aciklama: `Rakam göstergesi (${RAKAM_GOSTERGESI.join('-')}) sonrası ${r.ad}: ${r.noktalar.join('-')}.`
+    hucreler: [RAKAM_GOSTERGESI, r.noktalar],
+    hucreBasliklari: ['sayı', r.rakam],
+    hucreAriaEtiketleri: ['sayı işareti', `${r.rakam} rakam hücresi`],
+    hucreAdlari: ['sayı işareti hücresi', 'rakam hücresi'],
+    yonergeDetay: `önce sayı işareti hücresindeki ${RAKAM_GOSTERGESI.join(', ')}; sonra rakam hücresindeki ${r.noktalar.join(', ')} numaralı noktalardan oluşur.`,
+    aciklama:
+      "Matematik Braille'de rakam, sayı işareti ve ardından gelen rakam hücresiyle yazılır."
   }));
   return (
     <DesenOgretici
       baslik="Matematik: Rakamlar"
       ogeler={ogeler}
-      kategoriAdi="rakam"
+      kategoriAdi="rakamı"
       bolumAnahtari="mat-rakamlar"
       bittiMesaji="Tebrikler! Tüm rakamların braille karşılıklarını öğrendiniz."
     />

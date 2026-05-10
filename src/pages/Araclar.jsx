@@ -1363,7 +1363,7 @@ export default function Araclar() {
             onSil={onSil}
             onEnter={brfIndir}
             klavyeAcik={false}
-            siralikTiklama
+            anindaDokunma
           />
         </div>
       )}

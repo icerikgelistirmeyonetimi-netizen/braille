@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
+import OkumaModuListesi, { OkumaModuButonu } from '../components/OkumaModu.jsx';
 import { IKI_HARFLI_KISALTMALAR } from '../data/braille.js';
 import { konus, basariBildir, konusmayiDurdur } from '../utils/ses.js';
 import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
@@ -14,6 +15,7 @@ export default function KisaltmaIkiHarfli() {
   const [indeks, setIndeks] = useState(() => indeksAl(ANAHTAR));
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const [okumaModu, setOkumaModu] = useState(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const kayitliAdlar = sonraOgrenAl(ANAHTAR);
@@ -49,6 +51,17 @@ export default function KisaltmaIkiHarfli() {
     }
   };
 
+  const okumaModunaGec = () => {
+    konusmayiDurdur();
+    setOkumaModu(true);
+  };
+
+  const okumaOgesiSec = (orijinalIndeks) => {
+    setKayitlilarModu(false);
+    setIndeks(orijinalIndeks);
+    setOkumaModu(false);
+  };
+
   useEffect(() => {
     if (bitti) {
       konus('Tebrikler! İki harfli kısaltmaları tamamladınız.');
@@ -63,6 +76,33 @@ export default function KisaltmaIkiHarfli() {
   }, [indeks, bitti]);
 
   useEffect(() => () => konusmayiDurdur(), []);
+
+  if (okumaModu) {
+    return (
+      <div className="page">
+        <div>
+          <PageHeader baslik="İki Harfli Kısaltmalar" />
+          <div className="progress" aria-hidden="true">
+            Okuma modu: {IKI_HARFLI_KISALTMALAR.length} öğe
+          </div>
+        </div>
+        <div className="page-mid" style={{ justifyContent: 'flex-start', gap: 10, paddingTop: 8 }}>
+          <OkumaModuListesi
+            baslik="İki Harfli Kısaltmalar"
+            ogeler={IKI_HARFLI_KISALTMALAR}
+            getEtiket={(oge) => oge.harf.toLocaleUpperCase('tr')}
+            getAltEtiket={(oge) => oge.kelime}
+            getHucreler={(oge) => [oge.sol, oge.sag]}
+            onSec={okumaOgesiSec}
+            onKapat={() => setOkumaModu(false)}
+          />
+        </div>
+        <div className="controls">
+          <button type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+        </div>
+      </div>
+    );
+  }
 
   if (bitti) {
     return (
@@ -106,15 +146,17 @@ export default function KisaltmaIkiHarfli() {
       </div>
 
       <div className="page-mid">
-        <button
-          type="button"
-          aria-label={kaydedildi ? 'Sonra öğren listesinden kaldır' : 'Sonra öğren listesine kaydet'}
-          className={`sonra-kaydet-btn sayfa-ici${kaydedildi ? ' kaydedildi' : ''}`}
-          onClick={kaydetSonra}
-          style={{ alignSelf: 'flex-end' }}
-        >
-          <svg viewBox="0 0 24 24" fill={kaydedildi ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        </button>
+        <div className="ders-eylem-satiri">
+          <OkumaModuButonu onClick={okumaModunaGec} />
+          <button
+            type="button"
+            aria-label={kaydedildi ? 'Sonra öğren listesinden kaldır' : 'Sonra öğren listesine kaydet'}
+            className={`sonra-kaydet-btn sayfa-ici${kaydedildi ? ' kaydedildi' : ''}`}
+            onClick={kaydetSonra}
+          >
+            <svg viewBox="0 0 24 24" fill={kaydedildi ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </div>
         <div style={{ display: 'flex', gap: 'var(--cell-gap)', alignItems: 'flex-end', flexWrap: 'wrap', justifyContent: 'center' }}>
           <BrailleCell
             aktifNoktalar={k.sol}

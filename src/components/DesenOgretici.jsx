@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import BrailleCell from './BrailleCell.jsx';
 import PageHeader from './PageHeader.jsx';
+import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
 import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
-import { deseniGonder, deseniTemizle } from '../utils/arduino.js';
+import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
 
 /**
  * Bir Braille deseni (örn. bir harf) öğretmek için ortak ekran.
  *
  * Props:
  *  - baslik: string  (sayfa başlığı)
- *  - ogeler: { ad, ariaAd?, noktalar }[]
+ *  - ogeler: { ad, ariaAd?, noktalar, hucreler?, hucreBasliklari?, hucreAriaEtiketleri?, hucreAdlari?, yonergeDetay? }[]
  *  - kategoriAdi: string
  *  - bolumAnahtari?: string
  *  - bittiMesaji?: string
@@ -25,6 +26,7 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const tebriklerAktif = useRef(false);
+  const [okumaModu, setOkumaModu] = useState(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -36,6 +38,25 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
 
   const aktifOge = aktifListe[indeks];
   const bitti = indeks >= aktifListe.length;
+  const aktifHucreler = useMemo(() => {
+    if (!aktifOge) return [];
+    if (Array.isArray(aktifOge.hucreler) && aktifOge.hucreler.length > 0) return aktifOge.hucreler;
+    return [aktifOge.noktalar || []];
+  }, [aktifOge]);
+  const cokHucreli = aktifHucreler.length > 1;
+  const aktifAdimlar = useMemo(() => aktifHucreler.flatMap((noktalar, hucreIndex) =>
+    (noktalar || []).map((n) => ({
+      hucreIndex,
+      n,
+      key: `${hucreIndex}:${n}`
+    }))
+  ), [aktifHucreler]);
+
+  const hucreAdi = (hucreIndex) =>
+    aktifOge?.hucreAdlari?.[hucreIndex] || (cokHucreli ? `${hucreIndex + 1}. hücre` : 'hücre');
+  const adimMetni = (adim) => cokHucreli
+    ? `${hucreAdi(adim.hucreIndex)} ${adim.n} numara`
+    : `${adim.n} numara`;
 
   // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
   useEffect(() => {
@@ -69,17 +90,30 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
     }
   };
 
+  const okumaModunaGec = () => {
+    konusmayiDurdur();
+    setOkumaModu(true);
+  };
+
+  const okumaOgesiSec = (orijinalIndeks) => {
+    setKayitlilarModu(false);
+    setIndeks(orijinalIndeks);
+    setBasilanlar([]);
+    setYanlis([]);
+    setOkumaModu(false);
+  };
+
   const yonergeMetni = useMemo(() => {
     if (bitti) return bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!';
-    const kalan = aktifOge.noktalar.filter((n) => !basilanlar.includes(n));
-    if (kalan.length === aktifOge.noktalar.length) {
-      const noktaListesi = aktifOge.noktalar.join(', ');
+    const kalan = aktifAdimlar.filter((adim) => !basilanlar.includes(adim.key));
+    if (kalan.length === aktifAdimlar.length) {
       const ad = aktifOge.ariaAd || aktifOge.ad;
       const ek = aktifOge.aciklama ? ` ${aktifOge.aciklama}` : '';
-      return `${ad} ${kategoriAdi}, ${noktaListesi} numaralı noktalardan oluşur.${ek} Lütfen bu noktalara sırayla dokunun.`;
+      const detay = aktifOge.yonergeDetay || `${(aktifOge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
+      return `${ad} ${kategoriAdi}, ${detay}${ek} Lütfen bu noktalara sırayla dokunun.`;
     }
-    return `Sıradaki nokta: ${kalan[0]} numara.`;
-  }, [aktifOge, basilanlar, bitti, bittiMesaji, kategoriAdi]);
+    return `Sıradaki nokta: ${adimMetni(kalan[0])}.`;
+  }, [aktifAdimlar, aktifOge, basilanlar, bitti, bittiMesaji, kategoriAdi]);
 
   useEffect(() => {
     // Yeni öğeye geçişte intro'yu seslendir.
@@ -89,9 +123,9 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
     }
     const oge = aktifListe[indeks];
     const ad = oge.ariaAd || oge.ad;
-    const noktaListesi = oge.noktalar.join(', ');
+    const detay = oge.yonergeDetay || `${(oge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
     const ek = oge.aciklama ? ` ${oge.aciklama}` : '';
-    const giris = `${ad} ${kategoriAdi}, ${noktaListesi} numaralı noktalardan oluşur. Lütfen bu noktalara sırayla dokunun.${ek}`;
+    const giris = `${ad} ${kategoriAdi}, ${detay} Lütfen bu noktalara sırayla dokunun.${ek}`;
     const gecikme = tebriklerAktif.current ? 1100 : 250;
     const t = setTimeout(() => {
       tebriklerAktif.current = false;
@@ -124,12 +158,41 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
       deseniTemizle();
       return;
     }
-    if (aktifOge && aktifOge.noktalar) {
-      deseniGonder(aktifOge.noktalar);
+    if (aktifOge && aktifHucreler.length) {
+      if (aktifHucreler.length > 1) satiriGonder(aktifHucreler);
+      else deseniGonder(aktifHucreler[0]);
     }
     return () => { deseniTemizle(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indeks, bitti]);
+  }, [indeks, bitti, aktifHucreler]);
+
+  if (okumaModu) {
+    return (
+      <div className="page">
+        <div>
+          {baslik && <PageHeader baslik={baslik} />}
+          <div className="progress" aria-hidden="true">
+            Okuma modu: {ogeler.length} öğe
+          </div>
+        </div>
+        <div className="page-mid" style={{ justifyContent: 'flex-start', gap: 10, paddingTop: 8 }}>
+          <OkumaModuListesi
+            baslik={baslik || 'Öğrenme'}
+            ogeler={ogeler}
+            rtl={rtl}
+            getEtiket={(oge) => oge.ad}
+            getAltEtiket={(oge) => (oge.ariaAd && oge.ariaAd !== oge.ad ? oge.ariaAd : oge.aciklama)}
+            getHucreler={(oge) => (Array.isArray(oge.hucreler) && oge.hucreler.length > 0 ? oge.hucreler : (oge.noktalar || []))}
+            onSec={okumaOgesiSec}
+            onKapat={() => setOkumaModu(false)}
+          />
+        </div>
+        <div className="controls">
+          <button type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+        </div>
+      </div>
+    );
+  }
 
   if (bitti) {
     return (
@@ -151,18 +214,20 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
     );
   }
 
-  const noktayaTikla = (n) => {
-    if (basilanlar.includes(n)) return;
-    const beklenenSiradaki = aktifOge.noktalar[basilanlar.length];
-    if (n !== beklenenSiradaki) {
-      setYanlis([n]);
-      hataBildir(aktifOge.noktalar.includes(n) ? `Sıra yanlış. Önce ${beklenenSiradaki} numaraya basın.` : `${n} numara yanlış. Tekrar deneyin.`);
+  const noktayaTikla = (n, hucreIndex = 0) => {
+    const tiklananKey = `${hucreIndex}:${n}`;
+    if (basilanlar.includes(tiklananKey)) return;
+    const beklenenSiradaki = aktifAdimlar[basilanlar.length];
+    if (!beklenenSiradaki || n !== beklenenSiradaki.n || hucreIndex !== beklenenSiradaki.hucreIndex) {
+      setYanlis([tiklananKey]);
+      const hucredeVar = aktifHucreler[hucreIndex]?.includes(n);
+      hataBildir(hucredeVar ? `Sıra yanlış. Önce ${adimMetni(beklenenSiradaki)}.` : `${adimMetni({ hucreIndex, n })} yanlış. Tekrar deneyin.`);
       setTimeout(() => setYanlis([]), 700);
       return;
     }
-    const yeni = [...basilanlar, n];
+    const yeni = [...basilanlar, beklenenSiradaki.key];
     setBasilanlar(yeni);
-    const tamamMi = yeni.length === aktifOge.noktalar.length;
+    const tamamMi = yeni.length === aktifAdimlar.length;
     if (tamamMi) {
       if (bolumAnahtari) ogrenildiIsaretle(bolumAnahtari, aktifOge.ad);
       konusmayiDurdur();
@@ -170,9 +235,13 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
       basariBildir('Tebrikler!');
       setTimeout(() => setIndeks((i) => i + 1), 800);
     } else {
-      konus(`Doğru. Sıradaki nokta: ${aktifOge.noktalar[yeni.length]} numara.`);
+      konus(`Doğru. Sıradaki nokta: ${adimMetni(aktifAdimlar[yeni.length])}.`);
     }
   };
+
+  const hucreNoktalari = (anahtarlar, hucreIndex) => anahtarlar
+    .filter((anahtar) => anahtar.startsWith(`${hucreIndex}:`))
+    .map((anahtar) => Number(anahtar.split(':')[1]));
 
   return (
     <div className="page">
@@ -191,18 +260,20 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
       </div>
 
       <div className="page-mid">
-        <button
-          type="button"
-          className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktifOge?.ad) ? ' kaydedildi' : ''}`}
-          onClick={kaydetSonra}
-          aria-label="Daha sonra öğren listesine kaydet"
-          title="Daha sonra öğren"
-          style={{ alignSelf: 'flex-end' }}
-        >
-          <svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-          </svg>
-        </button>
+        <div className="ders-eylem-satiri">
+          <OkumaModuButonu onClick={okumaModunaGec} />
+          <button
+            type="button"
+            className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktifOge?.ad) ? ' kaydedildi' : ''}`}
+            onClick={kaydetSonra}
+            aria-label="Daha sonra öğren listesine kaydet"
+            title="Daha sonra öğren"
+          >
+            <svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
+        </div>
         <div
           role="status"
           aria-live="polite"
@@ -220,16 +291,34 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
         >
           {yonergeMetni}
         </div>
-        <BrailleCell
-          baslik={aktifOge.ad}
-          baslikAriaLabel={aktifOge.ariaAd || aktifOge.ad}
-          baslikStyle={rtl ? { fontFamily: "'Amasya', serif", direction: 'rtl' } : undefined}
-          tiklanabilir
-          onNoktaTikla={noktayaTikla}
-          hedefNoktalar={aktifOge.noktalar}
-          dogruNoktalar={basilanlar}
-          yanlisNoktalar={yanlis}
-        />
+        {cokHucreli ? (
+          <div className="cell-row fit" style={{ '--hucre-sayisi': aktifHucreler.length }}>
+            {aktifHucreler.map((noktalar, hucreIndex) => (
+              <BrailleCell
+                key={hucreIndex}
+                baslik={aktifOge.hucreBasliklari?.[hucreIndex] || (hucreIndex + 1).toString()}
+                baslikAriaLabel={aktifOge.hucreAriaEtiketleri?.[hucreIndex] || hucreAdi(hucreIndex)}
+                baslikStyle={rtl ? { fontFamily: "'Amasya', serif", direction: 'rtl' } : undefined}
+                tiklanabilir
+                onNoktaTikla={(n) => noktayaTikla(n, hucreIndex)}
+                hedefNoktalar={noktalar}
+                dogruNoktalar={hucreNoktalari(basilanlar, hucreIndex)}
+                yanlisNoktalar={hucreNoktalari(yanlis, hucreIndex)}
+              />
+            ))}
+          </div>
+        ) : (
+          <BrailleCell
+            baslik={aktifOge.ad}
+            baslikAriaLabel={aktifOge.ariaAd || aktifOge.ad}
+            baslikStyle={rtl ? { fontFamily: "'Amasya', serif", direction: 'rtl' } : undefined}
+            tiklanabilir
+            onNoktaTikla={(n) => noktayaTikla(n, 0)}
+            hedefNoktalar={aktifHucreler[0] || []}
+            dogruNoktalar={hucreNoktalari(basilanlar, 0)}
+            yanlisNoktalar={hucreNoktalari(yanlis, 0)}
+          />
+        )}
       </div>
 
       <div className="controls">

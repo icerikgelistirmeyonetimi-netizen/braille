@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 import { indeksAl } from '../utils/ilerleme.js';
@@ -10,7 +10,10 @@ import { ayarlariAl, ayarlariDinle } from '../utils/ayarlar.js';
 
 export default function AnaMenu() {
   const navigate = useNavigate();
+  const modulYanRef = useRef(null);
+  const scrollDragRef = useRef(null);
   const [turAcik, setTurAcik] = useState(false);
+  const [scrollGosterge, setScrollGosterge] = useState({ gorunur: false, top: 10, height: 48 });
   const [gizliModuller, setGizliModuller] = useState(
     () => ayarlariAl().gizliModuller || []
   );
@@ -31,6 +34,71 @@ export default function AnaMenu() {
   const gecerliAktif = gorunurModuller.find((m) => m.id === aktifModul)
     ? aktifModul
     : (gorunurModuller[0]?.id || 'modul1');
+
+  useEffect(() => {
+    const sidebar = modulYanRef.current;
+    if (!sidebar) return undefined;
+
+    const guncelle = () => {
+      const { scrollTop, scrollHeight, clientHeight } = sidebar;
+      const gorunur = scrollHeight > clientHeight + 2;
+      if (!gorunur) {
+        setScrollGosterge((onceki) => onceki.gorunur ? { ...onceki, gorunur: false } : onceki);
+        return;
+      }
+      const rayBosluk = 20;
+      const rayYukseklik = Math.max(1, clientHeight - rayBosluk);
+      const oran = clientHeight / scrollHeight;
+      const height = Math.min(96, Math.max(42, rayYukseklik * oran));
+      const maxTop = rayBosluk / 2 + rayYukseklik - height;
+      const top = rayBosluk / 2 + (scrollTop / (scrollHeight - clientHeight)) * (maxTop - rayBosluk / 2);
+      setScrollGosterge({ gorunur: true, top, height });
+    };
+
+    guncelle();
+    sidebar.addEventListener('scroll', guncelle, { passive: true });
+    window.addEventListener('resize', guncelle);
+
+    return () => {
+      sidebar.removeEventListener('scroll', guncelle);
+      window.removeEventListener('resize', guncelle);
+    };
+  }, [gorunurModuller.length, gecerliAktif]);
+
+  const scrollSurukleBaslat = (event) => {
+    const sidebar = modulYanRef.current;
+    if (!sidebar) return;
+    event.preventDefault();
+    event.stopPropagation();
+    scrollDragRef.current = {
+      pointerId: event.pointerId,
+      baslangicY: event.clientY,
+      baslangicScrollTop: sidebar.scrollTop
+    };
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* ignore */ }
+  };
+
+  const scrollSurukle = (event) => {
+    const sidebar = modulYanRef.current;
+    const drag = scrollDragRef.current;
+    if (!sidebar || !drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const scrollAlani = Math.max(1, sidebar.scrollHeight - sidebar.clientHeight);
+    const rayYukseklik = Math.max(1, sidebar.clientHeight - 20);
+    const tutamakHareketAlani = Math.max(1, rayYukseklik - scrollGosterge.height);
+    const sonraki = drag.baslangicScrollTop + ((event.clientY - drag.baslangicY) * scrollAlani / tutamakHareketAlani);
+    sidebar.scrollTop = Math.max(0, Math.min(scrollAlani, sonraki));
+  };
+
+  const scrollSurukleBitir = (event) => {
+    if (scrollDragRef.current?.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    scrollDragRef.current = null;
+    try { event.currentTarget.releasePointerCapture?.(event.pointerId); } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     const ANAHTAR = 'braille-hosgeldin-okundu';
@@ -96,36 +164,53 @@ export default function AnaMenu() {
       </header>
 
       <div className="modul-layout">
-        <aside className="modul-yan" aria-label="Modüller">
-          <div className="modul-yan-baslik" aria-hidden="true">Modüller</div>
-          {gorunurModuller.map((m) => (
+        <div className="modul-yan-shell">
+          <aside ref={modulYanRef} className="modul-yan" aria-label="Modüller">
+            <div className="modul-yan-baslik" aria-hidden="true">Modüller</div>
+            {gorunurModuller.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={'modul-sekme' + (m.id === gecerliAktif ? ' aktif' : '')}
+                onClick={() => modulSec(m.id)}
+                aria-pressed={m.id === gecerliAktif}
+                aria-label={`${m.baslik}: ${m.altBaslik}`}
+              >
+                <span className="modul-sekme-ikon" aria-hidden="true">{m.ikon}</span>
+                <span className="modul-sekme-yazi">
+                  <span className="modul-sekme-baslik">{m.baslik}</span>
+                  <span className="modul-sekme-alt">{m.altBaslik}</span>
+                </span>
+              </button>
+            ))}
             <button
-              key={m.id}
               type="button"
-              className={'modul-sekme' + (m.id === gecerliAktif ? ' aktif' : '')}
-              onClick={() => modulSec(m.id)}
-              aria-pressed={m.id === gecerliAktif}
-              aria-label={`${m.baslik}: ${m.altBaslik}`}
+              className="modul-sekme modul-ayarlar"
+              onClick={() => navigate('/ayarlar')}
+              aria-label="Ayarlar"
             >
-              <span className="modul-sekme-ikon" aria-hidden="true">{m.ikon}</span>
+              <span className="modul-sekme-ikon" aria-hidden="true">{Ikon.ayarlar}</span>
               <span className="modul-sekme-yazi">
-                <span className="modul-sekme-baslik">{m.baslik}</span>
-                <span className="modul-sekme-alt">{m.altBaslik}</span>
+                <span className="modul-sekme-baslik">Ayarlar</span>
               </span>
             </button>
-          ))}
-          <button
-            type="button"
-            className="modul-sekme modul-ayarlar"
-            onClick={() => navigate('/ayarlar')}
-            aria-label="Ayarlar"
-          >
-            <span className="modul-sekme-ikon" aria-hidden="true">{Ikon.ayarlar}</span>
-            <span className="modul-sekme-yazi">
-              <span className="modul-sekme-baslik">Ayarlar</span>
-            </span>
-          </button>
-        </aside>
+          </aside>
+          {scrollGosterge.gorunur && (
+            <span
+              className="modul-yan-scrollbar"
+              aria-hidden="true"
+              style={{ top: scrollGosterge.top, height: scrollGosterge.height }}
+              onPointerDown={scrollSurukleBaslat}
+              onPointerMove={scrollSurukle}
+              onPointerUp={scrollSurukleBitir}
+              onPointerCancel={scrollSurukleBitir}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+            />
+          )}
+        </div>
 
         <section className="modul-icerik" aria-label={`${modul?.baslik} bölümleri`}>
             <h2 className="modul-icerik-baslik">{modul?.baslik} — {modul?.altBaslik}</h2>

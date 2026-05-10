@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
+import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
 import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
 import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 
@@ -16,7 +17,8 @@ export default function CokHucreOkuyucu({
   ogeler,
   bittiMesaji = 'Tebrikler! Tamamladınız.',
   rtl = false,
-  bolumAnahtari
+  bolumAnahtari,
+  ikiHucreYanYana = false
 }) {
   const [indeks, setIndeks] = useState(() => {
     const k = indeksAl(bolumAnahtari);
@@ -27,6 +29,7 @@ export default function CokHucreOkuyucu({
   const [yanlis, setYanlis] = useState([]);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const [okumaModu, setOkumaModu] = useState(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -65,6 +68,20 @@ export default function CokHucreOkuyucu({
     }
   };
 
+  const okumaModunaGec = () => {
+    konusmayiDurdur();
+    setOkumaModu(true);
+  };
+
+  const okumaOgesiSec = (orijinalIndeks) => {
+    setKayitlilarModu(false);
+    setIndeks(orijinalIndeks);
+    setHucreIndeksi(0);
+    setBasilanlar([]);
+    setYanlis([]);
+    setOkumaModu(false);
+  };
+
   // Yeni kelimeye geçince ilk hücreden başla
   useEffect(() => { setHucreIndeksi(0); }, [indeks]);
   useEffect(() => { setBasilanlar([]); setYanlis([]); }, [indeks, hucreIndeksi]);
@@ -95,6 +112,34 @@ export default function CokHucreOkuyucu({
 
   useEffect(() => () => konusmayiDurdur(), []);
 
+  if (okumaModu) {
+    return (
+      <div className="page">
+        <div>
+          <PageHeader baslik={baslik} />
+          <div className="progress" aria-hidden="true">
+            Okuma modu: {ogeler.length} öğe
+          </div>
+        </div>
+        <div className="page-mid" style={{ justifyContent: 'flex-start', gap: 10, paddingTop: 8 }}>
+          <OkumaModuListesi
+            baslik={baslik}
+            ogeler={ogeler}
+            rtl={rtl}
+            getEtiket={(oge) => oge.yazi}
+            getAltEtiket={(oge) => oge.okunus || oge.anlam}
+            getHucreler={(oge) => oge.hucreler || []}
+            onSec={okumaOgesiSec}
+            onKapat={() => setOkumaModu(false)}
+          />
+        </div>
+        <div className="controls">
+          <button type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+        </div>
+      </div>
+    );
+  }
+
   if (bitti) {
     return (
       <div className="page">
@@ -122,6 +167,7 @@ export default function CokHucreOkuyucu({
   const aktifNoktalar = k.hucreler[guvenliHucreIndeksi] || [];
   const sonHucre = guvenliHucreIndeksi >= hucreSayisi - 1;
   const ilkKelime = indeks === 0;
+  const ikiHucreTekSatir = ikiHucreYanYana && hucreSayisi === 2;
 
   const oncekiHucre = () => {
     if (hucreIndeksi > 0) {
@@ -179,18 +225,20 @@ export default function CokHucreOkuyucu({
 
       <div className="page-mid" style={{ justifyContent: 'flex-start', gap: 10, paddingTop: 8 }}>
         {!bitti && (
-          <button
-            type="button"
-            className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktif?.yazi) ? ' kaydedildi' : ''}`}
-            onClick={kaydetSonra}
-            aria-label="Daha sonra öğren listesine kaydet"
-            title="Daha sonra öğren"
-            style={{ alignSelf: 'flex-end' }}
-          >
-            <svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-          </button>
+          <div className="ders-eylem-satiri">
+            <OkumaModuButonu onClick={okumaModunaGec} />
+            <button
+              type="button"
+              className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktif?.yazi) ? ' kaydedildi' : ''}`}
+              onClick={kaydetSonra}
+              aria-label="Daha sonra öğren listesine kaydet"
+              title="Daha sonra öğren"
+            >
+              <svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+          </div>
         )}
         {/* Kelime/ifade yazısı */}
         <div
@@ -212,22 +260,39 @@ export default function CokHucreOkuyucu({
           {k.yazi}
         </div>
 
-        {/* Aktif tek hücre — büyük, tıklanabilir */}
-        <div className="aktif-hucre-wrap">
-          <BrailleCell
-            hedefNoktalar={aktifNoktalar}
-            dogruNoktalar={basilanlar}
-            yanlisNoktalar={yanlis}
-            tiklanabilir
-            onNoktaTikla={noktayaTikla}
-            baslikAriaLabel={hucreSayisi > 1
-              ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
-              : k.yazi}
-          />
-        </div>
+        {/* Aktif hücre gösterimi */}
+        {ikiHucreTekSatir ? (
+          <div className="cell-row fit" style={{ '--hucre-sayisi': 2 }}>
+            {k.hucreler.map((noktalar, hucreIndex) => (
+              <BrailleCell
+                key={hucreIndex}
+                baslik={`${hucreIndex + 1}`}
+                hedefNoktalar={noktalar}
+                dogruNoktalar={hucreIndex < guvenliHucreIndeksi ? noktalar : hucreIndex === guvenliHucreIndeksi ? basilanlar : []}
+                yanlisNoktalar={hucreIndex === guvenliHucreIndeksi ? yanlis : []}
+                tiklanabilir={hucreIndex === guvenliHucreIndeksi}
+                onNoktaTikla={noktayaTikla}
+                baslikAriaLabel={`${hucreIndex + 1}. hücre, toplam ${hucreSayisi} hücreden`}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="aktif-hucre-wrap">
+            <BrailleCell
+              hedefNoktalar={aktifNoktalar}
+              dogruNoktalar={basilanlar}
+              yanlisNoktalar={yanlis}
+              tiklanabilir
+              onNoktaTikla={noktayaTikla}
+              baslikAriaLabel={hucreSayisi > 1
+                ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
+                : k.yazi}
+            />
+          </div>
+        )}
 
         {/* Tüm hücrelerin küçük önizlemesi — aktif olan vurgulanır */}
-        {hucreSayisi > 1 && (
+        {hucreSayisi > 1 && !ikiHucreTekSatir && (
           <div className="hucre-onizleme" role="tablist" aria-label="Hücre listesi">
             {k.hucreler.map((noktalar, i) => (
               <button

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MODULLER, Ikon } from '../data/moduller.jsx';
 import GorunumGecisi from './GorunumGecisi.jsx';
@@ -18,21 +18,88 @@ function getAktifModul(pathname) {
 export default function DesktopShell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const sidebarRef = useRef(null);
+  const scrollDragRef = useRef(null);
+  const [scrollGosterge, setScrollGosterge] = useState({ gorunur: false, top: 10, height: 48 });
   const [gizliModuller, setGizliModuller] = useState(
     () => ayarlariAl().gizliModuller || []
   );
+  const aktifModul = getAktifModul(location.pathname);
+  const ayarlardaMi = location.pathname === '/ayarlar';
+  const gorunurModuller = MODULLER.filter((m) => !gizliModuller.includes(m.id));
 
   useEffect(() => {
     const cikis = ayarlariDinle((a) => setGizliModuller(a.gizliModuller || []));
     return cikis;
   }, []);
 
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return undefined;
+
+    const guncelle = () => {
+      const { scrollTop, scrollHeight, clientHeight } = sidebar;
+      const gorunur = scrollHeight > clientHeight + 2;
+      if (!gorunur) {
+        setScrollGosterge((onceki) => onceki.gorunur ? { ...onceki, gorunur: false } : onceki);
+        return;
+      }
+      const rayBosluk = 20;
+      const rayYukseklik = Math.max(1, clientHeight - rayBosluk);
+      const oran = clientHeight / scrollHeight;
+      const height = Math.min(96, Math.max(42, rayYukseklik * oran));
+      const maxTop = rayBosluk / 2 + rayYukseklik - height;
+      const top = rayBosluk / 2 + (scrollTop / (scrollHeight - clientHeight)) * (maxTop - rayBosluk / 2);
+      setScrollGosterge({ gorunur: true, top, height });
+    };
+
+    guncelle();
+    sidebar.addEventListener('scroll', guncelle, { passive: true });
+    window.addEventListener('resize', guncelle);
+
+    return () => {
+      sidebar.removeEventListener('scroll', guncelle);
+      window.removeEventListener('resize', guncelle);
+    };
+  }, [location.pathname, gorunurModuller.length]);
+
+  const scrollSurukleBaslat = (event) => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+    event.preventDefault();
+    event.stopPropagation();
+    scrollDragRef.current = {
+      pointerId: event.pointerId,
+      baslangicY: event.clientY,
+      baslangicScrollTop: sidebar.scrollTop
+    };
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* ignore */ }
+  };
+
+  const scrollSurukle = (event) => {
+    const sidebar = sidebarRef.current;
+    const drag = scrollDragRef.current;
+    if (!sidebar || !drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const scrollAlani = Math.max(1, sidebar.scrollHeight - sidebar.clientHeight);
+    const rayYukseklik = Math.max(1, sidebar.clientHeight - 20);
+    const tutamakHareketAlani = Math.max(1, rayYukseklik - scrollGosterge.height);
+    const sonraki = drag.baslangicScrollTop + ((event.clientY - drag.baslangicY) * scrollAlani / tutamakHareketAlani);
+    sidebar.scrollTop = Math.max(0, Math.min(scrollAlani, sonraki));
+  };
+
+  const scrollSurukleBitir = (event) => {
+    if (scrollDragRef.current?.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    scrollDragRef.current = null;
+    try { event.currentTarget.releasePointerCapture?.(event.pointerId); } catch { /* ignore */ }
+  };
+
   // Ana sayfada shell yok — AnaMenu kendi layout'unu yönetir
   if (location.pathname === '/') return <>{children}</>;
-
-  const aktifModul = getAktifModul(location.pathname);
-  const ayarlardaMi = location.pathname === '/ayarlar';
-  const gorunurModuller = MODULLER.filter((m) => !gizliModuller.includes(m.id));
 
   return (
     <div className="ds-wrapper">
@@ -64,39 +131,56 @@ export default function DesktopShell({ children }) {
       </header>
 
       {/* ── Sol sidebar ── */}
-      <aside className="ds-sidebar" aria-label="Modüller">
-        <div className="modul-yan-baslik" aria-hidden="true">Modüller</div>
-        {gorunurModuller.map((m) => (
+      <div className="ds-sidebar-shell">
+        <aside ref={sidebarRef} className="ds-sidebar" aria-label="Modüller">
+          <div className="modul-yan-baslik" aria-hidden="true">Modüller</div>
+          {gorunurModuller.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className={'modul-sekme' + (m.id === aktifModul ? ' aktif' : '')}
+              onClick={() => {
+                try { sessionStorage.setItem('aktifModul', m.id); } catch { /* ignore */ }
+                navigate('/');
+              }}
+              aria-pressed={m.id === aktifModul}
+              aria-label={`${m.baslik}: ${m.altBaslik}`}
+            >
+              <span className="modul-sekme-ikon" aria-hidden="true">{m.ikon}</span>
+              <span className="modul-sekme-yazi">
+                <span className="modul-sekme-baslik">{m.baslik}</span>
+                <span className="modul-sekme-alt">{m.altBaslik}</span>
+              </span>
+            </button>
+          ))}
           <button
-            key={m.id}
             type="button"
-            className={'modul-sekme' + (m.id === aktifModul ? ' aktif' : '')}
-            onClick={() => {
-              try { sessionStorage.setItem('aktifModul', m.id); } catch { /* ignore */ }
-              navigate('/');
-            }}
-            aria-pressed={m.id === aktifModul}
-            aria-label={`${m.baslik}: ${m.altBaslik}`}
+            className={'modul-sekme modul-ayarlar' + (ayarlardaMi ? ' aktif' : '')}
+            onClick={() => navigate('/ayarlar')}
+            aria-label="Ayarlar"
           >
-            <span className="modul-sekme-ikon" aria-hidden="true">{m.ikon}</span>
+            <span className="modul-sekme-ikon" aria-hidden="true">{Ikon.ayarlar}</span>
             <span className="modul-sekme-yazi">
-              <span className="modul-sekme-baslik">{m.baslik}</span>
-              <span className="modul-sekme-alt">{m.altBaslik}</span>
+              <span className="modul-sekme-baslik">Ayarlar</span>
             </span>
           </button>
-        ))}
-        <button
-          type="button"
-          className={'modul-sekme modul-ayarlar' + (ayarlardaMi ? ' aktif' : '')}
-          onClick={() => navigate('/ayarlar')}
-          aria-label="Ayarlar"
-        >
-          <span className="modul-sekme-ikon" aria-hidden="true">{Ikon.ayarlar}</span>
-          <span className="modul-sekme-yazi">
-            <span className="modul-sekme-baslik">Ayarlar</span>
-          </span>
-        </button>
-      </aside>
+        </aside>
+        {scrollGosterge.gorunur && (
+          <span
+            className="ds-sidebar-scrollbar"
+            aria-hidden="true"
+            style={{ top: scrollGosterge.top, height: scrollGosterge.height }}
+            onPointerDown={scrollSurukleBaslat}
+            onPointerMove={scrollSurukle}
+            onPointerUp={scrollSurukleBitir}
+            onPointerCancel={scrollSurukleBitir}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          />
+        )}
+      </div>
 
       {/* ── Sayfa içeriği ── */}
       <div className="ds-content">

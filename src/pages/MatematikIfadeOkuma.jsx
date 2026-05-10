@@ -15,6 +15,7 @@ export default function MatematikIfadeOkuma() {
       ogeler={ogeler}
       bittiMesaji="Tebrikler! Tüm matematik ifadelerini okudunuz."
       bolumAnahtari="matematik-ifade"
+      ikiHucreYanYana
     />
   );
 }

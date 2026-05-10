@@ -1,4 +1,10 @@
 import React from 'react';
+import {
+  MATEMATIK_SEMBOLLER,
+  MATEMATIK_OLCULER,
+  GEOMETRI_SEMBOLLERI,
+  MATEMATIK_IFADELER
+} from './matematik.js';
 
 // İkonlar – sade çizgi tabanlı SVG'ler. currentColor kullanılır,
 // böylece tema rengine uyum sağlar.
@@ -234,6 +240,13 @@ export const Ikon = {
             fill="currentColor">+−×÷</text>
     </svg>
   ),
+  matOlcu: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="43" textAnchor="middle" fontSize="24"
+            fontFamily="Segoe UI, Tahoma, sans-serif" fontWeight="800"
+            fill="currentColor">m²</text>
+    </svg>
+  ),
   geometri: (
     <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
          strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -426,9 +439,10 @@ export const MODULLER = [
     ikon: Ikon.modul6,
     ogeler: [
       { yol: '/mat-rakamlar',   baslik: 'Rakamlar',           ikon: Ikon.matRakam,  anahtar: 'mat-rakamlar',    toplam: 10 },
-      { yol: '/mat-semboller',  baslik: 'İşlem Sembolleri',   ikon: Ikon.matSembol, anahtar: 'mat-semboller',   toplam: 15 },
-      { yol: '/mat-geometri',   baslik: 'Geometri',            ikon: Ikon.geometri,  anahtar: 'mat-geometri',    toplam: 7 },
-      { yol: '/mat-ifadeler',   baslik: 'İfade Okuma',         ikon: Ikon.matIfade,  anahtar: 'matematik-ifade', toplam: 5 },
+      { yol: '/mat-semboller',  baslik: 'İşaretler',           ikon: Ikon.matSembol, anahtar: 'mat-semboller',   toplam: MATEMATIK_SEMBOLLER.length },
+      { yol: '/mat-olculer',    baslik: 'Ölçüler',             ikon: Ikon.matOlcu,   anahtar: 'mat-olculer',     toplam: MATEMATIK_OLCULER.length },
+      { yol: '/mat-geometri',   baslik: 'Geometri',            ikon: Ikon.geometri,  anahtar: 'mat-geometri',    toplam: GEOMETRI_SEMBOLLERI.length },
+      { yol: '/mat-ifadeler',   baslik: 'İfade Okuma',         ikon: Ikon.matIfade,  anahtar: 'matematik-ifade', toplam: MATEMATIK_IFADELER.length },
       { yol: '/test-matematik', baslik: 'Test / Sınav',        ikon: Ikon.test }
     ]
   },

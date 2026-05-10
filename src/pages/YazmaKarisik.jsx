@@ -444,7 +444,7 @@ export default function YazmaKarisik() {
           vurguNoktalar={ipucuGoster ? beklenenHucre || [] : []}
           klavyeIpucu={ipucuGoster}
           tabletModu={tabletModu}
-          siralikTiklama
+          anindaDokunma
           onTikla={onTiklaDogrula}
           beklenenSayi={beklenenHucre?.length || 0}
         />

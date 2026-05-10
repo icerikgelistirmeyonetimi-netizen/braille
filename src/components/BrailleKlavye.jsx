@@ -29,6 +29,9 @@ const NOKTA_TUS = { 1: 'F', 2: 'D', 3: 'S', 4: 'J', 5: 'K', 6: 'L' };
  *  - onEnter()
  *  - vurguNoktalar : eğitim modunda öne çıkarılacak noktalar (opsiyonel)
  *  - klavyeAcik    : false yapılırsa global klavye dinleyicisi devre dışı
+ *  - aksiyonOncesiTiklamayiCommitEt : sıralı tıklamada Boşluk/Onay öncesi seçimi hücreye çevirir
+ *  - anindaDokunma : parmaklar bırakılınca beklemeden basılı noktaları hücreye çevirir
+ *                    tek parmak sağ kaydırma boşluk, sol kaydırma silme yapar
  */
 export default function BrailleKlavye({
   onHucre,
@@ -43,9 +46,12 @@ export default function BrailleKlavye({
   onTikla = null,
   beklenenSayi = 0,
   perkinsModu = false,
+  aksiyonOncesiTiklamayiCommitEt = false,
+  anindaDokunma = false,
 }) {
   // O an basılı tutulan noktalar (henüz commit edilmemiş)
   const [basili, setBasili] = useState(new Set());
+  const basiliRef = useRef(new Set());
   // En son commit edilen kombinasyon (kısa süre vurgulamak için)
   const [sonHucre, setSonHucre] = useState([]);
   // Sıralı fare tıklaması: seçili noktalar
@@ -104,8 +110,17 @@ export default function BrailleKlavye({
   const aktifParmaklar = useRef(new Set());
   // Hangi noktaya hangi parmak basıyor (parmak kaldırılınca o noktayı bırak)
   const parmakNokta = useRef(new Map());
+  const aktifPointerlar = useRef(new Set());
+  const pointerBaslangiclari = useRef(new Map());
   // Klavyede halen basılı olan tuşlar
   const aktifTuslar = useRef(new Set());
+
+  const basiliyiAyarla = useCallback((sonraki) => {
+    const yeni = new Set(typeof sonraki === 'function' ? sonraki(new Set(basiliRef.current)) : sonraki);
+    basiliRef.current = yeni;
+    setBasili(new Set(yeni));
+    return yeni;
+  }, []);
 
   // F D S J K L -> nokta numarası
   const TUS_NOKTA = {
@@ -116,12 +131,101 @@ export default function BrailleKlavye({
     const nokta = [...noktaSeti].sort((a, b) => a - b);
     if (nokta.length === 0) return;
     setSonHucre(nokta);
-    setBasili(new Set());
+    basiliyiAyarla(new Set());
     titret(40);
     if (onHucre) onHucre(nokta);
     // Vurgu kısa süre sonra sönsün
     setTimeout(() => setSonHucre((s) => (s === nokta ? [] : s)), 350);
-  }, [onHucre]);
+  }, [basiliyiAyarla, onHucre]);
+
+  const bekleyenTiklamayiCommitEt = useCallback(() => {
+    if (!aksiyonOncesiTiklamayiCommitEt || !siralikTiklama || tiklilarRef.current.size === 0) return false;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const current = new Set(tiklilarRef.current);
+    tiklilarRef.current = new Set();
+    setTiklilar(new Set());
+    commitHucre(current);
+    return true;
+  }, [aksiyonOncesiTiklamayiCommitEt, commitHucre, siralikTiklama]);
+
+  const bekleyenTiklamayiIptalEt = useCallback(() => {
+    if (!aksiyonOncesiTiklamayiCommitEt || !siralikTiklama || tiklilarRef.current.size === 0) return false;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    tiklilarRef.current = new Set();
+    setTiklilar(new Set());
+    basiliyiAyarla(new Set());
+    return true;
+  }, [aksiyonOncesiTiklamayiCommitEt, basiliyiAyarla, siralikTiklama]);
+
+  const boslukBasildi = useCallback(() => {
+    bekleyenTiklamayiCommitEt();
+    if (onBosluk) onBosluk();
+  }, [bekleyenTiklamayiCommitEt, onBosluk]);
+
+  const silBasildi = useCallback(() => {
+    if (bekleyenTiklamayiIptalEt()) return;
+    if (onSil) onSil();
+  }, [bekleyenTiklamayiIptalEt, onSil]);
+
+  const enterBasildi = useCallback(() => {
+    bekleyenTiklamayiCommitEt();
+    if (onEnter) onEnter();
+  }, [bekleyenTiklamayiCommitEt, onEnter]);
+
+  const anlikNoktaBasildi = (event, nokta) => {
+    if (!anindaDokunma) return;
+    event.preventDefault();
+    try {
+      if (event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Sentetik test olaylarında pointer capture aktif olmayabilir.
+    }
+    aktifPointerlar.current.add(event.pointerId);
+    pointerBaslangiclari.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+    basiliyiAyarla((onceki) => {
+      const yeni = new Set(onceki);
+      yeni.add(nokta);
+      return yeni;
+    });
+    titret(15);
+  };
+
+  const anlikNoktaBirakildi = (event) => {
+    if (!anindaDokunma) return;
+    event.preventDefault();
+    try {
+      if (event.currentTarget.releasePointerCapture && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Pointer capture yoksa bırakılacak bir şey de yoktur.
+    }
+    const baslangic = pointerBaslangiclari.current.get(event.pointerId);
+    const tekParmak = aktifPointerlar.current.size === 1;
+    const dx = baslangic ? event.clientX - baslangic.x : 0;
+    const dy = baslangic ? event.clientY - baslangic.y : 0;
+    const yatayKaydirma = Math.abs(dx) >= 70 && Math.abs(dx) > Math.abs(dy) * 1.4;
+
+    if (tekParmak && yatayKaydirma) {
+      aktifPointerlar.current.clear();
+      pointerBaslangiclari.current.clear();
+      basiliyiAyarla(new Set());
+      if (dx > 0) boslukBasildi();
+      else silBasildi();
+      titret(20);
+      return;
+    }
+    aktifPointerlar.current.delete(event.pointerId);
+    pointerBaslangiclari.current.delete(event.pointerId);
+    if (aktifPointerlar.current.size === 0) {
+      const basiliKopya = new Set(basiliRef.current);
+      if (basiliKopya.size > 0) commitHucre(basiliKopya);
+      else basiliyiAyarla(new Set());
+    }
+  };
 
   // ---------- Klavye olayları ----------
   useEffect(() => {
@@ -144,24 +248,24 @@ export default function BrailleKlavye({
         const n = TUS_NOKTA[e.code];
         aktifNoktalar.add(n);
         aktifTuslar.current.add(e.code);
-        setBasili(new Set(aktifNoktalar));
+        basiliyiAyarla(aktifNoktalar);
         return;
       }
       if (e.code === 'Space') {
         e.preventDefault();
-        if (onBosluk) onBosluk();
+        boslukBasildi();
         titret(20);
         return;
       }
       if (e.code === 'Backspace') {
         e.preventDefault();
-        if (onSil) onSil();
+        silBasildi();
         titret(20);
         return;
       }
       if (e.code === 'Enter' || e.code === 'NumpadEnter') {
         e.preventDefault();
-        if (onEnter) onEnter();
+        enterBasildi();
         return;
       }
     };
@@ -182,7 +286,7 @@ export default function BrailleKlavye({
     const blur = () => {
       aktifNoktalar.clear();
       aktifTuslar.current.clear();
-      setBasili(new Set());
+      basiliyiAyarla(new Set());
     };
 
     window.addEventListener('keydown', keydown);
@@ -193,15 +297,15 @@ export default function BrailleKlavye({
       window.removeEventListener('keyup', keyup);
       window.removeEventListener('blur', blur);
     };
-  }, [klavyeAcik, commitHucre, onBosluk, onSil, onEnter]);
+  }, [klavyeAcik, commitHucre, basiliyiAyarla, boslukBasildi, silBasildi, enterBasildi]);
 
   // ---------- Dokunma olayları ----------
   const noktayaDokunBaslat = (n, parmakId) => {
     parmakNokta.current.set(parmakId, n);
-    setBasili((s) => {
-      const y = new Set(s);
-      y.add(n);
-      return y;
+    basiliyiAyarla((onceki) => {
+      const yeni = new Set(onceki);
+      yeni.add(n);
+      return yeni;
     });
   };
 
@@ -228,10 +332,10 @@ export default function BrailleKlavye({
         const n = Number(noktaEl.getAttribute('data-klavye-nokta'));
         if (n && parmakNokta.current.get(t.identifier) !== n) {
           parmakNokta.current.set(t.identifier, n);
-          setBasili((s) => {
-            const y = new Set(s);
-            y.add(n);
-            return y;
+          basiliyiAyarla((onceki) => {
+            const yeni = new Set(onceki);
+            yeni.add(n);
+            return yeni;
           });
         }
       }
@@ -246,10 +350,9 @@ export default function BrailleKlavye({
     }
     if (aktifParmaklar.current.size === 0) {
       // Tüm parmaklar kalktı: kombinasyonu commit et
-      setBasili((s) => {
-        if (s.size > 0) commitHucre(s);
-        return new Set();
-      });
+      const basiliKopya = new Set(basiliRef.current);
+      if (basiliKopya.size > 0) commitHucre(basiliKopya);
+      else basiliyiAyarla(new Set());
     }
   };
 
@@ -282,11 +385,13 @@ export default function BrailleKlavye({
     <div
       className="braille-klavye"
       role="group"
-      aria-label="Perkins braille klavyesi, altı nokta"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      onTouchCancel={onTouchEnd}
+      aria-label={anindaDokunma
+        ? 'Perkins braille klavyesi, altı nokta. Sağa kaydır boşluk, sola kaydır sil.'
+        : 'Perkins braille klavyesi, altı nokta'}
+      onTouchStart={anindaDokunma ? undefined : onTouchStart}
+      onTouchMove={anindaDokunma ? undefined : onTouchMove}
+      onTouchEnd={anindaDokunma ? undefined : onTouchEnd}
+      onTouchCancel={anindaDokunma ? undefined : onTouchEnd}
     >
       <div className={'klv-grid' + (klavyeIpucu ? ' klv-grid-tus' : '')}>
         {satirlar.map((cift, satirIdx) => (
@@ -302,7 +407,10 @@ export default function BrailleKlavye({
                 aria-label={`${n} numaralı nokta${klavyeIpucu ? `, klavye ${tusEtiket} tuşu` : ''}`}
                 aria-pressed={basili.has(n) || (siralikTiklama && tiklilar.has(n))}
                 onContextMenu={(e) => e.preventDefault()}
-                onClick={siralikTiklama ? () => tiklaToggle(n) : undefined}
+                onClick={siralikTiklama && !anindaDokunma ? () => tiklaToggle(n) : undefined}
+                onPointerDown={anindaDokunma ? (event) => anlikNoktaBasildi(event, n) : undefined}
+                onPointerUp={anindaDokunma ? anlikNoktaBirakildi : undefined}
+                onPointerCancel={anindaDokunma ? anlikNoktaBirakildi : undefined}
                 tabIndex={-1}
               >
                 {klavyeIpucu ? (
@@ -321,16 +429,16 @@ export default function BrailleKlavye({
       </div>
 
       <div className="klv-aksiyonlar">
-        <button type="button" className="klv-aksiyon" onClick={onSil} aria-label="Sil (Backspace)">
+        <button type="button" className="klv-aksiyon" onClick={silBasildi} aria-label="Sil (Backspace)">
           <span aria-hidden="true">⌫ Sil</span>
           {klavyeIpucu && <span className="klv-aksiyon-tus" aria-hidden="true">Backspace</span>}
         </button>
-        <button type="button" className="klv-aksiyon klv-bosluk" onClick={onBosluk} aria-label="Boşluk (Space)">
+        <button type="button" className="klv-aksiyon klv-bosluk" onClick={boslukBasildi} aria-label="Boşluk (Space)">
           <span aria-hidden="true">␣ Boşluk</span>
           {klavyeIpucu && <span className="klv-aksiyon-tus" aria-hidden="true">Space</span>}
         </button>
         {onEnter && (
-          <button type="button" className="klv-aksiyon" onClick={onEnter} aria-label="Onayla (Enter)">
+          <button type="button" className="klv-aksiyon" onClick={enterBasildi} aria-label="Onayla (Enter)">
             <span aria-hidden="true">⏎ Onay</span>
             {klavyeIpucu && <span className="klv-aksiyon-tus" aria-hidden="true">Enter</span>}
           </button>

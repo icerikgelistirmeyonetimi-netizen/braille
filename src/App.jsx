@@ -30,6 +30,7 @@ import KuranSureOkuma from './pages/KuranSureOkuma.jsx';
 import TestKuran from './pages/TestKuran.jsx';
 import MatematikRakamEgitimi from './pages/MatematikRakamEgitimi.jsx';
 import MatematikSembolEgitimi from './pages/MatematikSembolEgitimi.jsx';
+import MatematikOlcuEgitimi from './pages/MatematikOlcuEgitimi.jsx';
 import MatematikGeometriEgitimi from './pages/MatematikGeometriEgitimi.jsx';
 import MatematikIfadeOkuma from './pages/MatematikIfadeOkuma.jsx';
 import TestMatematik from './pages/TestMatematik.jsx';
@@ -107,6 +108,7 @@ export default function App() {
           <Route path="/test-kuran" element={<TestKuran />} />
           <Route path="/mat-rakamlar" element={<MatematikRakamEgitimi />} />
           <Route path="/mat-semboller" element={<MatematikSembolEgitimi />} />
+          <Route path="/mat-olculer" element={<MatematikOlcuEgitimi />} />
           <Route path="/mat-geometri" element={<MatematikGeometriEgitimi />} />
           <Route path="/mat-ifadeler" element={<MatematikIfadeOkuma />} />
           <Route path="/test-matematik" element={<TestMatematik />} />

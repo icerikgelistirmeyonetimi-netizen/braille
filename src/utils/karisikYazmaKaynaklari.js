@@ -19,7 +19,7 @@ import {
 import { KURAN_SURELERI } from '../data/kuranSureler.js';
 import {
   MATEMATIK_RAKAMLAR, MATEMATIK_SEMBOLLER, GEOMETRI_SEMBOLLERI,
-  MATEMATIK_IFADELER
+  MATEMATIK_OLCULER, MATEMATIK_IFADELER
 } from '../data/matematik.js';
 import {
   YUNAN_HARFLERI, FEN_SEMBOLLER,
@@ -180,7 +180,7 @@ const KAYNAKLAR = {
     items: MATEMATIK_RAKAMLAR.map((r) => ({
       etiket: r.rakam,
       ariaAd: r.ad,
-      hucreler: tek(r.noktalar)
+      hucreler: r.hucreler
     }))
   },
   '/mat-semboller': {
@@ -188,6 +188,16 @@ const KAYNAKLAR = {
     baslik: 'Matematik Sembolleri',
     etiketTuru: 'sembol',
     items: MATEMATIK_SEMBOLLER.map((s) => ({
+      etiket: s.sembol,
+      ariaAd: s.ad,
+      hucreler: s.hucreler
+    })).filter(gecerliItem)
+  },
+  '/mat-olculer': {
+    yol: '/mat-olculer',
+    baslik: 'Matematik Ölçüleri',
+    etiketTuru: 'ölçü',
+    items: MATEMATIK_OLCULER.map((s) => ({
       etiket: s.sembol,
       ariaAd: s.ad,
       hucreler: s.hucreler

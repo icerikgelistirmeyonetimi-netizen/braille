@@ -364,6 +364,56 @@ const KOK_SORTED = [...KELIME_KOKU_KISALTMALARI].sort((a, b) => b.kelime.length 
 
 const KOK_BAGLAYICILAR = ['', 'a', 'e', 'ı', 'i', 'u', 'ü', 'ya', 'ye', 'yı', 'yi', 'yu', 'yü'];
 
+const KISALTMA_TEK_TERS = new Map(
+  KELIME_KISALTMALARI.map((k) => [noktalariAnahtara(k.noktalar), k.kelime])
+);
+const KISALTMA_IKI_TERS = (() => {
+  const m = new Map();
+  for (const k of IKI_HARFLI_KISALTMALAR) {
+    m.set(`${noktalariAnahtara(k.sol)}|${noktalariAnahtara(k.sag)}`, k.kelime);
+  }
+  return m;
+})();
+const HECE_TERS_KISALTMA = new Map(
+  HECE_KISALTMALARI.map((h) => [noktalariAnahtara(h.noktalar), h.hece])
+);
+const KOK_SAG_TERS = new Map(
+  KELIME_KOKU_KISALTMALARI.map((k) => [noktalariAnahtara(k.sag), k])
+);
+const PARCA_TERS = new Map(
+  KELIME_PARCASI_KISALTMALARI.map((p) => [`${noktalariAnahtara(p.sol)}|${noktalariAnahtara(p.sag)}`, p])
+);
+
+const ARKA_UNLU = new Set(['a', 'ı', 'o', 'u']);
+const ON_UNLU = new Set(['e', 'i', 'ö', 'ü']);
+const YUVARLAK_UNLU = new Set(['o', 'ö', 'u', 'ü']);
+const TUM_UNLU = new Set([...ARKA_UNLU, ...ON_UNLU]);
+
+function _unluUyumuSec(ekler, oncekiMetin) {
+  const variants = ekler.split(',').map((s) => s.trim());
+  if (variants.length <= 1) return variants[0] || '';
+  const oncekiKucuk = (oncekiMetin || '').toLocaleLowerCase('tr');
+  if (oncekiKucuk.endsWith('bu') && variants.includes('gün')) return 'gün';
+  let sonUnlu = null;
+  for (let i = oncekiKucuk.length - 1; i >= 0; i--) {
+    if (TUM_UNLU.has(oncekiKucuk[i])) { sonUnlu = oncekiKucuk[i]; break; }
+  }
+  if (!sonUnlu) return variants[0];
+  const arkaVar = ARKA_UNLU.has(sonUnlu);
+  const yuvVar = YUVARLAK_UNLU.has(sonUnlu);
+  for (const variant of variants) {
+    const ilkUnlu = [...variant].find((c) => TUM_UNLU.has(c));
+    if (!ilkUnlu) continue;
+    if (ARKA_UNLU.has(ilkUnlu) === arkaVar && YUVARLAK_UNLU.has(ilkUnlu) === yuvVar) return variant;
+  }
+  for (const variant of variants) {
+    const ilkUnlu = [...variant].find((c) => TUM_UNLU.has(c));
+    if (!ilkUnlu) continue;
+    if (ARKA_UNLU.has(ilkUnlu) === arkaVar) return variant;
+  }
+  return variants[0];
+}
+
 function _kalanIkinciKokleBaslar(kalanKucuk) {
   for (const baglayici of KOK_BAGLAYICILAR) {
     if (!kalanKucuk.startsWith(baglayici)) continue;
@@ -672,5 +722,263 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
   }
 
   return { hucreler, esleme };
+}
+
+function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt = {}) {
+  const {
+    hece: heceAktif = true,
+    birHarf: birHarfAktif = true,
+    ikiHarf: ikiHarfAktif = true,
+    kok: kokAktif = true,
+    parca: parcaAktif = true,
+  } = sistemler;
+
+  let bashCase = 'normal';
+  let b = bRaw;
+  if (b.length >= 2 && buyukHarfIsaretiMi(b[0]) && buyukHarfIsaretiMi(b[1])) {
+    bashCase = 'tumu';
+    b = b.slice(2);
+  } else if (b.length >= 1 && buyukHarfIsaretiMi(b[0])) {
+    bashCase = 'ilk';
+    b = b.slice(1);
+  }
+  if (b.length === 0) return '';
+
+  const kasala = (metin) => {
+    if (!metin) return metin;
+    if (bashCase === 'tumu') return metin.toLocaleUpperCase('tr');
+    if (bashCase === 'ilk') return metin.charAt(0).toLocaleUpperCase('tr') + metin.slice(1);
+    return metin;
+  };
+
+  const noktalamaMetni = (hucreler) => hucreler
+    .map((hucre) => NOKTA_TERS.get(noktalariAnahtara(hucre)) || '')
+    .join('');
+
+  let govdeBaslangic = 0;
+  while (govdeBaslangic < b.length) {
+    const anahtar = noktalariAnahtara(b[govdeBaslangic]);
+    if (anahtar !== '2,3,6' && anahtar !== '2,3,5,6') break;
+    govdeBaslangic++;
+  }
+  let govdeBitis = b.length;
+  while (govdeBitis > govdeBaslangic && NOKTA_TERS.has(noktalariAnahtara(b[govdeBitis - 1]))) {
+    govdeBitis--;
+  }
+  if ((govdeBaslangic > 0 || govdeBitis < b.length) && govdeBaslangic < govdeBitis) {
+    const sol = noktalamaMetni(b.slice(0, govdeBaslangic));
+    const sagHucreler = b.slice(govdeBitis);
+    const govdeTamamlandi = sagHucreler.some((hucre) => noktalariAnahtara(hucre) !== '3');
+    const govde = _hucreBlokunuMetneCevirKisaltmali(
+      b.slice(govdeBaslangic, govdeBitis),
+      sistemler,
+      sonrakiIlkHucre,
+      govdeTamamlandi ? {} : opt
+    );
+    const sag = noktalamaMetni(sagHucreler);
+    return `${sol}${kasala(govde)}${sag}`;
+  }
+
+  const ilkKey = noktalariAnahtara(b[0]);
+  if (birHarfAktif && !opt.sonTekHarfBeklet && b.length === 1 && KISALTMA_TEK_TERS.has(ilkKey)) {
+    return kasala(KISALTMA_TEK_TERS.get(ilkKey));
+  }
+  if (ikiHarfAktif && b.length === 2 && ilkKey !== '5' && ilkKey !== '4,5' && ilkKey !== '5,6') {
+    const ikiKey = `${ilkKey}|${noktalariAnahtara(b[1])}`;
+    if (KISALTMA_IKI_TERS.has(ikiKey)) return kasala(KISALTMA_IKI_TERS.get(ikiKey));
+  }
+
+  const buf = [];
+  let ci = 0;
+  let sayiModu = false;
+  let buyukHarfBekle = bashCase === 'ilk';
+  let tumKelimeBuyuk = bashCase === 'tumu';
+  let ikiHarfPrefixIndex = -1;
+  let kokPrefixIndex = -1;
+
+  if (ikiHarfAktif && b.length >= 3 && ilkKey !== '5' && ilkKey !== '4,5' && ilkKey !== '5,6') {
+    const ikiKey = `${ilkKey}|${noktalariAnahtara(b[1])}`;
+    if (KISALTMA_IKI_TERS.has(ikiKey)) {
+      let ikiKelime = KISALTMA_IKI_TERS.get(ikiKey);
+      if (tumKelimeBuyuk) ikiKelime = ikiKelime.toLocaleUpperCase('tr');
+      else if (buyukHarfBekle) ikiKelime = ikiKelime.charAt(0).toLocaleUpperCase('tr') + ikiKelime.slice(1).toLocaleLowerCase('tr');
+      buf.push(ikiKelime);
+      ikiHarfPrefixIndex = buf.length - 1;
+      buyukHarfBekle = false;
+      ci = 2;
+    }
+  }
+
+  if (birHarfAktif && b.length >= 3 && ci === 0 && KISALTMA_TEK_TERS.has(ilkKey)) {
+    const ikinciKey = noktalariAnahtara(b[1]);
+    if (ikinciKey === '3') {
+      let tekKelime = KISALTMA_TEK_TERS.get(ilkKey);
+      if (tumKelimeBuyuk) tekKelime = tekKelime.toLocaleUpperCase('tr');
+      else if (buyukHarfBekle) tekKelime = tekKelime.charAt(0).toLocaleUpperCase('tr') + tekKelime.slice(1).toLocaleLowerCase('tr');
+      buf.push(tekKelime);
+      buyukHarfBekle = false;
+      ci = 2;
+    }
+  }
+
+  if (kokAktif && b.length >= 2 && ci === 0 && ilkKey === '5') {
+    const sagKey = noktalariAnahtara(b[1]);
+    const kok = KOK_SAG_TERS.get(sagKey);
+    if (kok) {
+      let kokKelime = kok.kelime;
+      if (tumKelimeBuyuk) kokKelime = kokKelime.toLocaleUpperCase('tr');
+      else if (buyukHarfBekle) kokKelime = kokKelime.charAt(0).toLocaleUpperCase('tr') + kokKelime.slice(1);
+      buf.push(kokKelime);
+      kokPrefixIndex = buf.length - 1;
+      buyukHarfBekle = false;
+      ci = 2;
+    }
+  }
+
+  const harfYaz = (harf) => {
+    if (!harf) return;
+    if (tumKelimeBuyuk) buf.push(harf.toLocaleUpperCase('tr'));
+    else if (buyukHarfBekle) {
+      buf.push(harf.charAt(0).toLocaleUpperCase('tr') + harf.slice(1).toLocaleLowerCase('tr'));
+      buyukHarfBekle = false;
+    } else {
+      buf.push(harf.toLocaleLowerCase('tr'));
+    }
+  };
+
+  while (ci < b.length) {
+    const noktalar = b[ci];
+    if (sayiIsaretiMi(noktalar)) {
+      const kelimeBasi = ci === 0;
+      const sonraki = ci + 1 < b.length ? b[ci + 1] : null;
+      if (kelimeBasi && sonraki && hucreyiRakamayap(sonraki)) {
+        sayiModu = true;
+        ci++;
+        continue;
+      }
+    }
+
+    if (buyukHarfIsaretiMi(noktalar)) {
+      if (ci + 1 < b.length && buyukHarfIsaretiMi(b[ci + 1])) {
+        tumKelimeBuyuk = true;
+        ci += 2;
+      } else {
+        buyukHarfBekle = true;
+        ci++;
+      }
+      continue;
+    }
+
+    if (sayiModu) {
+      const rakam = hucreyiRakamayap(noktalar);
+      if (rakam) {
+        buf.push(rakam);
+        ci++;
+        continue;
+      }
+      sayiModu = false;
+    }
+
+    if (parcaAktif && ci + 1 < b.length) {
+      const solKey = noktalariAnahtara(noktalar);
+      if (solKey === '4,5' || solKey === '5,6') {
+        const parca = PARCA_TERS.get(`${solKey}|${noktalariAnahtara(b[ci + 1])}`);
+        if (parca) {
+          buf.push(_unluUyumuSec(parca.ekler, buf.join('')));
+          ci += 2;
+          continue;
+        }
+      }
+    }
+
+    const anahtar = noktalariAnahtara(noktalar);
+    const noktalama = NOKTA_TERS.get(anahtar);
+    const heceKarsiligi = heceAktif && !sayiModu ? HECE_TERS_KISALTMA.get(anahtar) : undefined;
+    if (noktalama && heceKarsiligi) {
+      const ilkHucre = ci === 0;
+      const sonHucre = ci === b.length - 1;
+      let kalanHepsiNoktalama = true;
+      for (let ki = ci + 1; ki < b.length; ki++) {
+        if (!NOKTA_TERS.has(noktalariAnahtara(b[ki]))) {
+          kalanHepsiNoktalama = false;
+          break;
+        }
+      }
+      let noktalamaKullan = false;
+      if (ilkHucre && anahtar === '2,3,6') noktalamaKullan = true;
+      else if (sonHucre || kalanHepsiNoktalama) {
+        if (anahtar === '2,6' && sonHucre) {
+          noktalamaKullan = sonrakiIlkHucre == null || buyukHarfIsaretiMi(sonrakiIlkHucre);
+        } else {
+          noktalamaKullan = true;
+        }
+      }
+      if (noktalamaKullan) buf.push(noktalama);
+      else harfYaz(heceKarsiligi);
+    } else if (noktalama) {
+      buf.push(noktalama);
+    } else if (heceKarsiligi) {
+      harfYaz(heceKarsiligi);
+    } else {
+      harfYaz(hucreyiKarakteryap(noktalar));
+    }
+    ci++;
+  }
+
+  if (ikiHarfPrefixIndex >= 0) {
+    const sonrakiMetin = buf.slice(ikiHarfPrefixIndex + 1).join('');
+    buf[ikiHarfPrefixIndex] = ikiHarfliKisaltmaOkunusunuYumusat(buf[ikiHarfPrefixIndex], sonrakiMetin);
+  }
+  if (kokPrefixIndex >= 0) {
+    const sonrakiMetin = buf.slice(kokPrefixIndex + 1).join('');
+    buf[kokPrefixIndex] = kelimeKokuOkunusunuYorIcinDuzelt(buf[kokPrefixIndex], sonrakiMetin);
+  }
+
+  return buf.join('');
+}
+
+/**
+ * Kısaltmalı braille hücre dizisini metne çevirir.
+ * Serbest Yazma gibi canlı girişlerde boşluk hücreleri korunur.
+ * @param {number[][]} hucreler
+ * @param {{ hece?: boolean, birHarf?: boolean, ikiHarf?: boolean, kok?: boolean, parca?: boolean }} [sistemler]
+ * @param {{ sonTekHarfBeklet?: boolean }} [opt]
+ * @returns {string}
+ */
+export function hucreleriMetneCevirKisaltmali(hucreler, sistemler = {}, opt = {}) {
+  const cikis = [];
+  let i = 0;
+
+  while (i < hucreler.length) {
+    const hucre = hucreler[i] || [];
+    if (hucre.length === 0) {
+      cikis.push(' ');
+      i++;
+      continue;
+    }
+
+    const blok = [];
+    while (i < hucreler.length && (hucreler[i] || []).length > 0) {
+      blok.push(hucreler[i]);
+      i++;
+    }
+    const sonBlokTamamlanmadi = opt.sonTekHarfBeklet && i >= hucreler.length;
+
+    let sonrakiIlkHucre = null;
+    for (let j = i; j < hucreler.length; j++) {
+      if ((hucreler[j] || []).length > 0) {
+        sonrakiIlkHucre = hucreler[j];
+        break;
+      }
+    }
+    cikis.push(_hucreBlokunuMetneCevirKisaltmali(
+      blok,
+      sistemler,
+      sonrakiIlkHucre,
+      sonBlokTamamlanmadi ? { sonTekHarfBeklet: true } : {}
+    ));
+  }
+
+  return cikis.join('');
 }
 

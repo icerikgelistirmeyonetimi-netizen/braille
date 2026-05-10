@@ -224,7 +224,7 @@ export default function YazmaYonergeli() {
           onEnter={!beklenen ? ileriCumle : undefined}
           vurguNoktalar={ipucuGoster ? beklenenNoktalar : []}
           klavyeIpucu={ipucuGoster}
-          siralikTiklama
+          anindaDokunma
         />
       </div>
     </div>

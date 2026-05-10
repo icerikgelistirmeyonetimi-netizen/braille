@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
+import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
 import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
 import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 
 // MEB Türkçe Braille Yazı Kılavuzu (2014) – Noktalama ve özel işaret sayfası.
 // Listedeki her madde için: hücre(ler), açıklama, kullanım kuralları ve örnekleri sıralı olarak gösterir.
-export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
+export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matematikHucreGorunumu = false }) {
   const [indeks, setIndeks] = useState(() => {
     const k = indeksAl(bolumAnahtari);
     return k < isaretler.length ? k : 0;
@@ -17,6 +18,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
   const [hucreIndeksi, setHucreIndeksi] = useState(0);
   const [basilanlar, setBasilanlar] = useState([]);
   const [yanlis, setYanlis] = useState([]);
+  const [okumaModu, setOkumaModu] = useState(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -68,6 +70,48 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
 
   useEffect(() => () => konusmayiDurdur(), []);
 
+  const okumaModunaGec = () => {
+    konusmayiDurdur();
+    setOkumaModu(true);
+  };
+
+  const okumaOgesiSec = (orijinalIndeks) => {
+    setKayitlilarModu(false);
+    setIndeks(orijinalIndeks);
+    setDetayAcik(false);
+    setHucreIndeksi(0);
+    setBasilanlar([]);
+    setYanlis([]);
+    setOkumaModu(false);
+  };
+
+  if (okumaModu) {
+    return (
+      <div className="page">
+        <div>
+          <PageHeader baslik={baslik} />
+          <div className="progress" aria-hidden="true">
+            Okuma modu: {isaretler.length} öğe
+          </div>
+        </div>
+        <div className="page-mid" style={{ justifyContent: 'flex-start', gap: 10, paddingTop: 8 }}>
+          <OkumaModuListesi
+            baslik={baslik}
+            ogeler={isaretler}
+            getEtiket={(isaret) => (isaret.sembol && isaret.sembol !== '—' ? isaret.sembol : isaret.ad)}
+            getAltEtiket={(isaret) => (isaret.sembol && isaret.sembol !== '—' ? isaret.ad : isaret.aciklama)}
+            getHucreler={(isaret) => isaret.hucreler || []}
+            onSec={okumaOgesiSec}
+            onKapat={() => setOkumaModu(false)}
+          />
+        </div>
+        <div className="controls">
+          <button type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+        </div>
+      </div>
+    );
+  }
+
   if (bitti) {
     return (
       <div className="page">
@@ -90,6 +134,10 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
   }
 
   const k = aktifListe[indeks];
+  const hucreSayisi = k.hucreler.length;
+  const guvenliHucreIndeksi = hucreSayisi > 0 ? Math.min(hucreIndeksi, hucreSayisi - 1) : 0;
+  const ikiHucreYanYana = matematikHucreGorunumu && hucreSayisi === 2;
+  const onizlemeliCokHucre = matematikHucreGorunumu && hucreSayisi > 2;
   const noktaMetni = k.hucreler.length > 0
     ? k.hucreler.map((h) => h.join('-')).join('  /  ')
     : 'Bu konu bir kuraldır, hücre sembolü yoktur.';
@@ -115,7 +163,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
   };
 
   const noktayaTikla = (n) => {
-    const aktifHucreNoktalar = k.hucreler[hucreIndeksi] || [];
+    const aktifHucreNoktalar = k.hucreler[guvenliHucreIndeksi] || [];
     if (basilanlar.includes(n)) return;
     const beklenenSiradaki = aktifHucreNoktalar[basilanlar.length];
     if (n !== beklenenSiradaki) {
@@ -128,7 +176,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
     setBasilanlar(yeni);
     const tamamMi = yeni.length === aktifHucreNoktalar.length;
     if (tamamMi) {
-      const sonHucreDir = hucreIndeksi >= k.hucreler.length - 1;
+      const sonHucreDir = guvenliHucreIndeksi >= k.hucreler.length - 1;
       if (sonHucreDir) {
         basariBildir('Tebrikler!');
         setTimeout(() => setIndeks((i) => i + 1), 800);
@@ -170,18 +218,20 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
           gap: 10
         }}
       >
-        <button
-          type="button"
-          className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(k?.ad) ? ' kaydedildi' : ''}`}
-          onClick={kaydetSonra}
-          aria-label="Daha sonra öğren listesine kaydet"
-          title="Daha sonra öğren"
-          style={{ alignSelf: 'flex-end' }}
-        >
-          <svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-          </svg>
-        </button>
+        <div className="ders-eylem-satiri">
+          <OkumaModuButonu onClick={okumaModunaGec} />
+          <button
+            type="button"
+            className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(k?.ad) ? ' kaydedildi' : ''}`}
+            onClick={kaydetSonra}
+            aria-label="Daha sonra öğren listesine kaydet"
+            title="Daha sonra öğren"
+          >
+            <svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
+        </div>
         <div style={{ textAlign: 'center', fontSize: '1.5em', fontWeight: 700, color: 'var(--accent)' }}>
           {k.ad}
           {k.sembol && k.sembol !== '—' && (
@@ -193,17 +243,67 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari }) {
 
         {k.hucreler.length > 0 && (
           <>
-            <BrailleCell
-              hedefNoktalar={k.hucreler[hucreIndeksi]}
-              dogruNoktalar={basilanlar}
-              yanlisNoktalar={yanlis}
-              tiklanabilir
-              onNoktaTikla={noktayaTikla}
-              baslikAriaLabel={k.hucreler.length > 1 ? `${k.ad} sembolü ${hucreIndeksi + 1}. hücre` : `${k.ad} sembolü`}
-            />
+            {ikiHucreYanYana ? (
+              <div className="cell-row fit" style={{ '--hucre-sayisi': 2 }}>
+                {k.hucreler.map((noktalar, hucreIndex) => (
+                  <BrailleCell
+                    key={hucreIndex}
+                    baslik={`${hucreIndex + 1}`}
+                    baslikAriaLabel={`${k.ad} sembolü ${hucreIndex + 1}. hücre`}
+                    hedefNoktalar={noktalar}
+                    dogruNoktalar={hucreIndex < guvenliHucreIndeksi ? noktalar : hucreIndex === guvenliHucreIndeksi ? basilanlar : []}
+                    yanlisNoktalar={hucreIndex === guvenliHucreIndeksi ? yanlis : []}
+                    tiklanabilir={hucreIndex === guvenliHucreIndeksi}
+                    onNoktaTikla={noktayaTikla}
+                  />
+                ))}
+              </div>
+            ) : onizlemeliCokHucre ? (
+              <>
+                <div className="aktif-hucre-wrap">
+                  <BrailleCell
+                    hedefNoktalar={k.hucreler[guvenliHucreIndeksi]}
+                    dogruNoktalar={basilanlar}
+                    yanlisNoktalar={yanlis}
+                    tiklanabilir
+                    onNoktaTikla={noktayaTikla}
+                    baslikAriaLabel={`${k.ad} sembolü ${guvenliHucreIndeksi + 1}. hücre`}
+                  />
+                </div>
+                <div className="hucre-onizleme" role="tablist" aria-label="Hücre listesi">
+                  {k.hucreler.map((noktalar, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      role="tab"
+                      aria-selected={i === guvenliHucreIndeksi}
+                      className={`hucre-onizleme-oge ${i === guvenliHucreIndeksi ? 'aktif' : ''}`}
+                      onClick={() => setHucreIndeksi(i)}
+                      aria-label={`${i + 1}. hücreye git`}
+                    >
+                      <span className="hucre-onizleme-grid" aria-hidden="true">
+                        {[1, 4, 2, 5, 3, 6].map((n) => (
+                          <span key={n} className={`hucre-onizleme-nokta ${noktalar.includes(n) ? 'on' : ''}`} />
+                        ))}
+                      </span>
+                      <span className="hucre-onizleme-no" aria-hidden="true">{i + 1}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <BrailleCell
+                hedefNoktalar={k.hucreler[guvenliHucreIndeksi]}
+                dogruNoktalar={basilanlar}
+                yanlisNoktalar={yanlis}
+                tiklanabilir
+                onNoktaTikla={noktayaTikla}
+                baslikAriaLabel={k.hucreler.length > 1 ? `${k.ad} sembolü ${guvenliHucreIndeksi + 1}. hücre` : `${k.ad} sembolü`}
+              />
+            )}
             {k.hucreler.length > 1 && (
               <div style={{ fontSize: '0.85em', color: 'var(--muted)' }}>
-                Hücre {hucreIndeksi + 1} / {k.hucreler.length}
+                Hücre {guvenliHucreIndeksi + 1} / {k.hucreler.length}
               </div>
             )}
           </>
