@@ -4,7 +4,7 @@ import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import { metniBrailleyeCevir, metniBrailleyeCevirKisaltmali } from '../utils/brailleCevir.js';
-import { hucreAnlami, tekHarfTirnakla, metinTirnakliGuncelle } from './Araclar.jsx';
+import { hucreAnlami } from './Araclar.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 
 const SATIRDA_HUCRE = 40;
@@ -27,7 +27,10 @@ export function kisaEtiket(anlam) {
     if (anlam.baslik.includes('Tümü Büyük')) return '⇧⇧';
     if (anlam.baslik.includes('Büyük Harf')) return '⇧';
     if (anlam.baslik.includes('Sayı')) return '#';
+    if (anlam.baslik.includes('Tarih Ayırma')) return '3-6';
+    if (anlam.baslik.includes('Düzeltme') || anlam.baslik.includes('Yabancı Harf')) return '^';
     if (anlam.baslik.includes('Ayırma')) return '3';
+    if (anlam.baslik.includes('Tek Küçük Harf')) return '5-6';
     if (anlam.baslik.includes('Kök') || anlam.baslik.includes('Parça')) return '*';
     return '*';
   }
@@ -243,7 +246,7 @@ export default function BelgeBrf() {
 
   const noktalariSeslendir = () => sesToggle('nokta', () => {
     if (!belgeMetni.trim()) return '';
-    const kaynakMetin = kisaltmaAktif ? tekHarfTirnakla(belgeMetni) : belgeMetni;
+    const kaynakMetin = belgeMetni;
     const { hucreler: hh, esleme } = cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true });
     const parcalar = [];
     for (let i = 0; i < hh.length; i++) {
@@ -276,11 +279,11 @@ export default function BelgeBrf() {
   };
 
   const cevirFn = kisaltmaAktif
-    ? (m, o) => metniBrailleyeCevirKisaltmali(tekHarfTirnakla(m), { ...o, ...kisaltmaSistemler })
+    ? (m, o) => metniBrailleyeCevirKisaltmali(m, { ...o, ...kisaltmaSistemler })
     : metniBrailleyeCevir;
   const cevirSonuc = useMemo(() => {
     if (!belgeMetni) return { hucreler: [], esleme: [], kaynak: '' };
-    const kaynak = kisaltmaAktif ? tekHarfTirnakla(belgeMetni) : belgeMetni;
+    const kaynak = belgeMetni;
     const r = cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true });
     return { hucreler: r.hucreler, esleme: r.esleme, kaynak };
   }, [belgeMetni, kisaltmaAktif, kisaltmaSistemler]);
@@ -426,7 +429,7 @@ export default function BelgeBrf() {
               <textarea
                 className="belge-metin-textarea"
                 value={belgeMetni}
-                onChange={(e) => metinTirnakliGuncelle(e.target.value, belgeMetni, e.target, kisaltmaAktif, setBelgeMetni)}
+                onChange={(e) => setBelgeMetni(e.target.value)}
                 aria-label="Belgeden okunan metin (düzenlenebilir)"
                 spellCheck={false}
                 autoCorrect="off"

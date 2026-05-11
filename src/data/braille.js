@@ -82,6 +82,217 @@ export const KISALTMALAR = [
   { kisaltma: 'Prof.', acilim: 'Profesör' }
 ];
 
+// Rumuzlu ifade kuralı yalnızca bu sözlükteki yaygın büyük harfli
+// kurum, kuruluş, sınav ve uluslararası kısaltmalara uygulanır.
+export const RUMUZLU_IFADELER = [
+  { kisaltma: 'AA', acilim: 'Anadolu Ajansı' },
+  { kisaltma: 'AB', acilim: 'Avrupa Birliği' },
+  { kisaltma: 'ABD', acilim: 'Amerika Birleşik Devletleri' },
+  { kisaltma: 'AFAD', acilim: 'Afet ve Acil Durum Yönetimi Başkanlığı' },
+  { kisaltma: 'AGİT', acilim: 'Avrupa Güvenlik ve İşbirliği Teşkilatı' },
+  { kisaltma: 'AİHM', acilim: 'Avrupa İnsan Hakları Mahkemesi' },
+  { kisaltma: 'AKP', acilim: 'Adalet ve Kalkınma Partisi' },
+  { kisaltma: 'AKUT', acilim: 'Arama Kurtarma Derneği' },
+  { kisaltma: 'ALES', acilim: 'Akademik Personel ve Lisansüstü Eğitimi Giriş Sınavı' },
+  { kisaltma: 'ASKİ', acilim: 'Ankara Su ve Kanalizasyon İdaresi' },
+  { kisaltma: 'ASELSAN', acilim: 'Askeri Elektronik Sanayii' },
+  { kisaltma: 'AYM', acilim: 'Anayasa Mahkemesi' },
+  { kisaltma: 'AYT', acilim: 'Alan Yeterlilik Testi' },
+  { kisaltma: 'BAĞKUR', acilim: 'Esnaf ve Sanatkarlar ve Diğer Bağımsız Çalışanlar Sosyal Sigortalar Kurumu' },
+  { kisaltma: 'BBP', acilim: 'Büyük Birlik Partisi' },
+  { kisaltma: 'BBC', acilim: 'British Broadcasting Corporation' },
+  { kisaltma: 'BDDK', acilim: 'Bankacılık Düzenleme ve Denetleme Kurumu' },
+  { kisaltma: 'BİMER', acilim: 'Başbakanlık İletişim Merkezi' },
+  { kisaltma: 'BİST', acilim: 'Borsa İstanbul' },
+  { kisaltma: 'BM', acilim: 'Birleşmiş Milletler' },
+  { kisaltma: 'BOTAŞ', acilim: 'Boru Hatları ile Petrol Taşıma Anonim Şirketi' },
+  { kisaltma: 'BTK', acilim: 'Bilgi Teknolojileri ve İletişim Kurumu' },
+  { kisaltma: 'CHP', acilim: 'Cumhuriyet Halk Partisi' },
+  { kisaltma: 'CİMER', acilim: 'Cumhurbaşkanlığı İletişim Merkezi' },
+  { kisaltma: 'CNN', acilim: 'Cable News Network' },
+  { kisaltma: 'DDK', acilim: 'Devlet Denetleme Kurulu' },
+  { kisaltma: 'DEM', acilim: 'Halkların Eşitlik ve Demokrasi Partisi' },
+  { kisaltma: 'DEVA', acilim: 'Demokrasi ve Atılım Partisi' },
+  { kisaltma: 'DGS', acilim: 'Dikey Geçiş Sınavı' },
+  { kisaltma: 'DHA', acilim: 'Demirören Haber Ajansı' },
+  { kisaltma: 'DHMİ', acilim: 'Devlet Hava Meydanları İşletmesi' },
+  { kisaltma: 'DİB', acilim: 'Diyanet İşleri Başkanlığı' },
+  { kisaltma: 'DİSK', acilim: 'Devrimci İşçi Sendikaları Konfederasyonu' },
+  { kisaltma: 'DMO', acilim: 'Devlet Malzeme Ofisi' },
+  { kisaltma: 'DP', acilim: 'Demokrat Parti' },
+  { kisaltma: 'DSİ', acilim: 'Devlet Su İşleri' },
+  { kisaltma: 'DSP', acilim: 'Demokratik Sol Parti' },
+  { kisaltma: 'DSÖ', acilim: 'Dünya Sağlık Örgütü' },
+  { kisaltma: 'DUS', acilim: 'Diş Hekimliğinde Uzmanlık Eğitimi Giriş Sınavı' },
+  { kisaltma: 'EGO', acilim: 'Elektrik Gaz Otobüs Genel Müdürlüğü' },
+  { kisaltma: 'EGM', acilim: 'Emniyet Genel Müdürlüğü' },
+  { kisaltma: 'EPDK', acilim: 'Enerji Piyasası Düzenleme Kurumu' },
+  { kisaltma: 'ESHOT', acilim: 'Elektrik Su Havagazı Otobüs ve Troleybüs' },
+  { kisaltma: 'FAO', acilim: 'Birleşmiş Milletler Gıda ve Tarım Örgütü' },
+  { kisaltma: 'FIBA', acilim: 'Uluslararası Basketbol Federasyonu' },
+  { kisaltma: 'FIFA', acilim: 'Uluslararası Futbol Federasyonları Birliği' },
+  { kisaltma: 'HAKİŞ', acilim: 'Hak İşçi Sendikaları Konfederasyonu' },
+  { kisaltma: 'HAVELSAN', acilim: 'Hava Elektronik Sanayii' },
+  { kisaltma: 'HDP', acilim: 'Halkların Demokratik Partisi' },
+  { kisaltma: 'HSK', acilim: 'Hakimler ve Savcılar Kurulu' },
+  { kisaltma: 'HSYK', acilim: 'Hakimler ve Savcılar Yüksek Kurulu' },
+  { kisaltma: 'ILO', acilim: 'Uluslararası Çalışma Örgütü' },
+  { kisaltma: 'IMF', acilim: 'Uluslararası Para Fonu' },
+  { kisaltma: 'ISO', acilim: 'Uluslararası Standardizasyon Örgütü' },
+  { kisaltma: 'İBB', acilim: 'İstanbul Büyükşehir Belediyesi' },
+  { kisaltma: 'İETT', acilim: 'İstanbul Elektrik Tramvay ve Tünel İşletmeleri' },
+  { kisaltma: 'İHA', acilim: 'İhlas Haber Ajansı' },
+  { kisaltma: 'İHH', acilim: 'İnsan Hak ve Hürriyetleri İnsani Yardım Vakfı' },
+  { kisaltma: 'İSKİ', acilim: 'İstanbul Su ve Kanalizasyon İdaresi' },
+  { kisaltma: 'İŞKUR', acilim: 'Türkiye İş Kurumu' },
+  { kisaltma: 'İTÜ', acilim: 'İstanbul Teknik Üniversitesi' },
+  { kisaltma: 'İYİ', acilim: 'İYİ Parti' },
+  { kisaltma: 'KAP', acilim: 'Kamuyu Aydınlatma Platformu' },
+  { kisaltma: 'KDK', acilim: 'Kamu Denetçiliği Kurumu' },
+  { kisaltma: 'KEİ', acilim: 'Karadeniz Ekonomik İşbirliği' },
+  { kisaltma: 'KESK', acilim: 'Kamu Emekçileri Sendikaları Konfederasyonu' },
+  { kisaltma: 'KGM', acilim: 'Karayolları Genel Müdürlüğü' },
+  { kisaltma: 'KİK', acilim: 'Kamu İhale Kurumu' },
+  { kisaltma: 'KİT', acilim: 'Kamu İktisadi Teşebbüsü' },
+  { kisaltma: 'KKB', acilim: 'Kredi Kayıt Bürosu' },
+  { kisaltma: 'KOSGEB', acilim: 'Küçük ve Orta Ölçekli İşletmeleri Geliştirme ve Destekleme İdaresi Başkanlığı' },
+  { kisaltma: 'KPSS', acilim: 'Kamu Personeli Seçme Sınavı' },
+  { kisaltma: 'KVKK', acilim: 'Kişisel Verileri Koruma Kurumu' },
+  { kisaltma: 'LGS', acilim: 'Liselere Geçiş Sistemi' },
+  { kisaltma: 'LÖSEV', acilim: 'Lösemili Çocuklar Vakfı' },
+  { kisaltma: 'MEB', acilim: 'Milli Eğitim Bakanlığı' },
+  { kisaltma: 'MEBBİS', acilim: 'Milli Eğitim Bakanlığı Bilişim Sistemleri' },
+  { kisaltma: 'MEMURSEN', acilim: 'Memur Sendikaları Konfederasyonu' },
+  { kisaltma: 'MHP', acilim: 'Milliyetçi Hareket Partisi' },
+  { kisaltma: 'MİT', acilim: 'Milli İstihbarat Teşkilatı' },
+  { kisaltma: 'MKK', acilim: 'Merkezi Kayıt Kuruluşu' },
+  { kisaltma: 'MSB', acilim: 'Milli Savunma Bakanlığı' },
+  { kisaltma: 'MÜSİAD', acilim: 'Müstakil Sanayici ve İşadamları Derneği' },
+  { kisaltma: 'NATO', acilim: 'Kuzey Atlantik Antlaşması Örgütü' },
+  { kisaltma: 'NTV', acilim: 'NTV' },
+  { kisaltma: 'OECD', acilim: 'Ekonomik İşbirliği ve Kalkınma Örgütü' },
+  { kisaltma: 'ODTÜ', acilim: 'Orta Doğu Teknik Üniversitesi' },
+  { kisaltma: 'ÖSYM', acilim: 'Ölçme Seçme ve Yerleştirme Merkezi' },
+  { kisaltma: 'PTT', acilim: 'Posta ve Telgraf Teşkilatı' },
+  { kisaltma: 'ROKETSAN', acilim: 'Roket Sanayii ve Ticaret Anonim Şirketi' },
+  { kisaltma: 'RTÜK', acilim: 'Radyo ve Televizyon Üst Kurulu' },
+  { kisaltma: 'SGK', acilim: 'Sosyal Güvenlik Kurumu' },
+  { kisaltma: 'SP', acilim: 'Saadet Partisi' },
+  { kisaltma: 'SPK', acilim: 'Sermaye Piyasası Kurulu' },
+  { kisaltma: 'SSCB', acilim: 'Sovyet Sosyalist Cumhuriyetler Birliği' },
+  { kisaltma: 'TC', acilim: 'Türkiye Cumhuriyeti' },
+  { kisaltma: 'TBMM', acilim: 'Türkiye Büyük Millet Meclisi' },
+  { kisaltma: 'TCK', acilim: 'Türk Ceza Kanunu' },
+  { kisaltma: 'TCDD', acilim: 'Türkiye Cumhuriyeti Devlet Demiryolları' },
+  { kisaltma: 'TCMB', acilim: 'Türkiye Cumhuriyet Merkez Bankası' },
+  { kisaltma: 'TDK', acilim: 'Türk Dil Kurumu' },
+  { kisaltma: 'TEGV', acilim: 'Türkiye Eğitim Gönüllüleri Vakfı' },
+  { kisaltma: 'TEMA', acilim: 'Türkiye Erozyonla Mücadele Ağaçlandırma ve Doğal Varlıkları Koruma Vakfı' },
+  { kisaltma: 'TESK', acilim: 'Türkiye Esnaf ve Sanatkarları Konfederasyonu' },
+  { kisaltma: 'TEV', acilim: 'Türk Eğitim Vakfı' },
+  { kisaltma: 'TFF', acilim: 'Türkiye Futbol Federasyonu' },
+  { kisaltma: 'THF', acilim: 'Türkiye Hentbol Federasyonu' },
+  { kisaltma: 'THY', acilim: 'Türk Hava Yolları' },
+  { kisaltma: 'TİGEM', acilim: 'Tarım İşletmeleri Genel Müdürlüğü' },
+  { kisaltma: 'TİKA', acilim: 'Türk İşbirliği ve Koordinasyon Ajansı Başkanlığı' },
+  { kisaltma: 'TİP', acilim: 'Türkiye İşçi Partisi' },
+  { kisaltma: 'TKP', acilim: 'Türkiye Komünist Partisi' },
+  { kisaltma: 'TMMOB', acilim: 'Türk Mühendis ve Mimar Odaları Birliği' },
+  { kisaltma: 'TMO', acilim: 'Toprak Mahsulleri Ofisi' },
+  { kisaltma: 'TMOK', acilim: 'Türkiye Milli Olimpiyat Komitesi' },
+  { kisaltma: 'TOKİ', acilim: 'Toplu Konut İdaresi Başkanlığı' },
+  { kisaltma: 'TOBB', acilim: 'Türkiye Odalar ve Borsalar Birliği' },
+  { kisaltma: 'TOG', acilim: 'Toplum Gönüllüleri Vakfı' },
+  { kisaltma: 'TPAO', acilim: 'Türkiye Petrolleri Anonim Ortaklığı' },
+  { kisaltma: 'TRT', acilim: 'Türkiye Radyo Televizyon Kurumu' },
+  { kisaltma: 'TSK', acilim: 'Türk Silahlı Kuvvetleri' },
+  { kisaltma: 'TSE', acilim: 'Türk Standardları Enstitüsü' },
+  { kisaltma: 'TTB', acilim: 'Türk Tabipleri Birliği' },
+  { kisaltma: 'TTK', acilim: 'Türk Tarih Kurumu' },
+  { kisaltma: 'TÜBA', acilim: 'Türkiye Bilimler Akademisi' },
+  { kisaltma: 'TÜBİTAK', acilim: 'Türkiye Bilimsel ve Teknolojik Araştırma Kurumu' },
+  { kisaltma: 'TÜİK', acilim: 'Türkiye İstatistik Kurumu' },
+  { kisaltma: 'TÜRKAK', acilim: 'Türk Akreditasyon Kurumu' },
+  { kisaltma: 'TÜRKİŞ', acilim: 'Türkiye İşçi Sendikaları Konfederasyonu' },
+  { kisaltma: 'TÜRKPA', acilim: 'Türk Devletleri Parlamenter Asamblesi' },
+  { kisaltma: 'TÜRKSOY', acilim: 'Uluslararası Türk Kültürü Teşkilatı' },
+  { kisaltma: 'TÜRKSAT', acilim: 'Türksat Uydu Haberleşme Kablo TV ve İşletme Anonim Şirketi' },
+  { kisaltma: 'TÜRMOB', acilim: 'Türkiye Serbest Muhasebeci Mali Müşavirler ve Yeminli Mali Müşavirler Odaları Birliği' },
+  { kisaltma: 'TÜSİAD', acilim: 'Türk Sanayicileri ve İş İnsanları Derneği' },
+  { kisaltma: 'TÜSEB', acilim: 'Türkiye Sağlık Enstitüleri Başkanlığı' },
+  { kisaltma: 'TUS', acilim: 'Tıpta Uzmanlık Eğitimi Giriş Sınavı' },
+  { kisaltma: 'TUSAŞ', acilim: 'Türk Havacılık ve Uzay Sanayii' },
+  { kisaltma: 'TÜPRAŞ', acilim: 'Türkiye Petrol Rafinerileri' },
+  { kisaltma: 'TVF', acilim: 'Türkiye Voleybol Federasyonu' },
+  { kisaltma: 'TYT', acilim: 'Temel Yeterlilik Testi' },
+  { kisaltma: 'UEFA', acilim: 'Avrupa Futbol Federasyonları Birliği' },
+  { kisaltma: 'UMKE', acilim: 'Ulusal Medikal Kurtarma Ekibi' },
+  { kisaltma: 'UNESCO', acilim: 'Birleşmiş Milletler Eğitim Bilim ve Kültür Örgütü' },
+  { kisaltma: 'UNICEF', acilim: 'Birleşmiş Milletler Çocuklara Yardım Fonu' },
+  { kisaltma: 'VOA', acilim: 'Voice of America' },
+  { kisaltma: 'WHO', acilim: 'World Health Organization' },
+  { kisaltma: 'YDS', acilim: 'Yabancı Dil Bilgisi Seviye Tespit Sınavı' },
+  { kisaltma: 'YKS', acilim: 'Yükseköğretim Kurumları Sınavı' },
+  { kisaltma: 'YÖK', acilim: 'Yükseköğretim Kurulu' },
+  { kisaltma: 'YÖKDİL', acilim: 'Yükseköğretim Kurumları Yabancı Dil Sınavı' },
+  { kisaltma: 'YRP', acilim: 'Yeniden Refah Partisi' },
+  { kisaltma: 'YSK', acilim: 'Yüksek Seçim Kurulu' },
+  { kisaltma: 'YTÜ', acilim: 'Yıldız Teknik Üniversitesi' },
+  
+ // --- MEB (Milli Eğitim Bakanlığı) Birimleri ve Kurumları ---
+  { kisaltma: 'YEĞİTEK', acilim: 'Yenilik ve Eğitim Teknolojileri Genel Müdürlüğü' },
+  { kisaltma: 'TTKB', acilim: 'Talim ve Terbiye Kurulu Başkanlığı' },
+  { kisaltma: 'TEGM', acilim: 'Temel Eğitim Genel Müdürlüğü' },
+  { kisaltma: 'ÖGM', acilim: 'Ortaöğretim Genel Müdürlüğü' },
+  { kisaltma: 'MTEGM', acilim: 'Mesleki ve Teknik Eğitim Genel Müdürlüğü' },
+  { kisaltma: 'DÖGM', acilim: 'Din Öğretimi Genel Müdürlüğü' },
+  { kisaltma: 'ÖERGM', acilim: 'Özel Eğitim ve Rehberlik Hizmetleri Genel Müdürlüğü' },
+  { kisaltma: 'HBOGM', acilim: 'Hayat Boyu Öğrenme Genel Müdürlüğü' },
+  { kisaltma: 'ÖDSGM', acilim: 'Ölçme, Değerlendirme ve Sınav Hizmetleri Genel Müdürlüğü' },
+  { kisaltma: 'YLSY', acilim: 'Yurt Dışına Lisansüstü Öğrenim Görmek Üzere Gönderilecek Adayları Seçme ve Yerleştirme' },
+  { kisaltma: 'EBA', acilim: 'Eğitim Bilişim Ağı' },
+  { kisaltma: 'MEBİM', acilim: 'Milli Eğitim Bakanlığı İletişim Merkezi' },
+
+  // --- Uluslararası Kuruluşlar (BM, Sağlık, Ekonomi, Güvenlik) ---
+  { kisaltma: 'UNDP', acilim: 'Birleşmiş Milletler Kalkınma Programı' },
+  { kisaltma: 'UNHCR', acilim: 'Birleşmiş Milletler Mülteciler Yüksek Komiserliği' },
+  { kisaltma: 'WFP', acilim: 'Dünya Gıda Programı' },
+  { kisaltma: 'IAEA', acilim: 'Uluslararası Atom Enerjisi Ajansı' },
+  { kisaltma: 'ICRC', acilim: 'Uluslararası Kızılhaç Komitesi' },
+  { kisaltma: 'INTERPOL', acilim: 'Uluslararası Kriminal Polis Teşkilatı' },
+  { kisaltma: 'WTO', acilim: 'Dünya Ticaret Örgütü' },
+  { kisaltma: 'WB', acilim: 'Dünya Bankası' },
+  { kisaltma: 'UNFPA', acilim: 'Birleşmiş Milletler Nüfus Fonu' },
+  { kisaltma: 'UNEP', acilim: 'Birleşmiş Milletler Çevre Programı' },
+  { kisaltma: 'IOM', acilim: 'Uluslararası Göç Kuruluşu' },
+  { kisaltma: 'OPEC', acilim: 'Petrol İhraç Eden Ülkeler Örgütü' },
+  { kisaltma: 'OSCE', acilim: 'Avrupa Güvenlik ve İşbirliği Teşkilatı' }, // AGİT'in İngilizcesi
+
+  // --- Türkiye'deki Diğer Eksik Önemli Kurumlar ---
+  { kisaltma: 'TUA', acilim: 'Türkiye Uzay Ajansı' },
+  { kisaltma: 'TMSF', acilim: 'Tasarruf Mevduatı Sigorta Fonu' },
+  { kisaltma: 'VGM', acilim: 'Vakıflar Genel Müdürlüğü' },
+  { kisaltma: 'MGM', acilim: 'Meteoroloji Genel Müdürlüğü' },
+  { kisaltma: 'YTB', acilim: 'Yurtdışı Türkler ve Akraba Topluluklar Başkanlığı' },
+  { kisaltma: 'TİHEK', acilim: 'Türkiye İnsan Hakları ve Eşitlik Kurumu' },
+  { kisaltma: 'VDK', acilim: 'Vergi Denetim Kurulu' },
+  { kisaltma: 'UAB', acilim: 'Ulaştırma ve Altyapı Bakanlığı' },
+  { kisaltma: 'İBÜB', acilim: 'İklim Değişikliği Başkanlığı' },
+  { kisaltma: 'AFO', acilim: 'Avrupa Birliği Eğitim ve Gençlik Programları Merkezi Başkanlığı (Ulusal Ajans)' },
+
+
+  // --- Uluslararası Kuruluşlar (Eksikler) ---
+  { kisaltma: 'UNHCR', acilim: 'Birleşmiş Milletler Mülteciler Yüksek Komiserliği' },
+  { kisaltma: 'İKT', acilim: 'İslam İşbirliği Teşkilatı' },
+  { kisaltma: 'AİB', acilim: 'Avrupa Yatırım Bankası' },
+  { kisaltma: 'ECB', acilim: 'Avrupa Merkez Bankası' },
+
+  // --- Diğer ---
+  { kisaltma: 'ÖİK', acilim: 'Özelleştirme İdaresi Başkanlığı' },
+  { kisaltma: 'KKY', acilim: 'Karar Destek Sistemi' },
+  { kisaltma: 'KAYSİS', acilim: 'Elektronik Kamu Bilgi Yönetimi Sistemi' }
+];
+
 // MEB Görme Engelliler için Türkçe Braille Yazı Kılavuzu (2014) –
 // "Bir Harfli Kısaltmalar" tablosu (sayfa 248–249).
 // Her kayıt: harf (alfabe karşılığı), kelime (tam okunuşu), noktalar.
@@ -566,7 +777,7 @@ export const OZEL_ISARETLER = [
     kurallar: [
       'Cümle başlarında (ilk harften önce) konur.',
       'Özel adların ilk harfinden önce konur.',
-      'Tüm büyük harfle yazılması gereken kısaltmaların her harfinden önce konur (TBMM gibi haller hariç—bk. Hepsi Büyük Harf).'
+      'Rumuzlu ifadelerde her harfin önünde ayrı ayrı kullanılır.'
     ],
     ornekler: ['`Ali', '`Ankara’ya', '`Türkçe']
   },
@@ -576,33 +787,33 @@ export const OZEL_ISARETLER = [
     hucreler: [[6], [6]],
     aciklama: '6. nokta arka arkaya iki kere yazılır. Sonraki kelimenin/kısaltmanın TÜM harflerini büyük yapar.',
     kurallar: [
-      'Tamamı büyük harflerle yazılan kısaltmaların başına konur (``TBMM, ``TDK).',
+      'Tamamı büyük harfle yazılacak kelime veya bölümlerin başına konur.',
       'Bir cümlenin tamamı büyük harflerle yazılacaksa cümlenin başına konur.',
       'Etkisi, sonraki boşluğa kadar sürer.'
     ],
-    ornekler: ['``TBMM', '``DİKKAT!']
+    ornekler: ['``DİKKAT!']
   },
   {
     ad: 'Tek Küçük Harf İşareti',
     sembol: 'p',
     hucreler: [[5, 6]],
-    aciklama: '5. ve 6. noktalardan oluşur. Sonraki tek küçük harfin “harf” olduğunu belirtir (rakam-harf karışıklığını önler).',
+    aciklama: '5. ve 6. noktalardan oluşur. Sonraki tek küçük harfin harf olarak okunacağını belirtir.',
     kurallar: [
-      'Bir rakamın hemen ardından gelen tek küçük harften önce konur (rakam-harf karışmasın diye).',
-      'Sadece bir harfi etkiler.'
+      'Harfler kelime veya kısaltma amacı dışında yalnız başına yazıldığında ilgili harften önce, harfe bitişik olarak konur.',
+      'Sadece bir küçük harfi etkiler.'
     ],
-    ornekler: ['12 p a sınıfı', '5 p b']
+    ornekler: ['pa köşesi', 'pb köşesi']
   },
   {
     ad: 'Tek Büyük Harf İşareti',
     sembol: 'p`',
     hucreler: [[5, 6], [6]],
-    aciklama: 'Önce 5-6 (tek harf) sonra 6 (büyük harf) işareti yazılır. Sonraki tek harfin büyük harf olduğunu belirtir.',
+    aciklama: 'Önce 5-6 (tek harf), sonra 6 (büyük harf) işareti yazılır. Sonraki tek büyük harfin harf olarak okunacağını belirtir.',
     kurallar: [
-      'Bir rakamın ardından gelen tek büyük harften önce konur.',
+      'Harf kelime veya kısaltma amacı dışında yalnız başına büyük harf olarak yazıldığında kullanılır.',
       'Sadece bir harfi etkiler.'
     ],
-    ornekler: ['12 p`A sınıfı']
+    ornekler: ['p`A noktası']
   },
   {
     ad: 'İtalik İşareti',
@@ -652,39 +863,39 @@ export const OZEL_ISARETLER = [
   },
   {
     ad: 'Tarih Yazma',
-    sembol: '—',
-    hucreler: [],
-    aciklama: 'Tarih, gün-ay-yıl sırasıyla ve aralarda nokta veya eğik çizgi ile yazılır.',
+    sembol: '3.3.2013',
+    hucreler: [[3, 4, 5, 6], [1, 4], [3, 6], [1, 4], [3, 6], [1, 2], [2, 4, 5], [1], [1, 4]],
+    aciklama: 'Tarih yazılırken önce rakam işareti konur; gün, ay ve yıl aralık verilmeden yazılır.',
     kurallar: [
-      'Rakamların başına rakam işareti konur.',
-      'Ay adı yazıyla yazılırsa nokta veya eğik çizgi kullanılmaz (25 Nisan 2026).',
-      'Sadece rakamla yazıldığında her rakam grubunun başına yeniden rakam işareti gerekir.'
+      'Tarih yazımlarında sadece en başa rakam işareti yazılır.',
+      'Gün, ay ve yıl arasında boşluk bırakılmaz.',
+      'Nokta, eğik çizgi veya kısa çizgiyle yazılan sayısal tarihlerde ayırıcı 3-6 noktalarıyla gösterilir.'
     ],
-    ornekler: ['25.04.2026', '25/04/2026', '25 Nisan 2026']
+    ornekler: ['3.3.2013', '03/03/2013', '2013-03-03']
   },
   {
     ad: 'Rumuzlu İfadeler',
-    sembol: '—',
-    hucreler: [],
-    aciklama: 'Bilinmeyen veya gizli tutulan adlar için kullanılan tek harflik rumuzlardır.',
+    sembol: 'TBMM',
+    hucreler: [[6], [2, 3, 4, 5], [6], [1, 2], [6], [1, 3, 4], [6], [1, 3, 4]],
+    aciklama: 'Sözlükte tanımlı kurum, kuruluş ve yaygın kısaltmalar rumuzlu yazıldığında her harfin önüne altıncı nokta konur.',
     kurallar: [
-      'Rumuz harfinin önüne büyük harf işareti (6) konur.',
-      'Rumuzun sonuna gelen ekler kesme işareti ile ayrılır.',
-      'Birden çok harfli rumuzlar nokta ile ayrılarak yazılır.'
+      'Rumuz sözlüğündeki kısaltmalarda her harfin önüne büyük harf işareti olan 6. nokta yazılır.',
+      'Harflerin arasına nokta konmaz.',
+      'Sözlükte olmayan tümü büyük kelimeler rumuz sayılmaz; tümü büyük harf kuralıyla yazılır.'
     ],
-    ornekler: ['B…’a', 'X.Y.Z.']
+    ornekler: ['TBMM', 'TDK', 'MEB', 'TÜBİTAK']
   },
   {
     ad: 'Düzeltme ve Yabancı Harf İşareti',
     sembol: '^',
     hucreler: [[4]],
-    aciklama: 'Yalnız 4. noktadan oluşur.',
+    aciklama: 'Yalnız 4. noktadan oluşur; düzeltme yapılacak ya da yabancı olan harften hemen önce yazılır.',
     kurallar: [
-      'Türkçede bulunmayan yabancı harflerden önce konur (q, w, x gibi).',
-      'Düzeltme (^) işareti gereken sesli harflerden önce konur (kâğıt, hâlâ).',
-      'Yalnızca kendisinden sonraki harfi etkiler.'
+      'Yazılışları aynı, anlamı ve okunuşu farklı kelimelerde uzun okunan ünlüden önce konur (âdet, hâlâ).',
+      'İnce g, k veya l seslerinden sonra gelen â/û gibi ünlülerden önce kullanılır (Dergâh, mahkûm, Lâle).',
+      'Türkçede bulunmayan q, w, x gibi yabancı harflerden ve yabancı alfabe harflerinden önce konur.'
     ],
-    ornekler: ['^kağıt', '^hala', '^q', '^w', '^x']
+    ornekler: ['âdet', 'hâlâ', 'Dergâh', 'mahkûm', 'Windows', 'queen', 'xenon', 'Êlise']
   }
 ];
 

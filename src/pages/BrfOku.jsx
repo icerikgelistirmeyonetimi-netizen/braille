@@ -10,6 +10,11 @@ import {
   hucreyiRakamayap,
   buyukHarfIsaretiMi,
   sayiIsaretiMi,
+  tekKucukHarfIsaretiMi,
+  tarihAyirmaIsaretiMi,
+  tarihHucreAraligi,
+  duzeltmeYabanciHarfIsaretiMi,
+  duzeltmeliHucreyiMetneCevir,
   ikiHarfliKisaltmaOkunusunuYumusat,
   kelimeKokuOkunusunuYorIcinDuzelt,
 } from '../utils/brailleCevir.js';
@@ -187,6 +192,7 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
         let ci = 0;
         // bashCase'i harfYaz akışına aktar: kısaltma eşleşmezse harf-harf yolda büyük harf korunur
         let sM = false, bH = (bashCase === 'ilk'), bHTumu = (bashCase === 'tumu');
+        let duzeltmeBekle = false;
         let ikiHarfPrefixIndex = -1;
         let kokPrefixIndex = -1;
         // İki harfli kısaltma + ek/devam: kısaltma başta genişletilir,
@@ -244,8 +250,43 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
           }
           else buf.push(h.toLocaleLowerCase('tr'));
         };
+        const tekHarfIsaretliOku = (cellIndex) => {
+          if (cellIndex !== 0 || !tekKucukHarfIsaretiMi(b[cellIndex])) return null;
+          let harfIndex = cellIndex + 1;
+          let buyuk = false;
+          if (harfIndex < b.length && buyukHarfIsaretiMi(b[harfIndex])) {
+            buyuk = true;
+            harfIndex++;
+          }
+          if (harfIndex >= b.length) return null;
+          const harf = hucreyiKarakteryap(b[harfIndex]);
+          if (!harf || harf === ' ') return null;
+          const sonraki = harfIndex + 1 < b.length ? b[harfIndex + 1] : null;
+          if (sonraki && !_NOKTA_TERS.has([...sonraki].sort((a, b) => a - b).join(','))) return null;
+          return {
+            metin: buyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr'),
+            sonrakiIndex: harfIndex + 1,
+          };
+        };
         while (ci < b.length) {
           const noktalar = b[ci];
+          const tekHarf = tekHarfIsaretliOku(ci);
+          if (tekHarf) {
+            buf.push(tekHarf.metin);
+            ci = tekHarf.sonrakiIndex;
+            continue;
+          }
+          if (duzeltmeBekle) {
+            harfYaz(duzeltmeliHucreyiMetneCevir(noktalar) || hucreyiKarakteryap(noktalar));
+            duzeltmeBekle = false;
+            ci++;
+            continue;
+          }
+          if (duzeltmeYabanciHarfIsaretiMi(noktalar)) {
+            duzeltmeBekle = true;
+            ci++;
+            continue;
+          }
           if (noktalar.length === 0) { buf.push(' '); sM = false; bH = false; bHTumu = false; ci++; continue; }
           if (sayiIsaretiMi(noktalar)) {
             // Sayı işareti yalnızca kelime başında + ardından rakam gelirse geçerli;
@@ -269,6 +310,7 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
           if (sM) {
             const r = hucreyiRakamayap(noktalar);
             if (r) { buf.push(r); ci++; continue; }
+            if (tarihAyirmaIsaretiMi(noktalar) && tarihHucreAraligi(b, ci)) { buf.push('.'); ci++; continue; }
             sM = false;
           }
           // Kelime parçası işareti: [4,5] veya [5,6] + sag hücresi
@@ -337,12 +379,50 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
   for (const satir of satirlar) {
     if (!satir.trim()) { metin += '\n'; continue; }
     let tumKelimeBuyuk = false;
-    for (const ch of satir) {
-      const noktalar = brfNoktalaradon(ch);
-      if (noktalar === null) continue;
-      if (noktalar.length === 0) {
-        metin += ' '; sayiModu = false; buyukHarfBekle = false; tumKelimeBuyuk = false; continue;
+    let duzeltmeBekle = false;
+    const satirHucreleri = Array.from(satir)
+      .map((ch) => brfNoktalaradon(ch))
+      .filter((noktalar) => noktalar !== null);
+    const tekHarfIsaretliOku = (cellIndex) => {
+      if (!tekKucukHarfIsaretiMi(satirHucreleri[cellIndex])) return null;
+      let harfIndex = cellIndex + 1;
+      let buyuk = false;
+      if (harfIndex < satirHucreleri.length && buyukHarfIsaretiMi(satirHucreleri[harfIndex])) {
+        buyuk = true;
+        harfIndex++;
       }
+      if (harfIndex >= satirHucreleri.length) return null;
+      const harf = hucreyiKarakteryap(satirHucreleri[harfIndex]);
+      if (!harf || harf === ' ') return null;
+      return {
+        metin: buyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr'),
+        sonrakiIndex: harfIndex,
+      };
+    };
+    for (let hi = 0; hi < satirHucreleri.length; hi++) {
+      const noktalar = satirHucreleri[hi];
+      if (noktalar.length === 0) {
+        metin += ' '; sayiModu = false; buyukHarfBekle = false; tumKelimeBuyuk = false; duzeltmeBekle = false; continue;
+      }
+      const tekHarf = tekHarfIsaretliOku(hi);
+      if (tekHarf) {
+        metin += tekHarf.metin;
+        hi = tekHarf.sonrakiIndex;
+        sayiModu = false;
+        buyukHarfBekle = false;
+        continue;
+      }
+      if (duzeltmeBekle) {
+        const harf = duzeltmeliHucreyiMetneCevir(noktalar) || hucreyiKarakteryap(noktalar);
+        if (harf) {
+          const buyuk = buyukHarfBekle || tumKelimeBuyuk;
+          metin += buyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr');
+        }
+        duzeltmeBekle = false;
+        buyukHarfBekle = false;
+        continue;
+      }
+      if (duzeltmeYabanciHarfIsaretiMi(noktalar)) { duzeltmeBekle = true; continue; }
       if (sayiIsaretiMi(noktalar)) { sayiModu = true; tumKelimeBuyuk = false; continue; }
       if (buyukHarfIsaretiMi(noktalar)) {
         if (buyukHarfBekle) { tumKelimeBuyuk = true; buyukHarfBekle = false; }
@@ -352,6 +432,7 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
       if (sayiModu) {
         const rakam = hucreyiRakamayap(noktalar);
         if (rakam) { metin += rakam; continue; }
+        if (tarihAyirmaIsaretiMi(noktalar) && tarihHucreAraligi(satirHucreleri, hi)) { metin += '.'; continue; }
         sayiModu = false;
       }
       const harf = hucreyiKarakteryap(noktalar);
