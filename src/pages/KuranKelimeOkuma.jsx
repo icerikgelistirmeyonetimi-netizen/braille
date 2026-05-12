@@ -1,6 +1,6 @@
 import React from 'react';
 import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
-import { KURAN_HECELERI, KURAN_KELIMELERI } from '../data/kuran.js';
+import { KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL } from '../data/kuran.js';
 
 // Kur'an braillesinde harf + hareke ardı ardına ayrı hücreler olarak yazılır.
 // Bu sayfa, tek hücre adımlama modunda (mobilde de net okunan) her kelimenin
@@ -15,9 +15,19 @@ const KAYNAKLAR = {
       hucreler: h.hucreler
     }))
   },
+  'kelime-temel': {
+    etiket: 'Kelime Okuma — Bölüm 1',
+    bittiMesaji: 'Tebrikler! Temel kelime okuma bölümünü tamamladınız.',
+    veri: KURAN_KELIMELERI_TEMEL.map((kw) => ({
+      yazi: kw.yazi,
+      okunus: kw.okunus,
+      anlam: kw.anlam,
+      hucreler: kw.hucreler
+    }))
+  },
   kelime: {
-    etiket: 'Kelime Okuma',
-    bittiMesaji: 'Tebrikler! Tüm kelimeleri okudunuz.',
+    etiket: 'Kelime Okuma — Bölüm 2',
+    bittiMesaji: 'Tebrikler! Geniş kelime okuma listesini tamamladınız.',
     veri: KURAN_KELIMELERI.map((k) => ({
       yazi: k.yazi,
       okunus: k.okunus,

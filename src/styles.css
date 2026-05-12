@@ -2340,6 +2340,20 @@ h1, h2, h3 { color: var(--fg); }
   min-height: 100px;
   white-space: pre-wrap;
 }
+.araclar-metin-yardim {
+  margin: 8px 0 0;
+  padding-right: 40px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--fg, #111) 65%, transparent);
+}
+.araclar-metin-ornek {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.araclar-metin-yardim a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
 .araclar-okunan {
   min-height: 120px;
   max-height: 40vh;
@@ -2954,6 +2968,7 @@ h1, h2, h3 { color: var(--fg); }
 }
 .belge-braille-hucre.kisaltma-hucre .belge-hucre-etiket { color: #e03535; }
 .belge-braille-hucre.noktalama-hucre .belge-hucre-etiket { color: #16a34a; }
+.belge-braille-hucre.matematik-hucre .belge-hucre-etiket { color: #7c3aed; }
 .araclar-nokta-gorunus.genisletilmis {
   gap: 6px 6px;
   align-items: flex-start;
@@ -3016,6 +3031,25 @@ h1, h2, h3 { color: var(--fg); }
   background: color-mix(in srgb, #16a34a 18%, transparent);
   border-color: #16a34a;
 }
+/* Matematik işaretleri → mor */
+.belge-braille-hucre.matematik-hucre .dot {
+  border-color: var(--panel-border);
+}
+.belge-braille-hucre.matematik-hucre .dot.on {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  box-shadow: none;
+  color: #fff;
+}
+.belge-braille-hucre.matematik-hucre:hover,
+.belge-braille-hucre.matematik-hucre:focus-visible {
+  background: color-mix(in srgb, #7c3aed 12%, transparent);
+  border-color: color-mix(in srgb, #7c3aed 50%, transparent);
+}
+.belge-braille-hucre.matematik-hucre.secili {
+  background: color-mix(in srgb, #7c3aed 18%, transparent);
+  border-color: #7c3aed;
+}
 /* Özel işaret hücreleri (büyük harf, sayı işareti, tümü büyük) → siyah */
 .belge-braille-hucre.ozel-isaret-hucre .belge-hucre-etiket { color: #111; }
 .belge-braille-hucre.ozel-isaret-hucre .dot {
@@ -3056,6 +3090,11 @@ h1, h2, h3 { color: var(--fg); }
   align-items: center;
   justify-content: space-between;
 }
+.bhp-header-aksiyonlar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .bhp-baslik-kucuk {
   font-size: 0.76em;
   font-weight: 700;
@@ -3063,23 +3102,35 @@ h1, h2, h3 { color: var(--fg); }
   opacity: 0.55;
   text-transform: uppercase;
 }
+.bhp-ayar,
 .bhp-kapat {
   width: 26px;
   height: 26px;
   border-radius: 6px;
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
   background: transparent;
   color: var(--fg);
-  opacity: 0.45;
+  opacity: 0.72;
   cursor: pointer;
-  font-size: 1em;
+  font-size: 0.85em;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  transition: opacity 0.12s, background 0.12s;
+  padding: 0 8px;
+  transition: opacity 0.12s, background 0.12s, border-color 0.12s;
 }
-.bhp-kapat:hover { opacity: 1; background: color-mix(in srgb, var(--fg) 10%, transparent); }
+.bhp-ayar {
+  width: auto;
+  min-width: 54px;
+  font-weight: 600;
+}
+.bhp-ayar.aktif,
+.bhp-ayar:hover,
+.bhp-kapat:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  border-color: color-mix(in srgb, var(--fg) 18%, transparent);
+}
 .bhp-noktalar {
   font-size: 0.82em;
   font-family: monospace;
@@ -3102,5 +3153,48 @@ h1, h2, h3 { color: var(--fg); }
   font-size: 0.85em;
   opacity: 0.65;
   line-height: 1.5;
+}
+.bhp-ayar-paneli {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bhp-ayar-baslik {
+  font-size: 0.92em;
+  font-weight: 700;
+}
+.bhp-ayar-aciklama {
+  font-size: 0.82em;
+  line-height: 1.5;
+  opacity: 0.72;
+}
+.bhp-ayar-listesi {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bhp-ayar-satiri {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9em;
+}
+.bhp-ayar-satiri input {
+  margin: 0;
+}
+.bhp-ayarlari-sifirla {
+  align-self: flex-start;
+  border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
+  background: transparent;
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.bhp-ayarlari-sifirla:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 

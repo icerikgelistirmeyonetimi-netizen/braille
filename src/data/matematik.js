@@ -29,6 +29,9 @@ const ALT_RAKAM = {
   '6': [2, 3, 5], '7': [2, 3, 5, 6], '8': [2, 3, 6], '9': [3, 5], '0': [3, 5, 6]
 };
 
+/** Türkçe litteratür Braille sıra sayısı (MEB 1.2.6): rakam hücreleri üst satırdan alta “indirgenmiş” yazılır. */
+export const SIRA_SAYISI_RAKAM_NOKTALARI = ALT_RAKAM;
+
 const BOSLUKSUZ = (...parcalar) => parcalar.flatMap((parca) => parca);
 const harfler = (metin) => [...metin.toLowerCase()].map((harf) => HARF[harf]).filter(Boolean);
 const kucukHarf = (metin) => [HARF_ISARETI, ...harfler(metin)];
@@ -38,11 +41,12 @@ const ekHucreleri = (ek = []) => {
   return Array.isArray(ek[0]) ? ek : [ek];
 };
 const olcu = (metin, ek = []) => [HARF_ISARETI, ...harfler(metin), ...ekHucreleri(ek)];
+const bolukluSayiMi = (deger) => /^\d{1,3}(?:\.\d{3})+(?:,\d+)?$/u.test(String(deger));
 const sayi = (deger) => [
   RAKAM_GOSTERGESI,
   ...String(deger).split('').map((karakter) => {
     if (karakter === ',') return [2];
-    if (karakter === '.') return [3, 6];
+    if (karakter === '.') return bolukluSayiMi(deger) ? [3] : [3, 6];
     return RAKAM[karakter];
   }).filter(Boolean)
 ];
@@ -85,7 +89,7 @@ export const MATEMATIK_SEMBOLLER = [
   { ad: 'çift rakam işareti', sembol: 'LL', aciklama: 'Üç veya daha fazla ardışık/alt alta sayıda ilk sayının başına çift rakam işareti yazılır.', hucreler: [RAKAM_GOSTERGESI, RAKAM_GOSTERGESI] },
   { ad: 'bölük işareti', sembol: '’', aciklama: 'Üç basamaktan fazla sayılarda sağdan üçer basamak ayırmak için 3. nokta kullanılır.', hucreler: [[3]] },
   { ad: 'bağ işareti', sembol: '-', aciklama: 'Bağlantılı sayılar ve zaman ifadelerinde araya 3-6 noktaları yazılır.', hucreler: [[3, 6]] },
-  { ad: 'virgül / ondalık gösterim', sembol: ',', aciklama: 'Matematikte sayıların arasındaki virgül ve ondalık gösterim 2. nokta ile yazılır.', hucreler: [[2]] },
+  { ad: 'virgül / ondalık gösterim', sembol: ',', aciklama: 'Matematikte sayıların arasındaki virgül ve ondalık gösterim 2. nokta ile yazılır; ondalık yazımda virgülden sonra ikinci bir rakam işareti kullanılmaz.', hucreler: [[2]] },
   { ad: 'harf işareti', sembol: '\\', aciklama: 'Matematikte tek küçük harflerin önüne 5-6 noktaları yazılır.', hucreler: [HARF_ISARETI] },
   { ad: 'tek büyük harf işareti', sembol: '\\^', aciklama: 'Tek büyük harf için harf işaretinden sonra 6. nokta kullanılır.', hucreler: [HARF_ISARETI, BUYUK_HARF_ISARETI] },
   { ad: 'artı', sembol: '+', aciklama: 'Kılavuza göre artı işareti iki hücredir: 5-6 ve 2-6.', hucreler: ISLEM.arti },
@@ -138,52 +142,52 @@ export const MATEMATIK_SEMBOLLER = [
 ];
 
 export const MATEMATIK_OLCULER = [
-  { ad: 'kilometre', sembol: 'km', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve km harfleriyle yazılır.', hucreler: olcu('km') },
-  { ad: 'hektometre', sembol: 'hm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve hm harfleriyle yazılır.', hucreler: olcu('hm') },
-  { ad: 'dekametre', sembol: 'dam', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve dam harfleriyle yazılır.', hucreler: olcu('dam') },
-  { ad: 'metre', sembol: 'm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve m harfiyle yazılır.', hucreler: olcu('m') },
-  { ad: 'desimetre', sembol: 'dm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve dm harfleriyle yazılır.', hucreler: olcu('dm') },
-  { ad: 'santimetre', sembol: 'cm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve cm harfleriyle yazılır.', hucreler: olcu('cm') },
   { ad: 'milimetre', sembol: 'mm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve mm harfleriyle yazılır.', hucreler: olcu('mm') },
-  { ad: 'kilometrekare', sembol: 'km²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 rakam işareti kullanılmadan alttan yazılır.', hucreler: olcu('km', ALT_RAKAM['2']) },
-  { ad: 'hektometrekare', sembol: 'hm²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('hm', ALT_RAKAM['2']) },
-  { ad: 'dekametrekare', sembol: 'dam²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('dam', ALT_RAKAM['2']) },
-  { ad: 'metrekare', sembol: 'm²', aciklama: 'Alan ölçüsü. Ölçü işareti, m ve alttan 2 ile yazılır.', hucreler: olcu('m', ALT_RAKAM['2']) },
-  { ad: 'desimetrekare', sembol: 'dm²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('dm', ALT_RAKAM['2']) },
-  { ad: 'santimetrekare', sembol: 'cm²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('cm', ALT_RAKAM['2']) },
+  { ad: 'santimetre', sembol: 'cm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve cm harfleriyle yazılır.', hucreler: olcu('cm') },
+  { ad: 'desimetre', sembol: 'dm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve dm harfleriyle yazılır.', hucreler: olcu('dm') },
+  { ad: 'metre', sembol: 'm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve m harfiyle yazılır.', hucreler: olcu('m') },
+  { ad: 'dekametre', sembol: 'dam', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve dam harfleriyle yazılır.', hucreler: olcu('dam') },
+  { ad: 'hektometre', sembol: 'hm', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve hm harfleriyle yazılır.', hucreler: olcu('hm') },
+  { ad: 'kilometre', sembol: 'km', aciklama: 'Uzunluk ölçüsü. Ölçü işareti ve km harfleriyle yazılır.', hucreler: olcu('km') },
   { ad: 'milimetrekare', sembol: 'mm²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('mm', ALT_RAKAM['2']) },
+  { ad: 'santimetrekare', sembol: 'cm²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('cm', ALT_RAKAM['2']) },
+  { ad: 'desimetrekare', sembol: 'dm²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('dm', ALT_RAKAM['2']) },
+  { ad: 'metrekare', sembol: 'm²', aciklama: 'Alan ölçüsü. Ölçü işareti, m ve alttan 2 ile yazılır.', hucreler: olcu('m', ALT_RAKAM['2']) },
+  { ad: 'dekametrekare', sembol: 'dam²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('dam', ALT_RAKAM['2']) },
+  { ad: 'hektometrekare', sembol: 'hm²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 alttan yazılır.', hucreler: olcu('hm', ALT_RAKAM['2']) },
+  { ad: 'kilometrekare', sembol: 'km²', aciklama: 'Alan ölçüsü. Birimin üstündeki 2 rakam işareti kullanılmadan alttan yazılır.', hucreler: olcu('km', ALT_RAKAM['2']) },
   { ad: 'ar', sembol: 'a', aciklama: 'Arazi ölçüsü.', hucreler: olcu('a') },
   { ad: 'dekar', sembol: 'daa', aciklama: 'Arazi ölçüsü.', hucreler: olcu('daa') },
   { ad: 'hektar', sembol: 'ha', aciklama: 'Arazi ölçüsü.', hucreler: olcu('ha') },
-  { ad: 'kilometreküp', sembol: 'km³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 rakam işareti kullanılmadan alttan yazılır.', hucreler: olcu('km', ALT_RAKAM['3']) },
-  { ad: 'hektometreküp', sembol: 'hm³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('hm', ALT_RAKAM['3']) },
-  { ad: 'dekametreküp', sembol: 'dam³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('dam', ALT_RAKAM['3']) },
-  { ad: 'metreküp', sembol: 'm³', aciklama: 'Hacim ölçüsü. Ölçü işareti, m ve alttan 3 ile yazılır.', hucreler: olcu('m', ALT_RAKAM['3']) },
-  { ad: 'desimetreküp', sembol: 'dm³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('dm', ALT_RAKAM['3']) },
-  { ad: 'santimetreküp', sembol: 'cm³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('cm', ALT_RAKAM['3']) },
   { ad: 'milimetreküp', sembol: 'mm³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('mm', ALT_RAKAM['3']) },
-  { ad: 'kilolitre', sembol: 'kL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('kl') },
-  { ad: 'hektolitre', sembol: 'hL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('hl') },
-  { ad: 'dekalitre', sembol: 'daL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('dal') },
-  { ad: 'litre', sembol: 'L', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('l') },
-  { ad: 'desilitre', sembol: 'dL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('dl') },
-  { ad: 'santilitre', sembol: 'cL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('cl') },
+  { ad: 'santimetreküp', sembol: 'cm³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('cm', ALT_RAKAM['3']) },
+  { ad: 'desimetreküp', sembol: 'dm³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('dm', ALT_RAKAM['3']) },
+  { ad: 'metreküp', sembol: 'm³', aciklama: 'Hacim ölçüsü. Ölçü işareti, m ve alttan 3 ile yazılır.', hucreler: olcu('m', ALT_RAKAM['3']) },
+  { ad: 'dekametreküp', sembol: 'dam³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('dam', ALT_RAKAM['3']) },
+  { ad: 'hektometreküp', sembol: 'hm³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 alttan yazılır.', hucreler: olcu('hm', ALT_RAKAM['3']) },
+  { ad: 'kilometreküp', sembol: 'km³', aciklama: 'Hacim ölçüsü. Birimin üstündeki 3 rakam işareti kullanılmadan alttan yazılır.', hucreler: olcu('km', ALT_RAKAM['3']) },
   { ad: 'mililitre', sembol: 'mL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('ml') },
-  { ad: 'ton', sembol: 't', aciklama: 'Kütle ölçüsü.', hucreler: olcu('t') },
-  { ad: 'kilogram', sembol: 'kg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('kg') },
-  { ad: 'hektogram', sembol: 'hg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('hg') },
-  { ad: 'dekagram', sembol: 'dag', aciklama: 'Kütle ölçüsü.', hucreler: olcu('dag') },
-  { ad: 'gram', sembol: 'g', aciklama: 'Kütle ölçüsü.', hucreler: olcu('g') },
-  { ad: 'desigram', sembol: 'dg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('dg') },
-  { ad: 'santigram', sembol: 'cg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('cg') },
+  { ad: 'santilitre', sembol: 'cL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('cl') },
+  { ad: 'desilitre', sembol: 'dL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('dl') },
+  { ad: 'litre', sembol: 'L', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('l') },
+  { ad: 'dekalitre', sembol: 'daL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('dal') },
+  { ad: 'hektolitre', sembol: 'hL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('hl') },
+  { ad: 'kilolitre', sembol: 'kL', aciklama: 'Sıvı ölçüsü.', hucreler: olcu('kl') },
   { ad: 'miligram', sembol: 'mg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('mg') },
-  { ad: 'saat', sembol: 'sa', aciklama: 'Zaman ölçüsü.', hucreler: olcu('sa') },
-  { ad: 'dakika', sembol: 'dk', aciklama: 'Zaman ölçüsü.', hucreler: olcu('dk') },
+  { ad: 'santigram', sembol: 'cg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('cg') },
+  { ad: 'desigram', sembol: 'dg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('dg') },
+  { ad: 'gram', sembol: 'g', aciklama: 'Kütle ölçüsü.', hucreler: olcu('g') },
+  { ad: 'dekagram', sembol: 'dag', aciklama: 'Kütle ölçüsü.', hucreler: olcu('dag') },
+  { ad: 'hektogram', sembol: 'hg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('hg') },
+  { ad: 'kilogram', sembol: 'kg', aciklama: 'Kütle ölçüsü.', hucreler: olcu('kg') },
+  { ad: 'ton', sembol: 't', aciklama: 'Kütle ölçüsü.', hucreler: olcu('t') },
   { ad: 'saniye', sembol: 'sn', aciklama: 'Zaman ölçüsü.', hucreler: olcu('sn') },
+  { ad: 'dakika', sembol: 'dk', aciklama: 'Zaman ölçüsü.', hucreler: olcu('dk') },
+  { ad: 'saat', sembol: 'sa', aciklama: 'Zaman ölçüsü.', hucreler: olcu('sa') },
   { ad: 'Celsius derece', sembol: '°C', aciklama: 'Sıcaklık ölçüsünde derece işareti ve büyük C kullanılır.', hucreler: [[3, 5, 6], BUYUK_HARF_ISARETI, HARF.c] },
   { ad: 'Fahrenheit derece', sembol: '°F', aciklama: 'Sıcaklık ölçüsünde derece işareti ve büyük F kullanılır.', hucreler: [[3, 5, 6], BUYUK_HARF_ISARETI, HARF.f] },
-  { ad: 'Türk lirası', sembol: 'TL', aciklama: 'Para birimi, ölçü işaretiyle boşluk bırakmadan yazılır.', hucreler: olcu('tl') },
   { ad: 'kuruş', sembol: 'Kr', aciklama: 'Para birimi, ölçü işaretiyle boşluk bırakmadan yazılır.', hucreler: olcu('kr') },
+  { ad: 'Türk lirası', sembol: 'TL', aciklama: 'Para birimi, ölçü işaretiyle boşluk bırakmadan yazılır.', hucreler: olcu('tl') },
   { ad: 'dolar', sembol: '$', aciklama: 'Para birimi, ölçü işareti ve d harfiyle yazılır.', hucreler: olcu('d') },
   { ad: 'euro / avro', sembol: '€', aciklama: 'Para birimi, ölçü işareti ve e harfiyle yazılır.', hucreler: olcu('e') },
   { ad: 'sterlin', sembol: '£', aciklama: 'Para birimi, ölçü işareti ve s harfiyle yazılır.', hucreler: olcu('s') }
@@ -216,9 +220,9 @@ export const GEOMETRI_SEMBOLLERI = [
 export const MATEMATIK_IFADELER = [
   { yazi: '5', okunus: 'beş', aciklama: 'Rakam işareti sayıdan önce yazılır.', hucreler: sayi('5') },
   { yazi: '26', okunus: 'yirmi altı', aciklama: 'Çok basamaklı sayıda rakam işareti yalnız başta yazılır.', hucreler: sayi('26') },
-  { yazi: '7.536.408', okunus: 'yedi milyon beş yüz otuz altı bin dört yüz sekiz', aciklama: 'Bölük işareti üçer basamak ayırmak için kullanılır.', hucreler: [...sayi('7'), [3], ...sayi('536').slice(1), [3], ...sayi('408').slice(1)] },
-  { yazi: '29.10.1923', okunus: 'yirmi dokuz on bin dokuz yüz yirmi üç', aciklama: 'Zaman/tarih ifadesinde araya bağ işareti yazılır.', hucreler: [...sayi('29'), [3, 6], ...sayi('10').slice(1), [3, 6], ...sayi('1923').slice(1)] },
-  { yazi: '2,3', okunus: 'iki tam onda üç', aciklama: 'Ondalık virgül 2. noktayla yazılır.', hucreler: sayi('2,3') },
+  { yazi: '7.536.408', okunus: 'yedi milyon beş yüz otuz altı bin dört yüz sekiz', aciklama: 'Bölük işareti üçer basamak ayırmak için kullanılır.', hucreler: sayi('7.536.408') },
+  { yazi: '29.10.1923', okunus: 'yirmi dokuz on bin dokuz yüz yirmi üç', aciklama: 'Zaman/tarih ifadesinde araya bağ işareti yazılır.', hucreler: sayi('29.10.1923') },
+  { yazi: '2,3', okunus: 'iki tam onda üç', aciklama: 'Ondalık virgül 2. noktayla yazılır; virgülden sonra ikinci bir rakam işareti kullanılmaz.', hucreler: sayi('2,3') },
   { yazi: '15 + 8 = 23', okunus: 'on beş artı sekiz eşittir yirmi üç', aciklama: 'İşlem işaretleri kılavuza göre harf işaretiyle başlayan iki hücreli sembollerdir.', hucreler: BOSLUKSUZ(sayi('15'), ISLEM.arti, sayi('8'), ISLEM.esit, sayi('23')) },
   { yazi: '27 - 12 = 15', okunus: 'yirmi yedi eksi on iki eşittir on beş', aciklama: 'Eksi işareti iki hücredir.', hucreler: BOSLUKSUZ(sayi('27'), ISLEM.eksi, sayi('12'), ISLEM.esit, sayi('15')) },
   { yazi: '13 x 4 = 52', okunus: 'on üç çarpı dört eşittir elli iki', aciklama: 'Çarpma işareti iki hücredir.', hucreler: BOSLUKSUZ(sayi('13'), ISLEM.carpma, sayi('4'), ISLEM.esit, sayi('52')) },

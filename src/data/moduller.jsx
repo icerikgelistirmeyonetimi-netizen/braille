@@ -5,6 +5,7 @@ import {
   GEOMETRI_SEMBOLLERI,
   MATEMATIK_IFADELER
 } from './matematik.js';
+import { KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL } from './kuran.js';
 
 // İkonlar – sade çizgi tabanlı SVG'ler. currentColor kullanılır,
 // böylece tema rengine uyum sağlar.
@@ -426,8 +427,21 @@ export const MODULLER = [
       { yol: '/kuran-harfler',   baslik: 'Arap Harfleri',      ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',   toplam: 31 },
       { yol: '/kuran-harekeler', baslik: 'Harekeler',           ikon: Ikon.harake,    anahtar: 'kuran-harekeler', toplam: 8 },
       { yol: '/kuran-tecvid',    baslik: 'Tecvid İşaretleri',  ikon: Ikon.tecvid,    anahtar: 'kuran-tecvid',    toplam: 7 },
-      { yol: '/kuran-heceler',   baslik: 'Hece Okuma',          ikon: Ikon.hece, anahtar: 'kuran-kelime-hece', toplam: 15 },
-      { yol: '/kuran-kelimeler', baslik: 'Kelime Okuma',        ikon: Ikon.kuranKelime, anahtar: 'kuran-kelime-kelime', toplam: 145 },
+      { yol: '/kuran-heceler',   baslik: 'Hece Okuma',          ikon: Ikon.hece, anahtar: 'kuran-kelime-hece', toplam: KURAN_HECELERI.length },
+      {
+        yol: '/kuran-kelimeler-temel',
+        baslik: 'Kelime Okuma 1',
+        ikon: Ikon.kuranKelime,
+        anahtar: 'kuran-kelime-kelime-temel',
+        toplam: KURAN_KELIMELERI_TEMEL.length
+      },
+      {
+        yol: '/kuran-kelimeler',
+        baslik: 'Kelime Okuma 2',
+        ikon: Ikon.kuranKelime,
+        anahtar: 'kuran-kelime-kelime',
+        toplam: KURAN_KELIMELERI.length
+      },
       { yol: '/kuran-sureler',   baslik: 'Kısa Sureler',        ikon: Ikon.kuranKelime },
       { yol: '/test-kuran',      baslik: 'Test / Sınav',        ikon: Ikon.test }
     ]
@@ -439,6 +453,7 @@ export const MODULLER = [
     ikon: Ikon.modul6,
     ogeler: [
       { yol: '/mat-rakamlar',   baslik: 'Rakamlar',           ikon: Ikon.matRakam,  anahtar: 'mat-rakamlar',    toplam: 10 },
+      { yol: '/mat-sira-sayilari', baslik: 'Sıra sayıları',   ikon: Ikon.matRakam, anahtar: 'mat-sira-sayilari', toplam: 9 },
       { yol: '/mat-semboller',  baslik: 'İşaretler',           ikon: Ikon.matSembol, anahtar: 'mat-semboller',   toplam: MATEMATIK_SEMBOLLER.length },
       { yol: '/mat-olculer',    baslik: 'Ölçüler',             ikon: Ikon.matOlcu,   anahtar: 'mat-olculer',     toplam: MATEMATIK_OLCULER.length },
       { yol: '/mat-geometri',   baslik: 'Geometri',            ikon: Ikon.geometri,  anahtar: 'mat-geometri',    toplam: GEOMETRI_SEMBOLLERI.length },

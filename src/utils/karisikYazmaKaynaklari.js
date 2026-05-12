@@ -14,7 +14,7 @@ import {
 } from '../data/braille.js';
 import {
   KURAN_HARFLERI, KURAN_HAREKELERI, KURAN_TECVID,
-  KURAN_HECELERI, KURAN_KELIMELERI
+  KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL
 } from '../data/kuran.js';
 import { KURAN_SURELERI } from '../data/kuranSureler.js';
 import {
@@ -278,6 +278,16 @@ const KAYNAKLAR = {
       etiket: h.yazi,
       ariaAd: `${h.okunus} hecesi`,
       hucreler: h.hucreler
+    })).filter(gecerliItem)
+  },
+  '/kuran-kelimeler-temel': {
+    yol: '/kuran-kelimeler-temel',
+    baslik: 'Kur\u2019an Kelimeleri (temel)',
+    etiketTuru: 'kelime',
+    items: KURAN_KELIMELERI_TEMEL.map((kw) => ({
+      etiket: kw.yazi,
+      ariaAd: kw.okunus,
+      hucreler: kw.hucreler
     })).filter(gecerliItem)
   },
   '/kuran-kelimeler': {

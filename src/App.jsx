@@ -26,6 +26,7 @@ import KuranHarekeEgitimi from './pages/KuranHarekeEgitimi.jsx';
 import KuranTecvidEgitimi from './pages/KuranTecvidEgitimi.jsx';
 import KuranHeceOkuma from './pages/KuranHeceOkuma.jsx';
 import KuranKelimeOkumaSayfa from './pages/KuranKelimeOkumaSayfa.jsx';
+import KuranKelimeTemelSayfa from './pages/KuranKelimeTemelSayfa.jsx';
 import KuranSureOkuma from './pages/KuranSureOkuma.jsx';
 import TestKuran from './pages/TestKuran.jsx';
 import MatematikRakamEgitimi from './pages/MatematikRakamEgitimi.jsx';
@@ -33,6 +34,7 @@ import MatematikSembolEgitimi from './pages/MatematikSembolEgitimi.jsx';
 import MatematikOlcuEgitimi from './pages/MatematikOlcuEgitimi.jsx';
 import MatematikGeometriEgitimi from './pages/MatematikGeometriEgitimi.jsx';
 import MatematikIfadeOkuma from './pages/MatematikIfadeOkuma.jsx';
+import MatematikSiraSayilari from './pages/MatematikSiraSayilari.jsx';
 import TestMatematik from './pages/TestMatematik.jsx';
 import FenYunanHarfler from './pages/FenYunanHarfler.jsx';
 import FenSembolEgitimi from './pages/FenSembolEgitimi.jsx';
@@ -103,6 +105,7 @@ export default function App() {
           <Route path="/kuran-harekeler" element={<KuranHarekeEgitimi />} />
           <Route path="/kuran-tecvid" element={<KuranTecvidEgitimi />} />
           <Route path="/kuran-heceler" element={<KuranHeceOkuma />} />
+          <Route path="/kuran-kelimeler-temel" element={<KuranKelimeTemelSayfa />} />
           <Route path="/kuran-kelimeler" element={<KuranKelimeOkumaSayfa />} />
           <Route path="/kuran-sureler" element={<KuranSureOkuma />} />
           <Route path="/test-kuran" element={<TestKuran />} />
@@ -111,6 +114,7 @@ export default function App() {
           <Route path="/mat-olculer" element={<MatematikOlcuEgitimi />} />
           <Route path="/mat-geometri" element={<MatematikGeometriEgitimi />} />
           <Route path="/mat-ifadeler" element={<MatematikIfadeOkuma />} />
+          <Route path="/mat-sira-sayilari" element={<MatematikSiraSayilari />} />
           <Route path="/test-matematik" element={<TestMatematik />} />
           <Route path="/fen-yunan" element={<FenYunanHarfler />} />
           <Route path="/fen-semboller" element={<FenSembolEgitimi />} />

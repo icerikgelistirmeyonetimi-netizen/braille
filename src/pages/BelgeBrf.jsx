@@ -3,7 +3,7 @@ import mammoth from 'mammoth';
 import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
-import { metniBrailleyeCevir, metniBrailleyeCevirKisaltmali } from '../utils/brailleCevir.js';
+import { metniBrailleyeCevir, metniBrailleyeCevirKisaltmali, siraSayisiSonRakamEtiketiNoktaEki } from '../utils/brailleCevir.js';
 import { hucreAnlami } from './Araclar.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 
@@ -27,8 +27,11 @@ export function kisaEtiket(anlam) {
     if (anlam.baslik.includes('Tümü Büyük')) return '⇧⇧';
     if (anlam.baslik.includes('Büyük Harf')) return '⇧';
     if (anlam.baslik.includes('Sayı')) return '#';
+    if (anlam.baslik === 'Harf İşareti') return '(h)';
+    if (anlam.baslik.includes('Bölük')) return '3';
     if (anlam.baslik.includes('Tarih Ayırma')) return '3-6';
     if (anlam.baslik.includes('Düzeltme') || anlam.baslik.includes('Yabancı Harf')) return '^';
+    if (anlam.baslik.includes('Bağ İşareti')) return '-';
     if (anlam.baslik.includes('Ayırma')) return '3';
     if (anlam.baslik.includes('Tek Küçük Harf')) return '5-6';
     if (anlam.baslik.includes('Kök') || anlam.baslik.includes('Parça')) return '*';
@@ -54,6 +57,8 @@ export function kisaEtiket(anlam) {
   if (anlam.tip === 'rakam') {
     const rm = anlam.baslik.match(/Rakam:\s*(.+)/);
     if (rm) return rm[1].trim();
+    const sm = anlam.baslik.match(/Sıra sayısı[:\s]*(\d)/u);
+    if (sm) return sm[1];
   }
   return anlam.baslik;
 }
@@ -466,14 +471,27 @@ export default function BelgeBrf() {
                       ))
                     );
                     const noktalamaHucre = anlam.tip === 'noktalama';
+                    const bolukIsaretiHucre = anlam.tip === 'isaret' && anlam.baslik === 'Bölük İşareti';
+                    const siraSayisiHucre = anlam.tip === 'rakam' && /^Sıra sayısı/u.test(anlam.baslik);
+                    const ondalikAyiracHucre = anlam.tip === 'noktalama' && anlam.baslik.includes('ondalık ayraç');
+                    const matematikHucre = anlam.tip === 'islem' || bolukIsaretiHucre || siraSayisiHucre || ondalikAyiracHucre;
                     // Sayı/büyük/tümü büyük gibi özel işaretler → siyah göster
-                    const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre;
+                    const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre && !bolukIsaretiHucre;
                     const sinif = 'belge-braille-hucre' +
                       (seciliHucre?.index === globalIdx ? ' secili' : '') +
                       (kisaltmaHucre ? ' kisaltma-hucre' : '') +
                       (noktalamaHucre ? ' noktalama-hucre' : '') +
+                      (matematikHucre ? ' matematik-hucre' : '') +
                       (ozelIsaretHucre ? ' ozel-isaret-hucre' : '');
-                    const etiket = genisletAktif ? kisaEtiket(anlam) : '';
+                    const etiket = genisletAktif
+                      ? `${kisaEtiket(anlam)}${siraSayisiSonRakamEtiketiNoktaEki(
+                        anlam,
+                        globalIdx,
+                        hucreler,
+                        kaynakCache,
+                        eslemeCache,
+                      )}`
+                      : '';
                     return (
                       <div
                         key={globalIdx}
