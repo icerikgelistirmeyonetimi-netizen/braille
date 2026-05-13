@@ -45,6 +45,8 @@ import MuzikNotaEgitimi from './pages/MuzikNotaEgitimi.jsx';
 import MuzikSembolEgitimi from './pages/MuzikSembolEgitimi.jsx';
 import MuzikSureleri from './pages/MuzikSureleri.jsx';
 import MuzikDiziOkuma from './pages/MuzikDiziOkuma.jsx';
+import MuzikBrailleMenu from './pages/MuzikBrailleMenu.jsx';
+import MuzikBrailleSayfa from './pages/MuzikBrailleSayfa.jsx';
 import TestMuzik from './pages/TestMuzik.jsx';
 import IngilizceBrailleMenu from './pages/IngilizceBrailleMenu.jsx';
 import IngilizceBrailleSayfa from './pages/IngilizceBrailleSayfa.jsx';
@@ -145,6 +147,8 @@ export default function App() {
           <Route path="/muzik-sureler" element={<MuzikSureleri />} />
           <Route path="/muzik-semboller" element={<MuzikSembolEgitimi />} />
           <Route path="/muzik-diziler" element={<MuzikDiziOkuma />} />
+          <Route path="/muzik" element={<MuzikBrailleMenu />} />
+          <Route path="/muzik/:slug" element={<MuzikBrailleSayfa />} />
           <Route path="/test-muzik" element={<TestMuzik />} />
           <Route path="/yabanci-dil" element={<Navigate to="/ingilizce" replace />} />
           <Route path="/almanca-braille" element={<Navigate to="/almanca" replace />} />

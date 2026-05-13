@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
+import { noktalardanUnicode } from './BelgeBrf.jsx';
 import {
   metniBrailleyeCevir,
   metniBrailleyeCevirKisaltmali,
@@ -395,6 +396,14 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
     '1,3,5',
     '2,4,6',
     '2,3,5,6',
+    '3,4,6',
+    '3,5,6',
+    '1,4,6',
+    '2,3,6',
+    '1,2,4',
+    '1,5',
+    '2,3,4,6',
+    '2,4,5,6',
   ]);
   const sayiIsaretiOncesiSinirMi = (hucre) => (
     !hucre
@@ -1098,6 +1107,35 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
     const np = _NOKTA_TERS.get(k);
     const hece = _HECE_TERS.get(k);
     if (np) {
+      // Kaynak metin ve eşleme verilmişse: bu hücreye karşılık gelen kaynak karakter
+      // gerçek bir noktalama karakteri (".", ",", "?", "!" vb.) ise doğrudan noktalama
+      // olarak yorumla. Aksi halde "ka" hecesi gibi aynı noktaları paylaşan hece
+      // kısaltmalarıyla yanlış eşleşme yaşanır (örn. "a.b" → ".", "ka" değil).
+      if (_kaynak && _esleme) {
+        const kaynakIdx = _esleme[idx];
+        if (typeof kaynakIdx === 'number' && kaynakIdx >= 0 && kaynakIdx < _kaynak.length) {
+          const kaynakKarakter = _kaynak[kaynakIdx];
+          // np.isaret tam eşleşme veya alternatif tırnak/parantez vb. varyantları
+          const noktalamaKarakteri = NOKTALAMA.some((n) => n.isaret === kaynakKarakter);
+          if (noktalamaKarakteri) {
+            const np2 = parenSwap(np);
+            return {
+              tip: 'noktalama',
+              baslik: `Noktalama: ${np2.isim} (${np2.isaret})`,
+              detay: `Nokta ${noktaStr}`,
+              noktaStr,
+              isaret: np2.isaret,
+            };
+          }
+          // Kaynak karakter bir harf ise (örn. "kalın" kelimesindeki "ka") noktalama
+          // değildir; hece olarak kalsın.
+          if (/\p{L}/u.test(kaynakKarakter)) {
+            // np kullanma; aşağıdaki hece bloğuna düşsün
+          } else {
+            // Diğer durumlar için aşağıdaki heuristik devreye girsin
+          }
+        }
+      }
       const ilkHucre = prevIsSpace; // kelime başı
       const sonHucre = nextIsSpace; // kelime sonu
       // Bu hücreden sonra (boşluğa kadar) sadece noktalama hücreleri mi var?
@@ -1185,6 +1223,14 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
     '1,3,5',
     '2,4,6',
     '2,3,5,6',
+    '3,4,6',
+    '3,5,6',
+    '1,4,6',
+    '2,3,6',
+    '1,2,4',
+    '1,5',
+    '2,3,4,6',
+    '2,4,5,6',
   ]);
   const sayiIsaretiOncesiSinirMi = (hucre) => (
     !hucre
@@ -1730,6 +1776,68 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
   return metin.trim();
 }
 
+// Matematik / özel işaret paleti — tıklayınca textarea'ya eklenir.
+// Buradaki tüm karakterler `brailleCevir.js` tarafından doğrudan tanınır.
+const MATEMATIK_PALETI = [
+  {
+    baslik: 'Temel İşlemler',
+    semboller: [
+      { sembol: '+', etiket: 'artı' },
+      { sembol: '-', etiket: 'eksi' },
+      { sembol: '×', etiket: 'çarpma' },
+      { sembol: '÷', etiket: 'bölme' },
+      { sembol: '=', etiket: 'eşittir' },
+      { sembol: '±', etiket: 'artı eksi' },
+      { sembol: '·', etiket: 'skaler çarpma' },
+      { sembol: '/', etiket: 'kesir / bölü' },
+      { sembol: '%', etiket: 'yüzde' },
+      { sembol: '‰', etiket: 'binde' },
+    ],
+  },
+  {
+    baslik: 'Karşılaştırma',
+    semboller: [
+      { sembol: '<', etiket: 'küçüktür' },
+      { sembol: '>', etiket: 'büyüktür' },
+      { sembol: '≤', etiket: 'küçük eşit' },
+      { sembol: '≥', etiket: 'büyük eşit' },
+      { sembol: '≠', etiket: 'eşit değildir' },
+      { sembol: '≡', etiket: 'denklik' },
+      { sembol: '≢', etiket: 'denk değildir' },
+      { sembol: '≅', etiket: 'eşlik' },
+    ],
+  },
+  {
+    baslik: 'Parantezler',
+    semboller: [
+      { sembol: '(', etiket: 'parantez aç' },
+      { sembol: ')', etiket: 'parantez kapa' },
+      { sembol: '[', etiket: 'köşeli aç' },
+      { sembol: ']', etiket: 'köşeli kapa' },
+      { sembol: '{', etiket: 'küme aç' },
+      { sembol: '}', etiket: 'küme kapa' },
+    ],
+  },
+  {
+    baslik: 'Kümeler',
+    semboller: [
+      { sembol: '⊂', etiket: 'alt küme' },
+      { sembol: '⊃', etiket: 'kapsar' },
+      { sembol: '∈', etiket: 'elemanıdır' },
+      { sembol: '∪', etiket: 'birleşim' },
+      { sembol: '∩', etiket: 'kesişim' },
+    ],
+  },
+  {
+    baslik: 'Üs · Kök · Açı',
+    semboller: [
+      { sembol: '^', etiket: 'üs (üstlü ifade)' },
+      { sembol: '√', etiket: 'karekök' },
+      { sembol: '°', etiket: 'derece / açı' },
+    ],
+  },
+];
+
 export default function Araclar() {
   const [perkinsAktif, setPerkinsAktif] = useState(true);
   const [kisaltmaAktif, setKisaltmaAktif] = useState(false);
@@ -1765,8 +1873,12 @@ export default function Araclar() {
     return () => document.removeEventListener('mousedown', handle);
   }, [sistemPaneli]);
   const [konusuyor, setKonusuyor] = useState(false); // 'metin' | 'nokta' | false
+  const [matematikPaletiAcik, setMatematikPaletiAcik] = useState(false);
+  const matematikPaletRef = useRef(null);
   const [seciliHucre, setSeciliHucre] = useState(null); // { index }
   const [genisletAktif, setGenisletAktif] = useState(false);
+  const [erisilebilirMod, setErisilebilirMod] = useState(false);
+  const [kopyalandi, setKopyalandi] = useState(false);
   const [brailleSayfa, setBrailleSayfa] = useState(0);
   const [sayfaInput, setSayfaInput] = useState('');
   const brailleKutuRef = useRef(null);
@@ -1778,6 +1890,23 @@ export default function Araclar() {
     window.addEventListener('keydown', kapat);
     return () => window.removeEventListener('keydown', kapat);
   }, [seciliHucre]);
+
+  // Matematik paleti dışına tıklayınca veya Escape ile kapat
+  useEffect(() => {
+    if (!matematikPaletiAcik) return;
+    const handleClick = (e) => {
+      if (matematikPaletRef.current && !matematikPaletRef.current.contains(e.target)) {
+        setMatematikPaletiAcik(false);
+      }
+    };
+    const handleKey = (e) => { if (e.key === 'Escape') setMatematikPaletiAcik(false); };
+    document.addEventListener('mousedown', handleClick);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [matematikPaletiAcik]);
 
   // ── Metin → BRF ──
   const [girisMetni, setGirisMetni] = useState('');
@@ -2244,7 +2373,51 @@ export default function Araclar() {
                   : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
                 }
               </button>
-             
+              <div className="araclar-matematik-sarici" ref={matematikPaletRef}>
+                <button
+                  type="button"
+                  className={'araclar-seslendir-btn araclar-matematik-btn' + (matematikPaletiAcik ? ' aktif' : '')}
+                  onClick={() => setMatematikPaletiAcik((v) => !v)}
+                  aria-label="Matematik / özel işaretler"
+                  aria-expanded={matematikPaletiAcik}
+                  title="Matematik / özel işaretler"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 6h7l-3 5 5 7H4" />
+                    <path d="M14 6h6" />
+                    <path d="M17 4v4" />
+                    <path d="M14 14l6 6" />
+                    <path d="M20 14l-6 6" />
+                  </svg>
+                </button>
+                {matematikPaletiAcik && (
+                  <div className="araclar-matematik-paneli" role="dialog" aria-label="Matematik ve özel işaretler">
+                    {MATEMATIK_PALETI.map((grup) => (
+                      <div key={grup.baslik} className="araclar-matematik-grup">
+                        <div className="araclar-matematik-grup-baslik">{grup.baslik}</div>
+                        <div className="araclar-matematik-grup-icerik">
+                          {grup.semboller.map((s) => (
+                            <button
+                              key={s.sembol + s.etiket}
+                              type="button"
+                              className="araclar-matematik-sembol"
+                              onClick={() => {
+                                insertAtCursor(s.sembol);
+                                textareaRef.current?.focus();
+                              }}
+                              title={s.etiket}
+                              aria-label={`${s.etiket} (${s.sembol}) ekle`}
+                            >
+                              <span className="araclar-matematik-sembol-ch" aria-hidden="true">{s.sembol}</span>
+                              <span className="araclar-matematik-sembol-ad">{s.etiket}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
          
@@ -2252,6 +2425,22 @@ export default function Araclar() {
             {/* Noktalı braille görünümü */}
             {girisMetni && (
               <div className="araclar-nokta-sarici">
+                {erisilebilirMod ? (
+                  <div
+                    ref={brailleKutuRef}
+                    className="belge-braille-erisilebilir"
+                    role="region"
+                    aria-label={`Erişilebilir braille metin görünümü, sayfa ${brailleSayfa + 1} / ${toplamSayfa}`}
+                    lang="tr"
+                  >
+                    <p
+                      className="belge-braille-text"
+                      aria-label={girisMetni}
+                    >
+                      {sayfaHucreler.map(noktalardanUnicode).join('')}
+                    </p>
+                  </div>
+                ) : (
                 <div ref={brailleKutuRef} className={'araclar-nokta-gorunus belge-braille-kutu' + (genisletAktif ? ' genisletilmis' : '')} aria-label="Braille nokta görünümü">
                   {sayfaHucreler.map((noktalar, i) => {
                     const globalIdx = sayfaBaslangic + i;
@@ -2313,8 +2502,9 @@ export default function Araclar() {
                     );
                   })}
                 </div>
+                )}
 
-                {seciliHucreDetayi && (
+                {!erisilebilirMod && seciliHucreDetayi && (
                   <div className="braille-hucre-popup" role="dialog" aria-label="Hücre anlamı">
                     <div className="bhp-header">
                       <span className="bhp-baslik-kucuk">Hücre {seciliHucreDetayi.index + 1}</span>
@@ -2501,6 +2691,61 @@ export default function Araclar() {
                     : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                   }
                 </button>
+                <button
+                  type="button"
+                  className={'araclar-seslendir-btn araclar-erisilebilir-btn' + (erisilebilirMod ? ' aktif' : '')}
+                  onClick={() => setErisilebilirMod((v) => !v)}
+                  aria-pressed={erisilebilirMod}
+                  aria-label={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir braille metin görünümüne geç (Unicode braille glifleri)'}
+                  title={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir mod (braille metin/font görünümü)'}
+                >
+                  {erisilebilirMod ? (
+                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+                      <circle cx="8" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>
+                      <circle cx="16" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M4 20l6-14h4l6 14"/><path d="M7 14h10"/>
+                    </svg>
+                  )}
+                </button>
+                {erisilebilirMod && (
+                  <button
+                    type="button"
+                    className={'araclar-seslendir-btn araclar-kopyala-btn' + (kopyalandi ? ' aktif' : '')}
+                    onClick={async () => {
+                      const metin = sayfaHucreler.map(noktalardanUnicode).join('');
+                      if (!metin) return;
+                      try {
+                        await navigator.clipboard.writeText(metin);
+                      } catch {
+                        const ta = document.createElement('textarea');
+                        ta.value = metin;
+                        ta.style.position = 'fixed'; ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        try { document.execCommand('copy'); } catch { /* yoksay */ }
+                        document.body.removeChild(ta);
+                      }
+                      setKopyalandi(true);
+                      setTimeout(() => setKopyalandi(false), 1500);
+                    }}
+                    aria-label={kopyalandi ? 'Panoya kopyalandı' : 'Braille metnini panoya kopyala'}
+                    title={kopyalandi ? 'Kopyalandı ✓' : 'Panoya kopyala'}
+                  >
+                    {kopyalandi ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="13" height="13" rx="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                    )}
+                  </button>
+                )}
               </div>
             )}
         </>

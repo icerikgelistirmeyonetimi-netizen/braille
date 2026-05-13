@@ -6,6 +6,7 @@ import {
   MATEMATIK_IFADELER
 } from './matematik.js';
 import { KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL } from './kuran.js';
+import { MUZIK_BOLUMLER } from './muzik.js';
 // İkonlar – sade çizgi tabanlı SVG'ler. currentColor kullanılır,
 // böylece tema rengine uyum sağlar.
 export const Ikon = {
@@ -497,11 +498,15 @@ export const MODULLER = [
     altBaslik: 'Müzik Braille',
     ikon: Ikon.modul8,
     ogeler: [
-      { yol: '/muzik-notalar',   baslik: 'Notalar (Do-Si)',      ikon: Ikon.nota,       anahtar: 'muzik-notalar',   toplam: 7 },
-      { yol: '/muzik-sureler',   baslik: 'Nota Süreleri',        ikon: Ikon.sure },
-      { yol: '/muzik-semboller', baslik: 'Anahtar ve Semboller', ikon: Ikon.muzikSembol, anahtar: 'muzik-semboller', toplam: 7 },
-      { yol: '/muzik-diziler',   baslik: 'Dizi Okuma',           ikon: Ikon.muzikDizi,   anahtar: 'muzik-dizi',      toplam: 3 },
-      { yol: '/test-muzik',      baslik: 'Test / Sınav',         ikon: Ikon.test }
+      ...MUZIK_BOLUMLER.map((b) => ({
+        yol: `/muzik/${b.slug}`,
+        baslik: b.kisaBaslik,
+        ikon: Ikon.muzikSembol,
+        anahtar: b.ilerlemeAnahtari,
+        toplam: b.veri.length,
+      })),
+      { yol: '/muzik-diziler', baslik: 'Dizi Okuma',     ikon: Ikon.muzikDizi, anahtar: 'muzik-dizi', toplam: 3 },
+      { yol: '/test-muzik',    baslik: 'Test / Sınav',   ikon: Ikon.test },
     ]
   },
   {

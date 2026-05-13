@@ -7,15 +7,15 @@ export default function MuzikNotaEgitimi() {
     ad: n.ad.toUpperCase(),
     ariaAd: `${n.ad} notası`,
     noktalar: n.noktalar,
-    aciklama: `Dörtlük ${n.ad} notasının braille hücresi: ${n.noktalar.join('-')}.`
+    aciklama: `${n.ad.charAt(0).toUpperCase() + n.ad.slice(1)} notasının temel hücresi: ${n.noktalar.join('-')}. UEB Music’te bu hücre sekizliği (quaver) temsil eder; süre için 3 ve/veya 6 noktası eklenir.`
   }));
   return (
     <DesenOgretici
-      baslik="Müzik: Notalar (Dörtlük)"
+      baslik="Müzik: Notalar (Do – Si)"
       ogeler={ogeler}
       kategoriAdi="nota"
       bolumAnahtari="muzik-notalar"
-      bittiMesaji="Tebrikler! Yedi temel notayı (Do-Si) öğrendiniz."
+      bittiMesaji="Tebrikler! Yedi temel notayı (Do–Si) öğrendiniz."
     />
   );
 }

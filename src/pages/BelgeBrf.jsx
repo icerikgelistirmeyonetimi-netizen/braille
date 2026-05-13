@@ -11,6 +11,20 @@ const SATIRDA_HUCRE = 40;
 const SAYFADA_SATIR = 25;
 const BRAILLE_SAYFA_BOYUTU = 200; // hücre/sayfa
 
+/**
+ * Bir braille hücresinin nokta dizisini Unicode braille karakterine çevirir.
+ * U+2800 = boş hücre. Bit n = (dot n+1).
+ * Ekran okuyucular (NVDA, JAWS, VoiceOver) bu blok karakterleri tanır.
+ */
+export function noktalardanUnicode(noktalar) {
+  if (!noktalar || noktalar.length === 0) return '\u2800'; // boş hücre (görünür ayraç)
+  let val = 0;
+  for (const n of noktalar) {
+    if (typeof n === 'number' && n >= 1 && n <= 8) val |= 1 << (n - 1);
+  }
+  return String.fromCharCode(0x2800 + val);
+}
+
 function noktalariBRF(noktalar) {
   let bits = 0;
   for (const d of noktalar) {
@@ -186,6 +200,11 @@ export default function BelgeBrf() {
   }, [brailleSayfa]);
   const [seciliHucre, setSeciliHucre] = useState(null); // { index, anlam }
   const [genisletAktif, setGenisletAktif] = useState(false);
+  // Erişilebilir mod: nokta grafiği yerine Unicode braille glifleri (⠁⠃⠉…).
+  // Ekran okuyucular bu blokları “braille pattern dots …” veya tercih edilen
+  // çevriyazı şeklinde okur; ek olarak aria-label kaynak metni sunar.
+  const [erisilebilirMod, setErisilebilirMod] = useState(false);
+  const [kopyalandi, setKopyalandi] = useState(false);
 
   useEffect(() => {
     if (!seciliHucre) return;
@@ -459,6 +478,24 @@ export default function BelgeBrf() {
             {/* Braille görünümü */}
             {aktifTab === 'braille' && (
               <div className="araclar-nokta-sarici">
+                {erisilebilirMod ? (
+                  <div
+                    ref={brailleKutuRef}
+                    className="belge-braille-erisilebilir"
+                    role="region"
+                    aria-label={`Erişilebilir braille metin görünümü, sayfa ${brailleSayfa + 1} / ${toplamSayfa}`}
+                    lang="tr"
+                  >
+                    <p
+                      className="belge-braille-text"
+                      // Ekran okuyucular Unicode braille bloklarını tanır;
+                      // ayrıca aria-label ile kaynak Türkçe metin sunulur.
+                      aria-label={belgeMetni}
+                    >
+                      {sayfaHucreler.map(noktalardanUnicode).join('')}
+                    </p>
+                  </div>
+                ) : (
                 <div ref={brailleKutuRef} className={'araclar-nokta-gorunus belge-braille-kutu' + (genisletAktif ? ' genisletilmis' : '')} aria-label="Braille nokta görünümü">
                   {sayfaHucreler.map((noktalar, i) => {
                     const globalIdx = sayfaBaslangic + i;
@@ -517,7 +554,8 @@ export default function BelgeBrf() {
                     );
                   })}
                 </div>
-                {seciliHucre && (
+                )}
+                {!erisilebilirMod && seciliHucre && (
                   <div className="braille-hucre-popup" role="dialog" aria-label="Hücre anlamı">
                     <div className="bhp-header">
                       <span className="bhp-baslik-kucuk">Hücre {seciliHucre.index + 1}</span>
@@ -649,6 +687,63 @@ export default function BelgeBrf() {
                     : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                   }
                 </button>
+                <button
+                  type="button"
+                  className={'araclar-seslendir-btn araclar-erisilebilir-btn' + (erisilebilirMod ? ' aktif' : '')}
+                  onClick={() => setErisilebilirMod((v) => !v)}
+                  aria-pressed={erisilebilirMod}
+                  aria-label={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir braille metin görünümüne geç (Unicode braille glifleri)'}
+                  title={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir mod (braille metin/font görünümü)'}
+                >
+                  {erisilebilirMod ? (
+                    // Nokta grafiğine dönüş ikonu (6 nokta)
+                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+                      <circle cx="8" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>
+                      <circle cx="16" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>
+                    </svg>
+                  ) : (
+                    // Erişilebilir/font ikonu (büyük A harfi)
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M4 20l6-14h4l6 14"/><path d="M7 14h10"/>
+                    </svg>
+                  )}
+                </button>
+                {erisilebilirMod && (
+                  <button
+                    type="button"
+                    className={'araclar-seslendir-btn araclar-kopyala-btn' + (kopyalandi ? ' aktif' : '')}
+                    onClick={async () => {
+                      const metin = sayfaHucreler.map(noktalardanUnicode).join('');
+                      if (!metin) return;
+                      try {
+                        await navigator.clipboard.writeText(metin);
+                      } catch {
+                        const ta = document.createElement('textarea');
+                        ta.value = metin;
+                        ta.style.position = 'fixed'; ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        try { document.execCommand('copy'); } catch { /* yoksay */ }
+                        document.body.removeChild(ta);
+                      }
+                      setKopyalandi(true);
+                      setTimeout(() => setKopyalandi(false), 1500);
+                    }}
+                    aria-label={kopyalandi ? 'Panoya kopyalandı' : 'Braille metnini panoya kopyala'}
+                    title={kopyalandi ? 'Kopyalandı ✓' : 'Panoya kopyala'}
+                  >
+                    {kopyalandi ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="13" height="13" rx="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </>

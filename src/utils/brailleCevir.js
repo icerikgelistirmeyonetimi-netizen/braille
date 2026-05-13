@@ -52,6 +52,16 @@ const MATEMATIK_GENEL_SEMBOL_ADLARI = new Set([
   'eşit değildir',
   'denklik',
   'denk değildir',
+  'alt küme',
+  'kapsar',
+  'elemanıdır',
+  'birleşim',
+  'kesişim',
+  'derece işareti',
+  'üs işareti',
+  'karekök işareti',
+  'binde',
+  'eşlik',
 ]);
 const EK_MATEMATIK_SEMBOLLER = [
   { ad: 've işareti', sembol: '&', aciklama: 'Ve işareti iki hücreyle yazılır.', hucreler: [[4], [1, 2, 3, 4, 6]] },
@@ -87,6 +97,8 @@ const SAYI_MODU_KORUYAN_MATEMATIK_ISARETLERI = new Set([
   'eşit değildir',
   'denklik',
   'denk değildir',
+  'üs işareti',
+  'karekök işareti',
 ]);
 
 const BUYUK_HARF_ISARETI = [6];      // MEB Türkçe Braille büyük harf işareti
