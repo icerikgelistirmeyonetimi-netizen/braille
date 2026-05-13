@@ -20,6 +20,7 @@ import {
   webBluetoothDestekleniyorMu
 } from '../utils/arduino.js';
 import { MODULLER } from '../data/moduller.jsx';
+import { titresimBuOrtamdaBeklenmezMi, IOS_TITRESIM_IPUCU } from '../utils/titresimDestek.js';
 
 export default function Ayarlar() {
   const [a, setA] = useState(ayarlariAl());
@@ -329,6 +330,11 @@ export default function Ayarlar() {
             <div>
               <div style={{ fontWeight: 600 }}>Titreşim</div>
               <div style={aciklamaStil}>Mobil cihazlarda dokunsal geri bildirim</div>
+              {titresimBuOrtamdaBeklenmezMi() && (
+                <div style={{ ...aciklamaStil, color: '#b45309', marginTop: 6, lineHeight: 1.35 }}>
+                  {IOS_TITRESIM_IPUCU}
+                </div>
+              )}
             </div>
             <label style={toggleKapStil}>
               <input type="checkbox" checked={a.titresimAcik} onChange={(e) => guncelle({ titresimAcik: e.target.checked })} aria-label={`Titreşim ${a.titresimAcik ? 'açık' : 'kapalı'}`} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />

@@ -41,6 +41,8 @@
   --btn-pad: 10px 18px;
   --btn-radius: 10px;
   --btn-border: 2px;
+
+  --braille-noktalama-fill: #16a34a;
 }
 
 [data-theme="lowVision"] {
@@ -70,6 +72,8 @@
   --btn-pad: 14px 22px;
   --btn-radius: 12px;
   --btn-border: 3px;
+
+  --braille-noktalama-fill: #ff9100;
 }
 
 * { box-sizing: border-box; }
@@ -127,6 +131,8 @@ h1, h2, h3 { color: var(--fg); }
 .ds-header  { display: none; }
 .ds-sidebar { display: none; }
 .ds-content { display: contents; }
+/* Kaydırma tutamağı yalnızca ≥900px'de konumlanır; dar ekranda grid/flex akışında boş satır bırakmasın */
+.ds-sidebar-scrollbar { display: none !important; }
 
 @media (min-width: 900px) {
   /* .app masaüstünde biraz genişler — !important ile altta gelen
@@ -183,6 +189,7 @@ h1, h2, h3 { color: var(--fg); }
 
   .ds-sidebar::-webkit-scrollbar { width: 0; height: 0; }
   .ds-sidebar-scrollbar {
+    display: block !important;
     position: absolute;
     right: 4px;
     width: 14px;
@@ -729,6 +736,10 @@ h1, h2, h3 { color: var(--fg); }
   line-height: 1.15;
   font-weight: 700;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .okuma-modu-mini-hucreler {
   display: flex;
@@ -807,6 +818,18 @@ h1, h2, h3 { color: var(--fg); }
   height: 22px;
 }
 .gorunum-ikon svg { width: 100%; height: 100%; display: block; }
+.gorunum-btn.fs-btn.fs-btn--sinirli {
+  opacity: 0.65;
+  cursor: help;
+}
+.toast-fs-aciklama {
+  white-space: normal;
+  max-width: min(420px, 94vw);
+  text-align: center;
+  line-height: 1.4;
+  animation: toastIn 0.22s ease;
+  pointer-events: auto;
+}
 [data-theme="lowVision"] .gorunum-btn {
   border-width: 3px;
   width: 52px;
@@ -1451,6 +1474,10 @@ h1, h2, h3 { color: var(--fg); }
   background: var(--accent);
   color: #000;
 }
+[data-theme="lowVision"] .klv-nokta.tikli .klv-nokta-no,
+[data-theme="lowVision"] .klv-nokta.basili .klv-nokta-no {
+  color: #000;
+}
 
 [data-theme="lowVision"] .klv-nokta {
   background: #000;
@@ -1764,6 +1791,19 @@ h1, h2, h3 { color: var(--fg); }
   align-items: stretch;
 }
 
+/* min-width: taşmayı kesmeden grid içinde küçülsün; yükseklikte stretch kalsın ki
+   .modul-icerik overflow-y: auto için sınırlı yükseklik alsın (align-self:start
+   içeriği 'içeriğe göre' boyutlayıp taşmayı .app overflow:hidden ile kesiyordu). */
+.modul-layout > .modul-icerik {
+  min-width: 0;
+}
+
+/* Ana menü yan kaydırma tutamağı yalnızca ≥1025px'de konumlanır; dar ekranda tek sütunlu
+   gridde boş satır yaratıp içeriği aşağı iter (display:contents + position yok). */
+.modul-yan-scrollbar {
+  display: none !important;
+}
+
 .modul-yan-shell { display: contents; }
 
 @media (min-width: 1025px) {
@@ -1805,6 +1845,7 @@ h1, h2, h3 { color: var(--fg); }
 
   .modul-yan::-webkit-scrollbar { width: 0; height: 0; }
   .modul-yan-scrollbar {
+    display: block !important;
     position: absolute;
     right: 4px;
     width: 14px;
@@ -1909,6 +1950,8 @@ h1, h2, h3 { color: var(--fg); }
   min-width: 0;
 }
 .modul-sekme-baslik { font-size: 1em; font-weight: 700; line-height: 1.15; }
+.modul-sekme-baslik-desk { display: inline; }
+.modul-sekme-baslik-mobil { display: none; }
 .modul-sekme-alt {
   font-size: 0.78em;
   font-weight: 500;
@@ -1930,6 +1973,8 @@ h1, h2, h3 { color: var(--fg); }
   gap: 10px;
   min-height: 0;
   overflow-y: auto;
+  justify-content: flex-start;
+  align-items: stretch;
 }
 .page > .page-mid,
 .modul-icerik,
@@ -1970,7 +2015,15 @@ h1, h2, h3 { color: var(--fg); }
 }
 .modul-icerik .menu-grid {
   margin-top: 0;
-  flex: 1;
+  /* Büyümeyi kapat: kartlar üstten dizilsin; fazla alan altta kalır veya kaydırılır */
+  flex: 0 1 auto;
+  align-content: start;
+  grid-auto-rows: auto;
+  width: 100%;
+}
+.modul-icerik .menu-card {
+  height: auto;
+  min-height: clamp(88px, 22vw, 130px);
 }
 
 [data-theme="lowVision"] .modul-yan {
@@ -2001,12 +2054,21 @@ h1, h2, h3 { color: var(--fg); }
 
 /* Mobil/Tablet: yan menü alt çubuğa dönüşür ve ekrana sabitlenir */
 @media (max-width: 1024px) {
+  .page.anasayfa {
+    --mobil-alt-menu-ofset: max(8px, env(safe-area-inset-bottom, 0px));
+    --mobil-alt-menu-bar-max-yukseklik: 86px;
+  }
+
   .modul-layout {
     grid-template-columns: 1fr !important;
-    grid-template-rows: 1fr !important;
+    /* Tek satır kullanılabilir yüksekliği doldursun ki .modul-icerik overflow ile kaydırılabilsin.
+       Düz auto satır içeriği uzatır; .app overflow:hidden taşmayı keser.
+       Phantom scrollbar sorunu çözüldüğü için 1fr güvenli; minmax(0,1fr) taşmayı izin verir. */
+    grid-template-rows: minmax(0, 1fr) !important;
+    align-content: start;
     gap: 10px;
-    /* Alttaki sabit menü kadar boşluk bırak */
-    padding-bottom: calc(98px + env(safe-area-inset-bottom, 0px));
+    /* Kaydırma sonu ile menü kutusunun üst çizgisi arasında ek boşluk yok: tampon = alt offset + çubuk yüksekliği */
+    padding-bottom: calc(var(--mobil-alt-menu-ofset) + var(--mobil-alt-menu-bar-max-yukseklik));
   }
   .modul-yan {
     order: 2;
@@ -2027,7 +2089,7 @@ h1, h2, h3 { color: var(--fg); }
     position: fixed !important;
     left: 50% !important;
     right: auto !important;
-    bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+    bottom: var(--mobil-alt-menu-ofset) !important;
     top: auto !important;
     width: min(720px, calc(100vw - 20px));
     transform: translateX(-50%);
@@ -2066,6 +2128,8 @@ h1, h2, h3 { color: var(--fg); }
   .modul-sekme.aktif::before { display: none; }
   .modul-sekme-ikon { width: 28px; height: 28px; padding: 4px; border-radius: 9px; }
   .modul-sekme-baslik { font-size: 0.85em; }
+  .modul-sekme-baslik-desk { display: none; }
+  .modul-sekme-baslik-mobil { display: inline; }
   .modul-sekme-alt { display: none; }
   .modul-ayarlar {
     margin-top: 0;
@@ -2179,10 +2243,31 @@ h1, h2, h3 { color: var(--fg); }
     align-items: center;
     justify-items: stretch;
   }
-  /* Sol kolondaki noktalar (1,2,3) sola, sağ kolondakiler (4,5,6) sağa
-     hizalı; ekran kenarından küçük bir boşluk bırakır */
-  .klavye-popup .klv-grid > .klv-nokta:nth-child(odd)  { justify-self: start; margin-left:  8vw; }
-  .klavye-popup .klv-grid > .klv-nokta:nth-child(even) { justify-self: end;   margin-right: 8vw; }
+  /* DOM sırası 1–6; grid ile iki sütun. Kenar boşluğu görsel sütuna göre (nth-child DOM’a bağlı kalmaz) */
+  .klavye-popup .klv-grid:not(.klv-grid-tablet) > .klv-nokta[data-klavye-nokta="1"],
+  .klavye-popup .klv-grid:not(.klv-grid-tablet) > .klv-nokta[data-klavye-nokta="2"],
+  .klavye-popup .klv-grid:not(.klv-grid-tablet) > .klv-nokta[data-klavye-nokta="3"] {
+    justify-self: start;
+    margin-left: 8vw;
+  }
+  .klavye-popup .klv-grid:not(.klv-grid-tablet) > .klv-nokta[data-klavye-nokta="4"],
+  .klavye-popup .klv-grid:not(.klv-grid-tablet) > .klv-nokta[data-klavye-nokta="5"],
+  .klavye-popup .klv-grid:not(.klv-grid-tablet) > .klv-nokta[data-klavye-nokta="6"] {
+    justify-self: end;
+    margin-right: 8vw;
+  }
+  .klavye-popup .klv-grid.klv-grid-tablet > .klv-nokta[data-klavye-nokta="4"],
+  .klavye-popup .klv-grid.klv-grid-tablet > .klv-nokta[data-klavye-nokta="5"],
+  .klavye-popup .klv-grid.klv-grid-tablet > .klv-nokta[data-klavye-nokta="6"] {
+    justify-self: start;
+    margin-left: 8vw;
+  }
+  .klavye-popup .klv-grid.klv-grid-tablet > .klv-nokta[data-klavye-nokta="1"],
+  .klavye-popup .klv-grid.klv-grid-tablet > .klv-nokta[data-klavye-nokta="2"],
+  .klavye-popup .klv-grid.klv-grid-tablet > .klv-nokta[data-klavye-nokta="3"] {
+    justify-self: end;
+    margin-right: 8vw;
+  }
 
   /* Yatay elips: genişliği yüksekliğinden fazla */
   .klavye-popup .klv-nokta,
@@ -2289,6 +2374,29 @@ h1, h2, h3 { color: var(--fg); }
   line-height: 1.55;
 }
 
+/* İşaret sayfası: açıklama / kurallar (eskiden detay penceresindeki metin düzeniyle uyumlu, tek akış) */
+.isaret-metin-alti {
+  width: 100%;
+  max-width: min(36rem, calc(100vw - 28px));
+  margin-top: 2px;
+  padding: 0 12px 8px;
+  align-self: stretch;
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.95em;
+  line-height: 1.55;
+}
+.isaret-metin-alti strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+[data-theme="lowVision"] .isaret-metin-alti {
+  color: var(--accent);
+}
+[data-theme="lowVision"] .isaret-metin-alti strong {
+  color: var(--accent);
+  opacity: 1;
+}
 /* ============================================================
    ARAÇLAR SAYFASI
    ============================================================ */
@@ -2867,22 +2975,22 @@ h1, h2, h3 { color: var(--fg); }
   border-color: var(--panel-border);
 }
 .braille-info-wrap.noktalama-hucre .dot.on {
-  background: #16a34a;
-  border-color: #16a34a;
+  background: var(--braille-noktalama-fill);
+  border-color: var(--braille-noktalama-fill);
   box-shadow: none;
   color: #fff;
 }
 .braille-info-wrap.noktalama-hucre:hover,
 .braille-info-wrap.noktalama-hucre:focus-visible {
-  background: color-mix(in srgb, #16a34a 12%, transparent);
-  border-color: color-mix(in srgb, #16a34a 50%, transparent);
+  background: color-mix(in srgb, var(--braille-noktalama-fill) 12%, transparent);
+  border-color: color-mix(in srgb, var(--braille-noktalama-fill) 50%, transparent);
 }
 .braille-info-wrap.noktalama-hucre.secili {
-  background: color-mix(in srgb, #16a34a 18%, transparent);
-  border-color: #16a34a;
+  background: color-mix(in srgb, var(--braille-noktalama-fill) 18%, transparent);
+  border-color: var(--braille-noktalama-fill);
 }
 
-/* Belge → BRF hücre renklendirme (kısaltma kırmızı, noktalama yeşil) */
+/* Belge → BRF hücre renklendirme (kısaltma kırmızı; noktalama varsayılan yeşil, az görende turuncu) */
 .belge-braille-kutu { position: relative; }
 .belge-braille-altbar {
   display: grid;
@@ -2967,7 +3075,7 @@ h1, h2, h3 { color: var(--fg); }
   white-space: pre-wrap;
 }
 .belge-braille-hucre.kisaltma-hucre .belge-hucre-etiket { color: #e03535; }
-.belge-braille-hucre.noktalama-hucre .belge-hucre-etiket { color: #16a34a; }
+.belge-braille-hucre.noktalama-hucre .belge-hucre-etiket { color: var(--braille-noktalama-fill); }
 .belge-braille-hucre.matematik-hucre .belge-hucre-etiket { color: #7c3aed; }
 .araclar-nokta-gorunus.genisletilmis {
   gap: 6px 6px;
@@ -3017,19 +3125,19 @@ h1, h2, h3 { color: var(--fg); }
   border-color: var(--panel-border);
 }
 .belge-braille-hucre.noktalama-hucre .dot.on {
-  background: #16a34a;
-  border-color: #16a34a;
+  background: var(--braille-noktalama-fill);
+  border-color: var(--braille-noktalama-fill);
   box-shadow: none;
   color: #fff;
 }
 .belge-braille-hucre.noktalama-hucre:hover,
 .belge-braille-hucre.noktalama-hucre:focus-visible {
-  background: color-mix(in srgb, #16a34a 12%, transparent);
-  border-color: color-mix(in srgb, #16a34a 50%, transparent);
+  background: color-mix(in srgb, var(--braille-noktalama-fill) 12%, transparent);
+  border-color: color-mix(in srgb, var(--braille-noktalama-fill) 50%, transparent);
 }
 .belge-braille-hucre.noktalama-hucre.secili {
-  background: color-mix(in srgb, #16a34a 18%, transparent);
-  border-color: #16a34a;
+  background: color-mix(in srgb, var(--braille-noktalama-fill) 18%, transparent);
+  border-color: var(--braille-noktalama-fill);
 }
 /* Matematik işaretleri → mor */
 .belge-braille-hucre.matematik-hucre .dot {
@@ -3197,4 +3305,3 @@ h1, h2, h3 { color: var(--fg); }
 .bhp-ayarlari-sifirla:hover {
   background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
-

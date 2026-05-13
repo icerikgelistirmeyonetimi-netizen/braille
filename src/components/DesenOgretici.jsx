@@ -54,9 +54,12 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
 
   const hucreAdi = (hucreIndex) =>
     aktifOge?.hucreAdlari?.[hucreIndex] || (cokHucreli ? `${hucreIndex + 1}. hücre` : 'hücre');
-  const adimMetni = (adim) => cokHucreli
-    ? `${hucreAdi(adim.hucreIndex)} ${adim.n} numara`
-    : `${adim.n} numara`;
+  const adimMetni = (adim) => {
+    if (!adim || adim.n === undefined || adim.n === null) return 'sıradaki nokta';
+    return cokHucreli
+      ? `${hucreAdi(adim.hucreIndex)} ${adim.n} numara`
+      : `${adim.n} numara`;
+  };
 
   // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
   useEffect(() => {
@@ -111,6 +114,9 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
       const ek = aktifOge.aciklama ? ` ${aktifOge.aciklama}` : '';
       const detay = aktifOge.yonergeDetay || `${(aktifOge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
       return `${ad} ${kategoriAdi}, ${detay}${ek} Lütfen bu noktalara sırayla dokunun.`;
+    }
+    if (kalan.length === 0) {
+      return 'Tamamlandı. Bir sonraki öğeye geçiliyor.';
     }
     return `Sıradaki nokta: ${adimMetni(kalan[0])}.`;
   }, [aktifAdimlar, aktifOge, basilanlar, bitti, bittiMesaji, kategoriAdi]);

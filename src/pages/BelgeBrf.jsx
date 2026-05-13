@@ -28,7 +28,7 @@ export function kisaEtiket(anlam) {
     if (anlam.baslik.includes('Büyük Harf')) return '⇧';
     if (anlam.baslik.includes('Sayı')) return '#';
     if (anlam.baslik === 'Harf İşareti') return '(h)';
-    if (anlam.baslik.includes('Bölük')) return '3';
+    if (anlam.baslik.includes('Bölük')) return '.';
     if (anlam.baslik.includes('Tarih Ayırma')) return '3-6';
     if (anlam.baslik.includes('Düzeltme') || anlam.baslik.includes('Yabancı Harf')) return '^';
     if (anlam.baslik.includes('Bağ İşareti')) return '-';

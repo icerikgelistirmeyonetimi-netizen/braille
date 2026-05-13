@@ -148,7 +148,10 @@ export default function DesktopShell({ children }) {
             >
               <span className="modul-sekme-ikon" aria-hidden="true">{m.ikon}</span>
               <span className="modul-sekme-yazi">
-                <span className="modul-sekme-baslik">{m.baslik}</span>
+                <span className="modul-sekme-baslik">
+                  <span className="modul-sekme-baslik-desk">{m.baslik}</span>
+                  <span className="modul-sekme-baslik-mobil">{m.mobilEtiket ?? m.baslik}</span>
+                </span>
                 <span className="modul-sekme-alt">{m.altBaslik}</span>
               </span>
             </button>

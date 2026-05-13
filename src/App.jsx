@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import AnaMenu from './pages/AnaMenu.jsx';
 import HucreTanima from './pages/HucreTanima.jsx';
 import HarfEgitimi from './pages/HarfEgitimi.jsx';
@@ -46,19 +46,42 @@ import MuzikSembolEgitimi from './pages/MuzikSembolEgitimi.jsx';
 import MuzikSureleri from './pages/MuzikSureleri.jsx';
 import MuzikDiziOkuma from './pages/MuzikDiziOkuma.jsx';
 import TestMuzik from './pages/TestMuzik.jsx';
+import IngilizceBrailleMenu from './pages/IngilizceBrailleMenu.jsx';
+import IngilizceBrailleSayfa from './pages/IngilizceBrailleSayfa.jsx';
+import AlmancaBrailleMenu from './pages/AlmancaBrailleMenu.jsx';
+import AlmancaBrailleSayfa from './pages/AlmancaBrailleSayfa.jsx';
+import FransizcaBrailleMenu from './pages/FransizcaBrailleMenu.jsx';
+import FransizcaBrailleSayfa from './pages/FransizcaBrailleSayfa.jsx';
 import Araclar from './pages/Araclar.jsx';
 import BelgeBrf from './pages/BelgeBrf.jsx';
 import BrfOku from './pages/BrfOku.jsx';
 import { sallamayiBaslat } from './utils/sallama.js';
 import DesktopShell from './components/DesktopShell.jsx';
+import { tamEkranApiDestekleniyorMu } from './utils/tamEkran.js';
+
+function IngilizceBrailleEskiYol() {
+  const { slug } = useParams();
+  return <Navigate to={`/ingilizce/${slug}`} replace />;
+}
+
+function AlmancaBrailleEskiYol() {
+  const { slug } = useParams();
+  return slug ? <Navigate to={`/almanca/${slug}`} replace /> : <Navigate to="/almanca" replace />;
+}
+
+function FransizcaBrailleEskiYol() {
+  const { slug } = useParams();
+  return slug ? <Navigate to={`/fransizca/${slug}`} replace /> : <Navigate to="/fransizca" replace />;
+}
 
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
 
-  // Mobilde fullscreen: sayfa yüklenince dene, olmadıysa ilk dokunuşta tekrar dene
+  // Mobilde fullscreen: yalnızca API destekleniyorsa (iOS Safari hariç).
+  // İlk yüklemede çoğu tarayıcı izin vermez; ilk dokunuşta yeniden dene.
   useEffect(() => {
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
-    if (!isMobile) return;
+    if (!isMobile || !tamEkranApiDestekleniyorMu()) return;
 
     const giris = () => {
       if (document.fullscreenElement || document.webkitFullscreenElement) return;
@@ -67,10 +90,7 @@ export default function App() {
       if (fn) fn.call(el).catch(() => {});
     };
 
-    // Sayfa açılır açılmaz dene (bazı bağlamlarda çalışır)
     giris();
-
-    // Çalışmadıysa ilk dokunuşta tekrar dene
     document.addEventListener('touchstart', giris, { passive: true });
     return () => document.removeEventListener('touchstart', giris);
   }, []);
@@ -126,6 +146,19 @@ export default function App() {
           <Route path="/muzik-semboller" element={<MuzikSembolEgitimi />} />
           <Route path="/muzik-diziler" element={<MuzikDiziOkuma />} />
           <Route path="/test-muzik" element={<TestMuzik />} />
+          <Route path="/yabanci-dil" element={<Navigate to="/ingilizce" replace />} />
+          <Route path="/almanca-braille" element={<Navigate to="/almanca" replace />} />
+          <Route path="/almanca-braille/:slug" element={<AlmancaBrailleEskiYol />} />
+          <Route path="/almanca" element={<AlmancaBrailleMenu />} />
+          <Route path="/almanca/:slug" element={<AlmancaBrailleSayfa />} />
+          <Route path="/fransizca-braille" element={<Navigate to="/fransizca" replace />} />
+          <Route path="/fransizca-braille/:slug" element={<FransizcaBrailleEskiYol />} />
+          <Route path="/fransizca" element={<FransizcaBrailleMenu />} />
+          <Route path="/fransizca/:slug" element={<FransizcaBrailleSayfa />} />
+          <Route path="/ingilizce-braille" element={<Navigate to="/ingilizce" replace />} />
+          <Route path="/ingilizce-braille/:slug" element={<IngilizceBrailleEskiYol />} />
+          <Route path="/ingilizce" element={<IngilizceBrailleMenu />} />
+          <Route path="/ingilizce/:slug" element={<IngilizceBrailleSayfa />} />
           <Route path="/araclar" element={<Araclar />} />
           <Route path="/belge-brf" element={<BelgeBrf />} />
           <Route path="/brf-oku" element={<BrfOku />} />

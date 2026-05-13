@@ -47,7 +47,8 @@ export default function OkumaModuListesi({
   getHucreler,
   onSec,
   onKapat,
-  rtl = false
+  rtl = false,
+  seslendirmeDili = 'tr',
 }) {
   const sonOkunanRef = useRef(null);
 
@@ -64,7 +65,16 @@ export default function OkumaModuListesi({
     if (sonOkunanRef.current === anahtar) return;
     sonOkunanRef.current = anahtar;
     const adMetni = altEtiket && altEtiket !== etiket ? `${etiket}. ${altEtiket}` : etiket;
-    konus(`${adMetni}. Braille noktaları: ${hucreNoktaMetni(hucreler)}.`, { kesintiyle: true });
+    const brailleAciklama = `Braille noktaları: ${hucreNoktaMetni(hucreler)}.`;
+    if (seslendirmeDili === 'en' || seslendirmeDili === 'de' || seslendirmeDili === 'fr') {
+      konus(adMetni, {
+        dil: seslendirmeDili,
+        kesintiyle: true,
+        onSon: () => konus(brailleAciklama, { dil: 'tr', kesintiyle: false }),
+      });
+    } else {
+      konus(`${adMetni}. ${brailleAciklama}`, { kesintiyle: true });
+    }
   };
 
   return (

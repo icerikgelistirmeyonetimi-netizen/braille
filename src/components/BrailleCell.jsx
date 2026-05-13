@@ -4,10 +4,11 @@ import { konus, titret } from '../utils/ses.js';
 /**
  * Braille hücresi bileşeni.
  *
- * Numaralandırma:
+ * Numaralandırma (görünüm):
  *   1 • • 4
  *   2 • • 5
  *   3 • • 6
+ * Klavye / DOM sırası erişilebilirlik için 1→6’dır; yerleşim CSS grid ile korunur.
  *
  * Props:
  *  - aktifNoktalar: number[]  -> dolu (kabarık) noktalar
@@ -33,7 +34,16 @@ export default function BrailleCell({
   baslikAriaLabel,
   baslikStyle
 }) {
-  const noktaSira = [1, 4, 2, 5, 3, 6]; // grid sırası: satır satır
+  /** Klavye odağı ve okuyucu sırası 1–6; iki sütunlu Braille düzeni grid ile */
+  const NOKTA_DOM_SIRA = [1, 2, 3, 4, 5, 6];
+  const noktaGridYerlesimi = {
+    1: { gridRow: 1, gridColumn: 1 },
+    2: { gridRow: 2, gridColumn: 1 },
+    3: { gridRow: 3, gridColumn: 1 },
+    4: { gridRow: 1, gridColumn: 2 },
+    5: { gridRow: 2, gridColumn: 2 },
+    6: { gridRow: 3, gridColumn: 2 },
+  };
   const sonOkunan = useRef(null);
   // Hücreyle herhangi bir parmak/fare etkileşimi (keşif veya tıklama)
   const etkilesimli = tiklanabilir || kesfedilebilir;
@@ -119,14 +129,16 @@ export default function BrailleCell({
         onTouchEnd={dokunusBitti}
         onMouseLeave={noktayiBirak}
       >
-        {noktaSira.map((n) => {
+        {NOKTA_DOM_SIRA.map((n) => {
           const Etiket = tiklanabilir ? 'button' : 'div';
+          const yer = noktaGridYerlesimi[n];
           return (
             <Etiket
               key={n}
               className={noktaDurumu(n)}
               aria-label={ariaLabel(n)}
               data-nokta={n}
+              style={yer}
               {...(tiklanabilir
                 ? {
                     type: 'button',

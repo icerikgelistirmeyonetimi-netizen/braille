@@ -6,7 +6,6 @@ import {
   MATEMATIK_IFADELER
 } from './matematik.js';
 import { KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL } from './kuran.js';
-
 // İkonlar – sade çizgi tabanlı SVG'ler. currentColor kullanılır,
 // böylece tema rengine uyum sağlar.
 export const Ikon = {
@@ -335,6 +334,16 @@ export const Ikon = {
             fill="currentColor">do-re-mi</text>
     </svg>
   ),
+  modulYabanci: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="32" cy="32" r="18" />
+      <ellipse cx="32" cy="32" rx="18" ry="8.25" />
+      <path d="M32 14 L32 50" />
+      <path d="M17.03 22 A18 18 0 0 1 46.97 22" />
+      <path d="M17.03 42 A18 18 0 0 0 46.97 42" />
+    </svg>
+  ),
   araclar: (
     <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
          strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -371,6 +380,7 @@ export const MODULLER = [
   {
     id: 'modul1',
     baslik: 'Modül 1',
+    mobilEtiket: 'Harfler',
     altBaslik: 'Braille Öğrenme',
     ikon: Ikon.modul1,
     ogeler: [
@@ -384,6 +394,7 @@ export const MODULLER = [
   {
     id: 'modul3',
     baslik: 'Modül 2',
+    mobilEtiket: 'Kısaltmalar',
     altBaslik: 'Kısaltma Sistemi',
     ikon: Ikon.modul3,
     ogeler: [
@@ -398,6 +409,7 @@ export const MODULLER = [
   {
     id: 'modul4',
     baslik: 'Modül 3',
+    mobilEtiket: 'Noktalamalar',
     altBaslik: 'Noktalama ve Özel İşaretler',
     ikon: Ikon.modul4,
     ogeler: [
@@ -409,6 +421,7 @@ export const MODULLER = [
   {
     id: 'modul2',
     baslik: 'Modül 4',
+    mobilEtiket: 'Yazma',
     altBaslik: 'Braille ile Yazma',
     ikon: Ikon.modul2,
     ogeler: [
@@ -421,6 +434,7 @@ export const MODULLER = [
   {
     id: 'modul5',
     baslik: 'Modül 5',
+    mobilEtiket: "Kur'an",
     altBaslik: "Kur'an Eğitimi",
     ikon: Ikon.modul5,
     ogeler: [
@@ -449,6 +463,7 @@ export const MODULLER = [
   {
     id: 'modul6',
     baslik: 'Modül 6',
+    mobilEtiket: 'Matematik',
     altBaslik: 'Matematik Braille',
     ikon: Ikon.modul6,
     ogeler: [
@@ -464,6 +479,7 @@ export const MODULLER = [
   {
     id: 'modul7',
     baslik: 'Modül 7',
+    mobilEtiket: 'Fen',
     altBaslik: 'Fen Bilimleri',
     ikon: Ikon.modul7,
     ogeler: [
@@ -477,6 +493,7 @@ export const MODULLER = [
   {
     id: 'modul8',
     baslik: 'Modül 8',
+    mobilEtiket: 'Müzik',
     altBaslik: 'Müzik Braille',
     ikon: Ikon.modul8,
     ogeler: [
@@ -488,8 +505,21 @@ export const MODULLER = [
     ]
   },
   {
-    id: 'modul9',
-    baslik: 'Araçlar',
+    id: 'modul9-yabanci',
+    baslik: 'Modül 9',
+    mobilEtiket: 'Dil',
+    altBaslik: 'Yabancı Dil Braille',
+    ikon: Ikon.modulYabanci,
+    ogeler: [
+      { yol: '/ingilizce', baslik: 'İngilizce', ikon: Ikon.modulYabanci },
+      { yol: '/almanca', baslik: 'Almanca', ikon: Ikon.modulYabanci },
+      { yol: '/fransizca', baslik: 'Fransızca', ikon: Ikon.modulYabanci },
+    ]
+  },
+  {
+    id: 'modul10-araclar',
+    baslik: 'Modül 10',
+    mobilEtiket: 'BRF',
     altBaslik: 'BRF Dönüştürücü',
     ikon: Ikon.araclar,
     ogeler: [

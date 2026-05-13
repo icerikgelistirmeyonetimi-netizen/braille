@@ -1,18 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
 import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
 import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
+import { okumaModuIkinciSatir } from '../utils/okumaModuMetni.js';
 
 // MEB Türkçe Braille Yazı Kılavuzu (2014) – Noktalama ve özel işaret sayfası.
 // Listedeki her madde için: hücre(ler), açıklama, kullanım kuralları ve örnekleri sıralı olarak gösterir.
-export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matematikHucreGorunumu = false }) {
+export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matematikHucreGorunumu = false, seslendirmeDili = 'tr' }) {
   const [indeks, setIndeks] = useState(() => {
     const k = indeksAl(bolumAnahtari);
     return k < isaretler.length ? k : 0;
   });
-  const [detayAcik, setDetayAcik] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const [hucreIndeksi, setHucreIndeksi] = useState(0);
@@ -24,11 +24,51 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
   const anahtar = bolumAnahtari || baslik || 'genel';
   const kayitliAdlar = sonraOgrenAl(anahtar);
   const kayitliSayisi = kayitliAdlar.length;
-  const aktifListe = kayitlilarModu
-    ? isaretler.filter((s) => kayitliAdlar.includes(s.ad))
-    : isaretler;
+  const kayitliImza = kayitliAdlar.join('|');
+  const aktifListe = useMemo(() => {
+    const adlar = sonraOgrenAl(anahtar);
+    if (!kayitlilarModu) return isaretler;
+    return isaretler.filter((s) => adlar.includes(s.ad));
+  }, [kayitlilarModu, isaretler, kayitliImza, anahtar]);
 
   const bitti = indeks >= aktifListe.length;
+
+  const ogeyiSeslendir = useCallback((oge, { kesintiyle = true, kurallariDahilEt = false } = {}) => {
+    if (!oge) return;
+    const yabanciKod =
+      seslendirmeDili === 'en'
+        ? 'en'
+        : seslendirmeDili === 'de'
+          ? 'de'
+          : seslendirmeDili === 'fr'
+            ? 'fr'
+            : null;
+    if (!yabanciKod) {
+      const tapMesaj = oge.hucreler.length > 0 ? ' Lütfen noktalarına dokunun.' : '';
+      let m = `${oge.ad}. ${oge.aciklama || ''}${tapMesaj}`.trim();
+      if (kurallariDahilEt && oge.kurallar?.length > 0) m += ` ${oge.kurallar.join(' ')}`;
+      konus(m, { kesintiyle });
+      return;
+    }
+    if (!oge.hucreler || oge.hucreler.length === 0) {
+      let m = `${oge.ad}.${oge.aciklama ? ` ${oge.aciklama}` : ''}`.trim();
+      if (kurallariDahilEt && oge.kurallar?.length > 0) m += ` ${oge.kurallar.join(' ')}`;
+      konus(m, { dil: 'tr', kesintiyle });
+      return;
+    }
+    const tapMesaj = 'Lütfen noktalarına dokunun.';
+    const aciklama = (oge.aciklama || '').trim();
+    const kuralParca =
+      kurallariDahilEt && oge.kurallar?.length > 0 ? oge.kurallar.join(' ') : '';
+    const turkceKisim = [aciklama, kuralParca, tapMesaj].filter(Boolean).join(' ');
+    konus(oge.ad, {
+      dil: yabanciKod,
+      kesintiyle,
+      onSon: turkceKisim
+        ? () => konus(turkceKisim, { dil: 'tr', kesintiyle: false })
+        : undefined,
+    });
+  }, [seslendirmeDili]);
 
   // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
   useEffect(() => {
@@ -47,16 +87,14 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
       return;
     }
     const k = aktifListe[indeks];
-    const tapMesaj = k.hucreler.length > 0 ? ' Lütfen noktalarına dokunun.' : '';
-    const metin = `${k.ad}. ${k.aciklama}${tapMesaj}`;
-    konus(metin);
-    const tekrar = () => konus(metin, { kesintiyle: true });
+    ogeyiSeslendir(k, { kesintiyle: true });
+    const tekrar = () => ogeyiSeslendir(k, { kesintiyle: true });
     window.addEventListener('yonergeTekrar', tekrar);
     return () => window.removeEventListener('yonergeTekrar', tekrar);
-  }, [indeks, bitti, baslik, isaretler, kayitlilarModu]);
+  }, [indeks, bitti, baslik, aktifListe, ogeyiSeslendir]);
 
   // Yeni işarete geçince sıfırla
-  useEffect(() => { setDetayAcik(false); setHucreIndeksi(0); }, [indeks]);
+  useEffect(() => { setHucreIndeksi(0); }, [indeks]);
   useEffect(() => { setBasilanlar([]); setYanlis([]); }, [indeks, hucreIndeksi]);
 
   // Yeni hücreye geçince seslendir
@@ -78,7 +116,6 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
   const okumaOgesiSec = (orijinalIndeks) => {
     setKayitlilarModu(false);
     setIndeks(orijinalIndeks);
-    setDetayAcik(false);
     setHucreIndeksi(0);
     setBasilanlar([]);
     setYanlis([]);
@@ -99,10 +136,15 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             baslik={baslik}
             ogeler={isaretler}
             getEtiket={(isaret) => (isaret.sembol && isaret.sembol !== '—' ? isaret.sembol : isaret.ad)}
-            getAltEtiket={(isaret) => (isaret.sembol && isaret.sembol !== '—' ? isaret.ad : isaret.aciklama)}
+            getAltEtiket={(isaret) => {
+              if (isaret.sembol && isaret.sembol !== '—') return isaret.ad;
+              const oz = okumaModuIkinciSatir(isaret);
+              return oz || undefined;
+            }}
             getHucreler={(isaret) => isaret.hucreler || []}
             onSec={okumaOgesiSec}
             onKapat={() => setOkumaModu(false)}
+            seslendirmeDili={seslendirmeDili}
           />
         </div>
         <div className="controls">
@@ -141,11 +183,14 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
   const noktaMetni = k.hucreler.length > 0
     ? k.hucreler.map((h) => h.join('-')).join('  /  ')
     : 'Bu konu bir kuraldır, hücre sembolü yoktur.';
+  const altPaneldeMetinVar =
+    Boolean((k.aciklama || '').trim()) ||
+    (Array.isArray(k.kurallar) && k.kurallar.length > 0) ||
+    (Array.isArray(k.ornekler) && k.ornekler.length > 0);
 
   const modDegistir = (kayitlilar) => {
     setKayitlilarModu(kayitlilar);
     setIndeks(0);
-    setDetayAcik(false);
   };
 
   const kaydetSonra = () => {
@@ -312,20 +357,44 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
         <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.95em' }}>
           <strong>Noktalar:</strong> {noktaMetni}
         </div>
+
+        {altPaneldeMetinVar && (
+          <div className="isaret-metin-alti" aria-live="polite">
+            {(k.aciklama || '').trim() !== '' && (
+              <p style={{ margin: '0 0 0.75em 0' }}>{k.aciklama}</p>
+            )}
+            {k.kurallar?.length > 0 && (
+              <>
+                <strong>Kullanıldığı yerler:</strong>
+                <ul style={{ margin: '0.3em 0 0.8em 1.2em', padding: 0 }}>
+                  {k.kurallar.map((kr, i) => (
+                    <li key={i} style={{ marginBottom: '0.3em' }}>{kr}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {k.ornekler?.length > 0 && (
+              <>
+                <strong>Örnek:</strong>
+                <ul style={{ margin: '0.3em 0 0 1.2em', padding: 0 }}>
+                  {k.ornekler.map((o, i) => (
+                    <li key={i} style={{ marginBottom: '0.3em' }}>{o}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="controls">
         <button
           type="button"
           aria-label="Tekrar dinle"
-          onClick={() => konus(`${k.ad}. ${k.aciklama} ${k.kurallar?.[0] || ''}`, { kesintiyle: true })}
+          onClick={() => ogeyiSeslendir(k, { kesintiyle: true, kurallariDahilEt: true })}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           <span className="btn-etiket">Tekrar</span>
-        </button>
-        <button type="button" aria-label="Detayı göster" onClick={() => setDetayAcik(true)}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span className="btn-etiket">Detay</span>
         </button>
         <button type="button" aria-label="Önceki" disabled={indeks === 0} onClick={() => setIndeks((i) => Math.max(0, i - 1))}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
@@ -347,56 +416,6 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
           <span className="btn-etiket">{k.hucreler.length > 0 ? 'Atla' : 'Anladım'}</span>
         </button>
       </div>
-
-      {detayAcik && (
-        <div
-          className="detay-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${k.ad} detayları`}
-          onClick={(e) => { if (e.target === e.currentTarget) setDetayAcik(false); }}
-        >
-          <div className="detay-popup">
-            <div className="detay-baslik">
-              <h2 style={{ margin: 0, color: 'var(--accent)' }}>
-                {k.ad}
-                {k.sembol && k.sembol !== '—' && (
-                  <span style={{ marginLeft: '0.5em', color: 'var(--muted)', fontSize: '0.7em' }}>
-                    ({k.sembol})
-                  </span>
-                )}
-              </h2>
-              <button
-                type="button"
-                className="detay-kapat"
-                onClick={() => setDetayAcik(false)}
-                aria-label="Detayı kapat"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="detay-icerik">
-              <p style={{ margin: '0 0 0.8em 0' }}>{k.aciklama}</p>
-              {k.kurallar?.length > 0 && (
-                <>
-                  <strong>Kullanıldığı yerler:</strong>
-                  <ul style={{ margin: '0.3em 0 0.8em 1.2em', padding: 0 }}>
-                    {k.kurallar.map((kr, i) => <li key={i} style={{ marginBottom: '0.3em' }}>{kr}</li>)}
-                  </ul>
-                </>
-              )}
-              {k.ornekler?.length > 0 && (
-                <>
-                  <strong>Örnek:</strong>
-                  <ul style={{ margin: '0.3em 0 0 1.2em', padding: 0 }}>
-                    {k.ornekler.map((o, i) => <li key={i} style={{ marginBottom: '0.3em' }}>{o}</li>)}
-                  </ul>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

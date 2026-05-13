@@ -10,6 +10,26 @@ import {
 // Nokta numarası -> standart Perkins klavye tuşu
 const NOKTA_TUS = { 1: 'F', 2: 'D', 3: 'S', 4: 'J', 5: 'K', 6: 'L' };
 
+/** BrailleCell ile aynı: DOM/Tab sırası 1–6; iki sütunlu görünüm grid ile */
+const KLV_NOKTA_DOM_SIRA = [1, 2, 3, 4, 5, 6];
+const KLV_GRID_STANDART = {
+  1: { gridRow: 1, gridColumn: 1 },
+  2: { gridRow: 2, gridColumn: 1 },
+  3: { gridRow: 3, gridColumn: 1 },
+  4: { gridRow: 1, gridColumn: 2 },
+  5: { gridRow: 2, gridColumn: 2 },
+  6: { gridRow: 3, gridColumn: 2 },
+};
+/** Tablet / yatay: ellerin yeri için sütunlar yer değiştirir; DOM sırası yine 1–6 */
+const KLV_GRID_TABLET = {
+  1: { gridRow: 1, gridColumn: 2 },
+  2: { gridRow: 2, gridColumn: 2 },
+  3: { gridRow: 3, gridColumn: 2 },
+  4: { gridRow: 1, gridColumn: 1 },
+  5: { gridRow: 2, gridColumn: 1 },
+  6: { gridRow: 3, gridColumn: 1 },
+};
+
 /**
  * Perkins tarzı 6 noktalı Braille klavyesi.
  *
@@ -357,20 +377,8 @@ export default function BrailleKlavye({
   };
 
   // ---------- Render ----------
-  // Perkins yerleşimi: ortada nokta yok, soldan sağa: 3 2 1 | 4 5 6
-  // Üç sırada (üst orta alt) iki sütun
-  const sutunlar = [
-    { isim: 'Sol el',  noktalar: [3, 2, 1] }, // baş parmak yukarıda olacak şekilde
-    { isim: 'Sağ el',  noktalar: [4, 5, 6] }
-  ];
-  // Daha kullanışlı: tek tek 6 büyük tuş, ikili sütunlu, üç satır
-  // Satır sıralaması: üst -> 1, 4 ; orta -> 2, 5 ; alt -> 3, 6
-  // Tablet modunda sütunlar yatay çevrilir: sol el 4-5-6, sağ el 1-2-3
-  // (tableti düz tutup üstten yazınca eller fiziksel olarak ters tarafa denk gelir)
-  // Tablet modunda ya da telefon yatayda: sol el 4-5-6, sağ el 1-2-3
-  const satirlar = (tabletModu || mobileYatay)
-    ? [[4, 1], [5, 2], [6, 3]]
-    : [[1, 4], [2, 5], [3, 6]];
+  const tabletYerlesimi = tabletModu || mobileYatay;
+  const klvGridYerlesimi = tabletYerlesimi ? KLV_GRID_TABLET : KLV_GRID_STANDART;
 
   const noktaSinif = (n) => {
     const c = ['klv-nokta'];
@@ -393,39 +401,42 @@ export default function BrailleKlavye({
       onTouchEnd={anindaDokunma ? undefined : onTouchEnd}
       onTouchCancel={anindaDokunma ? undefined : onTouchEnd}
     >
-      <div className={'klv-grid' + (klavyeIpucu ? ' klv-grid-tus' : '')}>
-        {satirlar.map((cift, satirIdx) => (
-          <React.Fragment key={satirIdx}>
-            {cift.map((n) => {
-              const tusEtiket = NOKTA_TUS[n];
-              return (
-              <button
-                key={n}
-                type="button"
-                className={noktaSinif(n)}
-                data-klavye-nokta={n}
-                aria-label={`${n} numaralı nokta${klavyeIpucu ? `, klavye ${tusEtiket} tuşu` : ''}`}
-                aria-pressed={basili.has(n) || (siralikTiklama && tiklilar.has(n))}
-                onContextMenu={(e) => e.preventDefault()}
-                onClick={siralikTiklama && !anindaDokunma ? () => tiklaToggle(n) : undefined}
-                onPointerDown={anindaDokunma ? (event) => anlikNoktaBasildi(event, n) : undefined}
-                onPointerUp={anindaDokunma ? anlikNoktaBirakildi : undefined}
-                onPointerCancel={anindaDokunma ? anlikNoktaBirakildi : undefined}
-                tabIndex={-1}
-              >
-                {klavyeIpucu ? (
-                  <>
-                    <span className="klv-nokta-tus" aria-hidden="true">{tusEtiket}</span>
-                    <span className="klv-nokta-no klv-nokta-no-rozet" aria-hidden="true">{n}</span>
-                  </>
-                ) : (
-                  <span className="klv-nokta-no" aria-hidden="true">{n}</span>
-                )}
-              </button>
-              );
-            })}
-          </React.Fragment>
-        ))}
+      <div
+        className={
+          'klv-grid'
+          + (klavyeIpucu ? ' klv-grid-tus' : '')
+          + (tabletYerlesimi ? ' klv-grid-tablet' : '')
+        }
+      >
+        {KLV_NOKTA_DOM_SIRA.map((n) => {
+          const tusEtiket = NOKTA_TUS[n];
+          const yer = klvGridYerlesimi[n];
+          return (
+            <button
+              key={n}
+              type="button"
+              className={noktaSinif(n)}
+              data-klavye-nokta={n}
+              aria-label={`${n} numaralı nokta${klavyeIpucu ? `, klavye ${tusEtiket} tuşu` : ''}`}
+              aria-pressed={basili.has(n) || (siralikTiklama && tiklilar.has(n))}
+              style={yer}
+              onContextMenu={(e) => e.preventDefault()}
+              onClick={siralikTiklama && !anindaDokunma ? () => tiklaToggle(n) : undefined}
+              onPointerDown={anindaDokunma ? (event) => anlikNoktaBasildi(event, n) : undefined}
+              onPointerUp={anindaDokunma ? anlikNoktaBirakildi : undefined}
+              onPointerCancel={anindaDokunma ? anlikNoktaBirakildi : undefined}
+            >
+              {klavyeIpucu ? (
+                <>
+                  <span className="klv-nokta-tus" aria-hidden="true">{tusEtiket}</span>
+                  <span className="klv-nokta-no klv-nokta-no-rozet" aria-hidden="true">{n}</span>
+                </>
+              ) : (
+                <span className="klv-nokta-no" aria-hidden="true">{n}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="klv-aksiyonlar">

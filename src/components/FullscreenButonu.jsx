@@ -1,9 +1,22 @@
 import React, { useEffect, useState } from 'react';
+import { IOS_TAM_EKRAN_IPUCU, tamEkranApiDestekleniyorMu } from '../utils/tamEkran.js';
 
 export default function FullscreenButonu() {
+  const [destek, setDestek] = useState(() => tamEkranApiDestekleniyorMu());
+  const [uyari, setUyari] = useState('');
   const [durum, setDurum] = useState(() =>
     !!(document.fullscreenElement || document.webkitFullscreenElement)
   );
+
+  useEffect(() => {
+    setDestek(tamEkranApiDestekleniyorMu());
+  }, []);
+
+  useEffect(() => {
+    if (!uyari) return undefined;
+    const t = window.setTimeout(() => setUyari(''), 6000);
+    return () => window.clearTimeout(t);
+  }, [uyari]);
 
   useEffect(() => {
     const guncelle = () =>
@@ -17,6 +30,10 @@ export default function FullscreenButonu() {
   }, []);
 
   const tikla = () => {
+    if (!destek) {
+      setUyari(IOS_TAM_EKRAN_IPUCU);
+      return;
+    }
     if (durum) {
       const fn = document.exitFullscreen || document.webkitExitFullscreen;
       if (fn) fn.call(document).catch(() => {});
@@ -27,13 +44,18 @@ export default function FullscreenButonu() {
     }
   };
 
+  const etiketDisa = durum ? 'Tam ekrandan çık' : 'Tam ekran';
+  const uzunAciklama = !destek ? IOS_TAM_EKRAN_IPUCU : (durum ? 'Tam ekrandan çık' : 'Tam ekran');
+
   return (
+    <>
     <button
       type="button"
-      className="gorunum-btn fs-btn"
+      className={`gorunum-btn fs-btn${!destek ? ' fs-btn--sinirli' : ''}`}
       onClick={tikla}
-      aria-label={durum ? 'Tam ekrandan çık' : 'Tam ekran'}
-      title={durum ? 'Tam ekrandan çık' : 'Tam ekran'}
+      aria-label={etiketDisa}
+      aria-describedby={!destek ? 'fs-ios-aciklama' : undefined}
+      title={uzunAciklama}
     >
       <span aria-hidden="true" className="gorunum-ikon">
         {durum ? (
@@ -59,5 +81,12 @@ export default function FullscreenButonu() {
         )}
       </span>
     </button>
+    {!destek && (
+      <span id="fs-ios-aciklama" className="sr-only">{IOS_TAM_EKRAN_IPUCU}</span>
+    )}
+    {uyari && (
+      <div className="toast toast-fs-aciklama" role="status" aria-live="polite">{uyari}</div>
+    )}
+    </>
   );
 }

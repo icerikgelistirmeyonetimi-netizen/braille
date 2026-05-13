@@ -17,6 +17,7 @@ import {
   tarihAyirmaIsaretiMi,
   tarihHucreAraligi,
   tarihYazimiEslesmesi,
+  saatYazimiEslesmesi,
   duzeltmeYabanciHarfIsaretiMi,
   duzeltmeliHucreyiMetneCevir,
   ikiHarfliKisaltmaPrefixEslesmesi,
@@ -62,7 +63,7 @@ function kisaEtiket(anlam) {
     if (anlam.baslik.includes('Çift Rakam İşareti')) return '#';
     if (anlam.baslik.includes('Sayı')) return '#';
     if (anlam.baslik === 'Harf İşareti') return '(h)';
-    if (anlam.baslik.includes('Bölük')) return '3';
+    if (anlam.baslik.includes('Bölük')) return '.';
     if (anlam.baslik.includes('Tarih Ayırma')) return '3-6';
     if (anlam.baslik.includes('Düzeltme') || anlam.baslik.includes('Yabancı Harf')) return '^';
     if (anlam.baslik.includes('Bağ İşareti')) return '-';
@@ -333,6 +334,50 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
     return !!tarihHucreAraligi(hucreler, cellIdx);
   };
 
+  /** Kaynak üzerinden saat kalıplarının kapalı [bas,bit) aralıkları (üst üste binmez). */
+  const _saatKaynakAraliklari = !_kaynak ? [] : (() => {
+    /** @type {{ bas: number, bit: number }[]} */
+    const araliklar = [];
+    let st = 0;
+    while (st < _kaynak.length) {
+      const sx = saatYazimiEslesmesi(_kaynak, st);
+      if (sx) {
+        araliklar.push({ bas: st, bit: st + sx.uzunluk });
+        st += sx.uzunluk;
+      } else {
+        st++;
+      }
+    }
+    return araliklar;
+  })();
+
+  const _saatKaynakIcindeMi = (kaynakIndeks) => (
+    typeof kaynakIndeks === 'number'
+    && kaynakIndeks >= 0
+    && _saatKaynakAraliklari.some((t) => kaynakIndeks >= t.bas && kaynakIndeks < t.bit)
+  );
+
+  /** Bu hücre veya yakın önceki dolu kaynak eşlemesi bir saat ifadesinin parçası mı (– bağ, :, rakamlar). */
+  const _saatHucreBaglamiMi = (cellIdx) => {
+    if (!_kaynak || !_esleme || cellIdx < 0 || cellIdx >= hucreler.length) return false;
+    const ki = _esleme[cellIdx];
+    if (typeof ki === 'number' && ki >= 0 && _saatKaynakIcindeMi(ki)) return true;
+    for (let geri = 1; geri <= 6 && cellIdx - geri >= 0; geri++) {
+      const kj = _esleme[cellIdx - geri];
+      if (typeof kj === 'number' && kj >= 0 && _saatKaynakIcindeMi(kj)) return true;
+    }
+    return false;
+  };
+
+  /** Bu hücrenin kaynak karakteri { } [ ] ( ) ise edebî “tek harf” sol/sağ sınırı sayılır; kısaltma parça [5–6]+… ile karışmasın. */
+  const _matematikListeAyraçKaynağıMi = (cellIdx) => {
+    if (!_kaynak || !_esleme || cellIdx < 0 || cellIdx >= hucreler.length) return false;
+    const ki = _esleme[cellIdx];
+    if (typeof ki !== 'number' || ki < 0 || ki >= _kaynak.length) return false;
+    const ch = _kaynak[ki];
+    return ch === '{' || ch === '}' || ch === '[' || ch === ']' || ch === '(' || ch === ')';
+  };
+
   // Durum takibi (Metin ↔ BRF ile uyumlu; çoklu sayı listesinde virgül sayıModu'nu kapatmaz.)
   let sayiModu = false;
   let siraSayiModu = false;
@@ -450,12 +495,22 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
     ) {
       continue;
     }
-      if (tarihAyirmaIsaretiMi(h) && _tarihHucreBaglamiMi(i)) continue;
+      if (tarihAyirmaIsaretiMi(h) && (_tarihHucreBaglamiMi(i) || _saatHucreBaglamiMi(i))) continue;
       if (
         !siraSayiModu
         && tarihAyirmaIsaretiMi(h)
         && i + 1 < hucreler.length
         && hucreyiRakamayap(hucreler[i + 1])
+        && (_tarihHucreBaglamiMi(i) || _saatHucreBaglamiMi(i))
+      ) {
+        continue;
+      }
+      if (
+        !siraSayiModu
+        && dotKey(h) === '2,5'
+        && i + 1 < hucreler.length
+        && hucreyiRakamayap(hucreler[i + 1])
+        && _saatHucreBaglamiMi(i)
       ) {
         continue;
       }
@@ -518,6 +573,10 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
       islem.ad === 'yüzde'
       || islem.ad === 'parantez açma'
       || islem.ad === 'parantez kapama'
+      || islem.ad === 'köşeli parantez açma'
+      || islem.ad === 'köşeli parantez kapama'
+      || islem.ad === 'dış parantez açma'
+      || islem.ad === 'dış parantez kapama'
       || islem.ad === 'kesir çizgisi'
     )
   );
@@ -528,16 +587,41 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
     if (islem.ad === 'yüzde') {
       return !sayiIsaretiMi(sonraki);
     }
-    if (islem.ad === 'parantez açma') {
+    if (islem.ad === 'parantez açma' || islem.ad === 'köşeli parantez açma' || islem.ad === 'dış parantez açma') {
       return !(sayiIsaretiMi(sonraki) || tekKucukHarfIsaretiMi(sonraki) || buyukHarfIsaretiMi(sonraki));
     }
-    if (islem.ad === 'parantez kapama') {
+    if (islem.ad === 'parantez kapama' || islem.ad === 'köşeli parantez kapama' || islem.ad === 'dış parantez kapama') {
       return !(sayiModu || sayiIsaretiMi(onceki) || tekKucukHarfIsaretiMi(onceki) || buyukHarfIsaretiMi(onceki));
     }
     if (islem.ad === 'kesir çizgisi') {
       return !(sayiIsaretiMi(onceki) || sayiIsaretiMi(sonraki));
     }
     return false;
+  };
+  const islemDetayiOlustur = (islem, hucreIdx) => {
+    const noktaGosterimi = islem.hucreler.map((hucre) => hucre.join('-')).join(', ');
+    if (islem.hucreler.length <= 1) {
+      if (islem.aciklama) return `${islem.aciklama} Nokta gösterimi ${noktaGosterimi}.`;
+      return `Matematik işlem işareti; nokta gösterimi ${noktaGosterimi}.`;
+    }
+    let baslangic = typeof islem.baslangic === 'number' ? islem.baslangic : hucreIdx;
+    if (typeof islem.baslangic !== 'number' && _esleme) {
+      const kaynakIndeksi = _esleme[hucreIdx];
+      if (typeof kaynakIndeksi === 'number' && kaynakIndeksi >= 0) {
+        while (baslangic > 0 && _esleme[baslangic - 1] === kaynakIndeksi) baslangic--;
+      }
+    }
+    const seciliHucreNo = hucreIdx - baslangic + 1;
+    const hucreAciklamalari = islem.hucreler
+      .map((hucre, indeks) => `${indeks + 1}. hücre: Nokta ${hucre.join(' · ')}.`)
+      .join(' ');
+    const temelAciklama = islem.aciklama
+      ? `${islem.aciklama} `
+      : 'Matematik işlem işareti. ';
+    const seciliHucreMetni = seciliHucreNo >= 1 && seciliHucreNo <= islem.hucreler.length
+      ? `Seçili hücre ${seciliHucreNo}. hücre. `
+      : '';
+    return `${temelAciklama}${islem.hucreler.length} hücreden oluşur. ${seciliHucreMetni}${hucreAciklamalari}`.trim();
   };
   if (noktalar.length === 0) {
     return { tip: 'bosluk', baslik: 'Boşluk', detay: 'Kelimeler arasındaki boşluk.', noktaStr };
@@ -565,7 +649,7 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
     return {
       tip: 'islem',
       baslik: `İşlem işareti: ${kaynakIslem.ad} (${kaynakIslem.sembol})`,
-      detay: `Matematik işlem işareti; nokta gösterimi ${kaynakIslem.hucreler.map((hucre) => hucre.join('-')).join(', ')}.`,
+      detay: islemDetayiOlustur(kaynakIslem, idx),
       noktaStr,
       etiket: ilkHucre ? kaynakIslem.sembol : '',
     };
@@ -599,7 +683,7 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
       return {
         tip: 'islem',
         baslik: `İşlem işareti: ${islemKapsami.ad} (${islemKapsami.sembol})`,
-        detay: `Matematik işlem işareti; nokta gösterimi ${islemKapsami.hucreler.map((hucre) => hucre.join('-')).join(', ')}.`,
+        detay: islemDetayiOlustur(islemKapsami, idx),
         noktaStr,
         etiket: ilkHucre ? islemKapsami.sembol : '',
       };
@@ -832,11 +916,18 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
       const prevPrev = cellIdx >= 2 ? hucreler[cellIdx - 2] : null;
       return cellIdx < 2 || !prevPrev || prevPrev.length === 0 || buyukHarfIsaretiMi(prevPrev);
     };
+    const _kumeAcmaIkinciHucreMi = (cellIdx) => {
+      if (cellIdx <= 0) return false;
+      return dotKey(hucreler[cellIdx]) === '3'
+        && dotKey(hucreler[cellIdx - 1]) === '1,2,3,5,6';
+    };
     const _isNoktalamaHucre = (h, i) => {
       if (!h || h.length === 0) return false;
       const kk = dotKey(h);
       if (!_NOKTA_TERS.has(kk)) return false;
-      if (kk === '3' && _tekHarfAyirmaIsaretiMi(i)) return false;
+      // Küme açmanın 2. hücresi yalnızca nokta 3; kesme ile aynı desen. Noktalama sanılırsa
+      // "{" yanındaki harfler için kısaltma sınırları bozulur.
+      if (kk === '3' && (_tekHarfAyirmaIsaretiMi(i) || _kumeAcmaIkinciHucreMi(i))) return false;
       if (!_HECE_TERS.has(kk)) return true;
       const next = i + 1 < hucreler.length ? hucreler[i + 1] : null;
       if (!next || next.length === 0) return true;
@@ -855,8 +946,12 @@ export function hucreAnlami(hucreler, idx, kisaltmaAktif, opts) {
       if (!harf || harf === ' ') return null;
       const onceki = cellIdx > 0 ? hucreler[cellIdx - 1] : null;
       const sonraki = harfIdx + 1 < hucreler.length ? hucreler[harfIdx + 1] : null;
-      const solSinir = cellIdx === 0 || !onceki || onceki.length === 0 || _isNoktalamaHucre(onceki, cellIdx - 1);
-      const sagSinir = !sonraki || sonraki.length === 0 || _isNoktalamaHucre(sonraki, harfIdx + 1);
+      const solSinir = cellIdx === 0 || !onceki || onceki.length === 0
+        || _isNoktalamaHucre(onceki, cellIdx - 1)
+        || _matematikListeAyraçKaynağıMi(cellIdx - 1);
+      const sagSinir = !sonraki || sonraki.length === 0
+        || _isNoktalamaHucre(sonraki, harfIdx + 1)
+        || _matematikListeAyraçKaynağıMi(harfIdx + 1);
       return solSinir && sagSinir ? { harfIdx, harf, buyuk } : null;
     };
     const _tekHarfIsaretiMi = (cellIdx) => {

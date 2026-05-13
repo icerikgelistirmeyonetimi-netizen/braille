@@ -39,6 +39,10 @@ const MATEMATIK_GENEL_SEMBOL_ADLARI = new Set([
   'artı eksi',
   'parantez açma',
   'parantez kapama',
+  'köşeli parantez açma',
+  'köşeli parantez kapama',
+  'küme açma',
+  'küme kapama',
   'kesir çizgisi',
   'yüzde',
   'küçüktür',
@@ -50,12 +54,15 @@ const MATEMATIK_GENEL_SEMBOL_ADLARI = new Set([
   'denk değildir',
 ]);
 const EK_MATEMATIK_SEMBOLLER = [
-  { ad: 've işareti', sembol: '&', hucreler: [[4], [1, 2, 3, 4, 6]] },
+  { ad: 've işareti', sembol: '&', aciklama: 'Ve işareti iki hücreyle yazılır.', hucreler: [[4], [1, 2, 3, 4, 6]] },
+  { ad: 'dış parantez açma', sembol: '⦅', aciklama: 'Dış parantez açma için 1-2-3-4-5-6 kullanılır.', hucreler: [[1, 2, 3, 4, 5, 6]] },
+  { ad: 'dış parantez kapama', sembol: '⦆', aciklama: 'Dış parantez kapama için 1-2-3-4-5-6 kullanılır.', hucreler: [[1, 2, 3, 4, 5, 6]] },
 ];
 export const MATEMATIK_ISLEM_ISARETLERI = MATEMATIK_SEMBOLLER
   .filter((sembol) => MATEMATIK_GENEL_SEMBOL_ADLARI.has(sembol.ad))
   .map((sembol) => ({
     ad: sembol.ad,
+    aciklama: sembol.aciklama,
     sembol: sembol.ad === 'denklik'
       ? '≡'
       : sembol.ad === 'denk değildir'
@@ -325,8 +332,35 @@ function harfMi(ch) {
   return !!ch && (HARF_TABLO.has(ch.toLocaleUpperCase('tr')) || duzeltmeliHarfBilgisi(ch) !== null);
 }
 
-function tekHarfKullanimiMi(metin, index) {
+const TEK_HARF_MATH_LISTE_ARALARI = {
+  /** Sağında tek harf okunabilecek matematik liste açılışı (küme/yuvarlak/köşeli). */
+  acilislaraIzınVerilen: new Set([
+    'küme açma',
+    'parantez açma',
+    'köşeli parantez açma',
+  ]),
+  /** Solunda tek harf okunabilecek kapanış. */
+  kapanislaraIzınVerilen: new Set([
+    'küme kapama',
+    'parantez kapama',
+    'köşeli parantez kapama',
+  ]),
+};
+
+/** Edebî tek-harf modu: yanlarda harf yok; çoğu matematik işaretinde işaret verilmez.
+ * Liste kuralı gruplaşmalarda süslü, yuvarlak ve köşeli parantez içinde tek küçük harfler işaretlenir. */
+function tekHarfKullanimiMi(metin, index, yorumTercihleri = {}) {
   if (!harfMi(metin[index])) return false;
+  const solIdx = index - 1;
+  const sagIdx = index + 1;
+  if (solIdx >= 0 && !harfMi(metin[solIdx])) {
+    const solIsaret = matematikIslemIsaretiMetinEslesmesi(metin, solIdx, yorumTercihleri);
+    if (solIsaret && !TEK_HARF_MATH_LISTE_ARALARI.acilislaraIzınVerilen.has(solIsaret.ad)) return false;
+  }
+  if (sagIdx < metin.length && !harfMi(metin[sagIdx])) {
+    const sagIsaret = matematikIslemIsaretiMetinEslesmesi(metin, sagIdx, yorumTercihleri);
+    if (sagIsaret && !TEK_HARF_MATH_LISTE_ARALARI.kapanislaraIzınVerilen.has(sagIsaret.ad)) return false;
+  }
   return !harfMi(metin[index - 1]) && !harfMi(metin[index + 1]);
 }
 
@@ -366,6 +400,143 @@ function tarihYazimiEkle(tarih, baslangic, ekle, sayiIsareti) {
     const ch = tarih[offset];
     if (RAKAM_TABLO.has(ch)) ekle(RAKAM_TABLO.get(ch), baslangic + offset);
     else ekle(TARIH_AYIRMA_ISARETI, baslangic + offset);
+  }
+}
+
+const SAAT_TEK_REGEX = /^(\d{2})([.:])(\d{2})(?:\2(\d{2}))?(?![\d.:])/u;
+
+const KOSELI_PARANTEZ_AC_HUCRE = [2, 4, 6];
+const KOSELI_PARANTEZ_KAP_HUCRE = [1, 3, 5];
+
+/** Saatte `.` veya `:` yazılsa da çıktıda Türkçe saat yazımına uygun nokta ayırıcı ([3]). */
+function saatAyiriciHucreleri(karakter) {
+  if (karakter === '.' || karakter === ':') return [3];
+  return [2, 5];
+}
+
+function saatPargalariGecerliMi(sa, dk, saniye) {
+  const S = Number.parseInt(sa, 10);
+  const D = Number.parseInt(dk, 10);
+  if (!Number.isInteger(S) || S < 0 || S > 23) return false;
+  if (!Number.isInteger(D) || D < 0 || D > 59) return false;
+  if (saniye != null) {
+    const N = Number.parseInt(saniye, 10);
+    if (!Number.isInteger(N) || N < 0 || N > 59) return false;
+  }
+  return true;
+}
+
+/**
+ * Yazım kalıpları `00.00`, `00.00.00`, `00:00`, `00:00:00` (bir ifadede `.` ile `:` karıştırılmaz; `:` çıktıda nokta [3] olur).
+ * İsteğe bağlı süslü aralık: `[00.00 – 00.05]`; köşeli parantezler Braille çıktısına köşeli parantez hücreleriyle yazılır.
+ * @returns {null | { ilk: string, ikinci: string | null, uzunluk: number }}
+ */
+export function saatYazimiEslesmesi(metin, index) {
+  if (!metin || index < 0 || index >= metin.length) return null;
+  if (!(metin[index] === '[' || /\d/u.test(metin[index]))) return null;
+  if (index > 0 && /[\d.,:]/.test(metin[index - 1])) return null;
+
+  let p = index;
+  if (metin[p] === '[') p++;
+
+  while (p < metin.length && /\s/u.test(metin[p])) p++;
+
+  /** @returns {boolean} */
+  function birSaatiOku() {
+    const m = metin.slice(p).match(SAAT_TEK_REGEX);
+    if (!m || !saatPargalariGecerliMi(m[1], m[3], m[4] ?? null)) return false;
+    p += m[0].length;
+    return true;
+  }
+
+  const ilkBas = p;
+  if (!birSaatiOku()) return null;
+  const ilkKod = metin.slice(ilkBas, p);
+
+  while (p < metin.length && /\s/u.test(metin[p])) p++;
+
+  /** @type {string | null} */
+  let ikinciKod = null;
+  const dashM = metin.slice(p).match(/^[–—−-]/u);
+  if (dashM) {
+    p += dashM[0].length;
+    while (p < metin.length && /\s/u.test(metin[p])) p++;
+    const ikiBas = p;
+    if (!birSaatiOku()) return null;
+    ikinciKod = metin.slice(ikiBas, p);
+  }
+
+  if (metin[index] === '[') {
+    while (p < metin.length && /\s/u.test(metin[p])) p++;
+    if (metin[p] !== ']') return null;
+    p++;
+  }
+
+  while (p < metin.length && /\s/u.test(metin[p])) p++;
+  if (p < metin.length && /\p{L}/u.test(metin[p])) return null;
+
+  return { ilk: ilkKod, ikinci: ikinciKod, uzunluk: p - index };
+}
+
+function saatKodundanHucreEkle(saatiKodu, ilkIndeksMutlak, ekle, sayiIsareti, rakamBasinaIsaretEkle) {
+  /** @type {boolean} */
+  let sayiIsaretiVerildi = false;
+  for (let local = 0; local < saatiKodu.length; local++) {
+    const karakter = saatiKodu[local];
+    const abs = ilkIndeksMutlak + local;
+    if (RAKAM_TABLO.has(karakter)) {
+      if (sayiIsareti && rakamBasinaIsaretEkle && !sayiIsaretiVerildi) {
+        ekle(SAYI_ISARETI, -1);
+        sayiIsaretiVerildi = true;
+      }
+      ekle(RAKAM_TABLO.get(karakter), abs);
+    } else if (karakter === '.' || karakter === ':') {
+      ekle(saatAyiriciHucreleri(karakter), abs);
+    }
+  }
+}
+
+/** Süslü ve çizgisel aralıkta da köşeli parantez çıktıda kalır (matematik köşeli parantez hücreleri). */
+function saatYazimiHucreleriniEkle(eslesme, baslangic, metinTam, ekle, sayiIsareti) {
+  const sonMutlak = baslangic + eslesme.uzunluk;
+  let qi = baslangic;
+  let ilkBlokYazildi = false;
+
+  while (qi < sonMutlak) {
+    const c = metinTam[qi];
+    if (c === '[') {
+      ekle(KOSELI_PARANTEZ_AC_HUCRE, qi);
+      qi++;
+      continue;
+    }
+    if (c === ']') {
+      ekle(KOSELI_PARANTEZ_KAP_HUCRE, qi);
+      qi++;
+      continue;
+    }
+    if (/\s/u.test(c)) {
+      ekle([], qi);
+      qi++;
+      continue;
+    }
+    const tir = metinTam.slice(qi, sonMutlak).match(/^[–—−-]/u);
+    if (tir) {
+      ekle(TARIH_AYIRMA_ISARETI, qi);
+      qi += tir[0].length;
+      continue;
+    }
+    if (!ilkBlokYazildi && metinTam.startsWith(eslesme.ilk, qi)) {
+      saatKodundanHucreEkle(eslesme.ilk, qi, ekle, sayiIsareti, true);
+      qi += eslesme.ilk.length;
+      ilkBlokYazildi = true;
+      continue;
+    }
+    if (eslesme.ikinci && metinTam.startsWith(eslesme.ikinci, qi)) {
+      saatKodundanHucreEkle(eslesme.ikinci, qi, ekle, sayiIsareti, false);
+      qi += eslesme.ikinci.length;
+      continue;
+    }
+    qi++;
   }
 }
 
@@ -639,12 +810,27 @@ export function metniBrailleyeCevir(metin, opt = {}) {
   for (let i = 0; i < metin.length; i++) {
     const ch = metin[i];
 
+    if (/\s/u.test(ch)) {
+      sayiModu = false;
+      ekle([], i);
+      continue;
+    }
+
     const tarih = tarihYazimiEslesmesi(metin, i);
     if (tarih) {
       tarihYazimiEkle(tarih, i, ekle, sayiIsareti);
       sayiModu = false;
       tumuBuyukKalan = 0;
       i += tarih.length - 1;
+      continue;
+    }
+
+    const saatBolgesi = saatYazimiEslesmesi(metin, i);
+    if (saatBolgesi) {
+      saatYazimiHucreleriniEkle(saatBolgesi, i, metin, ekle, sayiIsareti);
+      sayiModu = false;
+      tumuBuyukKalan = 0;
+      i += saatBolgesi.uzunluk - 1;
       continue;
     }
 
@@ -752,7 +938,7 @@ export function metniBrailleyeCevir(metin, opt = {}) {
 
     const duzeltmeli = duzeltmeliHarfBilgisi(ch);
     if (duzeltmeli) {
-      if (tekHarfIsareti && tekHarfKullanimiMi(metin, i)) {
+      if (tekHarfIsareti && tekHarfKullanimiMi(metin, i, yorumTercihleri)) {
         ekle(TEK_KUCUK_HARF_ISARETI, -1);
       }
       if (buyukHarfIsareti && buyukHarfKarakteriMi(ch)) {
@@ -767,7 +953,7 @@ export function metniBrailleyeCevir(metin, opt = {}) {
     // Harfler (Türkçe destekli)
     const ust = ch.toLocaleUpperCase('tr');
     if (HARF_TABLO.has(ust)) {
-      if (tekHarfIsareti && tekHarfKullanimiMi(metin, i)) {
+      if (tekHarfIsareti && tekHarfKullanimiMi(metin, i, yorumTercihleri)) {
         ekle(TEK_KUCUK_HARF_ISARETI, -1);
       }
       // Kelime başında ALL CAPS kontrolü → çift [6]
@@ -1486,50 +1672,55 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
     if (tarih) {
       tokenler.push({ tip: 'tarih', deger: tarih, idx: i });
       i += tarih.length;
-    } else if (sayiBagIfadesiEslesmesi(metin, i)) {
-      const deger = sayiBagIfadesiEslesmesi(metin, i);
-      tokenler.push({ tip: 'sayiBag', deger, idx: i });
-      i += deger.uzunluk;
-    } else if (bolukluSayiEslesmesi(metin, i)) {
-      const deger = bolukluSayiEslesmesi(metin, i);
-      tokenler.push({ tip: 'bolukluSayi', deger, idx: i });
-      i += deger.length;
-    } else if (/\s/.test(ch)) {
-      tokenler.push({ tip: 'bosluk', deger: ch, idx: i });
-      i++;
-    } else if (harfliSayiEslesmesi(metin, i)) {
-      const deger = harfliSayiEslesmesi(metin, i);
-      tokenler.push({ tip: 'harfliSayi', deger, idx: i });
-      i += deger.length;
-    } else if (matematikIslemIsaretiMetinEslesmesi(metin, i, yorumTercihleri)) {
-      tokenler.push({ tip: 'islem', deger: ch, idx: i });
-      i++;
-    } else if (NOKTA_TABLO.has(ch)) {
-      tokenler.push({ tip: 'noktalama', deger: ch, idx: i });
-      i++;
-    } else if (ch === '^') {
-      tokenler.push({ tip: 'duzeltme', deger: ch, idx: i });
-      i++;
-    } else if (RAKAM_TABLO.has(ch)) {
-      let j = i;
-      while (j < metin.length && RAKAM_TABLO.has(metin[j])) j++;
-      tokenler.push({ tip: 'rakam', deger: metin.slice(i, j), idx: i });
-      i = j;
     } else {
-      // Kelime bloğu (harf karakterleri)
-      let j = i;
-      while (j < metin.length) {
-        const c = metin[j];
-        if (
-          /\s/.test(c)
-          || NOKTA_TABLO.has(c)
-          || RAKAM_TABLO.has(c)
-          || matematikIslemIsaretiMetinEslesmesi(metin, j, yorumTercihleri)
-        ) break;
-        j++;
+      const saatBolgesi = saatYazimiEslesmesi(metin, i);
+      if (saatBolgesi) {
+        tokenler.push({ tip: 'saat', deger: saatBolgesi, idx: i });
+        i += saatBolgesi.uzunluk;
+      } else if (sayiBagIfadesiEslesmesi(metin, i)) {
+        const deger = sayiBagIfadesiEslesmesi(metin, i);
+        tokenler.push({ tip: 'sayiBag', deger, idx: i });
+        i += deger.uzunluk;
+      } else if (bolukluSayiEslesmesi(metin, i)) {
+        const deger = bolukluSayiEslesmesi(metin, i);
+        tokenler.push({ tip: 'bolukluSayi', deger, idx: i });
+        i += deger.length;
+      } else if (/\s/.test(ch)) {
+        tokenler.push({ tip: 'bosluk', deger: ch, idx: i });
+        i++;
+      } else if (harfliSayiEslesmesi(metin, i)) {
+        const deger = harfliSayiEslesmesi(metin, i);
+        tokenler.push({ tip: 'harfliSayi', deger, idx: i });
+        i += deger.length;
+      } else if (matematikIslemIsaretiMetinEslesmesi(metin, i, yorumTercihleri)) {
+        tokenler.push({ tip: 'islem', deger: ch, idx: i });
+        i++;
+      } else if (NOKTA_TABLO.has(ch)) {
+        tokenler.push({ tip: 'noktalama', deger: ch, idx: i });
+        i++;
+      } else if (ch === '^') {
+        tokenler.push({ tip: 'duzeltme', deger: ch, idx: i });
+        i++;
+      } else if (RAKAM_TABLO.has(ch)) {
+        let j = i;
+        while (j < metin.length && RAKAM_TABLO.has(metin[j])) j++;
+        tokenler.push({ tip: 'rakam', deger: metin.slice(i, j), idx: i });
+        i = j;
+      } else {
+        let j = i;
+        while (j < metin.length) {
+          const c = metin[j];
+          if (
+            /\s/.test(c)
+            || NOKTA_TABLO.has(c)
+            || RAKAM_TABLO.has(c)
+            || matematikIslemIsaretiMetinEslesmesi(metin, j, yorumTercihleri)
+          ) break;
+          j++;
+        }
+        tokenler.push({ tip: 'kelime', deger: metin.slice(i, j), idx: i });
+        i = j;
       }
-      tokenler.push({ tip: 'kelime', deger: metin.slice(i, j), idx: i });
-      i = j;
     }
   }
 
@@ -1609,6 +1800,9 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
         ekle(RAKAM_TABLO.get(tok.deger[ri]), tok.idx + ri);
       }
       sayiModu = true;
+    } else if (tok.tip === 'saat') {
+      saatYazimiHucreleriniEkle(tok.deger, tok.idx, metin, ekle, sayiIsareti);
+      sayiModu = false;
     } else if (tok.tip === 'tarih') {
       tarihYazimiEkle(tok.deger, tok.idx, ekle, sayiIsareti);
       sayiModu = false;
@@ -1632,7 +1826,7 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
         rumuzluIfadeEkle(kel, tok.idx, ekle);
         continue;
       }
-      if (tekHarfIsareti && tekHarfKullanimiMi(metin, tok.idx)) {
+      if (tekHarfIsareti && tekHarfKullanimiMi(metin, tok.idx, yorumTercihleri)) {
         const ch = [...kel][0];
         const ust = ch.toLocaleUpperCase('tr');
         ekle(TEK_KUCUK_HARF_ISARETI, -1);
