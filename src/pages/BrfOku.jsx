@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+﻿import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
@@ -18,6 +18,7 @@ import {
   tarihHucreAraligi,
   duzeltmeYabanciHarfIsaretiMi,
   duzeltmeliHucreyiMetneCevir,
+  tekHarfIsaretiSonrasiHarfOkuma,
   ikiHarfliKisaltmaOkunusunuYumusat,
   kelimeKokuOkunusunuYorIcinDuzelt,
   matematikIsaretiSayiModunuKorurMu,
@@ -145,6 +146,7 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
   let buyukHarfBekle = false;
   const noktalamaHucreMi = (hucre) => !!hucre && _NOKTA_TERS.has(noktalariAnahtara(hucre));
   const matematikSayiSinirAnahtarlari = new Set([
+    '1,2',
     '3,4,6',
     '3,5,6',
     '1,4,6',
@@ -168,22 +170,7 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
     || noktalamaHucreMi(hucre)
     || matematikSayiSinirAnahtarlari.has(noktalariAnahtara(hucre))
   );
-  const harfliSayiHarfOku = (hucreler, index) => {
-    if (index < 0 || index >= hucreler.length || !tekKucukHarfIsaretiMi(hucreler[index])) return null;
-    let harfIndex = index + 1;
-    let buyuk = false;
-    if (harfIndex < hucreler.length && buyukHarfIsaretiMi(hucreler[harfIndex])) {
-      buyuk = true;
-      harfIndex++;
-    }
-    if (harfIndex >= hucreler.length) return null;
-    const harf = hucreyiKarakteryap(hucreler[harfIndex]);
-    if (!harf || harf === ' ') return null;
-    return {
-      metin: buyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr'),
-      sonrakiIndex: harfIndex + 1,
-    };
-  };
+  const harfliSayiHarfOku = tekHarfIsaretiSonrasiHarfOkuma;
   if (kisaltmali) {
     // Sayfa ayraçlarını (\f) paragraf sınırı; satır sonları (\r\n) kelime ortasında olabilir → birleştir
     const sayfalar = icerik.split(/\f/);
@@ -734,21 +721,21 @@ export default function BrfOku() {
   const [dosyaAdi, setDosyaAdi] = useState('');
   const [yukleniyor, setYukleniyor] = useState(false);
   const [hata, setHata] = useState('');
-  const [kisaltmaAktif, setKisaltmaAktif] = useState(false);
+  const [kisaltmaAktif, setKisaltmaAktif] = useState(true);
   const [konusuyor, setKonusuyor] = useState(false); // 'metin' | 'nokta' | false
   const [dragOver, setDragOver] = useState(false);
   const [aktifTab, setAktifTab] = useState('metin');
   const [brailleSayfa, setBrailleSayfa] = useState(0);
   const [sayfaInput, setSayfaInput] = useState('');
   const [seciliHucre, setSeciliHucre] = useState(null);
-  const [genisletAktif, setGenisletAktif] = useState(false);
+  const [genisletAktif, setGenisletAktif] = useState(true);
   const [erisilebilirMod, setErisilebilirMod] = useState(false);
   const [kopyalandi, setKopyalandi] = useState(false);
   const brailleKutuRef = useRef(null);
 
   const SISTEM_VARSAYILAN = { hece: true, birHarf: true, ikiHarf: true, kok: true, parca: true };
   const [kisaltmaSistemler, setKisaltmaSistemler] = useState(() => {
-    const saved = localStorage.getItem('brfOkuKisaltmaSistemler');
+    const saved = localStorage.getItem('araclarKisaltmaSistemler');
     if (!saved) return { ...SISTEM_VARSAYILAN };
     try { return { ...SISTEM_VARSAYILAN, ...JSON.parse(saved) }; } catch { return { ...SISTEM_VARSAYILAN }; }
   });
@@ -757,7 +744,7 @@ export default function BrfOku() {
 
   const sistemToggle = (key) => setKisaltmaSistemler((prev) => {
     const yeni = { ...prev, [key]: !prev[key] };
-    localStorage.setItem('brfOkuKisaltmaSistemler', JSON.stringify(yeni));
+    localStorage.setItem('araclarKisaltmaSistemler', JSON.stringify(yeni));
     return yeni;
   });
 
@@ -771,20 +758,92 @@ export default function BrfOku() {
     return () => document.removeEventListener('mousedown', handle);
   }, [sistemPaneli]);
 
+  const [eslemeWorkerSonuc, setEslemeWorkerSonuc] = useState(null);
+
+  // Worker için referanslar
+  const workerRef = useRef(null);
+  const islemIdRef = useRef(0);
+
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('../workers/araclarCevir.worker.js', import.meta.url), { type: 'module' });
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+  }, []);
+
   // Dosya içeriği, kısaltma modu veya sistemler değişince metni yeniden çöz
   useEffect(() => {
-    if (!dosyaIcerik) return;
-    setOkunanMetin(
-      kisaltmaAktif
-        ? brfMetinedonKisaltmali(dosyaIcerik, kisaltmaSistemler)
-        : brfMetinedon(dosyaIcerik)
-    );
+    if (!dosyaIcerik || !workerRef.current) return;
+    setYukleniyor(true);
+    islemIdRef.current += 1;
+    const currentId = islemIdRef.current;
+    
+    workerRef.current.onmessage = (e) => {
+      if (e.data.requestId !== currentId) return;
+      if (e.data.actionType === 'brfToText' || typeof e.data.resultText === 'string') {
+        if (e.data.ok) {
+          setOkunanMetin(e.data.resultText);
+          setYukleniyor(false);
+        } else {
+          setHata('Çeviri sırasında hata oluştu: ' + (e.data.error || ''));
+          setYukleniyor(false);
+        }
+      }
+    };
+
+    // Araya setTimeout koyarak React'in 'yukleniyor: true' state'ini çizmesine izin verelim
+    const t = setTimeout(() => {
+      workerRef.current.postMessage({
+        action: 'brfToText',
+        text: dosyaIcerik,
+        kisaltmali: kisaltmaAktif,
+        opts: kisaltmaSistemler,
+        requestId: currentId
+      });
+    }, 50);
+    return () => clearTimeout(t);
   }, [dosyaIcerik, kisaltmaAktif, kisaltmaSistemler]);
+
+  // Metin oluştuktan sonra esleme dizisini hesaplamak için worker kullan
+  useEffect(() => {
+    if (!okunanMetin || !workerRef.current) {
+      setEslemeWorkerSonuc(null);
+      return;
+    }
+    islemIdRef.current += 1;
+    const currentId = islemIdRef.current;
+    
+    const workerHandler = workerRef.current.onmessage;
+    workerRef.current.onmessage = (e) => {
+      if (e.data.requestId === currentId) {
+        if (e.data.ok && e.data.esleme) {
+          setEslemeWorkerSonuc(e.data.esleme);
+        }
+      } else if (workerHandler) {
+        workerHandler(e);
+      }
+    };
+
+    const t = setTimeout(() => {
+      workerRef.current.postMessage({
+        action: 'textToBrf',
+        text: okunanMetin,
+        kisaltmali: kisaltmaAktif,
+        opts: { ...kisaltmaSistemler, buyukHarfIsareti: true, sayiIsareti: true },
+        requestId: currentId
+      });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [okunanMetin, kisaltmaAktif, kisaltmaSistemler]);
 
   const temizle = () => {
     setOkunanMetin(''); setDosyaIcerik(''); setDosyaAdi('');
     setHata(''); setYukleniyor(false);
     setAktifTab('metin'); setBrailleSayfa(0); setSeciliHucre(null);
+    setEslemeWorkerSonuc(null);
     if (konusuyor) { konusmayiDurdur(); setKonusuyor(false); }
   };
 
@@ -800,13 +859,8 @@ export default function BrfOku() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const icerik = ev.target.result;
-      const normal = brfMetinedon(icerik);
-      const kisaltmali = brfMetinedonKisaltmali(icerik, kisaltmaSistemler);
-      const kisaltmaVar = normal !== kisaltmali;
-      setKisaltmaAktif(kisaltmaVar);
-      setDosyaIcerik(icerik); // useEffect ile metni günceller
-      if (!kisaltmaVar) setOkunanMetin(normal); // kısaltma yoksa hemen set et
-      setYukleniyor(false);
+      setDosyaIcerik(icerik);
+      // setYukleniyor(false); => Worker'a devrediliyor
     };
     reader.onerror = () => { setHata('Dosya okunurken hata oluştu.'); setYukleniyor(false); };
     reader.readAsText(dosya, 'latin1');
@@ -833,20 +887,7 @@ export default function BrfOku() {
     }
     return out;
   }, [dosyaIcerik]);
-  const gorunumEsleme = useMemo(() => {
-    if (!okunanMetin || !hucreler.length) return null;
-    const sonuc = kisaltmaAktif
-      ? metniBrailleyeCevirKisaltmali(okunanMetin, {
-        buyukHarfIsareti: true,
-        sayiIsareti: true,
-        ...kisaltmaSistemler,
-      })
-      : metniBrailleyeCevir(okunanMetin, {
-        buyukHarfIsareti: true,
-        sayiIsareti: true,
-      });
-    return sonuc.hucreler.length === hucreler.length ? sonuc.esleme : null;
-  }, [okunanMetin, hucreler, kisaltmaAktif, kisaltmaSistemler]);
+  const gorunumEsleme = eslemeWorkerSonuc?.length === hucreler.length ? eslemeWorkerSonuc : null;
   const hucreAnlamiOpts = gorunumEsleme ? { kaynak: okunanMetin, esleme: gorunumEsleme } : undefined;
 
   const toplamSayfa = Math.max(1, Math.ceil(hucreler.length / BRAILLE_SAYFA_BOYUTU));
@@ -1143,7 +1184,12 @@ export default function BrfOku() {
                   {!erisilebilirMod && seciliHucre && (
                     <div className="braille-hucre-popup" role="dialog" aria-label="Hücre anlamı">
                       <div className="bhp-header">
-                        <span className="bhp-baslik-kucuk">Hücre {seciliHucre.index + 1}</span>
+                        <div className="bhp-baslik-bloku">
+                          <span className="bhp-baslik-kucuk">Hücre {seciliHucre.index + 1}</span>
+                          <span className={'bhp-anlam bhp-tip-' + seciliHucre.anlam.tip}>
+                            {seciliHucre.anlam.baslik}
+                          </span>
+                        </div>
                         <button
                           type="button"
                           className="bhp-kapat"
@@ -1152,9 +1198,6 @@ export default function BrfOku() {
                         >✕</button>
                       </div>
                       <div className="bhp-noktalar">Nokta: {seciliHucre.anlam.noktaStr}</div>
-                      <div className={'bhp-anlam bhp-tip-' + seciliHucre.anlam.tip}>
-                        {seciliHucre.anlam.baslik}
-                      </div>
                       {seciliHucre.anlam.detay && (
                         <div className="bhp-detay">{seciliHucre.anlam.detay}</div>
                       )}

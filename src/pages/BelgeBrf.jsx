@@ -6,6 +6,10 @@ import BrailleCell from '../components/BrailleCell.jsx';
 import { metniBrailleyeCevir, metniBrailleyeCevirKisaltmali, siraSayisiSonRakamEtiketiNoktaEki } from '../utils/brailleCevir.js';
 import { hucreAnlami } from './Araclar.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
+import {
+  paraBirimiKaynakSonEkiAraliklari,
+  hucreParaBirimiKaynakBaglamiMi,
+} from '../utils/paraBirimiKaynak.js';
 
 const SATIRDA_HUCRE = 40;
 const SAYFADA_SATIR = 25;
@@ -47,7 +51,7 @@ export function kisaEtiket(anlam) {
     if (anlam.baslik.includes('Düzeltme') || anlam.baslik.includes('Yabancı Harf')) return '^';
     if (anlam.baslik.includes('Bağ İşareti')) return '-';
     if (anlam.baslik.includes('Ayırma')) return '3';
-    if (anlam.baslik.includes('Tek Küçük Harf')) return '5-6';
+    if (anlam.baslik.includes('Tek Küçük Harf')) return '(h)';
     if (anlam.baslik.includes('Kök') || anlam.baslik.includes('Parça')) return '*';
     return '*';
   }
@@ -77,8 +81,7 @@ export function kisaEtiket(anlam) {
   return anlam.baslik;
 }
 
-function metniBRFe(metin, cevirFn) {
-  const { hucreler } = cevirFn(metin, { buyukHarfIsareti: true, sayiIsareti: true });
+function metniBRFe(hucreler) {
   const satirlar = [];
   let satir = '';
   let sonBosluk = -1; // satır içinde son boş hücre konumu (boşluk)
@@ -126,11 +129,11 @@ export default function BelgeBrf() {
   const [belgeMetni, setBelgeMetni] = useState('');
   const [yukleniyor, setYukleniyor] = useState(false);
   const [hata, setHata] = useState('');
-  const [kisaltmaAktif, setKisaltmaAktif] = useState(false);
+  const [kisaltmaAktif, setKisaltmaAktif] = useState(true);
 
   const SISTEM_VARSAYILAN = { hece: true, birHarf: true, ikiHarf: true, kok: true, parca: true };
   const [kisaltmaSistemler, setKisaltmaSistemler] = useState(() => {
-    const saved = localStorage.getItem('belgeBrfKisaltmaSistemler');
+    const saved = localStorage.getItem('araclarKisaltmaSistemler');
     if (!saved) return { ...SISTEM_VARSAYILAN };
     try { return { ...SISTEM_VARSAYILAN, ...JSON.parse(saved) }; } catch { return { ...SISTEM_VARSAYILAN }; }
   });
@@ -139,7 +142,7 @@ export default function BelgeBrf() {
 
   const sistemToggle = (key) => setKisaltmaSistemler((prev) => {
     const yeni = { ...prev, [key]: !prev[key] };
-    localStorage.setItem('belgeBrfKisaltmaSistemler', JSON.stringify(yeni));
+    localStorage.setItem('araclarKisaltmaSistemler', JSON.stringify(yeni));
     return yeni;
   });
 
@@ -199,7 +202,7 @@ export default function BelgeBrf() {
     }
   }, [brailleSayfa]);
   const [seciliHucre, setSeciliHucre] = useState(null); // { index, anlam }
-  const [genisletAktif, setGenisletAktif] = useState(false);
+  const [genisletAktif, setGenisletAktif] = useState(true);
   // Erişilebilir mod: nokta grafiği yerine Unicode braille glifleri (⠁⠃⠉…).
   // Ekran okuyucular bu blokları “braille pattern dots …” veya tercih edilen
   // çevriyazı şeklinde okur; ek olarak aria-label kaynak metni sunar.
@@ -245,8 +248,8 @@ export default function BelgeBrf() {
   };
 
   const brfIndir = () => {
-    if (!belgeMetni.trim()) return;
-    const brf = metniBRFe(belgeMetni, cevirFn);
+    if (!belgeMetni.trim() || !hucreler.length) return;
+    const brf = metniBRFe(hucreler);
     const blob = new Blob([brf], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -278,7 +281,11 @@ export default function BelgeBrf() {
       const kaynak = esleme ? esleme[i] : -1;
       if (n.length === 0) { parcalar.push('boşluk'); continue; }
       const noktaMetni = n.join(' ');
-      const anlam = hucreAnlami(hh, i, kisaltmaAktif, { kaynak: kaynakMetin, esleme });
+      const anlam = hucreAnlami(hh, i, kisaltmaAktif, {
+        kaynak: kaynakMetin,
+        esleme,
+        paraBirimiKaynakAraliklari: paraBirimiKaynakSonEkiAraliklari(kaynakMetin),
+      });
       if (anlam.tip === 'isaret') {
         parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
         continue;
@@ -302,18 +309,68 @@ export default function BelgeBrf() {
     setKonusuyor(false); konusmayiDurdur(); setAktifTab('metin'); setBrailleSayfa(0);
   };
 
+  const [cevirSonuc, setCevirSonuc] = useState({ hucreler: [], esleme: [], kaynak: '' });
+
+  // Worker için referanslar
+  const workerRef = useRef(null);
+  const islemIdRef = useRef(0);
+
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('../workers/araclarCevir.worker.js', import.meta.url), { type: 'module' });
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!belgeMetni || !workerRef.current) {
+      setCevirSonuc({ hucreler: [], esleme: [], kaynak: '' });
+      return;
+    }
+    setYukleniyor(true);
+    islemIdRef.current += 1;
+    const currentId = islemIdRef.current;
+    
+    workerRef.current.onmessage = (e) => {
+      if (e.data.requestId === currentId) {
+        if (e.data.ok && e.data.hucreler) {
+          setCevirSonuc({
+            hucreler: e.data.hucreler,
+            esleme: e.data.esleme,
+            kaynak: e.data.kaynak
+          });
+        } else if (!e.data.ok) {
+          setHata('Çeviri sırasında hata oluştu: ' + (e.data.error || ''));
+        }
+        setYukleniyor(false);
+      }
+    };
+
+    const t = setTimeout(() => {
+      workerRef.current.postMessage({
+        text: belgeMetni,
+        kisaltmali: kisaltmaAktif,
+        opts: { ...kisaltmaSistemler, buyukHarfIsareti: true, sayiIsareti: true },
+        requestId: currentId
+      });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [belgeMetni, kisaltmaAktif, kisaltmaSistemler]);
+
   const cevirFn = kisaltmaAktif
     ? (m, o) => metniBrailleyeCevirKisaltmali(m, { ...o, ...kisaltmaSistemler })
     : metniBrailleyeCevir;
-  const cevirSonuc = useMemo(() => {
-    if (!belgeMetni) return { hucreler: [], esleme: [], kaynak: '' };
-    const kaynak = belgeMetni;
-    const r = cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true });
-    return { hucreler: r.hucreler, esleme: r.esleme, kaynak };
-  }, [belgeMetni, kisaltmaAktif, kisaltmaSistemler]);
+    
   const hucreler = cevirSonuc.hucreler;
   const eslemeCache = cevirSonuc.esleme;
   const kaynakCache = cevirSonuc.kaynak;
+  const paraBirimiKaynakAraliklari = useMemo(
+    () => paraBirimiKaynakSonEkiAraliklari(kaynakCache),
+    [kaynakCache],
+  );
 
   const toplamSayfa = Math.max(1, Math.ceil(hucreler.length / BRAILLE_SAYFA_BOYUTU));
   const sayfaBaslangic = brailleSayfa * BRAILLE_SAYFA_BOYUTU;
@@ -499,7 +556,11 @@ export default function BelgeBrf() {
                 <div ref={brailleKutuRef} className={'araclar-nokta-gorunus belge-braille-kutu' + (genisletAktif ? ' genisletilmis' : '')} aria-label="Braille nokta görünümü">
                   {sayfaHucreler.map((noktalar, i) => {
                     const globalIdx = sayfaBaslangic + i;
-                    const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif, { kaynak: kaynakCache, esleme: eslemeCache });
+                    const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif, {
+                      kaynak: kaynakCache,
+                      esleme: eslemeCache,
+                      paraBirimiKaynakAraliklari,
+                    });
                     const kisaltmaHucre = kisaltmaAktif && (
                       anlam.tip === 'kisaltma' ||
                       (anlam.tip === 'isaret' && (
@@ -512,13 +573,15 @@ export default function BelgeBrf() {
                     const siraSayisiHucre = anlam.tip === 'rakam' && /^Sıra sayısı/u.test(anlam.baslik);
                     const ondalikAyiracHucre = anlam.tip === 'noktalama' && anlam.baslik.includes('ondalık ayraç');
                     const matematikHucre = anlam.tip === 'islem' || bolukIsaretiHucre || siraSayisiHucre || ondalikAyiracHucre;
+                    const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
                     // Sayı/büyük/tümü büyük gibi özel işaretler → siyah göster
-                    const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre && !bolukIsaretiHucre;
+                    const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre && !bolukIsaretiHucre && !paraBirimiHucre;
                     const sinif = 'belge-braille-hucre' +
                       (seciliHucre?.index === globalIdx ? ' secili' : '') +
                       (kisaltmaHucre ? ' kisaltma-hucre' : '') +
                       (noktalamaHucre ? ' noktalama-hucre' : '') +
                       (matematikHucre ? ' matematik-hucre' : '') +
+                      (paraBirimiHucre ? ' para-birimi-hucre' : '') +
                       (ozelIsaretHucre ? ' ozel-isaret-hucre' : '');
                     const etiket = genisletAktif
                       ? `${kisaEtiket(anlam)}${siraSayisiSonRakamEtiketiNoktaEki(
@@ -558,7 +621,12 @@ export default function BelgeBrf() {
                 {!erisilebilirMod && seciliHucre && (
                   <div className="braille-hucre-popup" role="dialog" aria-label="Hücre anlamı">
                     <div className="bhp-header">
-                      <span className="bhp-baslik-kucuk">Hücre {seciliHucre.index + 1}</span>
+                      <div className="bhp-baslik-bloku">
+                        <span className="bhp-baslik-kucuk">Hücre {seciliHucre.index + 1}</span>
+                        <span className={'bhp-anlam bhp-tip-' + seciliHucre.anlam.tip}>
+                          {seciliHucre.anlam.baslik}
+                        </span>
+                      </div>
                       <button
                         type="button"
                         className="bhp-kapat"
@@ -567,9 +635,6 @@ export default function BelgeBrf() {
                       >✕</button>
                     </div>
                     <div className="bhp-noktalar">Nokta: {seciliHucre.anlam.noktaStr}</div>
-                    <div className={'bhp-anlam bhp-tip-' + seciliHucre.anlam.tip}>
-                      {seciliHucre.anlam.baslik}
-                    </div>
                     {seciliHucre.anlam.detay && (
                       <div className="bhp-detay">{seciliHucre.anlam.detay}</div>
                     )}

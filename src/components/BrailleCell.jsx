@@ -1,5 +1,10 @@
 import React, { useRef } from 'react';
 import { konus, titret } from '../utils/ses.js';
+import {
+  BRAILLE_STATIK_HUCRE_OLCEK,
+  brailleHucreStatikArkaPlani,
+  noktaDizisindenBrailleBits,
+} from '../utils/brailleStatikHucreGorseli.js';
 
 /**
  * Braille hücresi bileşeni.
@@ -19,6 +24,8 @@ import { konus, titret } from '../utils/ses.js';
  *  - onNoktaTikla: (noktaNo: number) => void
  *  - baslik: string  (büyük gösterilecek harf/sembol; ekran okuyucudan gizlenir)
  *  - baslikAriaLabel: string
+ *  - baslikStyle: object
+ *  - statikDesen: tek katmanlı gradient desen (nadiren; çoğu görünüm .dot ile)
  */
 export default function BrailleCell({
   aktifNoktalar = [],
@@ -32,7 +39,8 @@ export default function BrailleCell({
   onNoktaTikla,
   baslik,
   baslikAriaLabel,
-  baslikStyle
+  baslikStyle,
+  statikDesen = false,
 }) {
   /** Klavye odağı ve okuyucu sırası 1–6; iki sütunlu Braille düzeni grid ile */
   const NOKTA_DOM_SIRA = [1, 2, 3, 4, 5, 6];
@@ -76,6 +84,14 @@ export default function BrailleCell({
   const noktayiBirak = () => {
     sonOkunan.current = null;
   };
+
+  const statikKullan = statikDesen
+    && !tiklanabilir
+    && !kesfedilebilir
+    && !baslik
+    && dogruNoktalar.length === 0
+    && yanlisNoktalar.length === 0
+    && hedefNoktalar.length === 0;
 
   // Dokunmatikte parmak hareket ettikçe altındaki noktayı bul
   const dokunusHareket = (e) => {
@@ -121,15 +137,25 @@ export default function BrailleCell({
         {baslik || '\u00A0'}
       </div>
       <div
-        className="cell"
+        className={'cell' + (statikKullan ? ' braille-cell-statik' : '')}
         role="group"
         aria-label="Braille hücresi, altı nokta"
         onTouchStart={dokunusHareket}
         onTouchMove={dokunusHareket}
         onTouchEnd={dokunusBitti}
         onMouseLeave={noktayiBirak}
+        {...(statikKullan
+          ? {
+              style: {
+                width: BRAILLE_STATIK_HUCRE_OLCEK.genislik,
+                height: BRAILLE_STATIK_HUCRE_OLCEK.yukseklik,
+                background: brailleHucreStatikArkaPlani(noktaDizisindenBrailleBits(aktifNoktalar)),
+                backgroundColor: 'transparent',
+              },
+            }
+          : {})}
       >
-        {NOKTA_DOM_SIRA.map((n) => {
+        {statikKullan ? null : NOKTA_DOM_SIRA.map((n) => {
           const Etiket = tiklanabilir ? 'button' : 'div';
           const yer = noktaGridYerlesimi[n];
           return (

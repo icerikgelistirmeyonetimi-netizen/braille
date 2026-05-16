@@ -14,6 +14,10 @@
 
 import { HARFLER, RAKAMLAR, NOKTALAMA, RUMUZLU_IFADELER } from '../data/braille.js';
 import { MATEMATIK_SEMBOLLER, SIRA_SAYISI_RAKAM_NOKTALARI } from '../data/matematik.js';
+import {
+  kelimeyiSayiSonrasiBirimiyleEslestir,
+  paraBirimiKaynakSonEkiAraliklari,
+} from './paraBirimiKaynak.js';
 
 const HARF_TABLO = (() => {
   const m = new Map();
@@ -57,11 +61,14 @@ const MATEMATIK_GENEL_SEMBOL_ADLARI = new Set([
   'elemanıdır',
   'birleşim',
   'kesişim',
+  'fark',
   'derece işareti',
   'üs işareti',
   'karekök işareti',
   'binde',
   'eşlik',
+  'mutlak değer açma',
+  'mutlak değer kapama',
 ]);
 const EK_MATEMATIK_SEMBOLLER = [
   { ad: 've işareti', sembol: '&', aciklama: 'Ve işareti iki hücreyle yazılır.', hucreler: [[4], [1, 2, 3, 4, 6]] },
@@ -84,11 +91,19 @@ export const MATEMATIK_ISLEM_ISARETLERI = MATEMATIK_SEMBOLLER
 const ISLEM_ISARETI_TABLO = new Map(
   MATEMATIK_ISLEM_ISARETLERI.map((isaret) => [isaret.sembol, isaret]),
 );
-ISLEM_ISARETI_TABLO.set('×', ISLEM_ISARETI_TABLO.get('x'));
 ISLEM_ISARETI_TABLO.set('−', ISLEM_ISARETI_TABLO.get('-'));
+const skalerCarpmaIsaretKaydi = ISLEM_ISARETI_TABLO.get('•');
+if (skalerCarpmaIsaretKaydi) {
+  ISLEM_ISARETI_TABLO.set('·', skalerCarpmaIsaretKaydi);
+  ISLEM_ISARETI_TABLO.set('∙', skalerCarpmaIsaretKaydi);
+}
 const ISLEM_HUCRE_ESLESMELERI = MATEMATIK_ISLEM_ISARETLERI
   .map((isaret) => ({ ...isaret, anahtar: hucreDizisiAnahtari(isaret.hucreler) }))
   .sort((a, b) => b.hucreler.length - a.hucreler.length);
+const MUTLAK_DEGER_ACMA_ISARETI_KAYDI =
+  MATEMATIK_ISLEM_ISARETLERI.find((kayit) => kayit.ad === 'mutlak değer açma') ?? null;
+const MUTLAK_DEGER_KAPAMA_ISARETI_KAYDI =
+  MATEMATIK_ISLEM_ISARETLERI.find((kayit) => kayit.ad === 'mutlak değer kapama') ?? null;
 const SAYI_MODU_KORUYAN_MATEMATIK_ISARETLERI = new Set([
   'küçüktür',
   'büyüktür',
@@ -127,21 +142,85 @@ function buyukHarfKarakteriMi(ch) {
   return !!ch && ch === ch.toLocaleUpperCase('tr') && ch !== ch.toLocaleLowerCase('tr');
 }
 
+/** Boşluk + Word/HTML sızdıran görünmez ayırıcılar (ZWSP, BOM vb.). */
+function gorunmezMetinAyricisiMi(ch) {
+  return ch === '\u200b'
+    || ch === '\u200c'
+    || ch === '\u200d'
+    || ch === '\ufeff'
+    || ch === '\u00ad';
+}
+
 function oncekiBoslukDisiKarakter(metin, index) {
   let i = index - 1;
-  while (i >= 0 && /\s/u.test(metin[i])) i--;
+  while (i >= 0 && (/\s/u.test(metin[i]) || gorunmezMetinAyricisiMi(metin[i]))) i--;
   return i >= 0 ? metin[i] : '';
 }
 
 function sonrakiBoslukDisiKarakter(metin, index) {
   let i = index + 1;
-  while (i < metin.length && /\s/u.test(metin[i])) i++;
+  while (
+    i < metin.length
+    && (/\s/u.test(metin[i]) || gorunmezMetinAyricisiMi(metin[i]))
+  ) i++;
   return i < metin.length ? metin[i] : '';
 }
 
+/**
+ * Sağda sayı/harf bir operatörden (+×÷=) önce geliyorsa veya operatör yoksa açılış;
+ * aksi halde derinlik > 0 ise kapanış; derinlik 0 ise yine açılış (yedek).
+ * Encoder, kısaltmalı çeviri ve kaynak derinliği ile ortak kullanılır.
+ */
+export function mutlakDikeyCizgiAcilisKarari(metin, indeks, derinlikOnceki) {
+  const kalanMetin = metin.slice(indeks + 1);
+  const sonrakiDegerIndeks = kalanMetin.search(/[\d\p{L}]/u);
+  const sonrakiOperatorIndeks = kalanMetin.search(/[+×÷=]/);
+  const degerDahaYakin =
+    sonrakiDegerIndeks !== -1
+    && (sonrakiOperatorIndeks === -1 || sonrakiDegerIndeks < sonrakiOperatorIndeks);
+  if (degerDahaYakin) return { acilis: true, derinlik: derinlikOnceki + 1 };
+  if (derinlikOnceki > 0) return { acilis: false, derinlik: derinlikOnceki - 1 };
+  return { acilis: true, derinlik: derinlikOnceki + 1 };
+}
+
+/** Encoder ile uyumlu mutlak derinliği: satır sonunda sıfırlanır; `|` için mutlakDikeyCizgiAcilisKarari uygulanır. */
+export function metindeMutlakDegerDerinligiOnceki(metin, index) {
+  if (!metin || index < 0) return 0;
+  let derinlik = 0;
+  const sinir = Math.min(index, metin.length);
+  for (let i = 0; i < sinir; i++) {
+    const c = metin[i];
+    if (c === '\n' || c === '\r') {
+      derinlik = 0;
+      continue;
+    }
+    if (c !== '|') continue;
+    derinlik = mutlakDikeyCizgiAcilisKarari(metin, i, derinlik).derinlik;
+  }
+  return derinlik;
+}
+
+export function metindeMutlakDegerIcindeMi(metin, index) {
+  return metindeMutlakDegerDerinligiOnceki(metin, index) > 0;
+}
+
 function islenenEksiBaglamiMi(metin, index) {
+  if (metindeMutlakDegerIcindeMi(metin, index)) return true;
   const onceki = oncekiBoslukDisiKarakter(metin, index);
   const sonraki = sonrakiBoslukDisiKarakter(metin, index);
+  const solKomsu = index > 0 ? metin[index - 1] : '';
+  // Negatif sayı / işaretli rakam: "-5" → [5-6][3-6] + # + rakam (bağlı sayı "3-5" öbeği ayrı dallanır)
+  if (/\d/u.test(sonraki)) {
+    if (!onceki) return true;
+    // Eksiden hemen önce boşluk veya görünmez ayırıcı + rakam: " -1", "\n-1", "x -1" → çıkarma (tire değil)
+    if (
+      /\s/u.test(solKomsu)
+      || gorunmezMetinAyricisiMi(solKomsu)
+    ) return true;
+    if ('([{'.includes(onceki)) return true;
+    if ('=+×÷*'.includes(onceki)) return true;
+    if (onceki === '-') return true;
+  }
   const kalan = metin.slice(index + 1);
   const esitlikVar = kalan.includes('=');
   if (!esitlikVar) return false;
@@ -150,23 +229,13 @@ function islenenEksiBaglamiMi(metin, index) {
   return /\d|\)/u.test(onceki) && /\d|\(/u.test(sonraki);
 }
 
-function islenenCarpmaBaglamiMi(metin, index) {
-  const onceki = oncekiBoslukDisiKarakter(metin, index);
-  const sonraki = sonrakiBoslukDisiKarakter(metin, index);
-  return /\d|\)/u.test(onceki) && /\d|\(/u.test(sonraki);
-}
-
 function hucreDizisiAnahtari(hucreler) {
   return hucreler.map((hucre) => noktalariAnahtara(hucre)).join('|');
 }
 
-function harfTablosundaMi(ch) {
-  return !!ch && HARF_TABLO.has(ch.toLocaleUpperCase('tr'));
-}
-
 function harfliSayiEslesmesi(metin, index) {
   const ilk = metin[index];
-  if (!RAKAM_TABLO.has(ilk) && !harfTablosundaMi(ilk)) return null;
+  if (!RAKAM_TABLO.has(ilk) && !harfMi(ilk)) return null;
   let j = index;
   let rakamVar = false;
   let harfVar = false;
@@ -177,7 +246,7 @@ function harfliSayiEslesmesi(metin, index) {
       j++;
       continue;
     }
-    if (harfTablosundaMi(ch)) {
+    if (harfMi(ch)) {
       harfVar = true;
       j++;
       continue;
@@ -194,6 +263,14 @@ function harfliSayiEkle(metin, baslangic, ekle, sayiIsareti) {
     const ch = metin[offset];
     if (RAKAM_TABLO.has(ch)) {
       ekle(RAKAM_TABLO.get(ch), baslangic + offset);
+      continue;
+    }
+    const duzeltmeli = duzeltmeliHarfBilgisi(ch);
+    if (duzeltmeli) {
+      ekle(TEK_KUCUK_HARF_ISARETI, -1);
+      if (buyukHarfKarakteriMi(ch)) ekle(BUYUK_HARF_ISARETI, -1);
+      ekle(DUZELTME_YABANCI_HARF_ISARETI, -1);
+      ekle(duzeltmeli.noktalar, baslangic + offset);
       continue;
     }
     const ust = ch.toLocaleUpperCase('tr');
@@ -228,9 +305,19 @@ function indeksMatematikIsaretininSonundatur(metin, sonIndeks) {
 export function matematikIslemIsaretiMetinEslesmesi(metin, index, yorumTercihleri = {}) {
   const ch = metin[index];
   const yorumTercihi = yorumTercihleri?.[index];
-  if (ch === '-' && yorumTercihi?.eksiTire) return null;
+  if (ch === '|') {
+    const derinlikOnceki = metindeMutlakDegerDerinligiOnceki(metin, index);
+    const karar = mutlakDikeyCizgiAcilisKarari(metin, index, derinlikOnceki);
+    return karar.acilis ? MUTLAK_DEGER_ACMA_ISARETI_KAYDI : MUTLAK_DEGER_KAPAMA_ISARETI_KAYDI;
+  }
+  // Tire tercihi yalnızca gerçekten matematik eksisi olmayan "-" için (ör. kelime-kelime); "-2" her zaman eksi.
+  if (
+    ch === '-'
+    && yorumTercihi?.eksiTire
+    && !metindeMutlakDegerIcindeMi(metin, index)
+    && !islenenEksiBaglamiMi(metin, index)
+  ) return null;
   if (ch === '-' && !islenenEksiBaglamiMi(metin, index)) return null;
-  if (ch === 'x' && !islenenCarpmaBaglamiMi(metin, index)) return null;
   const isaret = ISLEM_ISARETI_TABLO.get(ch);
   if (!isaret) return null;
   return isaret;
@@ -273,15 +360,20 @@ function tekHucreliMatematikSembolBaglamiMi(isaret, hucreler, index) {
   const onceki = oncekiBosOlmayanHucre(hucreler, index);
   const sonraki = sonrakiBosOlmayanHucre(hucreler, index);
   if (isaret.hucreler.length !== 1) return true;
-  if (isaret.ad === 'yüzde') return sayiIsaretiMi(sonraki);
-  if (isaret.ad === 'parantez açma') {
+  if (isaret.ad === 'yüzde' || isaret.ad === 'binde') return sayiIsaretiMi(sonraki);
+  if (isaret.ad === 'parantez açma' || isaret.ad === 'köşeli parantez açma') {
     return !!(
       sayiIsaretiMi(sonraki)
       || tekKucukHarfIsaretiMi(sonraki)
       || buyukHarfIsaretiMi(sonraki)
     );
   }
-  if (isaret.ad === 'parantez kapama') return matematikOperandHucreMi(onceki);
+  if (isaret.ad === 'parantez kapama' || isaret.ad === 'köşeli parantez kapama') {
+    return matematikOperandHucreMi(onceki);
+  }
+  if (isaret.ad === 'dış parantez') {
+    return matematikOperandHucreMi(onceki) || (sonraki && (sayiIsaretiMi(sonraki) || tekKucukHarfIsaretiMi(sonraki) || buyukHarfIsaretiMi(sonraki)));
+  }
   if (isaret.ad === 'kesir çizgisi') {
     return matematikOperandHucreMi(onceki) && matematikOperandHucreMi(sonraki);
   }
@@ -289,6 +381,7 @@ function tekHucreliMatematikSembolBaglamiMi(isaret, hucreler, index) {
     isaret.ad === 'küçüktür'
     || isaret.ad === 'büyüktür'
     || isaret.ad === 'denklik'
+    || isaret.ad === 'fark'
   ) {
     return matematikOperandHucreMi(onceki) && matematikOperandHucreMi(sonraki);
   }
@@ -600,86 +693,6 @@ export function kelimeTumuBuyukMu(kelime) {
   return harfSayisi >= 2;
 }
 
-/** @param {number} basMutlak @param {string} kesit */
-function ciftRakamIlkIndeksleri(basMutlak, kesit) {
-  const ilkler = [];
-  let o = 0;
-  while (o < kesit.length) {
-    while (o < kesit.length && !/\d/u.test(kesit[o])) o++;
-    if (o >= kesit.length) break;
-    ilkler.push(basMutlak + o);
-    while (o < kesit.length && /\d/u.test(kesit[o])) o++;
-  }
-  return ilkler;
-}
-
-/**
- * MEB 1.2.5 çift rakam işareti: üç veya daha fazla ardışık sayı (virgülle veya dikey satırlarda).
- * Her sayının İLK rakam indeksine göre işaret rolleri atanır (ara rakamlarda rol yok).
- * @returns {Map<number, 'ilk_cift' | 'orta_isaretsiz' | 'son_tek'>}
- */
-function ciftRakamIsaretiPlaniOlustur(metin) {
-  /** @type {Map<number, 'ilk_cift' | 'orta_isaretsiz' | 'son_tek'>} */
-  const plan = new Map();
-  if (!metin) return plan;
-  const yatayAraliklar = [];
-  const yatayRe = /\d+(?:\s*,\s*\d+){2,}/gu;
-  /** @type {RegExpExecArray | null} */
-  let ym = null;
-  while ((ym = yatayRe.exec(metin)) !== null) {
-    const tam = ym[0];
-    const bas = ym.index;
-    yatayAraliklar.push([bas, bas + tam.length]);
-    const ilkler = ciftRakamIlkIndeksleri(bas, tam);
-    if (ilkler.length < 3) continue;
-    plan.set(ilkler[0], 'ilk_cift');
-    for (let u = 1; u < ilkler.length - 1; u++) plan.set(ilkler[u], 'orta_isaretsiz');
-    plan.set(ilkler[ilkler.length - 1], 'son_tek');
-  }
-  const aralikKapsiyor = (konumIndeks) =>
-    yatayAraliklar.some(([a, b]) => konumIndeks >= a && konumIndeks < b);
-  /** @type {{ ilkRakam: number }[]} */
-  let dikeyTampon = [];
-  const flushDikeyTampon = () => {
-    if (dikeyTampon.length < 3) {
-      dikeyTampon = [];
-      return;
-    }
-    const cakisiyor = dikeyTampon.some((k) => aralikKapsiyor(k.ilkRakam));
-    if (!cakisiyor) {
-      const ilklerDikey = dikeyTampon.map((x) => x.ilkRakam);
-      for (let gi = 0; gi < ilklerDikey.length; gi++) {
-        const idx = ilklerDikey[gi];
-        if (plan.has(idx)) continue;
-        if (gi === 0) plan.set(idx, 'ilk_cift');
-        else if (gi === ilklerDikey.length - 1) plan.set(idx, 'son_tek');
-        else plan.set(idx, 'orta_isaretsiz');
-      }
-    }
-    dikeyTampon = [];
-  };
-  let konum = 0;
-  while (konum < metin.length) {
-    const satirSonu = metin.indexOf('\n', konum);
-    const kesitSonu = satirSonu === -1 ? metin.length : satirSonu;
-    const satHam = metin.slice(konum, kesitSonu);
-    const satir = satHam.replace(/\r+$/, '');
-    const satirBasi = konum;
-    /** @type {RegExpMatchArray | null} */
-    const mSat = satir.match(/^\s*(\d+)\s*$/u);
-    if (mSat) {
-      const ilkMutlak = satirBasi + satir.indexOf(mSat[1][0]);
-      dikeyTampon.push({ ilkRakam: ilkMutlak });
-    } else {
-      flushDikeyTampon();
-    }
-    if (satirSonu === -1) break;
-    konum = satirSonu + 1;
-  }
-  flushDikeyTampon();
-  return plan;
-}
-
 /**
  * Bu virgül, en az üç rakam grubunu ayıran liste ifadesine mi ait? (Çift rakam işareti kuralına giren sıra.)
  * Ondalık virgülle karışmasın diye önce liste tarafı seçilir.
@@ -760,8 +773,14 @@ function siraSayisiSonrakiEkUzunlugu(metin, kesmeSonrasi) {
   return m ? m[0].length : 0;
 }
 
-function sayiBagIfadesiEslesmesi(metin, index) {
+/** Mutlak derinliği > 0 iken bağlı sayı kalıbını kullanma; içerideki `-` matematiksel eksidir (ör. |1-1|). */
+function sayiBagIfadesiEslesmesi(metin, index, encoderMutlakDerinligi) {
   if (!RAKAM_TABLO.has(metin[index])) return null;
+  const md =
+    encoderMutlakDerinligi !== undefined
+      ? encoderMutlakDerinligi
+      : metindeMutlakDegerDerinligiOnceki(metin, index);
+  if (md > 0) return null;
   if (index > 1 && metin[index - 1] === ',' && /\d/u.test(metin[index - 2])) return null;
   const satirSonu = metin.indexOf('\n', index);
   const sinir = satirSonu === -1 ? metin.length : satirSonu;
@@ -786,9 +805,28 @@ function sayiBagIfadesiEkle(eslesme, baslangic, ekle, sayiIsareti) {
     ekle(RAKAM_TABLO.get(eslesme.ilk[i]), baslangic + i);
   }
   ekle(TARIH_AYIRMA_ISARETI, eslesme.bagIndeksi);
+  // İkinci rakam grubu yine rakamdır; # olmadan harf desenleriyle çakışır (ör. 2000-2001 → b,j,j,a).
+  if (sayiIsareti) ekle(SAYI_ISARETI, -1);
   const ikinciBaslangic = baslangic + eslesme.uzunluk - eslesme.ikinci.length;
   for (let i = 0; i < eslesme.ikinci.length; i++) {
     ekle(RAKAM_TABLO.get(eslesme.ikinci[i]), ikinciBaslangic + i);
+  }
+}
+
+/** Sayıdan sonra gelen ölçü/para birimi: tek [5,6]; harfler yalın (büyük/küçük işareti yok). */
+function sayiSonrasiBirimHucreleriniEkle(kelHam, birimSembol, kaynakBasIdx, ekle) {
+  ekle(TEK_KUCUK_HARF_ISARETI, -1);
+  const paraSemboldenHarfe = { $: 'd', '€': 'e', '£': 's' };
+  const paraHarf = paraSemboldenHarfe[birimSembol];
+  if (paraHarf) {
+    ekle(HARF_TABLO.get(paraHarf.toLocaleUpperCase('tr')), kaynakBasIdx);
+    return;
+  }
+  for (let ci = 0; ci < kelHam.length; ci++) {
+    const ust = kelHam[ci].toLocaleUpperCase('tr');
+    if (HARF_TABLO.has(ust)) {
+      ekle(HARF_TABLO.get(ust), kaynakBasIdx + ci);
+    }
   }
 }
 
@@ -817,13 +855,22 @@ export function metniBrailleyeCevir(metin, opt = {}) {
   let sayiModu = false;
   let tirnakAcik = false; // düz " için açma/kapama toggle
   let tumuBuyukKalan = 0; // bu sayıya kadar gelen harfler için per-letter [6] verme
-  const ciftPlani = sayiIsareti ? ciftRakamIsaretiPlaniOlustur(metin) : new Map();
+  /** ASCII | : sağda değer/operatör sırasına göre aç/kapa (mutlakDikeyCizgiAcilisKarari). */
+  let mutlakDegerDerinligi = 0;
+  const birimKaynakAraliklari = paraBirimiKaynakSonEkiAraliklari(metin);
 
   for (let i = 0; i < metin.length; i++) {
     const ch = metin[i];
 
+    if (birimKaynakAraliklari.some((a) => i > a.bas && i < a.son)) {
+      sayiModu = false;
+      tumuBuyukKalan = 0;
+      continue;
+    }
+
     if (/\s/u.test(ch)) {
       sayiModu = false;
+      if (ch === '\n' || ch === '\r') mutlakDegerDerinligi = 0;
       ekle([], i);
       continue;
     }
@@ -846,7 +893,7 @@ export function metniBrailleyeCevir(metin, opt = {}) {
       continue;
     }
 
-    const sayiBag = sayiBagIfadesiEslesmesi(metin, i);
+    const sayiBag = sayiBagIfadesiEslesmesi(metin, i, mutlakDegerDerinligi);
     if (sayiBag) {
       sayiBagIfadesiEkle(sayiBag, i, ekle, sayiIsareti);
       sayiModu = true;
@@ -884,9 +931,24 @@ export function metniBrailleyeCevir(metin, opt = {}) {
       }
     }
 
+    if (ch === '|') {
+      const karar = mutlakDikeyCizgiAcilisKarari(metin, i, mutlakDegerDerinligi);
+      ekle(karar.acilis ? [1, 2, 3] : [4, 5, 6], i);
+      mutlakDegerDerinligi = karar.derinlik;
+      // KURAL: Mutlak değer çubuğu sayı modunu kırar (sonraki rakam için # gerekir).
+      sayiModu = false;
+      continue;
+    }
+
     const islemIsareti = matematikIslemIsaretiMetinEslesmesi(metin, i, yorumTercihleri);
     if (islemIsareti) {
-      for (const hucre of islemIsareti.hucreler) ekle(hucre, i);
+      const matematikEksiKarakteriMi = ch === '-' || ch === '\u2212';
+      if (matematikEksiKarakteriMi && islemIsareti.ad === 'eksi') {
+        ekle([5, 6], i);
+        ekle([3, 6], i);
+      } else {
+        for (const hucre of islemIsareti.hucreler) ekle(hucre, i);
+      }
       sayiModu = sayiModu && matematikIsaretiSayiModunuKorurMu(islemIsareti);
       tumuBuyukKalan = 0;
       continue;
@@ -922,16 +984,9 @@ export function metniBrailleyeCevir(metin, opt = {}) {
         i = j - 1;
         continue;
       }
-      const rol = ciftPlani.get(i);
-      if (sayiIsareti) {
-        if (rol === 'ilk_cift') {
-          ekle(SAYI_ISARETI, -1);
-          ekle(SAYI_ISARETI, -1);
-        } else if (rol === 'son_tek') {
-          if (!sayiModu) ekle(SAYI_ISARETI, -1);
-        } else if (rol !== 'orta_isaretsiz') {
-          if (!sayiModu) ekle(SAYI_ISARETI, -1);
-        }
+      // KURAL: Sayı modu kapalıysa (işlem, mutlak veya boşluktan geldiysek) rakamdan önce # zorunlu.
+      if (sayiIsareti && !sayiModu) {
+        ekle(SAYI_ISARETI, -1);
       }
       ekle(RAKAM_TABLO.get(ch), i);
       sayiModu = true;
@@ -960,6 +1015,19 @@ export function metniBrailleyeCevir(metin, opt = {}) {
       ekle(duzeltmeli.noktalar, i);
       tumuBuyukKalan = 0;
       continue;
+    }
+
+    const birimBuBaslangic = birimKaynakAraliklari.find((a) => i === a.bas);
+    if (birimBuBaslangic) {
+      const kelHam = metin.slice(birimBuBaslangic.bas, birimBuBaslangic.son);
+      const birimNorm = kelimeyiSayiSonrasiBirimiyleEslestir(kelHam);
+      if (birimNorm) {
+        sayiSonrasiBirimHucreleriniEkle(kelHam, birimNorm, birimBuBaslangic.bas, ekle);
+        sayiModu = false;
+        tumuBuyukKalan = 0;
+        i = birimBuBaslangic.son - 1;
+        continue;
+      }
     }
 
     // Harfler (Türkçe destekli)
@@ -1178,6 +1246,31 @@ export function duzeltmeliHucreyiMetneCevir(noktalar) {
     case 'E': return 'ê';
     default: return harf.toLocaleLowerCase('tr');
   }
+}
+
+/** [5,6] ve isteğe bağlı [6], isteğe bağlı düzeltme [4] sonrası harfi okur (Türkçe ve yabancı). */
+export function tekHarfIsaretiSonrasiHarfOkuma(hucreler, index) {
+  if (!Array.isArray(hucreler) || index < 0 || index >= hucreler.length) return null;
+  if (!tekKucukHarfIsaretiMi(hucreler[index])) return null;
+  let i = index + 1;
+  let buyuk = false;
+  if (i < hucreler.length && buyukHarfIsaretiMi(hucreler[i])) {
+    buyuk = true;
+    i += 1;
+  }
+  if (i >= hucreler.length) return null;
+  if (duzeltmeYabanciHarfIsaretiMi(hucreler[i])) {
+    i += 1;
+    if (i < hucreler.length && buyukHarfIsaretiMi(hucreler[i])) {
+      buyuk = true;
+      i += 1;
+    }
+  }
+  if (i >= hucreler.length) return null;
+  const hamHarf = duzeltmeliHucreyiMetneCevir(hucreler[i]) || hucreyiKarakteryap(hucreler[i]);
+  if (!hamHarf || hamHarf === ' ') return null;
+  const metin = buyuk ? hamHarf.toLocaleUpperCase('tr') : hamHarf.toLocaleLowerCase('tr');
+  return { metin, sonrakiIndex: i + 1 };
 }
 
 export function tarihHucreAraligi(hucreler, index) {
@@ -1689,62 +1782,76 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
       if (saatBolgesi) {
         tokenler.push({ tip: 'saat', deger: saatBolgesi, idx: i });
         i += saatBolgesi.uzunluk;
-      } else if (sayiBagIfadesiEslesmesi(metin, i)) {
-        const deger = sayiBagIfadesiEslesmesi(metin, i);
-        tokenler.push({ tip: 'sayiBag', deger, idx: i });
-        i += deger.uzunluk;
-      } else if (bolukluSayiEslesmesi(metin, i)) {
-        const deger = bolukluSayiEslesmesi(metin, i);
-        tokenler.push({ tip: 'bolukluSayi', deger, idx: i });
-        i += deger.length;
-      } else if (/\s/.test(ch)) {
-        tokenler.push({ tip: 'bosluk', deger: ch, idx: i });
-        i++;
-      } else if (harfliSayiEslesmesi(metin, i)) {
-        const deger = harfliSayiEslesmesi(metin, i);
-        tokenler.push({ tip: 'harfliSayi', deger, idx: i });
-        i += deger.length;
-      } else if (matematikIslemIsaretiMetinEslesmesi(metin, i, yorumTercihleri)) {
-        tokenler.push({ tip: 'islem', deger: ch, idx: i });
-        i++;
-      } else if (NOKTA_TABLO.has(ch)) {
-        tokenler.push({ tip: 'noktalama', deger: ch, idx: i });
-        i++;
-      } else if (ch === '^') {
-        tokenler.push({ tip: 'duzeltme', deger: ch, idx: i });
-        i++;
-      } else if (RAKAM_TABLO.has(ch)) {
-        let j = i;
-        while (j < metin.length && RAKAM_TABLO.has(metin[j])) j++;
-        tokenler.push({ tip: 'rakam', deger: metin.slice(i, j), idx: i });
-        i = j;
       } else {
-        let j = i;
-        while (j < metin.length) {
-          const c = metin[j];
-          if (
-            /\s/.test(c)
-            || NOKTA_TABLO.has(c)
-            || RAKAM_TABLO.has(c)
-            || matematikIslemIsaretiMetinEslesmesi(metin, j, yorumTercihleri)
-          ) break;
-          j++;
+        const sayiBagTok = sayiBagIfadesiEslesmesi(metin, i);
+        if (sayiBagTok) {
+          tokenler.push({ tip: 'sayiBag', deger: sayiBagTok, idx: i });
+          i += sayiBagTok.uzunluk;
+        } else if (bolukluSayiEslesmesi(metin, i)) {
+          const deger = bolukluSayiEslesmesi(metin, i);
+          tokenler.push({ tip: 'bolukluSayi', deger, idx: i });
+          i += deger.length;
+        } else if (/\s/.test(ch)) {
+          tokenler.push({ tip: 'bosluk', deger: ch, idx: i });
+          i++;
+        } else if (harfliSayiEslesmesi(metin, i)) {
+          const deger = harfliSayiEslesmesi(metin, i);
+          tokenler.push({ tip: 'harfliSayi', deger, idx: i });
+          i += deger.length;
+        } else if (ch === '|') {
+          tokenler.push({ tip: 'mutlakDikey', deger: ch, idx: i });
+          i++;
+        } else if (matematikIslemIsaretiMetinEslesmesi(metin, i, yorumTercihleri)) {
+          tokenler.push({ tip: 'islem', deger: ch, idx: i });
+          i++;
+        } else if (NOKTA_TABLO.has(ch)) {
+          tokenler.push({ tip: 'noktalama', deger: ch, idx: i });
+          i++;
+        } else if (ch === '^') {
+          tokenler.push({ tip: 'duzeltme', deger: ch, idx: i });
+          i++;
+        } else if (RAKAM_TABLO.has(ch)) {
+          let j = i;
+          while (j < metin.length && RAKAM_TABLO.has(metin[j])) j++;
+          tokenler.push({ tip: 'rakam', deger: metin.slice(i, j), idx: i });
+          i = j;
+        } else {
+          let j = i;
+          while (j < metin.length) {
+            const c = metin[j];
+            if (
+              /\s/.test(c)
+              || NOKTA_TABLO.has(c)
+              || RAKAM_TABLO.has(c)
+              || c === '|'
+              || matematikIslemIsaretiMetinEslesmesi(metin, j, yorumTercihleri)
+            ) break;
+            j++;
+          }
+          tokenler.push({ tip: 'kelime', deger: metin.slice(i, j), idx: i });
+          i = j;
         }
-        tokenler.push({ tip: 'kelime', deger: metin.slice(i, j), idx: i });
-        i = j;
       }
     }
   }
 
   const islenmisJetonlar = sirayaSayiJetonlariniDuzenle(tokenler);
 
-  const ciftPlani = sayiIsareti ? ciftRakamIsaretiPlaniOlustur(metin) : new Map();
+  const birimKaynakAraliklari = paraBirimiKaynakSonEkiAraliklari(metin);
   let sayiModu = false;
+  let mutlakDegerDerinligi = 0;
 
   for (let ti = 0; ti < islenmisJetonlar.length; ti++) {
     const tok = islenmisJetonlar[ti];
     if (tok.tip === 'bosluk') {
       ekle([], tok.idx);
+      sayiModu = false;
+      if (tok.deger === '\n' || tok.deger === '\r') mutlakDegerDerinligi = 0;
+    } else if (tok.tip === 'mutlakDikey') {
+      const karar = mutlakDikeyCizgiAcilisKarari(metin, tok.idx, mutlakDegerDerinligi);
+      ekle(karar.acilis ? [1, 2, 3] : [4, 5, 6], tok.idx);
+      mutlakDegerDerinligi = karar.derinlik;
+      // KURAL: Mutlak değer çubuğu sayı modunu kırar.
       sayiModu = false;
     } else if (tok.tip === 'bolukluSayi') {
       bolukluSayiEkle(tok.deger, tok.idx, ekle, sayiIsareti);
@@ -1762,8 +1869,15 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
       sayiModu = false;
     } else if (tok.tip === 'islem') {
       const islemIsareti = matematikIslemIsaretiMetinEslesmesi(metin, tok.idx, yorumTercihleri);
+      const chTok = metin[tok.idx];
+      const matematikEksiKarakteriMi = chTok === '-' || chTok === '\u2212';
       if (islemIsareti) {
-        for (const hucre of islemIsareti.hucreler) ekle(hucre, tok.idx);
+        if (matematikEksiKarakteriMi && islemIsareti.ad === 'eksi') {
+          ekle([5, 6], tok.idx);
+          ekle([3, 6], tok.idx);
+        } else {
+          for (const hucre of islemIsareti.hucreler) ekle(hucre, tok.idx);
+        }
       }
       sayiModu = sayiModu && matematikIsaretiSayiModunuKorurMu(islemIsareti);
     } else if (tok.tip === 'harfliSayi') {
@@ -1797,16 +1911,9 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
         sayiModu = false;
         continue;
       }
-      const rol = ciftPlani.get(tok.idx);
-      if (sayiIsareti) {
-        if (rol === 'ilk_cift') {
-          ekle(SAYI_ISARETI, -1);
-          ekle(SAYI_ISARETI, -1);
-        } else if (rol === 'son_tek') {
-          if (!sayiModu) ekle(SAYI_ISARETI, -1);
-        } else if (rol !== 'orta_isaretsiz') {
-          if (!sayiModu) ekle(SAYI_ISARETI, -1);
-        }
+      // KURAL: Sayı modu kapalıysa rakam grubundan önce # zorunlu.
+      if (sayiIsareti && !sayiModu) {
+        ekle(SAYI_ISARETI, -1);
       }
       for (let ri = 0; ri < tok.deger.length; ri++) {
         ekle(RAKAM_TABLO.get(tok.deger[ri]), tok.idx + ri);
@@ -1836,6 +1943,14 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
         : { hece, birHarf, ikiHarf, kok, parca };
       if (buyukHarfIsareti && rumuzluIfadeMi(kel)) {
         rumuzluIfadeEkle(kel, tok.idx, ekle);
+        continue;
+      }
+      const kelimeBirimAraligi = birimKaynakAraliklari.find(
+        (a) => tok.idx === a.bas && tok.idx + kel.length === a.son,
+      );
+      const kelimeBirimNorm = kelimeyiSayiSonrasiBirimiyleEslestir(kel);
+      if (kelimeBirimAraligi && kelimeBirimNorm) {
+        sayiSonrasiBirimHucreleriniEkle(kel, kelimeBirimNorm, kelimeBirimAraligi.bas, ekle);
         continue;
       }
       if (tekHarfIsareti && tekHarfKullanimiMi(metin, tok.idx, yorumTercihleri)) {

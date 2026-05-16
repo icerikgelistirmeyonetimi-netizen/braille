@@ -194,13 +194,43 @@ export const MUZIK_NOTALAR = [
   R('si (B)', ['2-4-5'], '(si) · temel hücre = sekizlik', KURAL_NOTA, undefined, 'B'),
 ];
 
-/* ─────────  2) NOTA SÜRELERİ (Duration) — Do üzerinden örnek  ──────────── */
+/* ─────────  2) NOTA SÜRELERİ (Duration)  ──────────── */
 export const MUZIK_SURELER = [
-  R('sekizlik (quaver) · Do', ['1-4-5'], '(temel hücre; 3 ve 6 noktası eklenmez)', KURAL_SURE, undefined, '♪'),
-  R('dörtlük (crotchet) · Do', ['1-4-5-6'], '(temel hücreye 6 eklenir)', KURAL_SURE, undefined, '♩'),
-  R('yarım (minim) · Do', ['1-3-4-5'], '(temel hücreye 3 eklenir)', KURAL_SURE, undefined, '𝅗𝅥'),
-  R('tam (semibreve) · Do', ['1-3-4-5-6'], '(temel hücreye 3 + 6 eklenir)', KURAL_SURE, undefined, '𝅝'),
-  R('noktalı dörtlük · Do', ['1-4-5-6', '3'], '(dörtlük + 3 noktası uzatma)', KURAL_NOKTALI_NOTA, undefined, '♩.'),
+  R('Sekizlik süre (Quaver / 128th)', [], 'Temel hücredir, 3 ve 6 noktası eklenmez', KURAL_SURE, undefined, '♪'),
+  R('Sekizlik Do', ['1-4-5'], '(temel hücre)', KURAL_SURE, undefined, 'C♪'),
+  R('Sekizlik Re', ['1-5'], '(temel hücre)', KURAL_SURE, undefined, 'D♪'),
+  R('Sekizlik Mi', ['1-2-4'], '(temel hücre)', KURAL_SURE, undefined, 'E♪'),
+  R('Sekizlik Fa', ['1-2-4-5'], '(temel hücre)', KURAL_SURE, undefined, 'F♪'),
+  R('Sekizlik Sol', ['1-2-5'], '(temel hücre)', KURAL_SURE, undefined, 'G♪'),
+  R('Sekizlik La', ['2-4'], '(temel hücre)', KURAL_SURE, undefined, 'A♪'),
+  R('Sekizlik Si', ['2-4-5'], '(temel hücre)', KURAL_SURE, undefined, 'B♪'),
+
+  R('Dörtlük süre (Crotchet / 64th)', ['6'], 'Temel hücreye 6 noktası eklenir', KURAL_SURE, undefined, '♩'),
+  R('Dörtlük Do', ['1-4-5-6'], '(1-4-5 + 6)', KURAL_SURE, undefined, 'C♩'),
+  R('Dörtlük Re', ['1-5-6'], '(1-5 + 6)', KURAL_SURE, undefined, 'D♩'),
+  R('Dörtlük Mi', ['1-2-4-6'], '(1-2-4 + 6)', KURAL_SURE, undefined, 'E♩'),
+  R('Dörtlük Fa', ['1-2-4-5-6'], '(1-2-4-5 + 6)', KURAL_SURE, undefined, 'F♩'),
+  R('Dörtlük Sol', ['1-2-5-6'], '(1-2-5 + 6)', KURAL_SURE, undefined, 'G♩'),
+  R('Dörtlük La', ['2-4-6'], '(2-4 + 6)', KURAL_SURE, undefined, 'A♩'),
+  R('Dörtlük Si', ['2-4-5-6'], '(2-4-5 + 6)', KURAL_SURE, undefined, 'B♩'),
+
+  R('Yarım süre (Minim / 32nd)', ['3'], 'Temel hücreye 3 noktası eklenir', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('Yarım Do', ['1-3-4-5'], '(1-4-5 + 3)', KURAL_SURE, undefined, 'C𝅗𝅥'),
+  R('Yarım Re', ['1-3-5'], '(1-5 + 3)', KURAL_SURE, undefined, 'D𝅗𝅥'),
+  R('Yarım Mi', ['1-2-3-4'], '(1-2-4 + 3)', KURAL_SURE, undefined, 'E𝅗𝅥'),
+  R('Yarım Fa', ['1-2-3-4-5'], '(1-2-4-5 + 3)', KURAL_SURE, undefined, 'F𝅗𝅥'),
+  R('Yarım Sol', ['1-2-3-5'], '(1-2-5 + 3)', KURAL_SURE, undefined, 'G𝅗𝅥'),
+  R('Yarım La', ['2-3-4'], '(2-4 + 3)', KURAL_SURE, undefined, 'A𝅗𝅥'),
+  R('Yarım Si', ['2-3-4-5'], '(2-4-5 + 3)', KURAL_SURE, undefined, 'B𝅗𝅥'),
+
+  R('Tam süre (Semibreve / 16th)', ['3-6'], 'Temel hücreye 3 ve 6 noktaları eklenir', KURAL_SURE, undefined, '𝅝'),
+  R('Tam Do', ['1-3-4-5-6'], '(1-4-5 + 3-6)', KURAL_SURE, undefined, 'C𝅝'),
+  R('Tam Re', ['1-3-5-6'], '(1-5 + 3-6)', KURAL_SURE, undefined, 'D𝅝'),
+  R('Tam Mi', ['1-2-3-4-6'], '(1-2-4 + 3-6)', KURAL_SURE, undefined, 'E𝅝'),
+  R('Tam Fa', ['1-2-3-4-5-6'], '(1-2-4-5 + 3-6)', KURAL_SURE, undefined, 'F𝅝'),
+  R('Tam Sol', ['1-2-3-5-6'], '(1-2-5 + 3-6)', KURAL_SURE, undefined, 'G𝅝'),
+  R('Tam La', ['2-3-4-6'], '(2-4 + 3-6)', KURAL_SURE, undefined, 'A𝅝'),
+  R('Tam Si', ['2-3-4-5-6'], '(2-4-5 + 3-6)', KURAL_SURE, undefined, 'B𝅝'),
 ];
 
 /* ───────────────────  3) ESLAR (Rests) — UEB Music  ────────────────────── */

@@ -1,0 +1,21 @@
+  const ctx = {
+    dotKey,
+    _kaynak,
+    _esleme,
+    _yorumTercihleri,
+    _kaynakKelime,
+    _kaynakKelimeBaslar,
+    _kaynakKelimeSonEki,
+    _kaynakTarihIcindeMi,
+    _tarihHucreBaglamiMi,
+    _saatKaynakAraliklari,
+    _saatKaynakIcindeMi,
+    _saatHucreBaglamiMi,
+    _matematikListeAyraçKaynağıMi,
+    sayiIsaretiOncesiSinirMi,
+    virgulListesiAyirMi,
+    harfliSayiHarfIsaretiMi,
+    harfliSayiHarfHucreMi,
+    mod,
+  };
+  return hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx);
