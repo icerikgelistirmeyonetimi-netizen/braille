@@ -4,16 +4,27 @@ import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import { metniBrailleyeCevir, metniBrailleyeCevirKisaltmali, siraSayisiSonRakamEtiketiNoktaEki } from '../utils/brailleCevir.js';
-import { hucreAnlami } from './Araclar.jsx';
+import {
+  hucreAnlami,
+  SATIRDA_HUCRE,
+  SAYFADA_SATIR,
+  BRAILLE_SAYFA_BOYUTU,
+  TABLET_SATIR_HUCRE,
+  TABLET_SAYFADA_SATIR,
+  TABLET_BRAILLE_SAYFA_BOYUTU,
+  tabletDelikAynala,
+  tabletSayfasiUnicodeKopyaMetni,
+  brfKagitBoyutunuDuzeltGirdi,
+  brfIcindekiSayfaMetinleri,
+  brfSatirininBrailleUnicodeKarsiligi,
+  BRF_KAGIT_PRESET_STANDART,
+  BRF_KAGIT_PRESET_DAR_A4_OZERI
+} from './Araclar.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 import {
   paraBirimiKaynakSonEkiAraliklari,
   hucreParaBirimiKaynakBaglamiMi,
 } from '../utils/paraBirimiKaynak.js';
-
-const SATIRDA_HUCRE = 40;
-const SAYFADA_SATIR = 25;
-const BRAILLE_SAYFA_BOYUTU = 200; // hücre/sayfa
 
 /**
  * Bir braille hücresinin nokta dizisini Unicode braille karakterine çevirir.
@@ -81,7 +92,8 @@ export function kisaEtiket(anlam) {
   return anlam.baslik;
 }
 
-function metniBRFe(hucreler) {
+function metniBRFe(hucreler, kagitBoyutu) {
+  const { satirdaHucre, sayfadaSatir } = brfKagitBoyutunuDuzeltGirdi(kagitBoyutu);
   const satirlar = [];
   let satir = '';
   let sonBosluk = -1; // satır içinde son boş hücre konumu (boşluk)
@@ -89,7 +101,7 @@ function metniBRFe(hucreler) {
     const ch = noktalariBRF(hucre);
     satir += ch;
     if (hucre.length === 0) sonBosluk = satir.length; // boşluk konumu (sonrası)
-    if (satir.length >= SATIRDA_HUCRE) {
+    if (satir.length >= satirdaHucre) {
       // Kelime ortasında kırma: en yakın boşluk varsa orada böl
       if (sonBosluk > 0 && sonBosluk < satir.length) {
         satirlar.push(satir.slice(0, sonBosluk - 1)); // boşluğu da at (satır sonu = sınır)
@@ -103,8 +115,8 @@ function metniBRFe(hucreler) {
   }
   if (satir.length) satirlar.push(satir);
   const chunks = [];
-  for (let i = 0; i < satirlar.length; i += SAYFADA_SATIR) {
-    chunks.push(satirlar.slice(i, i + SAYFADA_SATIR).join('\r\n'));
+  for (let i = 0; i < satirlar.length; i += sayfadaSatir) {
+    chunks.push(satirlar.slice(i, i + sayfadaSatir).join('\r\n'));
   }
   return chunks.join('\r\n\f\r\n');
 }
@@ -207,6 +219,11 @@ export default function BelgeBrf() {
   // Ekran okuyucular bu blokları “braille pattern dots …” veya tercih edilen
   // çevriyazı şeklinde okur; ek olarak aria-label kaynak metni sunar.
   const [erisilebilirMod, setErisilebilirMod] = useState(false);
+  const [tabletModuAktif, setTabletModuAktif] = useState(false);
+  const [brfOnizlemeAcik, setBrfOnizlemeAcik] = useState(false);
+  const [brfOnizlemePreset, setBrfOnizlemePreset] = useState('standart');
+  const [brfOnizlemeOzelHucre, setBrfOnizlemeOzelHucre] = useState(String(SATIRDA_HUCRE));
+  const [brfOnizlemeOzelSatir, setBrfOnizlemeOzelSatir] = useState(String(SAYFADA_SATIR));
   const [kopyalandi, setKopyalandi] = useState(false);
 
   useEffect(() => {
@@ -216,98 +233,17 @@ export default function BelgeBrf() {
     return () => window.removeEventListener('keydown', kapat);
   }, [seciliHucre]);
 
+  useEffect(() => {
+    if (!brfOnizlemeAcik) return;
+    const kap = (e) => {
+      if (e.key === 'Escape') setBrfOnizlemeAcik(false);
+    };
+    window.addEventListener('keydown', kap);
+    return () => window.removeEventListener('keydown', kap);
+  }, [brfOnizlemeAcik]);
+
   // Sayfa değişince seçili hücreyi temizle
   useEffect(() => { setSeciliHucre(null); }, [brailleSayfa, aktifTab, kisaltmaAktif]);
-
-  const processFile = async (dosya) => {
-    const ad = dosya.name.toLowerCase();
-    const gecerli = ['.txt', '.docx', '.rtf', '.md'].some((ext) => ad.endsWith(ext));
-    if (!gecerli) {
-      setHata('Desteklenen formatlar: .txt .docx .rtf .md');
-      return;
-    }
-    setHata('');
-    setBelgeAdi(dosya.name);
-    setYukleniyor(true);
-    setBelgeMetni('');
-    try {
-      let metin = '';
-      if (ad.endsWith('.docx')) {
-        const arrayBuffer = await dosya.arrayBuffer();
-        const sonuc = await mammoth.extractRawText({ arrayBuffer });
-        metin = sonuc.value;
-      } else {
-        metin = await dosya.text();
-      }
-      setBelgeMetni(metniTemizle(metin));
-    } catch (err) {
-      setHata('Dosya okunurken hata oluştu: ' + (err?.message || ''));
-    } finally {
-      setYukleniyor(false);
-    }
-  };
-
-  const brfIndir = () => {
-    if (!belgeMetni.trim() || !hucreler.length) return;
-    const brf = metniBRFe(hucreler);
-    const blob = new Blob([brf], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (belgeAdi.replace(/\.[^.]+$/, '') || 'cikti') + '.brf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const sesToggle = (alan, metinFn) => {
-    if (konusuyor === alan) { konusmayiDurdur(); setKonusuyor(false); return; }
-    const metin = metinFn();
-    if (!metin || !metin.trim()) return;
-    setKonusuyor(alan);
-    konus(metin, { kesintiyle: true, onSon: () => setKonusuyor(false) });
-  };
-
-  const metniSeslendir = () => sesToggle('metin', () => belgeMetni);
-
-  const noktalariSeslendir = () => sesToggle('nokta', () => {
-    if (!belgeMetni.trim()) return '';
-    const kaynakMetin = belgeMetni;
-    const { hucreler: hh, esleme } = cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true });
-    const parcalar = [];
-    for (let i = 0; i < hh.length; i++) {
-      const n = hh[i];
-      const kaynak = esleme ? esleme[i] : -1;
-      if (n.length === 0) { parcalar.push('boşluk'); continue; }
-      const noktaMetni = n.join(' ');
-      const anlam = hucreAnlami(hh, i, kisaltmaAktif, {
-        kaynak: kaynakMetin,
-        esleme,
-        paraBirimiKaynakAraliklari: paraBirimiKaynakSonEkiAraliklari(kaynakMetin),
-      });
-      if (anlam.tip === 'isaret') {
-        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
-        continue;
-      }
-      if (anlam.tip === 'kisaltma') {
-        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik.replace(/"/g, '')}`);
-        continue;
-      }
-      if (anlam.tip === 'noktalama') {
-        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
-        continue;
-      }
-      const harfMetni = kaynak >= 0 ? kaynakMetin[kaynak] : '';
-      parcalar.push(harfMetni ? `nokta ${noktaMetni}, ${harfMetni}` : `nokta ${noktaMetni}`);
-    }
-    return parcalar.join('. ');
-  });
-
-  const temizle = () => {
-    setBelgeMetni(''); setBelgeAdi(''); setHata('');
-    setKonusuyor(false); konusmayiDurdur(); setAktifTab('metin'); setBrailleSayfa(0);
-  };
 
   const [cevirSonuc, setCevirSonuc] = useState({ hucreler: [], esleme: [], kaynak: '' });
 
@@ -372,9 +308,160 @@ export default function BelgeBrf() {
     [kaynakCache],
   );
 
-  const toplamSayfa = Math.max(1, Math.ceil(hucreler.length / BRAILLE_SAYFA_BOYUTU));
-  const sayfaBaslangic = brailleSayfa * BRAILLE_SAYFA_BOYUTU;
-  const sayfaHucreler = hucreler.slice(sayfaBaslangic, sayfaBaslangic + BRAILLE_SAYFA_BOYUTU);
+  const brfOnizlemeKagitBoyutu = useMemo(() => {
+    if (brfOnizlemePreset === BRF_KAGIT_PRESET_STANDART.id)
+      return { satirdaHucre: BRF_KAGIT_PRESET_STANDART.satirdaHucre, sayfadaSatir: BRF_KAGIT_PRESET_STANDART.sayfadaSatir };
+    if (brfOnizlemePreset === BRF_KAGIT_PRESET_DAR_A4_OZERI.id)
+      return { satirdaHucre: BRF_KAGIT_PRESET_DAR_A4_OZERI.satirdaHucre, sayfadaSatir: BRF_KAGIT_PRESET_DAR_A4_OZERI.sayfadaSatir };
+    return brfKagitBoyutunuDuzeltGirdi({
+      satirdaHucre: Number.parseInt(String(brfOnizlemeOzelHucre), 10),
+      sayfadaSatir: Number.parseInt(String(brfOnizlemeOzelSatir), 10),
+    });
+  }, [brfOnizlemePreset, brfOnizlemeOzelHucre, brfOnizlemeOzelSatir]);
+
+  const brfOnizlemeDosyaMetni = useMemo(() => {
+    if (!brfOnizlemeAcik) return '';
+    if (!belgeMetni.trim()) return '';
+    if (!hucreler.length) return '';
+    try {
+      return metniBRFe(hucreler, brfOnizlemeKagitBoyutu);
+    } catch (err) {
+      console.error('BRF ön izleme hatası:', err);
+      return '';
+    }
+  }, [brfOnizlemeAcik, belgeMetni, hucreler, brfOnizlemeKagitBoyutu]);
+
+  const brfOnizlemeSayfalari = useMemo(
+    () => brfIcindekiSayfaMetinleri(brfOnizlemeDosyaMetni),
+    [brfOnizlemeDosyaMetni],
+  );
+
+  const brfOnizlemeUnicodeSayfalari = useMemo(() => {
+    if (!brfOnizlemeAcik || brfOnizlemeSayfalari.length === 0) return [];
+    return brfOnizlemeSayfalari.map((sayfaMetni) =>
+      sayfaMetni.split('\n').map((satir) => brfSatirininBrailleUnicodeKarsiligi(satir)),
+    );
+  }, [brfOnizlemeAcik, brfOnizlemeSayfalari]);
+
+  const processFile = async (dosya) => {
+    const ad = dosya.name.toLowerCase();
+    const gecerli = ['.txt', '.docx', '.rtf', '.md'].some((ext) => ad.endsWith(ext));
+    if (!gecerli) {
+      setHata('Desteklenen formatlar: .txt .docx .rtf .md');
+      return;
+    }
+    setHata('');
+    setBelgeAdi(dosya.name);
+    setYukleniyor(true);
+    setBelgeMetni('');
+    try {
+      let metin = '';
+      if (ad.endsWith('.docx')) {
+        const arrayBuffer = await dosya.arrayBuffer();
+        const sonuc = await mammoth.extractRawText({ arrayBuffer });
+        metin = sonuc.value;
+      } else {
+        metin = await dosya.text();
+      }
+      setBelgeMetni(metniTemizle(metin));
+    } catch (err) {
+      setHata('Dosya okunurken hata oluştu: ' + (err?.message || ''));
+    } finally {
+      setYukleniyor(false);
+    }
+  };
+
+  const brfIndir = () => {
+    if (!belgeMetni.trim() || !hucreler.length) return;
+    let brf;
+    try {
+      brf = metniBRFe(hucreler, brfOnizlemeKagitBoyutu);
+    } catch (e) {
+      console.error('BRF indirme hatası:', e);
+      return;
+    }
+    const blob = new Blob([brf], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (belgeAdi.replace(/\.[^.]+$/, '') || 'cikti') + '.brf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const sesToggle = (alan, metinFn) => {
+    if (konusuyor === alan) { konusmayiDurdur(); setKonusuyor(false); return; }
+    const metin = metinFn();
+    if (!metin || !metin.trim()) return;
+    setKonusuyor(alan);
+    konus(metin, { kesintiyle: true, onSon: () => setKonusuyor(false) });
+  };
+
+  const metniSeslendir = () => sesToggle('metin', () => belgeMetni);
+
+  const noktalariSeslendir = () => sesToggle('nokta', () => {
+    if (!belgeMetni.trim()) return '';
+    const kaynakMetin = belgeMetni;
+    const { hucreler: hh, esleme } = cevirFn(belgeMetni, { buyukHarfIsareti: true, sayiIsareti: true });
+    const parcalar = [];
+    for (let i = 0; i < hh.length; i++) {
+      const n = hh[i];
+      const kaynak = esleme ? esleme[i] : -1;
+      if (n.length === 0) { parcalar.push('boşluk'); continue; }
+      const noktaMetni = n.join(' ');
+      const anlam = hucreAnlami(hh, i, kisaltmaAktif, {
+        kaynak: kaynakMetin,
+        esleme,
+        paraBirimiKaynakAraliklari: paraBirimiKaynakSonEkiAraliklari(kaynakMetin),
+      });
+      if (anlam.tip === 'isaret') {
+        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
+        continue;
+      }
+      if (anlam.tip === 'kisaltma') {
+        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik.replace(/"/g, '')}`);
+        continue;
+      }
+      if (anlam.tip === 'noktalama') {
+        parcalar.push(`nokta ${noktaMetni}, ${anlam.baslik}`);
+        continue;
+      }
+      const harfMetni = kaynak >= 0 ? kaynakMetin[kaynak] : '';
+      parcalar.push(harfMetni ? `nokta ${noktaMetni}, ${harfMetni}` : `nokta ${noktaMetni}`);
+    }
+    return parcalar.join('. ');
+  });
+
+  const temizle = () => {
+    setBelgeMetni(''); setBelgeAdi(''); setHata('');
+    setKonusuyor(false); konusmayiDurdur(); setAktifTab('metin'); setBrailleSayfa(0);
+  };
+
+  const brailleSayfaBoyutu = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
+  const toplamSayfa = Math.max(1, Math.ceil(hucreler.length / brailleSayfaBoyutu));
+  const sayfaBaslangic = brailleSayfa * brailleSayfaBoyutu;
+  const sayfaHucreler = hucreler.slice(sayfaBaslangic, sayfaBaslangic + brailleSayfaBoyutu);
+  const sayfaSonIndeks = sayfaBaslangic + sayfaHucreler.length;
+
+  const tabletSatirYerelleri = useMemo(() => {
+    const n = sayfaHucreler.length;
+    const satirlar = [];
+    for (let b = 0; b < n; b += TABLET_SATIR_HUCRE) {
+      const yerel = [];
+      for (let j = b; j < Math.min(b + TABLET_SATIR_HUCRE, n); j++) yerel.push(j);
+      satirlar.push(yerel);
+    }
+    return satirlar;
+  }, [sayfaBaslangic, sayfaHucreler.length]);
+
+  const erisilebilirTabletUnicodeHucreleri = useMemo(() => {
+    if (!erisilebilirMod || !tabletModuAktif || !belgeMetni) return null;
+    if (sayfaSonIndeks <= sayfaBaslangic) return [];
+    const dilim = hucreler.slice(sayfaBaslangic, sayfaSonIndeks);
+    return dilim.map((noktalar) => noktalardanUnicode(tabletDelikAynala(noktalar)));
+  }, [erisilebilirMod, tabletModuAktif, belgeMetni, hucreler, sayfaBaslangic, sayfaSonIndeks]);
 
   const brailleTabAc = () => { setAktifTab('braille'); setBrailleSayfa(0); };
   const brailleTabKapat = () => setAktifTab('metin');
@@ -538,84 +625,216 @@ export default function BelgeBrf() {
                 {erisilebilirMod ? (
                   <div
                     ref={brailleKutuRef}
-                    className="belge-braille-erisilebilir"
+                    className={'belge-braille-erisilebilir' + (tabletModuAktif ? ' belge-braille-erisilebilir-tablet' : '')}
                     role="region"
-                    aria-label={`Erişilebilir braille metin görünümü, sayfa ${brailleSayfa + 1} / ${toplamSayfa}`}
+                    aria-label={(tabletModuAktif ? `Tablet: ${TABLET_SATIR_HUCRE}×${TABLET_SAYFADA_SATIR} hücre/sayfa. ` : '')
+                      + `Erişilebilir braille metin görünümü, sayfa ${brailleSayfa + 1} / ${toplamSayfa}`}
                     lang="tr"
                   >
-                    <p
-                      className="belge-braille-text"
-                      // Ekran okuyucular Unicode braille bloklarını tanır;
-                      // ayrıca aria-label ile kaynak Türkçe metin sunulur.
-                      aria-label={belgeMetni}
-                    >
-                      {sayfaHucreler.map(noktalardanUnicode).join('')}
-                    </p>
+                    <div className={'belge-braille-text-unicode-group' + (tabletModuAktif ? ' belge-braille-text-unicode-group-tablet' : '')} aria-label={belgeMetni}>
+                      {tabletModuAktif ? (
+                        <div className="araclar-tablet-grid">
+                          {/* Üst kolon numaraları */}
+                          <div className="tablet-satir-numarasi" style={{ visibility: 'hidden' }}>00</div>
+                          {Array.from({ length: TABLET_SATIR_HUCRE }, (_, i) => (
+                            <div key={`er-col-${i}`} className="tablet-kolon-numarasi">{i + 1}</div>
+                          ))}
+
+                          {/* Satırlar */}
+                          {tabletSatirYerelleri.map((yerler, ri) => (
+                            <React.Fragment key={`er-t-${brailleSayfa}-${ri}`}>
+                              <div className="tablet-satir-numarasi">{ri + 1}</div>
+                              {yerler.map((i) => {
+                                const globalIdx = sayfaBaslangic + i;
+                                return (
+                                  <span
+                                    key={globalIdx}
+                                    className="unicode-hucre araclar-tablet-er-unicode-hucre"
+                                  >
+                                    {erisilebilirTabletUnicodeHucreleri?.[i] ?? ''}
+                                  </span>
+                                );
+                              })}
+                              {/* Eksik hücreleri doldur */}
+                              {Array.from({ length: TABLET_SATIR_HUCRE - yerler.length }).map((_, emptyIdx) => (
+                                <div key={`er-empty-${ri}-${emptyIdx}`} />
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      ) : (
+                        sayfaHucreler.map((noktalar, i) => (
+                          <span
+                            key={sayfaBaslangic + i}
+                            className="unicode-hucre"
+                            style={{
+                              fontSize: '.2 em',
+                              display: 'inline-block',
+                              padding: '0 1px',
+                              lineHeight: '1',
+                            }}
+                          >
+                            {noktalardanUnicode(noktalar)}
+                          </span>
+                        ))
+                      )}
+                    </div>
                   </div>
                 ) : (
-                <div ref={brailleKutuRef} className={'araclar-nokta-gorunus belge-braille-kutu' + (genisletAktif ? ' genisletilmis' : '')} aria-label="Braille nokta görünümü">
-                  {sayfaHucreler.map((noktalar, i) => {
-                    const globalIdx = sayfaBaslangic + i;
-                    const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif, {
-                      kaynak: kaynakCache,
-                      esleme: eslemeCache,
-                      paraBirimiKaynakAraliklari,
-                    });
-                    const kisaltmaHucre = kisaltmaAktif && (
-                      anlam.tip === 'kisaltma' ||
-                      (anlam.tip === 'isaret' && (
-                        anlam.baslik === 'Kelime Kökü İşareti' ||
-                        anlam.baslik === 'Kelime Parçası İşareti'
-                      ))
-                    );
-                    const noktalamaHucre = anlam.tip === 'noktalama';
-                    const bolukIsaretiHucre = anlam.tip === 'isaret' && anlam.baslik === 'Bölük İşareti';
-                    const siraSayisiHucre = anlam.tip === 'rakam' && /^Sıra sayısı/u.test(anlam.baslik);
-                    const ondalikAyiracHucre = anlam.tip === 'noktalama' && anlam.baslik.includes('ondalık ayraç');
-                    const matematikHucre = anlam.tip === 'islem' || bolukIsaretiHucre || siraSayisiHucre || ondalikAyiracHucre;
-                    const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
-                    // Sayı/büyük/tümü büyük gibi özel işaretler → siyah göster
-                    const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre && !bolukIsaretiHucre && !paraBirimiHucre;
-                    const sinif = 'belge-braille-hucre' +
-                      (seciliHucre?.index === globalIdx ? ' secili' : '') +
-                      (kisaltmaHucre ? ' kisaltma-hucre' : '') +
-                      (noktalamaHucre ? ' noktalama-hucre' : '') +
-                      (matematikHucre ? ' matematik-hucre' : '') +
-                      (paraBirimiHucre ? ' para-birimi-hucre' : '') +
-                      (ozelIsaretHucre ? ' ozel-isaret-hucre' : '');
-                    const etiket = genisletAktif
-                      ? `${kisaEtiket(anlam)}${siraSayisiSonRakamEtiketiNoktaEki(
-                        anlam,
-                        globalIdx,
-                        hucreler,
-                        kaynakCache,
-                        eslemeCache,
-                      )}`
-                      : '';
-                    return (
-                      <div
-                        key={globalIdx}
-                        className={sinif}
-                        role="button"
-                        tabIndex={0}
-                        title="Tıkla: anlam göster"
-                        onClick={() => {
-                          setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+                <div
+                  ref={brailleKutuRef}
+                  className={'araclar-nokta-gorunus belge-braille-kutu'
+                    + (genisletAktif ? ' genisletilmis' : '')
+                    + (tabletModuAktif ? ' araclar-tablet-mod' : '')}
+                  aria-label={tabletModuAktif
+                    ? `Braille nokta görünümü (tablet: ${TABLET_SATIR_HUCRE} hücre × ${TABLET_SAYFADA_SATIR} sıra, sağdan sola)`
+                    : 'Braille nokta görünümü'}
+                >
+                  {tabletModuAktif ? (
+                    <div className="araclar-tablet-grid">
+                      {/* Üst kolon numaraları */}
+                      <div className="tablet-satir-numarasi" style={{ visibility: 'hidden' }}>00</div>
+                      {Array.from({ length: TABLET_SATIR_HUCRE }, (_, i) => (
+                        <div key={`col-${i}`} className="tablet-kolon-numarasi">{i + 1}</div>
+                      ))}
+
+                      {/* Satırlar */}
+                      {tabletSatirYerelleri.map((yerler, ri) => (
+                        <React.Fragment key={`t-${brailleSayfa}-${ri}`}>
+                          <div className="tablet-satir-numarasi">{ri + 1}</div>
+                          {yerler.map((i) => {
+                            const noktalar = sayfaHucreler[i];
+                            const globalIdx = sayfaBaslangic + i;
+                            const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif, {
+                              kaynak: kaynakCache,
+                              esleme: eslemeCache,
+                              paraBirimiKaynakAraliklari,
+                            });
+                            const kisaltmaHucre = kisaltmaAktif && (
+                              anlam.tip === 'kisaltma' ||
+                              (anlam.tip === 'isaret' && (
+                                anlam.baslik === 'Kelime Kökü İşareti' ||
+                                anlam.baslik === 'Kelime Parçası İşareti'
+                              ))
+                            );
+                            const noktalamaHucre = anlam.tip === 'noktalama';
+                            const bolukIsaretiHucre = anlam.tip === 'isaret' && anlam.baslik === 'Bölük İşareti';
+                            const siraSayisiHucre = anlam.tip === 'rakam' && /^Sıra sayısı/u.test(anlam.baslik);
+                            const ondalikAyiracHucre = anlam.tip === 'noktalama' && anlam.baslik.includes('ondalık ayraç');
+                            const matematikHucre = anlam.tip === 'islem' || bolukIsaretiHucre || siraSayisiHucre || ondalikAyiracHucre;
+                            const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
+                            const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre && !bolukIsaretiHucre && !paraBirimiHucre;
+                            const sinif = 'belge-braille-hucre' +
+                              (seciliHucre?.index === globalIdx ? ' secili' : '') +
+                              (kisaltmaHucre ? ' kisaltma-hucre' : '') +
+                              (noktalamaHucre ? ' noktalama-hucre' : '') +
+                              (matematikHucre ? ' matematik-hucre' : '') +
+                              (paraBirimiHucre ? ' para-birimi-hucre' : '') +
+                              (ozelIsaretHucre ? ' ozel-isaret-hucre' : '');
+                            const etiket = genisletAktif
+                              ? `${kisaEtiket(anlam)}${siraSayisiSonRakamEtiketiNoktaEki(
+                                anlam,
+                                globalIdx,
+                                hucreler,
+                                kaynakCache,
+                                eslemeCache,
+                              )}`
+                              : '';
+                            return (
+                              <div
+                                key={globalIdx}
+                                className={sinif}
+                                role="button"
+                                tabIndex={0}
+                                title="Tıkla: anlam göster"
+                                onClick={() => {
+                                  setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
+                                  }
+                                }}
+                              >
+                                <BrailleCell aktifNoktalar={tabletDelikAynala(noktalar)} tiklanabilir={false} kesfedilebilir={false} />
+                                {genisletAktif && (
+                                  <div className="belge-hucre-etiket" aria-hidden="true">{etiket || '\u00A0'}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {/* Eksik hücreleri doldur */}
+                          {Array.from({ length: TABLET_SATIR_HUCRE - yerler.length }).map((_, emptyIdx) => (
+                            <div key={`empty-${ri}-${emptyIdx}`} />
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  ) : (
+                    sayfaHucreler.map((noktalar, i) => {
+                      const globalIdx = sayfaBaslangic + i;
+                      const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif, {
+                        kaynak: kaynakCache,
+                        esleme: eslemeCache,
+                        paraBirimiKaynakAraliklari,
+                      });
+                      const kisaltmaHucre = kisaltmaAktif && (
+                        anlam.tip === 'kisaltma' ||
+                        (anlam.tip === 'isaret' && (
+                          anlam.baslik === 'Kelime Kökü İşareti' ||
+                          anlam.baslik === 'Kelime Parçası İşareti'
+                        ))
+                      );
+                      const noktalamaHucre = anlam.tip === 'noktalama';
+                      const bolukIsaretiHucre = anlam.tip === 'isaret' && anlam.baslik === 'Bölük İşareti';
+                      const siraSayisiHucre = anlam.tip === 'rakam' && /^Sıra sayısı/u.test(anlam.baslik);
+                      const ondalikAyiracHucre = anlam.tip === 'noktalama' && anlam.baslik.includes('ondalık ayraç');
+                      const matematikHucre = anlam.tip === 'islem' || bolukIsaretiHucre || siraSayisiHucre || ondalikAyiracHucre;
+                      const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
+                      // Sayı/büyük/tümü büyük gibi özel işaretler → siyah göster
+                      const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre && !bolukIsaretiHucre && !paraBirimiHucre;
+                      const sinif = 'belge-braille-hucre' +
+                        (seciliHucre?.index === globalIdx ? ' secili' : '') +
+                        (kisaltmaHucre ? ' kisaltma-hucre' : '') +
+                        (noktalamaHucre ? ' noktalama-hucre' : '') +
+                        (matematikHucre ? ' matematik-hucre' : '') +
+                        (paraBirimiHucre ? ' para-birimi-hucre' : '') +
+                        (ozelIsaretHucre ? ' ozel-isaret-hucre' : '');
+                      const etiket = genisletAktif
+                        ? `${kisaEtiket(anlam)}${siraSayisiSonRakamEtiketiNoktaEki(
+                          anlam,
+                          globalIdx,
+                          hucreler,
+                          kaynakCache,
+                          eslemeCache,
+                        )}`
+                        : '';
+                      return (
+                        <div
+                          key={globalIdx}
+                          className={sinif}
+                          role="button"
+                          tabIndex={0}
+                          title="Tıkla: anlam göster"
+                          onClick={() => {
                             setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
-                          }
-                        }}
-                      >
-                        <BrailleCell aktifNoktalar={noktalar} tiklanabilir={false} kesfedilebilir={false} />
-                        {genisletAktif && (
-                          <div className="belge-hucre-etiket" aria-hidden="true">{etiket || '\u00A0'}</div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
+                            }
+                          }}
+                        >
+                          <BrailleCell aktifNoktalar={noktalar} tiklanabilir={false} kesfedilebilir={false} />
+                          {genisletAktif && (
+                            <div className="belge-hucre-etiket" aria-hidden="true">{etiket || '\u00A0'}</div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
                 )}
                 {!erisilebilirMod && seciliHucre && (
@@ -815,17 +1034,177 @@ export default function BelgeBrf() {
         )}
       </div>
 
+      {brfOnizlemeAcik && (
+        <div
+          className="araclar-brf-onizle-backdrop"
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setBrfOnizlemeAcik(false); }}
+        >
+          <div
+            className="araclar-brf-onizle-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="araclar-brf-onizle-baslik"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="araclar-brf-onizle-ust">
+              <h2 id="araclar-brf-onizle-baslik" className="araclar-brf-onizle-baslik">
+                Kabartmalı çıktı ön izlemesi (BRF sırası)
+              </h2>
+              <button
+                type="button"
+                className="araclar-brf-onizle-kapat"
+                onClick={() => setBrfOnizlemeAcik(false)}
+                aria-label="Kapat"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="araclar-brf-onizle-govde">
+              <aside className="araclar-brf-onizle-panel" aria-label="Kağıt ve satır düzeni">
+                <p className="araclar-brf-onizle-panel-baslik">Sayfa düzeni</p>
+                <p className="araclar-brf-onizle-aciklama">
+                  Sıra başına hücre ve sayfa başına satır yazıcısındaki delik satırlarına karşılık gelir. Seçilen düzen hem ön izlemede hem “BRF İndir” ile indirilen dosyada kullanılır.
+                </p>
+                <div className="araclar-brf-onizle-sec">
+                  {[BRF_KAGIT_PRESET_STANDART, BRF_KAGIT_PRESET_DAR_A4_OZERI].map((p) => (
+                    <label key={p.id} className="araclar-brf-onizle-radio">
+                      <input
+                        type="radio"
+                        name="brf-kagit"
+                        checked={brfOnizlemePreset === p.id}
+                        onChange={() => {
+                          setBrfOnizlemePreset(p.id);
+                          setBrfOnizlemeOzelHucre(String(p.satirdaHucre));
+                          setBrfOnizlemeOzelSatir(String(p.sayfadaSatir));
+                        }}
+                      />
+                      <span>{p.etiket}</span>
+                    </label>
+                  ))}
+                  <label className="araclar-brf-onizle-radio">
+                    <input
+                      type="radio"
+                      name="brf-kagit"
+                      checked={brfOnizlemePreset === 'ozel'}
+                      onChange={() => setBrfOnizlemePreset('ozel')}
+                    />
+                    <span>Özel (elle)</span>
+                  </label>
+                </div>
+                {brfOnizlemePreset === 'ozel' && (
+                  <div className="araclar-brf-onizle-ozel">
+                    <label className="araclar-brf-onizle-satir">
+                      <span>Sıra başına hücre</span>
+                      <input
+                        type="number"
+                        min={10}
+                        max={80}
+                        inputMode="numeric"
+                        value={brfOnizlemeOzelHucre}
+                        onChange={(e) => setBrfOnizlemeOzelHucre(e.target.value)}
+                      />
+                    </label>
+                    <label className="araclar-brf-onizle-satir">
+                      <span>Sayfa başına satır</span>
+                      <input
+                        type="number"
+                        min={5}
+                        max={64}
+                        inputMode="numeric"
+                        value={brfOnizlemeOzelSatir}
+                        onChange={(e) => setBrfOnizlemeOzelSatir(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                )}
+                <p className="araclar-brf-onizle-kucuk">
+                  Ön izleme Unicode braille ile gösterilir.
+                </p>
+              </aside>
+              <div className="araclar-brf-onizle-icerik" tabIndex={0}>
+                {brfOnizlemeSayfalari.length === 0 ? (
+                  <p className="araclar-brf-onizle-bos">Ön izlenecek BRF içeriği yok.</p>
+                ) : (
+                  brfOnizlemeUnicodeSayfalari.map((unicodeSatirlari, sayfaInd) => (
+                    <div key={sayfaInd} className="araclar-brf-onizle-sayfa">
+                      <div className="araclar-brf-onizle-sayfa-baslik">
+                        Sayfa {sayfaInd + 1} / {brfOnizlemeSayfalari.length}
+                        <span className="araclar-brf-onizle-sayfa-oran">
+                          {brfOnizlemeKagitBoyutu.satirdaHucre} × {brfOnizlemeKagitBoyutu.sayfadaSatir}
+                        </span>
+                      </div>
+                      <pre className="araclar-brf-onizle-pre" lang="und">
+                        {unicodeSatirlari.map((satirUnicode, si) => (
+                          <div key={si} className="araclar-brf-onizle-satir">
+                            {satirUnicode}
+                          </div>
+                        ))}
+                      </pre>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Alt — butonlar */}
       <div className="yazma-bolum yazma-bolum-alt">
         {belgeMetni && (
           <div className="controls">
-            <button type="button" onClick={brfIndir} disabled={!belgeMetni.trim()} aria-label="BRF İndir">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                   strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
-                <path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 20h14"/>
+            <div className="araclar-brf-grup">
+              <button
+                type="button"
+                onClick={brfIndir}
+                disabled={!belgeMetni.trim()}
+                className="araclar-brf-grup-ilk"
+                aria-label="BRF İndir"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                     strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
+                  <path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 20h14"/>
+                </svg>
+                <span className="btn-yazi">BRF İndir</span>
+              </button>
+              <button
+                type="button"
+                disabled={!belgeMetni.trim()}
+                onClick={() => setBrfOnizlemeAcik(true)}
+                className="araclar-brf-grup-son araclar-brf-grup-onizle"
+                aria-label="Kabartmalı çıktı için BRF ön izlemesi"
+                title="Ön izle — kağıda göre sıra ve satır (form feed)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
+                  <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                </svg>
+              </button>
+            </div>
+            
+            <button
+              type="button"
+              disabled={!belgeMetni}
+              className={'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (tabletModuAktif ? ' aktif' : '')}
+              onClick={() => {
+                const eskiBoyut = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
+                const yeniTablet = !tabletModuAktif;
+                const yeniBoyut = yeniTablet ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
+                setBrailleSayfa((sayfa) => Math.floor((sayfa * eskiBoyut) / yeniBoyut));
+                setTabletModuAktif(yeniTablet);
+              }}
+              aria-pressed={tabletModuAktif}
+              aria-label={`Tablet modu ${tabletModuAktif ? 'açık' : 'kapalı'}`}
+              title={'Tablet modu (' + (tabletModuAktif ? 'açık' : 'kapalı') + `). Sayfa: ${TABLET_SATIR_HUCRE}×${TABLET_SAYFADA_SATIR} hücre (${TABLET_BRAILLE_SAYFA_BOYUTU}); satır başına ${TABLET_SATIR_HUCRE} hücre, sağdan sola; delik yönüne göre yansıtılmış nokta`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <line x1="7" y1="8" x2="7" y2="16" />
+                <line x1="17" y1="8" x2="17" y2="16" />
               </svg>
-              <span className="btn-yazi">BRF İndir</span>
             </button>
+
             <div className="kisaltma-btn-grup" ref={sistemPaneliRef}>
               <button
                 type="button"

@@ -3960,3 +3960,10 @@ h1, h2, h3 { color: var(--fg); }
   color: #fff;
   border-color: #16a34a;
 }
+.araclar-brf-grup-orta { border-radius: 0; } 
+.araclar-brf-grup-orta { border-right: 1px solid rgba(255, 255, 255, 0.15) !important; } 
+.tablet-numara-sargisi { width: 100%; display: flex; flex-direction: column; direction: rtl; gap: 4px; } 
+.tablet-satir-numarasi { display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #94a3b8; font-weight: 600; padding: 2px 4px; background-color: #f1f5f9; border-radius: 4px; margin-right: 4px; }
+[data-theme="dark"] .tablet-satir-numarasi { background-color: #1e293b; color: #64748b; } 
+.araclar-tablet-grid { display: grid; grid-template-columns: min-content repeat(28, minmax(0, 1fr)); direction: rtl; column-gap: var(--tablet-col-gap, 1px); row-gap: 4px; align-items: center; justify-items: stretch; width: 100%; min-width: 0; box-sizing: border-box; } 
+.tablet-kolon-numarasi { text-align: center; font-size: 0.65rem; color: #94a3b8; font-weight: 600; min-width: 0; overflow: hidden; align-self: stretch; display: flex; align-items: center; justify-content: center; background-color: #f1f5f9; border-radius: 4px; margin: 0 1px; } 

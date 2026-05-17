@@ -1259,15 +1259,17 @@ export function tekHarfIsaretiSonrasiHarfOkuma(hucreler, index) {
     i += 1;
   }
   if (i >= hucreler.length) return null;
+  let isDuzeltmeli = false;
   if (duzeltmeYabanciHarfIsaretiMi(hucreler[i])) {
     i += 1;
+    isDuzeltmeli = true;
     if (i < hucreler.length && buyukHarfIsaretiMi(hucreler[i])) {
       buyuk = true;
       i += 1;
     }
   }
   if (i >= hucreler.length) return null;
-  const hamHarf = duzeltmeliHucreyiMetneCevir(hucreler[i]) || hucreyiKarakteryap(hucreler[i]);
+  const hamHarf = isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(hucreler[i]) || hucreyiKarakteryap(hucreler[i])) : hucreyiKarakteryap(hucreler[i]);
   if (!hamHarf || hamHarf === ' ') return null;
   const metin = buyuk ? hamHarf.toLocaleUpperCase('tr') : hamHarf.toLocaleLowerCase('tr');
   return { metin, sonrakiIndex: i + 1 };

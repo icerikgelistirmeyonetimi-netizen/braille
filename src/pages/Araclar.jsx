@@ -58,21 +58,21 @@ import {
 //   Karakter = 0x20 + nokta bitleri
 //   bit0=nokta1  bit1=nokta2  bit2=nokta3
 //   bit3=nokta4  bit4=nokta5  bit5=nokta6
-const SATIRDA_HUCRE = 40;
-const SAYFADA_SATIR = 25;
-const BRAILLE_SAYFA_BOYUTU = 200; // hücre/sayfa (klasik Araçlar sayfalaması)
+export const SATIRDA_HUCRE = 40;
+export const SAYFADA_SATIR = 25;
+export const BRAILLE_SAYFA_BOYUTU = 200; // hücre/sayfa (klasik Araçlar sayfalaması)
 /** Tablet görünümü: fiziksel cihaza yakın yazım yönü ve satır genişliği (hücre/sıra). */
-const TABLET_SATIR_HUCRE = 28;
+export const TABLET_SATIR_HUCRE = 28;
 /** Kabartma sayfada sıra sayısı (BRF “32×28” preset’teki 28 satırla aynı mantık). */
-const TABLET_SAYFADA_SATIR = 28;
+export const TABLET_SAYFADA_SATIR = 28;
 /** Tablet modunda tam “ekran”: 28×28 hücre. */
-const TABLET_BRAILLE_SAYFA_BOYUTU = TABLET_SATIR_HUCRE * TABLET_SAYFADA_SATIR;
+export const TABLET_BRAILLE_SAYFA_BOYUTU = TABLET_SATIR_HUCRE * TABLET_SAYFADA_SATIR;
 
 /** Delik aynası: aynı nokta dizisi için aynı dizi referansı (React.memo). */
 const _aynaliCache = new Map();
 
 /** Fiziksel delme aynası: sütunlar yatay çevrilir (1 ↔ 4, 2 ↔ 5, 3 ↔ 6); yalnızca görüntü. */
-function tabletDelikAynala(noktalar) {
+export function tabletDelikAynala(noktalar) {
   if (!noktalar || !noktalar.length) return noktalar;
   const key = noktalar.join(',');
   if (_aynaliCache.has(key)) return _aynaliCache.get(key);
@@ -85,7 +85,7 @@ function tabletDelikAynala(noktalar) {
 }
 
 /** Tablet kopyasında: ayılmış satırlar + delik aynalı Unicode (okuma sırası sayfa sırasında kalır). */
-function tabletSayfasiUnicodeKopyaMetni(hucreler) {
+export function tabletSayfasiUnicodeKopyaMetni(hucreler) {
   const satirlar = [];
   for (let b = 0; b < hucreler.length; b += TABLET_SATIR_HUCRE) {
     const parca = [];
@@ -218,7 +218,7 @@ function brfNoktalaradon(ch) {
 }
 
 /** Kabartmalı sıra/satır için makul üst-alt sınırlar (ön izleme + BRFe). */
-function brfKagitBoyutunuDuzeltGirdi(kagitBoyutu) {
+export function brfKagitBoyutunuDuzeltGirdi(kagitBoyutu) {
   if (!kagitBoyutu || typeof kagitBoyutu !== 'object') {
     return { satirdaHucre: SATIRDA_HUCRE, sayfadaSatir: SAYFADA_SATIR };
   }
@@ -231,7 +231,7 @@ function brfKagitBoyutunuDuzeltGirdi(kagitBoyutu) {
   return { satirdaHucre, sayfadaSatir };
 }
 
-function hucreleriBRFDizgesine(hucreler, kagitBoyutu) {
+export function hucreleriBRFDizgesine(hucreler, kagitBoyutu) {
   if (!hucreler || hucreler.length === 0) return '';
   const { satirdaHucre, sayfadaSatir } = brfKagitBoyutunuDuzeltGirdi(kagitBoyutu);
   const satirlar = [];
@@ -251,7 +251,7 @@ function hucreleriBRFDizgesine(hucreler, kagitBoyutu) {
   return chunks.join('\r\n\f\r\n');
 }
 
-function metniBRFe(metin, cevirFn = metniBrailleyeCevir, kagitBoyutu) {
+export function metniBRFe(metin, cevirFn = metniBrailleyeCevir, kagitBoyutu) {
   const { hucreler } = cevirFn(metin, {
     buyukHarfIsareti: true,
     sayiIsareti: true,
@@ -259,12 +259,12 @@ function metniBRFe(metin, cevirFn = metniBrailleyeCevir, kagitBoyutu) {
   return hucreleriBRFDizgesine(hucreler, kagitBoyutu);
 }
 
-function brfIcindekiSayfaMetinleri(brfDizgesi) {
+export function brfIcindekiSayfaMetinleri(brfDizgesi) {
   if (!brfDizgesi) return [];
   return brfDizgesi.split(/\r\n\f\r\n/).map((parca) => parca.replace(/\r\n/g, '\n')).filter((p) => p.length > 0);
 }
 
-function brfSatirininBrailleUnicodeKarsiligi(satir) {
+export function brfSatirininBrailleUnicodeKarsiligi(satir) {
   let cikti = '';
   for (let i = 0; i < satir.length; i++) {
     const pts = brfNoktalaradon(satir.charAt(i));
@@ -274,8 +274,8 @@ function brfSatirininBrailleUnicodeKarsiligi(satir) {
   return cikti;
 }
 
-const BRF_KAGIT_PRESET_STANDART = { id: 'standart', etiket: 'Standart (40 × 25)', satirdaHucre: 40, sayfadaSatir: 25 };
-const BRF_KAGIT_PRESET_DAR_A4_OZERI = { id: 'dar', etiket: 'Dar sıra / geniş yazıcı (32 × 28)', satirdaHucre: 32, sayfadaSatir: 28 };
+export const BRF_KAGIT_PRESET_STANDART = { id: 'standart', etiket: 'Standart (40 × 25)', satirdaHucre: 40, sayfadaSatir: 25 };
+export const BRF_KAGIT_PRESET_DAR_A4_OZERI = { id: 'dar', etiket: 'Dar sıra / geniş yazıcı (32 × 28)', satirdaHucre: 32, sayfadaSatir: 28 };
 
 function brfMetinedon(icerik) {
   return _brfMetinedon(icerik, false);
@@ -534,20 +534,23 @@ function hucreAnlamiBaglamVeModSifir(hucreler, opts) {
     if (!tekKucukHarfIsaretiMi(hucreler[cellIdx])) return false;
     let harfIdx = cellIdx + 1;
     if (harfIdx < hucreler.length && buyukHarfIsaretiMi(hucreler[harfIdx])) harfIdx++;
-    const harf = harfIdx < hucreler.length ? hucreyiKarakteryap(hucreler[harfIdx]) : null;
+    let isDuzeltmeli = false;
+    if (harfIdx < hucreler.length && duzeltmeYabanciHarfIsaretiMi(hucreler[harfIdx])) { harfIdx++; isDuzeltmeli = true; }
+    if (harfIdx < hucreler.length && buyukHarfIsaretiMi(hucreler[harfIdx])) harfIdx++;
+    const harf = harfIdx < hucreler.length ? (isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(hucreler[harfIdx]) || hucreyiKarakteryap(hucreler[harfIdx])) : hucreyiKarakteryap(hucreler[harfIdx])) : null;
     return !!harf && harf !== ' ';
   };
   const harfliSayiHarfHucreMi = (cellIdx) => {
-    const onceki = cellIdx > 0 ? hucreler[cellIdx - 1] : null;
-    const onceOnceki = cellIdx > 1 ? hucreler[cellIdx - 2] : null;
-    if (onceki && tekKucukHarfIsaretiMi(onceki)) return !!hucreyiKarakteryap(hucreler[cellIdx]);
-    return !!(
-      onceki
-      && buyukHarfIsaretiMi(onceki)
-      && onceOnceki
-      && tekKucukHarfIsaretiMi(onceOnceki)
-      && hucreyiKarakteryap(hucreler[cellIdx])
-    );
+    // harf hücresinin kendisini tespit et
+    let i = cellIdx - 1;
+    let isDuzeltmeli = false;
+    if (i >= 0 && buyukHarfIsaretiMi(hucreler[i])) i--;
+    if (i >= 0 && duzeltmeYabanciHarfIsaretiMi(hucreler[i])) { i--; isDuzeltmeli = true; }
+    if (i >= 0 && buyukHarfIsaretiMi(hucreler[i])) i--;
+    if (i >= 0 && tekKucukHarfIsaretiMi(hucreler[i])) {
+      return !!(isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(hucreler[cellIdx]) || hucreyiKarakteryap(hucreler[cellIdx])) : hucreyiKarakteryap(hucreler[cellIdx]));
+    }
+    return false;
   };
 
   const mod = {
@@ -1088,15 +1091,21 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
     }
     if (!siraSayiModu && harfliSayiHarfHucreMi(idx)) {
       const oncekiBuyuk = idx > 0 && buyukHarfIsaretiMi(hucreler[idx - 1]);
-      const harf = hucreyiKarakteryap(noktalar);
-      const goster = oncekiBuyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr');
-      return {
-        tip: 'harf',
-        baslik: `Harf: ${goster}`,
-        detay: `Sayı içindeki harf işaretinden sonra Nokta ${noktaStr} → "${goster}" harfi.`,
-        noktaStr,
-        harf: goster,
-      };
+      let isDuzeltmeli = false;
+      let checkIdx = idx - 1;
+      if (checkIdx >= 0 && buyukHarfIsaretiMi(hucreler[checkIdx])) checkIdx--;
+      if (checkIdx >= 0 && duzeltmeYabanciHarfIsaretiMi(hucreler[checkIdx])) isDuzeltmeli = true;
+      const harf = isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(noktalar) || hucreyiKarakteryap(noktalar)) : hucreyiKarakteryap(noktalar);
+      if (harf) {
+        const goster = oncekiBuyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr');
+        return {
+          tip: 'harf',
+          baslik: `Harf: ${goster}`,
+          detay: `Sayı içindeki harf işaretinden sonra Nokta ${noktaStr} → "${goster}" harfi.`,
+          noktaStr,
+          harf: goster,
+        };
+      }
     }
     const r = hucreyiRakamayap(noktalar);
     if (!siraSayiModu && r) return { tip: 'rakam', baslik: `Rakam: ${r}`, detay: 'Sayı modunda kullanılır.', noktaStr };
@@ -1204,10 +1213,11 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
   if (!kisaltmaAktif && tekKucukHarfIsaretiMi(noktalar)) {
     let harfIdx = idx + 1;
     if (harfIdx < hucreler.length && buyukHarfIsaretiMi(hucreler[harfIdx])) harfIdx++;
-    if (harfIdx < hucreler.length && duzeltmeYabanciHarfIsaretiMi(hucreler[harfIdx])) harfIdx++;
+    let isDuzeltmeli = false;
+    if (harfIdx < hucreler.length && duzeltmeYabanciHarfIsaretiMi(hucreler[harfIdx])) { harfIdx++; isDuzeltmeli = true; }
     if (harfIdx < hucreler.length && buyukHarfIsaretiMi(hucreler[harfIdx])) harfIdx++;
     const harf = harfIdx < hucreler.length
-      ? (duzeltmeliHucreyiMetneCevir(hucreler[harfIdx]) || hucreyiKarakteryap(hucreler[harfIdx]))
+      ? (isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(hucreler[harfIdx]) || hucreyiKarakteryap(hucreler[harfIdx])) : hucreyiKarakteryap(hucreler[harfIdx]))
       : null;
     if (harf && harf !== ' ') {
       return { tip: 'isaret', baslik: 'Tek Küçük Harf İşareti', detay: 'Nokta 5 · 6. Sonraki tek harfin harf olarak okunacağını gösterir.', noktaStr };
@@ -1258,13 +1268,17 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
         harfIdx++;
         buyuk = true;
       }
-      if (harfIdx < hucreler.length && duzeltmeYabanciHarfIsaretiMi(hucreler[harfIdx])) harfIdx++;
+      let isDuzeltmeli = false;
+      if (harfIdx < hucreler.length && duzeltmeYabanciHarfIsaretiMi(hucreler[harfIdx])) {
+        harfIdx++;
+        isDuzeltmeli = true;
+      }
       if (harfIdx < hucreler.length && buyukHarfIsaretiMi(hucreler[harfIdx])) {
         harfIdx++;
         buyuk = true;
       }
       if (harfIdx >= hucreler.length) return null;
-      const harf = duzeltmeliHucreyiMetneCevir(hucreler[harfIdx]) || hucreyiKarakteryap(hucreler[harfIdx]);
+      const harf = isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(hucreler[harfIdx]) || hucreyiKarakteryap(hucreler[harfIdx])) : hucreyiKarakteryap(hucreler[harfIdx]);
       if (!harf || harf === ' ') return null;
       const onceki = cellIdx > 0 ? hucreler[cellIdx - 1] : null;
       const sonraki = harfIdx + 1 < hucreler.length ? hucreler[harfIdx + 1] : null;
@@ -1728,8 +1742,17 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
             buyuk = true;
             harfIndex++;
           }
+          let isDuzeltmeli = false;
+          if (harfIndex < b.length && duzeltmeYabanciHarfIsaretiMi(b[harfIndex])) {
+            harfIndex++;
+            isDuzeltmeli = true;
+          }
+          if (harfIndex < b.length && buyukHarfIsaretiMi(b[harfIndex])) {
+            buyuk = true;
+            harfIndex++;
+          }
           if (harfIndex >= b.length) return null;
-          const harf = hucreyiKarakteryap(b[harfIndex]);
+          const harf = isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(b[harfIndex]) || hucreyiKarakteryap(b[harfIndex])) : hucreyiKarakteryap(b[harfIndex]);
           if (!harf || harf === ' ') return null;
           const sonraki = harfIndex + 1 < b.length ? b[harfIndex + 1] : null;
           if (sonraki && !_NOKTA_TERS.has([...sonraki].sort((a, b) => a - b).join(','))) return null;
@@ -1972,8 +1995,17 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
         buyuk = true;
         harfIndex++;
       }
+      let isDuzeltmeli = false;
+      if (harfIndex < satirHucreleri.length && duzeltmeYabanciHarfIsaretiMi(satirHucreleri[harfIndex])) {
+        harfIndex++;
+        isDuzeltmeli = true;
+      }
+      if (harfIndex < satirHucreleri.length && buyukHarfIsaretiMi(satirHucreleri[harfIndex])) {
+        buyuk = true;
+        harfIndex++;
+      }
       if (harfIndex >= satirHucreleri.length) return null;
-      const harf = hucreyiKarakteryap(satirHucreleri[harfIndex]);
+      const harf = isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(satirHucreleri[harfIndex]) || hucreyiKarakteryap(satirHucreleri[harfIndex])) : hucreyiKarakteryap(satirHucreleri[harfIndex]);
       if (!harf || harf === ' ') return null;
       return {
         metin: buyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr'),
@@ -3299,37 +3331,50 @@ export default function Araclar() {
                   >
                     <div className={'belge-braille-text-unicode-group' + (tabletModuAktif ? ' belge-braille-text-unicode-group-tablet' : '')} aria-label={girisMetni}>
                       {tabletModuAktif ? (
-                        tabletSatirYerelleri.map((yerler, ri) => (
-                          <div key={`er-t-${brailleSayfa}-${ri}`} className="araclar-tablet-er-satir" role="row">
-                            {yerler.map((i) => {
-                              const noktalar = sayfaHucreler[i];
-                              const globalIdx = sayfaBaslangic + i;
-                              const anlam = sayfaHucreAnlamlari[i];
-                              const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
-                              const renk = getHucreTipiRengi(anlam, paraBirimiHucre);
-                              const isVurgulu = metinSecimHucreAraligi
-                                && globalIdx >= metinSecimHucreAraligi.lo
-                                && globalIdx <= metinSecimHucreAraligi.hi;
-                              return (
-                                <span
-                                  key={globalIdx}
-                                  className={`unicode-hucre araclar-tablet-er-unicode-hucre${isVurgulu ? ' vurgulu' : ''}`}
-                                  style={{
-                                    color: renk,
-                                    cursor: 'pointer',
-                                    backgroundColor: isVurgulu ? '#e0f2fe' : 'transparent',
-                                    borderRadius: '1px',
-                                    lineHeight: '1',
-                                  }}
-                                  onClick={() => hucreTiklandigindaMetniSec(globalIdx)}
-                                  title={anlam?.baslik}
-                                >
-                                  {erisilebilirTabletUnicodeHucreleri?.[i] ?? ''}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        ))
+                        <div className="araclar-tablet-grid">
+                          {/* Üst kolon numaraları */}
+                          <div className="tablet-satir-numarasi" style={{ visibility: 'hidden' }}>00</div>
+                          {Array.from({ length: TABLET_SATIR_HUCRE }, (_, i) => (
+                            <div key={`er-col-${i}`} className="tablet-kolon-numarasi">{i + 1}</div>
+                          ))}
+
+                          {/* Satırlar */}
+                          {tabletSatirYerelleri.map((yerler, ri) => (
+                            <React.Fragment key={`er-t-${brailleSayfa}-${ri}`}>
+                              <div className="tablet-satir-numarasi">{ri + 1}</div>
+                              {yerler.map((i) => {
+                                const globalIdx = sayfaBaslangic + i;
+                                const anlam = sayfaHucreAnlamlari[i];
+                                const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
+                                const renk = getHucreTipiRengi(anlam, paraBirimiHucre);
+                                const isVurgulu = metinSecimHucreAraligi
+                                  && globalIdx >= metinSecimHucreAraligi.lo
+                                  && globalIdx <= metinSecimHucreAraligi.hi;
+                                return (
+                                  <span
+                                    key={globalIdx}
+                                    className={`unicode-hucre araclar-tablet-er-unicode-hucre${isVurgulu ? ' vurgulu' : ''}`}
+                                    style={{
+                                      color: renk,
+                                      cursor: 'pointer',
+                                      backgroundColor: isVurgulu ? '#e0f2fe' : 'transparent',
+                                      borderRadius: '1px',
+                                      lineHeight: '1',
+                                    }}
+                                    onClick={() => hucreTiklandigindaMetniSec(globalIdx)}
+                                    title={anlam?.baslik}
+                                  >
+                                    {erisilebilirTabletUnicodeHucreleri?.[i] ?? ''}
+                                  </span>
+                                );
+                              })}
+                              {/* Eksik hücreleri doldur */}
+                              {Array.from({ length: TABLET_SATIR_HUCRE - yerler.length }).map((_, emptyIdx) => (
+                                <div key={`er-empty-${ri}-${emptyIdx}`} />
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </div>
                       ) : (
                         sayfaHucreler.map((noktalar, i) => {
                           const globalIdx = sayfaBaslangic + i;
@@ -3375,32 +3420,46 @@ export default function Araclar() {
                     : 'Braille nokta görünümü'}
                 >
                   {tabletModuAktif ? (
-                    tabletSatirYerelleri.map((yerler, ri) => (
-                      <div key={`t-${brailleSayfa}-${ri}`} className="araclar-tablet-satir" role="row">
-                        {yerler.map((i) => {
-                          const noktalar = sayfaHucreler[i];
-                          const globalIdx = sayfaBaslangic + i;
-                          const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
-                          const isVurgulu = metinSecimHucreAraligi
-                            && globalIdx >= metinSecimHucreAraligi.lo
-                            && globalIdx <= metinSecimHucreAraligi.hi;
-                          return (
-                            <BrailleHucreBileseni
-                              key={globalIdx}
-                              noktalar={noktalar}
-                              svgAktifNoktalar={tabletDelikAynala(noktalar)}
-                              globalIdx={globalIdx}
-                              anlam={sayfaHucreAnlamlari[i] || null}
-                              genisletAktif={genisletAktif}
-                              paraBirimiHucre={paraBirimiHucre}
-                              isSecili={seciliHucre?.index === globalIdx}
-                              isVurgulu={isVurgulu}
-                              onClick={hucreTiklandigindaMetniSec}
-                            />
-                          );
-                        })}
-                      </div>
-                    ))
+                    <div className="araclar-tablet-grid">
+                      {/* Üst kolon numaraları */}
+                      <div className="tablet-satir-numarasi" style={{ visibility: 'hidden' }}>00</div>
+                      {Array.from({ length: TABLET_SATIR_HUCRE }, (_, i) => (
+                        <div key={`col-${i}`} className="tablet-kolon-numarasi">{i + 1}</div>
+                      ))}
+
+                      {/* Satırlar */}
+                      {tabletSatirYerelleri.map((yerler, ri) => (
+                        <React.Fragment key={`t-${brailleSayfa}-${ri}`}>
+                          <div className="tablet-satir-numarasi">{ri + 1}</div>
+                          {yerler.map((i) => {
+                            const noktalar = sayfaHucreler[i];
+                            const globalIdx = sayfaBaslangic + i;
+                            const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
+                            const isVurgulu = metinSecimHucreAraligi
+                              && globalIdx >= metinSecimHucreAraligi.lo
+                              && globalIdx <= metinSecimHucreAraligi.hi;
+                            return (
+                              <BrailleHucreBileseni
+                                key={globalIdx}
+                                noktalar={noktalar}
+                                svgAktifNoktalar={tabletDelikAynala(noktalar)}
+                                globalIdx={globalIdx}
+                                anlam={sayfaHucreAnlamlari[i] || null}
+                                genisletAktif={genisletAktif}
+                                paraBirimiHucre={paraBirimiHucre}
+                                isSecili={seciliHucre?.index === globalIdx}
+                                isVurgulu={isVurgulu}
+                                onClick={hucreTiklandigindaMetniSec}
+                              />
+                            );
+                          })}
+                          {/* Eksik hücreleri doldur */}
+                          {Array.from({ length: TABLET_SATIR_HUCRE - yerler.length }).map((_, emptyIdx) => (
+                            <div key={`empty-${ri}-${emptyIdx}`} />
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
                   ) : (
                     sayfaHucreler.map((noktalar, i) => {
                       const globalIdx = sayfaBaslangic + i;
