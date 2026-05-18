@@ -26,7 +26,7 @@ import {
 } from './brailleCevir.js';
 
 // ─── BRF → nokta dizisi ────────────────────────────────────────────────────
-export function brfNoktalaradon(ch) {
+function brfNoktalaradon(ch) {
   const code = ch.charCodeAt(0);
   if (code < 0x20 || code > 0x5f) return null;
   const bits = code - 0x20;
@@ -191,6 +191,11 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
           if (_KISALTMA_IKI.has(a)) { cikis.push(kasala(_KISALTMA_IKI.get(a))); return; }
         }
         const buf = [];
+        const pushBuf = (item) => {
+          console.log("PUSH:", item);
+          buf.push(item);
+        };
+
         let ci = 0;
         let sM = false, siraSM = false, bH = (bashCase === 'ilk'), bHTumu = (bashCase === 'tumu');
         let ciftListeVirgulle = false;
@@ -235,9 +240,11 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
           }
         }
         const harfYaz = (h) => {
+          console.log("harfYaz called with:", h, "bHTumu:", bHTumu, "bH:", bH);
           if (!h) return;
           if (bHTumu) buf.push(h.toLocaleUpperCase('tr'));
           else if (bH) {
+            console.log("bH is true, pushing:", h.charAt(0).toLocaleUpperCase('tr') + h.slice(1).toLocaleLowerCase('tr'));
             buf.push(h.charAt(0).toLocaleUpperCase('tr') + h.slice(1).toLocaleLowerCase('tr'));
             bH = false;
           }
@@ -261,11 +268,10 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             sonrakiIndex: harfIndex + 1,
           };
         };
-        const isAmbiguousMath = (isaret) => !!isaret && isaret.hucreler.length === 1;
         while (ci < b.length) {
           const noktalar = b[ci];
           const islemIsareti = matematikSembolHucreEslesmesi(b, ci);
-          if (islemIsareti && (!isAmbiguousMath(islemIsareti) || sM)) {
+          if (islemIsareti) {
             buf.push(islemIsareti.sembol);
             sM = sM && matematikIsaretiSayiModunuKorurMu(islemIsareti);
             siraSM = false;
@@ -456,6 +462,7 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
           const sonrakiMetin = buf.slice(kokPrefixIndex + 1).join('');
           buf[kokPrefixIndex] = kelimeKokuOkunusunuYorIcinDuzelt(buf[kokPrefixIndex], sonrakiMetin);
         }
+        console.log("BUFFFF:", buf, "NOKTA_TERS 1,2,3:", _NOKTA_TERS.get('1,2,3'));
         cikis.push(buf.join(''));
       };
 
@@ -508,8 +515,7 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
         buyukHarfBekle = false; tumKelimeBuyuk = false; duzeltmeBekle = false; continue;
       }
       const islemIsareti = matematikSembolHucreEslesmesi(satirHucreleri, hi);
-      const isAmbiguousMath2 = (isaret) => !!isaret && isaret.hucreler.length === 1;
-      if (islemIsareti && (!isAmbiguousMath2(islemIsareti) || sayiModu)) {
+      if (islemIsareti) {
         metin += islemIsareti.sembol;
         hi += islemIsareti.hucreler.length - 1;
         sayiModu = sayiModu && matematikIsaretiSayiModunuKorurMu(islemIsareti);

@@ -694,7 +694,7 @@ export function kelimeTumuBuyukMu(kelime) {
 }
 
 /**
- * Bu virgül, en az üç rakam grubunu ayıran liste ifadesine mi ait? (Çift rakam işareti kuralına giren sıra.)
+ * Bu virgül, en az üç rakam grubunu ayıran liste ifadesine mi ait?
  * Ondalık virgülle karışmasın diye önce liste tarafı seçilir.
  */
 function cokluSayiListesiKommasiMi(metin, commaIdx) {
@@ -710,6 +710,48 @@ function cokluSayiListesiKommasiMi(metin, commaIdx) {
     }
   }
   return false;
+}
+
+function cokluSayiListesiEslesmesi(metin, index) {
+  if (!metin || index < 0 || index >= metin.length || !/\d/u.test(metin[index])) return null;
+  if (index > 0 && /[\d,]/u.test(metin[index - 1])) return null;
+  const eslesme = metin.slice(index).match(/^\d+(?:\s*,\s*\d+){3,}(?!\s*,|\s*\d)/u);
+  if (!eslesme) return null;
+  const parca = eslesme[0];
+  const sayilar = [];
+  const virgulIndeksleri = [];
+  let p = 0;
+  while (p < parca.length) {
+    while (p < parca.length && /\s/u.test(parca[p])) p++;
+    const bas = p;
+    while (p < parca.length && /\d/u.test(parca[p])) p++;
+    if (p > bas) sayilar.push({ deger: parca.slice(bas, p), idx: index + bas });
+    while (p < parca.length && /\s/u.test(parca[p])) p++;
+    if (parca[p] === ',') {
+      virgulIndeksleri.push(index + p);
+      p++;
+    }
+  }
+  return sayilar.length >= 4 ? { sayilar, virgulIndeksleri, uzunluk: parca.length } : null;
+}
+
+function cokluSayiListesiEkle(eslesme, ekle, sayiIsareti) {
+  if (sayiIsareti) {
+    ekle(SAYI_ISARETI, -1);
+    ekle(SAYI_ISARETI, -1);
+  }
+  for (let si = 0; si < eslesme.sayilar.length; si++) {
+    const sayi = eslesme.sayilar[si];
+    if (sayiIsareti && si === eslesme.sayilar.length - 1) {
+      ekle(SAYI_ISARETI, -1);
+    }
+    for (let ri = 0; ri < sayi.deger.length; ri++) {
+      ekle(RAKAM_TABLO.get(sayi.deger[ri]), sayi.idx + ri);
+    }
+    if (si < eslesme.virgulIndeksleri.length) {
+      ekle(NOKTA_TABLO.get(','), eslesme.virgulIndeksleri[si]);
+    }
+  }
 }
 
 /**
@@ -890,6 +932,15 @@ export function metniBrailleyeCevir(metin, opt = {}) {
       sayiModu = false;
       tumuBuyukKalan = 0;
       i += saatBolgesi.uzunluk - 1;
+      continue;
+    }
+
+    const cokluSayiListesi = cokluSayiListesiEslesmesi(metin, i);
+    if (cokluSayiListesi) {
+      cokluSayiListesiEkle(cokluSayiListesi, ekle, sayiIsareti);
+      sayiModu = true;
+      tumuBuyukKalan = 0;
+      i += cokluSayiListesi.uzunluk - 1;
       continue;
     }
 
@@ -1785,6 +1836,11 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
         tokenler.push({ tip: 'saat', deger: saatBolgesi, idx: i });
         i += saatBolgesi.uzunluk;
       } else {
+        const cokluSayiListesi = cokluSayiListesiEslesmesi(metin, i);
+        if (cokluSayiListesi) {
+          tokenler.push({ tip: 'cokluSayiListesi', deger: cokluSayiListesi, idx: i });
+          i += cokluSayiListesi.uzunluk;
+        } else {
         const sayiBagTok = sayiBagIfadesiEslesmesi(metin, i);
         if (sayiBagTok) {
           tokenler.push({ tip: 'sayiBag', deger: sayiBagTok, idx: i });
@@ -1834,6 +1890,7 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
           i = j;
         }
       }
+      }
     }
   }
 
@@ -1860,6 +1917,9 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
       sayiModu = true;
     } else if (tok.tip === 'sayiBag') {
       sayiBagIfadesiEkle(tok.deger, tok.idx, ekle, sayiIsareti);
+      sayiModu = true;
+    } else if (tok.tip === 'cokluSayiListesi') {
+      cokluSayiListesiEkle(tok.deger, ekle, sayiIsareti);
       sayiModu = true;
     } else if (tok.tip === 'noktalama') {
       ekle(NOKTA_TABLO.get(tok.deger), tok.idx);

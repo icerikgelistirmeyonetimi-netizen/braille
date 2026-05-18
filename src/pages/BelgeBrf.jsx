@@ -3,6 +3,7 @@ import mammoth from 'mammoth';
 import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
+import BrailleGrid from '../components/BrailleGrid.jsx';
 import { metniBrailleyeCevir, metniBrailleyeCevirKisaltmali, siraSayisiSonRakamEtiketiNoktaEki } from '../utils/brailleCevir.js';
 import {
   hucreAnlami,
@@ -14,6 +15,8 @@ import {
   TABLET_BRAILLE_SAYFA_BOYUTU,
   tabletDelikAynala,
   tabletSayfasiUnicodeKopyaMetni,
+  sayfaBaslangicDurumlariniHesapla,
+  sayfaAnlamlariniTopluHesapla,
   brfKagitBoyutunuDuzeltGirdi,
   brfIcindekiSayfaMetinleri,
   brfSatirininBrailleUnicodeKarsiligi,
@@ -444,6 +447,21 @@ export default function BelgeBrf() {
   const sayfaBaslangic = brailleSayfa * brailleSayfaBoyutu;
   const sayfaHucreler = hucreler.slice(sayfaBaslangic, sayfaBaslangic + brailleSayfaBoyutu);
   const sayfaSonIndeks = sayfaBaslangic + sayfaHucreler.length;
+  const hucreAnlamiOpts = useMemo(
+    () => ({ kaynak: kaynakCache, esleme: eslemeCache, paraBirimiKaynakAraliklari }),
+    [kaynakCache, eslemeCache, paraBirimiKaynakAraliklari],
+  );
+  const sayfaBaslangicDurumlari = useMemo(
+    () => sayfaBaslangicDurumlariniHesapla(hucreler, brailleSayfaBoyutu, hucreAnlamiOpts),
+    [hucreler, brailleSayfaBoyutu, hucreAnlamiOpts],
+  );
+  const sayfaHucreAnlamlari = useMemo(
+    () => sayfaAnlamlariniTopluHesapla(hucreler, sayfaBaslangic, sayfaSonIndeks, kisaltmaAktif, {
+      ...hucreAnlamiOpts,
+      baslangicDurumu: sayfaBaslangicDurumlari[brailleSayfa],
+    }),
+    [hucreler, sayfaBaslangic, sayfaSonIndeks, kisaltmaAktif, hucreAnlamiOpts, sayfaBaslangicDurumlari, brailleSayfa],
+  );
 
   const tabletSatirYerelleri = useMemo(() => {
     const n = sayfaHucreler.length;
@@ -472,19 +490,15 @@ export default function BelgeBrf() {
     const dosya = e.dataTransfer.files?.[0];
     if (dosya) processFile(dosya);
   }, []);
-
   const onDragOver = (e) => { e.preventDefault(); setDragOver(true); };
   const onDragLeave = () => setDragOver(false);
 
   return (
     <div className="page yazma-page araclar-page">
-
-      {/* Üst */}
       <div className="yazma-bolum yazma-bolum-ust">
         <PageHeader baslik="Belge → BRF" />
       </div>
 
-      {/* Orta */}
       <div className="yazma-bolum yazma-bolum-orta">
         <input
           ref={dosyaRef}
@@ -495,7 +509,6 @@ export default function BelgeBrf() {
           aria-label="Belge seç"
         />
 
-        {/* ── Boş durum: drop zone ── */}
         {!belgeMetni && !yukleniyor && (
           <div
             className={'belge-drop-zone' + (dragOver ? ' drag-over' : '')}
@@ -524,20 +537,16 @@ export default function BelgeBrf() {
                 <span key={f} className="belge-format-badge">{f}</span>
               ))}
             </div>
-            {hata && (
-              <p className="belge-drop-hata" role="alert">{hata}</p>
-            )}
+            {hata && <p className="belge-drop-hata" role="alert">{hata}</p>}
           </div>
         )}
 
-        {/* ── Yükleniyor ── */}
         {yukleniyor && (
           <div className="belge-yukleniyor">
             <span className="belge-yukleniyor-spinner" aria-hidden="true" />
             <span>Okunuyor…</span>
           </div>
         )}
-
         {/* ── Metin önizleme ── */}
         {!yukleniyor && belgeMetni && (
           <>
@@ -772,68 +781,17 @@ export default function BelgeBrf() {
                       ))}
                     </div>
                   ) : (
-                    sayfaHucreler.map((noktalar, i) => {
-                      const globalIdx = sayfaBaslangic + i;
-                      const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif, {
-                        kaynak: kaynakCache,
-                        esleme: eslemeCache,
-                        paraBirimiKaynakAraliklari,
-                      });
-                      const kisaltmaHucre = kisaltmaAktif && (
-                        anlam.tip === 'kisaltma' ||
-                        (anlam.tip === 'isaret' && (
-                          anlam.baslik === 'Kelime Kökü İşareti' ||
-                          anlam.baslik === 'Kelime Parçası İşareti'
-                        ))
-                      );
-                      const noktalamaHucre = anlam.tip === 'noktalama';
-                      const bolukIsaretiHucre = anlam.tip === 'isaret' && anlam.baslik === 'Bölük İşareti';
-                      const siraSayisiHucre = anlam.tip === 'rakam' && /^Sıra sayısı/u.test(anlam.baslik);
-                      const ondalikAyiracHucre = anlam.tip === 'noktalama' && anlam.baslik.includes('ondalık ayraç');
-                      const matematikHucre = anlam.tip === 'islem' || bolukIsaretiHucre || siraSayisiHucre || ondalikAyiracHucre;
-                      const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
-                      // Sayı/büyük/tümü büyük gibi özel işaretler → siyah göster
-                      const ozelIsaretHucre = anlam.tip === 'isaret' && !kisaltmaHucre && !bolukIsaretiHucre && !paraBirimiHucre;
-                      const sinif = 'belge-braille-hucre' +
-                        (seciliHucre?.index === globalIdx ? ' secili' : '') +
-                        (kisaltmaHucre ? ' kisaltma-hucre' : '') +
-                        (noktalamaHucre ? ' noktalama-hucre' : '') +
-                        (matematikHucre ? ' matematik-hucre' : '') +
-                        (paraBirimiHucre ? ' para-birimi-hucre' : '') +
-                        (ozelIsaretHucre ? ' ozel-isaret-hucre' : '');
-                      const etiket = genisletAktif
-                        ? `${kisaEtiket(anlam)}${siraSayisiSonRakamEtiketiNoktaEki(
-                          anlam,
-                          globalIdx,
-                          hucreler,
-                          kaynakCache,
-                          eslemeCache,
-                        )}`
-                        : '';
-                      return (
-                        <div
-                          key={globalIdx}
-                          className={sinif}
-                          role="button"
-                          tabIndex={0}
-                          title="Tıkla: anlam göster"
-                          onClick={() => {
-                            setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSeciliHucre(seciliHucre?.index === globalIdx ? null : { index: globalIdx, anlam });
-                            }
-                          }}
-                        >
-                          <BrailleCell aktifNoktalar={noktalar} tiklanabilir={false} kesfedilebilir={false} />
-                          {genisletAktif && (
-                            <div className="belge-hucre-etiket" aria-hidden="true">{etiket || '\u00A0'}</div>
-                          )}
-                        </div>
-                      );
-                    })
+                    <BrailleGrid
+                      hucreler={hucreler}
+                      indices={Array.from({ length: sayfaHucreler.length }, (_, i) => i)}
+                      baseIndex={sayfaBaslangic}
+                      kisaltmaAktif={kisaltmaAktif}
+                      genisletAktif={genisletAktif}
+                      seciliIndex={(seciliHucre && typeof seciliHucre.index === 'number') ? seciliHucre.index : -1}
+                      onSelect={(idx, anlam) => setSeciliHucre(seciliHucre && seciliHucre.index === idx ? null : { index: idx, anlam })}
+                      anlamlar={sayfaHucreAnlamlari}
+                      buildEtiket={(anlam, idx) => `${kisaEtiket(anlam)}${siraSayisiSonRakamEtiketiNoktaEki(anlam, idx, hucreler, kaynakCache, eslemeCache)}`}
+                    />
                   )}
                 </div>
                 )}
@@ -851,7 +809,7 @@ export default function BelgeBrf() {
                         className="bhp-kapat"
                         onClick={() => setSeciliHucre(null)}
                         aria-label="Kapat"
-                      >✕</button>
+                      >x</button>
                     </div>
                     <div className="bhp-noktalar">Nokta: {seciliHucre.anlam.noktaStr}</div>
                     {seciliHucre.anlam.detay && (
@@ -980,13 +938,11 @@ export default function BelgeBrf() {
                   title={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir mod (braille metin/font görünümü)'}
                 >
                   {erisilebilirMod ? (
-                    // Nokta grafiğine dönüş ikonu (6 nokta)
                     <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
                       <circle cx="8" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>
                       <circle cx="16" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>
                     </svg>
                   ) : (
-                    // Erişilebilir/font ikonu (büyük A harfi)
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M4 20l6-14h4l6 14"/><path d="M7 14h10"/>
                     </svg>
@@ -1048,20 +1004,11 @@ export default function BelgeBrf() {
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="araclar-brf-onizle-ust">
-              <h2 id="araclar-brf-onizle-baslik" className="araclar-brf-onizle-baslik">
-                Kabartmalı çıktı ön izlemesi (BRF sırası)
-              </h2>
-              <button
-                type="button"
-                className="araclar-brf-onizle-kapat"
-                onClick={() => setBrfOnizlemeAcik(false)}
-                aria-label="Kapat"
-              >
-                ✕
-              </button>
+              <h2 id="araclar-brf-onizle-baslik" className="araclar-brf-onizle-baslik">Kabartmalı çıktı ön izlemesi (BRF sırası)</h2>
+              <button type="button" className="araclar-brf-onizle-kapat" onClick={() => setBrfOnizlemeAcik(false)} aria-label="Kapat">x</button>
             </div>
             <div className="araclar-brf-onizle-govde">
-              <aside className="araclar-brf-onizle-panel" aria-label="Kağıt ve satır düzeni">
+              <aside className="araclar-brf-onizle-panel" aria-label="Kagit ve satir duzeni">
                 <p className="araclar-brf-onizle-panel-baslik">Sayfa düzeni</p>
                 <p className="araclar-brf-onizle-aciklama">
                   Sıra başına hücre ve sayfa başına satır yazıcısındaki delik satırlarına karşılık gelir. Seçilen düzen hem ön izlemede hem “BRF İndir” ile indirilen dosyada kullanılır.

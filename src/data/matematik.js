@@ -86,7 +86,7 @@ export const MATEMATIK_RAKAMLAR = [
 
 export const MATEMATIK_SEMBOLLER = [
   { ad: 'rakam işareti', sembol: 'L', aciklama: 'Rakamlar harflerden ayrılırken önce rakam işareti yazılır. Noktaları: 3-4-5-6.', hucreler: [RAKAM_GOSTERGESI] },
-  { ad: 'çift rakam işareti', sembol: 'LL', aciklama: 'Üç veya daha fazla ardışık/alt alta sayıda ilk sayının başına çift rakam işareti yazılır.', hucreler: [RAKAM_GOSTERGESI, RAKAM_GOSTERGESI] },
+  { ad: 'çift rakam işareti', sembol: 'LL', aciklama: 'Üçten fazla ardışık/alt alta sayıda ilk sayının başına çift rakam işareti yazılır.', hucreler: [RAKAM_GOSTERGESI, RAKAM_GOSTERGESI] },
   { ad: 'bölük işareti', sembol: '’', aciklama: 'Üç basamaktan fazla sayılarda sağdan üçer basamak ayırmak için 3. nokta kullanılır.', hucreler: [[3]] },
   { ad: 'bağ işareti', sembol: '-', aciklama: 'Bağlantılı sayılar ve zaman ifadelerinde araya 3-6 noktaları yazılır.', hucreler: [[3, 6]] },
   { ad: 'virgül / ondalık gösterim', sembol: ',', aciklama: 'Matematikte sayıların arasındaki virgül ve ondalık gösterim 2. nokta ile yazılır; ondalık yazımda virgülden sonra ikinci bir rakam işareti kullanılmaz.', hucreler: [[2]] },

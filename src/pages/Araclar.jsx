@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
+import BrailleGrid from '../components/BrailleGrid.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 import { noktalardanUnicode } from './BelgeBrf.jsx';
@@ -104,7 +105,7 @@ const ARACLAR_CEVIR_WORKER_DEBOUNCE_MS = 48;
 
 const CIFT_RAKAM_ISARETI_DETAY =
 
-  'Çift rakam işareti (aynı anda nokta 3 · 4 · 5 · 6 yazılmış iki Braille hücresi, ⠼⠼): Üç veya daha fazla ardışık sayı yan yana (virgülle ayrılmış) veya sütunda alt alta yazıldığında sıra böyle iki sayı işareti ile başlar. Ara sayıların öncesine sayı işareti yazılmaz; yalnızca dizinin son sayısının başında tek sayı işareti (⠼) kullanılır. ';
+  'Çift rakam işareti (aynı anda nokta 3 · 4 · 5 · 6 yazılmış iki Braille hücresi, ⠼⠼): Üçten fazla ardışık sayı yan yana (virgülle ayrılmış) veya sütunda alt alta yazıldığında sıra böyle iki sayı işareti ile başlar. Ara sayıların öncesine sayı işareti yazılmaz; yalnızca dizinin son sayısının başında tek sayı işareti (⠼) kullanılır. ';
 
 
 // Hücre anlamından kısa etiket türet (genişlet modunda hücre altında gösterilir)
@@ -496,6 +497,7 @@ function hucreAnlamiBaglamVeModSifir(hucreler, opts) {
     if (barKaynaktaMi === true) return true;
     if (barKaynaktaMi === false) return false;
     if (key === '1,2,3' && mutlakDikeyCizgiLiteraryElleMuhtemelMi(cellIdx)) return false;
+    if (key === '1,2,3') return false;
     return true;
   };
 
@@ -938,6 +940,25 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
   }
   const islemKapsami = matematikIslemIsaretiHucreKapsami(hucreler, idx);
   if (islemKapsami) {
+    // Heuristik: Küme kapama (}) yalnızca daha önce eşleşmiş bir "küme açma" ({) varsa gösterilsin.
+    // Aksi halde, büyük harf işareti [6] + "ta" hecesi [2,3,4,5,6] gibi doğal yazımlar yanlışlıkla
+    // küme kapama olarak etiketleniyor ("Tatilde" örneği).
+    const dotKeyAt = (i) => (i >= 0 && i < hucreler.length && hucreler[i]?.length ? noktalariAnahtara(hucreler[i]) : '');
+    const isKumeAcmaAt = (i) => dotKeyAt(i) === '1,2,3,5,6' && dotKeyAt(i + 1) === '3';
+    const isKumeKapamaAt = (i) => dotKeyAt(i) === '6' && dotKeyAt(i + 1) === '2,3,4,5,6';
+    const oncekiKumeAcikSayisi = (() => {
+      let say = 0;
+      let i = 0;
+      while (i < idx) {
+        if (isKumeAcmaAt(i)) { say++; i += 2; continue; }
+        if (isKumeKapamaAt(i)) { if (say > 0) say--; i += 2; continue; }
+        i++;
+      }
+      return say;
+    })();
+    if (islemKapsami.ad === 'küme kapama' && oncekiKumeAcikSayisi <= 0) {
+      // Küme bağlamı yoksa matematik sembolü olarak göstermeyelim; harf/hece yorumuna bırak.
+    } else {
     const kaynakIdx = _esleme ? _esleme[islemKapsami.baslangic] : -1;
     const kaynakKarakter = _kaynak && typeof kaynakIdx === 'number' && kaynakIdx >= 0
       ? _kaynak[kaynakIdx]
@@ -952,6 +973,7 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
         noktaStr,
         etiket: ilkHucre ? islemKapsami.sembol : '',
       };
+    }
     }
   }
   if (buyukHarfIsaretiMi(noktalar)) {
@@ -1001,7 +1023,7 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
           tip: 'isaret',
           baslik: 'Çift Rakam İşareti (Örüntü Sonu)',
           detay:
-            'Nokta 3 · 4 · 5 · 6. Virgülle ayrılmış üç veya daha fazla sayılı örneğinde dizi ilk sayıdan önce çift rakam işareti ile başlar, ara rakamlarda sayı işareti kullanılmaz; yalnızca sıranın son rakam grubunun hemen öncesinde bu tek işaret yazılır (MEB 1.2.5). Sonraki hücreler rakam olarak okunur.',
+            'Nokta 3 · 4 · 5 · 6. Virgülle ayrılmış üçten fazla sayılı örnekte dizi ilk sayıdan önce çift rakam işareti ile başlar, ara rakamlarda sayı işareti kullanılmaz; yalnızca sıranın son rakam grubunun hemen öncesinde bu tek işaret yazılır (MEB 1.2.5). Sonraki hücreler rakam olarak okunur.',
           noktaStr,
         };
       }
@@ -1246,10 +1268,18 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
       return dotKey(hucreler[cellIdx]) === '3'
         && dotKey(hucreler[cellIdx - 1]) === '1,2,3,5,6';
     };
+    const _kaynakNoktalamaMi = (cellIdx) => {
+      if (!_kaynak || !_esleme) return false;
+      const kaynakIdx = _esleme[cellIdx];
+      if (typeof kaynakIdx !== 'number' || kaynakIdx < 0 || kaynakIdx >= _kaynak.length) return false;
+      const kaynakKarakter = _kaynak[kaynakIdx];
+      return NOKTALAMA.some((n) => n.isaret === kaynakKarakter);
+    };
     const _isNoktalamaHucre = (h, i) => {
       if (!h || h.length === 0) return false;
       const kk = dotKey(h);
       if (!_NOKTA_TERS.has(kk)) return false;
+      if (_kaynakNoktalamaMi(i)) return true;
       // Küme açmanın 2. hücresi yalnızca nokta 3; kesme ile aynı desen. Noktalama sanılırsa
       // "{" yanındaki harfler için kısaltma sınırları bozulur.
       if (kk === '3' && (_tekHarfAyirmaIsaretiMi(i) || _kumeAcmaIkinciHucreMi(i))) return false;
@@ -1526,6 +1556,32 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
   return { tip: 'bilinmiyor', baslik: 'Bilinmiyor', detay: `Nokta ${noktaStr} için anlam bulunamadı.`, noktaStr };
 }
 
+
+function hucreAnlamiModDurumunuKopyala(mod) {
+  return {
+    sayiModu: !!mod.sayiModu,
+    siraSayiModu: !!mod.siraSayiModu,
+    buyukHarfBekle: !!mod.buyukHarfBekle,
+    tumKelimeBuyuk: !!mod.tumKelimeBuyuk,
+    ciftListeVirgulle: !!mod.ciftListeVirgulle,
+    cListeSonTekIsaretSonrasi: !!mod.cListeSonTekIsaretSonrasi,
+    paren24356Count: typeof mod.paren24356Count === 'number' ? mod.paren24356Count : 0,
+    mutlakDerinlik: typeof mod.mutlakDerinlik === 'number' ? mod.mutlakDerinlik : 0,
+  };
+}
+
+export function sayfaBaslangicDurumlariniHesapla(hucreler, sayfaBoyutu, opts) {
+  const boyut = Math.max(1, Number.isFinite(sayfaBoyutu) ? Math.floor(sayfaBoyutu) : BRAILLE_SAYFA_BOYUTU);
+  const bg = hucreAnlamiBaglamVeModSifir(hucreler, opts);
+  const durumlar = [hucreAnlamiModDurumunuKopyala(bg.mod)];
+  for (let i = 0; i < hucreler.length; i++) {
+    bg.modTekIndeks(i);
+    if ((i + 1) % boyut === 0) {
+      durumlar.push(hucreAnlamiModDurumunuKopyala(bg.mod));
+    }
+  }
+  return durumlar;
+}
 
 /** Sayfa aralığındaki hücre anlamlarını tek doğrusal geçişte üretir (O sayfa başına). */
 export function sayfaAnlamlariniTopluHesapla(hucreler, sayfaBas, sayfaSon, kisaltmaAktif, opts) {
@@ -2563,19 +2619,35 @@ export default function Araclar() {
       kaynak: kaynakCache,
     };
   }, [eslemeCache, hucrelerCache, kaynakCache]);
+  const brailleSayfaBoyutu = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
+  const toplamSayfa = Math.max(1, Math.ceil(hucrelerCache.length / brailleSayfaBoyutu));
+  const sayfaBaslangic = brailleSayfa * brailleSayfaBoyutu;
+  const sayfaHucreler = hucrelerCache.slice(sayfaBaslangic, sayfaBaslangic + brailleSayfaBoyutu);
+  const sayfaSonIndeks = sayfaBaslangic + sayfaHucreler.length;
+  const hucreAnlamiOrtakOpts = useMemo(() => ({
+    kaynak: kaynakCache,
+    esleme: eslemeCache,
+    yorumTercihleri: karakterYorumTercihleri,
+    paraBirimiKaynakAraliklari,
+  }), [kaynakCache, eslemeCache, karakterYorumTercihleri, paraBirimiKaynakAraliklari]);
+  const sayfaBaslangicDurumlari = useMemo(
+    () => sayfaBaslangicDurumlariniHesapla(hucrelerCache, brailleSayfaBoyutu, hucreAnlamiOrtakOpts),
+    [hucrelerCache, brailleSayfaBoyutu, hucreAnlamiOrtakOpts],
+  );
   const seciliHucreDetayi = useMemo(() => {
     if (!seciliHucre || typeof seciliHucre.index !== 'number') return null;
     if (seciliHucre.index < 0 || seciliHucre.index >= hucrelerCache.length) return null;
+    const seciliSayfa = Math.floor(seciliHucre.index / brailleSayfaBoyutu);
+    const seciliSayfaBaslangic = seciliSayfa * brailleSayfaBoyutu;
     return {
       index: seciliHucre.index,
       anlam: hucreAnlami(hucrelerCache, seciliHucre.index, hucreYorumlariAktif, {
-        kaynak: kaynakCache,
-        esleme: eslemeCache,
-        yorumTercihleri: karakterYorumTercihleri,
-        paraBirimiKaynakAraliklari,
+        ...hucreAnlamiOrtakOpts,
+        baslangicHucre: seciliSayfaBaslangic,
+        baslangicDurumu: sayfaBaslangicDurumlari[seciliSayfa],
       }),
     };
-  }, [seciliHucre, hucrelerCache, hucreYorumlariAktif, kaynakCache, eslemeCache, karakterYorumTercihleri, paraBirimiKaynakAraliklari]);
+  }, [seciliHucre, hucrelerCache, hucreYorumlariAktif, brailleSayfaBoyutu, hucreAnlamiOrtakOpts, sayfaBaslangicDurumlari]);
 
   const seciliHucreKelimeBaglami = useMemo(
     () => (seciliHucreDetayi
@@ -2644,11 +2716,6 @@ export default function Araclar() {
   }, [seciliHucreDetayi, eslemeCache, kaynakCache, karakterYorumTercihleri]);
   const seciliHucreYorumAyariBilgisi =
     seciliHucreAyarBilgisi || seciliHucreEksiAyariBilgisi || seciliHucreOndalikVirgulAyariBilgisi;
-  const brailleSayfaBoyutu = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
-  const toplamSayfa = Math.max(1, Math.ceil(hucrelerCache.length / brailleSayfaBoyutu));
-  const sayfaBaslangic = brailleSayfa * brailleSayfaBoyutu;
-  const sayfaHucreler = hucrelerCache.slice(sayfaBaslangic, sayfaBaslangic + brailleSayfaBoyutu);
-  const sayfaSonIndeks = sayfaBaslangic + sayfaHucreler.length;
   const sayfaHucreAnlamlari = useMemo(() => {
     if (!girisMetni || sayfaHucreler.length === 0) return [];
     return sayfaAnlamlariniTopluHesapla(
@@ -2657,10 +2724,8 @@ export default function Araclar() {
       sayfaSonIndeks,
       hucreYorumlariAktif,
       {
-        kaynak: kaynakCache,
-        esleme: eslemeCache,
-        yorumTercihleri: karakterYorumTercihleri,
-        paraBirimiKaynakAraliklari,
+        ...hucreAnlamiOrtakOpts,
+        baslangicDurumu: sayfaBaslangicDurumlari[brailleSayfa],
       },
     );
   }, [
@@ -2670,10 +2735,8 @@ export default function Araclar() {
     sayfaBaslangic,
     sayfaSonIndeks,
     hucreYorumlariAktif,
-    kaynakCache,
-    eslemeCache,
-    karakterYorumTercihleri,
-    paraBirimiKaynakAraliklari,
+    hucreAnlamiOrtakOpts,
+    sayfaBaslangicDurumlari,
   ]);
 
   /** Erişilebilir + tablet: Unicode satırı render içinde tekrar hesaplanmasın. */
@@ -3461,26 +3524,20 @@ export default function Araclar() {
                       ))}
                     </div>
                   ) : (
-                    sayfaHucreler.map((noktalar, i) => {
-                      const globalIdx = sayfaBaslangic + i;
-                      const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
-                      const isVurgulu = metinSecimHucreAraligi
-                        && globalIdx >= metinSecimHucreAraligi.lo
-                        && globalIdx <= metinSecimHucreAraligi.hi;
-                      return (
-                        <BrailleHucreBileseni
-                          key={globalIdx}
-                          noktalar={noktalar}
-                          globalIdx={globalIdx}
-                          anlam={sayfaHucreAnlamlari[i] || null}
-                          genisletAktif={genisletAktif}
-                          paraBirimiHucre={paraBirimiHucre}
-                          isSecili={seciliHucre?.index === globalIdx}
-                          isVurgulu={isVurgulu}
-                          onClick={hucreTiklandigindaMetniSec}
-                        />
-                      );
-                    })
+                    <BrailleGrid
+                      hucreler={hucrelerCache}
+                      indices={Array.from({ length: sayfaHucreler.length }, (_, i) => i)}
+                      baseIndex={sayfaBaslangic}
+                      kisaltmaAktif={kisaltmaAktif}
+                      genisletAktif={genisletAktif}
+                      seciliIndex={(seciliHucre && typeof seciliHucre.index === 'number') ? seciliHucre.index : -1}
+                      onSelect={(idx) => hucreTiklandigindaMetniSec(idx)}
+                      anlamlar={sayfaHucreAnlamlari}
+                      buildEtiket={(anlam) => kisaEtiket(anlam)}
+                      esleme={eslemeCache}
+                      paraBirimiKaynakAraliklari={paraBirimiKaynakAraliklari}
+                      isHighlighted={(idx) => !!(metinSecimHucreAraligi && idx >= metinSecimHucreAraligi.lo && idx <= metinSecimHucreAraligi.hi)}
+                    />
                   )}
                 </div>
                 )}
@@ -3512,7 +3569,7 @@ export default function Araclar() {
                           className="bhp-kapat"
                           onClick={() => setSeciliHucre(null)}
                           aria-label="Kapat"
-                        >✕</button>
+                        >×</button>
                       </div>
                     </div>
                     <div className="bhp-noktalar">Nokta: {seciliHucreDetayi.anlam.noktaStr}</div>
@@ -3875,7 +3932,7 @@ export default function Araclar() {
                 onClick={() => setBrfOnizlemeAcik(false)}
                 aria-label="Kapat"
               >
-                ✕
+                ×
               </button>
             </div>
             <div className="araclar-brf-onizle-govde">
