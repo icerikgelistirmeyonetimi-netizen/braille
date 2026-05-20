@@ -632,7 +632,7 @@ export default function BrfOku() {
                                     }
                                   }}
                                 >
-                                  <BrailleCell aktifNoktalar={tabletDelikAynala(noktalar)} tiklanabilir={false} kesfedilebilir={false} />
+                                  <BrailleCell aktifNoktalar={tabletDelikAynala(noktalar)} tiklanabilir={false} kesfedilebilir={false} aynaliEtiket={true} />
                                   {genisletAktif && (
                                     <div className="belge-hucre-etiket" aria-hidden="true">{etiket || '\u00A0'}</div>
                                   )}

@@ -41,10 +41,15 @@ export default function BrailleCell({
   baslikAriaLabel,
   baslikStyle,
   statikDesen = false,
+  // Tablet/yazı tableti modu: nokta NUMARA ETİKETLERİ aynalanır (1↔4, 2↔5, 3↔6).
+  // Fiziksel braille tabletinin yazım yüzü için. Dot fillleri zaten dış kullanıcıdan
+  // mirror edilmiş gelir; bu bayrak yalnız görünür label numarasını değiştirir.
+  aynaliEtiket = false,
 }) {
   /** Klavye odağı ve okuyucu sırası 1–6; iki sütunlu Braille düzeni grid ile */
   const NOKTA_DOM_SIRA = [1, 2, 3, 4, 5, 6];
-  const noktaGridYerlesimi = {
+  // Standart yerleşim: dot 1-2-3 sol sütun, 4-5-6 sağ sütun
+  const noktaGridYerlesimiStd = {
     1: { gridRow: 1, gridColumn: 1 },
     2: { gridRow: 2, gridColumn: 1 },
     3: { gridRow: 3, gridColumn: 1 },
@@ -52,6 +57,19 @@ export default function BrailleCell({
     5: { gridRow: 2, gridColumn: 2 },
     6: { gridRow: 3, gridColumn: 2 },
   };
+  // Tablet (yazım yüzü) yerleşimi: dot 1-2-3 sağ sütun, 4-5-6 sol sütun
+  // (fiziksel tabletteki punch konumlarına uyacak şekilde mirror)
+  const noktaGridYerlesimiAyna = {
+    1: { gridRow: 1, gridColumn: 2 },
+    2: { gridRow: 2, gridColumn: 2 },
+    3: { gridRow: 3, gridColumn: 2 },
+    4: { gridRow: 1, gridColumn: 1 },
+    5: { gridRow: 2, gridColumn: 1 },
+    6: { gridRow: 3, gridColumn: 1 },
+  };
+  const noktaGridYerlesimi = aynaliEtiket ? noktaGridYerlesimiAyna : noktaGridYerlesimiStd;
+  const AYNA_HARITASI = { 1: 4, 2: 5, 3: 6, 4: 1, 5: 2, 6: 3 };
+  const etiketGoster = (n) => (aynaliEtiket ? AYNA_HARITASI[n] : n);
   const sonOkunan = useRef(null);
   // Hücreyle herhangi bir parmak/fare etkileşimi (keşif veya tıklama)
   const etkilesimli = tiklanabilir || kesfedilebilir;
@@ -69,7 +87,7 @@ export default function BrailleCell({
 
   const ariaLabel = (n) => {
     const durum = aktifNoktalar.includes(n) || dogruNoktalar.includes(n) ? 'dolu' : 'boş';
-    return `${n} numaralı nokta, ${durum}`;
+    return `${etiketGoster(n)} numaralı nokta, ${durum}`;
   };
 
   // Üzerine gelindiğinde / parmak gezdirildiğinde numarayı seslendir + kısa titreşim
@@ -78,7 +96,7 @@ export default function BrailleCell({
     if (sonOkunan.current === n) return;
     sonOkunan.current = n;
     titret(25); // parmak yeni noktaya girdi
-    konus(String(n), { kesintiyle: true });
+    konus(String(etiketGoster(n)), { kesintiyle: true });
   };
 
   const noktayiBirak = () => {
@@ -179,7 +197,7 @@ export default function BrailleCell({
                     }
                   : { 'aria-hidden': false })}
             >
-              {n}
+              {etiketGoster(n)}
             </Etiket>
           );
         })}

@@ -2942,6 +2942,26 @@ function muzikSkorunuBrailleyeCevir(ogeler, baglar = []) {
 
   for (let idx = 0; idx < ogeler.length; idx++) {
     const oge = ogeler[idx];
+
+    // Audit E,G — Ölçü başında: bar number + (varsa) otomatik bar repeat işareti
+    const olcuIdx = ogeOlcuIndeksi.get(idx);
+    if (olcuIdx !== undefined && olculer[olcuIdx].indices[0] === idx && !yazilanOlculer.has(olcuIdx)) {
+      yazilanOlculer.add(olcuIdx);
+      // Otomatik bar repeat: bu ölçü öncekiyle özdeşse 7 işareti emit et, öğeleri atla
+      if (autoRepeatHaritasi.get(olcuIdx)) {
+        if (kaynakParcalar.length) kaynakIndeksi += 1;
+        kaynakParcalar.push('𝄎');
+        hucreler.push([2, 3, 5, 6]);
+        esleme.push(kaynakIndeksi);
+        metaEkle({ ogeId: null, kaynak: 'bar-repeat', etiket: `Ölçü ${olcuIdx + 1}: bar repeat (önceki ölçüyle aynı)` });
+        kaynakIndeksi += 1;
+        // Sonraki ölçüye geçildiğinde ilk notada oktav işareti gerekir
+        timeKeyDegisimiBayragi = true;
+      }
+    }
+    // Auto-repeat ölçüsünün öğelerini atla (zaten 7 emit edildi)
+    if (atlananIndeksler.has(idx)) continue;
+
     if (oge.tip === 'nota') {
       const oncesiSirali = (Array.isArray(oge.modifiers?.oncesi) ? oge.modifiers.oncesi : [])
         .slice()
@@ -5297,6 +5317,7 @@ export default function Araclar() {
                                 isSecili={seciliHucre?.index === globalIdx}
                                 isVurgulu={isVurgulu}
                                 onClick={hucreTiklandigindaMetniSec}
+                                aynaliEtiket={true}
                               />
                             );
                           })}
@@ -5858,6 +5879,7 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
   isSecili,
   isVurgulu,
   onClick,
+  aynaliEtiket = false,
 }) {
   const { noktaRenk, etiketRenk } = useMemo(() => {
     const baslikStr = anlam && typeof anlam.baslik === 'string' ? anlam.baslik : '';
@@ -5907,6 +5929,7 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
           aktifNoktalar={hucreNoktalariSvg}
           tiklanabilir={false}
           kesfedilebilir={false}
+          aynaliEtiket={aynaliEtiket}
         />
       </div>
       {genisletAktif && anlam ? (
@@ -5925,6 +5948,7 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
     && prev.isVurgulu === next.isVurgulu
     && prev.genisletAktif === next.genisletAktif
     && prev.paraBirimiHucre === next.paraBirimiHucre
+    && (prev.aynaliEtiket || false) === (next.aynaliEtiket || false)
     && brailleHucreAnlamiMemoAnahtari(prev.anlam, prev.paraBirimiHucre, prev.genisletAktif)
       === brailleHucreAnlamiMemoAnahtari(next.anlam, next.paraBirimiHucre, next.genisletAktif);
 });
