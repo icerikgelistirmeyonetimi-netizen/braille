@@ -25,7 +25,7 @@ import { kisaEtiket, noktalardanUnicode } from './BelgeBrf.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 import BrailleGrid from '../components/BrailleGrid.jsx';
 import { siraSayisiSonRakamEtiketiNoktaEki } from '../utils/brailleCevir.js';
-// ��� Bile�en ��������������������������������������������������������������
+// Bileşen
 
 export default function BrfOku() {
   const dosyaRef = useRef(null);
@@ -78,7 +78,7 @@ export default function BrfOku() {
 
   const [metinBrailleSonuc, setMetinBrailleSonuc] = useState({ hucreler: [], esleme: [], kaynak: '' });
 
-  // Worker i�in referanslar
+  // Worker için referanslar
   const workerRef = useRef(null);
   const islemIdRef = useRef(0);
 
@@ -92,7 +92,7 @@ export default function BrfOku() {
     };
   }, []);
 
-  // Dosya i�eri�i, k�saltma modu veya sistemler de�i�ince metni yeniden ��z
+  // Dosya içeriği, kısaltma modu veya sistemler değişince metni yeniden çöz
   useEffect(() => {
     if (!dosyaIcerik || !workerRef.current) return;
     setYukleniyor(true);
@@ -106,13 +106,13 @@ export default function BrfOku() {
           setOkunanMetin(e.data.resultText);
           setYukleniyor(false);
         } else {
-          setHata('�eviri s�ras�nda hata olu�tu: ' + (e.data.error || ''));
+          setHata('Çeviri sırasında hata oluştu: ' + (e.data.error || ''));
           setYukleniyor(false);
         }
       }
     };
 
-    // Araya setTimeout koyarak React'in 'yukleniyor: true' state'ini �izmesine izin verelim
+    // Araya setTimeout koyarak React'in 'yukleniyor: true' state'ini çizmesine izin verelim
     const t = setTimeout(() => {
       workerRef.current.postMessage({
         action: 'brfToText',
@@ -125,7 +125,7 @@ export default function BrfOku() {
     return () => clearTimeout(t);
   }, [dosyaIcerik, kisaltmaAktif, kisaltmaSistemler]);
 
-  // Metin olu�tuktan sonra esleme dizisini hesaplamak i�in worker kullan
+  // Metin oluştuktan sonra esleme dizisini hesaplamak için worker kullan
   useEffect(() => {
     if (!okunanMetin || !workerRef.current) {
       setMetinBrailleSonuc({ hucreler: [], esleme: [], kaynak: '' });
@@ -252,6 +252,16 @@ export default function BrfOku() {
       baslangicDurumu: sayfaBaslangicDurumlari[brailleSayfa],
     }),
     [hucreler, sayfaBaslangic, sayfaSonIndeks, kisaltmaAktif, hucreAnlamiOpts, sayfaBaslangicDurumlari, brailleSayfa],
+  );
+
+  const sayfaYerelIndeksleri = useMemo(
+    () => Array.from({ length: sayfaHucreler.length }, (_, i) => i),
+    [sayfaHucreler.length],
+  );
+
+  const tabletKolonlari = useMemo(
+    () => Array.from({ length: TABLET_SATIR_HUCRE }, (_, i) => i),
+    [],
   );
 
   const tabletSatirYerelleri = useMemo(() => {
@@ -509,7 +519,7 @@ export default function BrfOku() {
                             <div className="tablet-kolon-basliklari">
                               <div className="tablet-satir-numarasi" style={{ visibility: 'hidden' }}>00</div>
                               <div className="araclar-tablet-satir" style={{ flexGrow: 1, margin: 0, padding: 0 }}>
-                                {Array.from({ length: TABLET_SATIR_HUCRE }, (_, i) => (
+                                {tabletKolonlari.map((i) => (
                                   <div key={i} className="tablet-kolon-numarasi">{i + 1}</div>
                                 ))}
                               </div>
@@ -565,7 +575,7 @@ export default function BrfOku() {
                       <div className="araclar-tablet-grid">
                         {/* Üst kolon numaraları */}
                         <div className="tablet-satir-numarasi" style={{ visibility: 'hidden' }}>00</div>
-                        {Array.from({ length: TABLET_SATIR_HUCRE }, (_, i) => (
+                        {tabletKolonlari.map((i) => (
                           <div key={`col-${i}`} className="tablet-kolon-numarasi">{i + 1}</div>
                         ))}
 
@@ -576,7 +586,7 @@ export default function BrfOku() {
                             {yerler.map((i) => {
                               const noktalar = sayfaHucreler[i];
                               const globalIdx = sayfaBaslangic + i;
-                              const anlam = hucreAnlami(hucreler, globalIdx, kisaltmaAktif, hucreAnlamiOpts);
+                              const anlam = sayfaHucreAnlamlari[i] || hucreAnlami(hucreler, globalIdx, kisaltmaAktif, hucreAnlamiOpts);
                               const kisaltmaHucre = kisaltmaAktif && (
                                 anlam.tip === 'kisaltma' ||
                                 (anlam.tip === 'isaret' && (
@@ -639,7 +649,7 @@ export default function BrfOku() {
                     ) : (
                       <BrailleGrid
                         hucreler={hucreler}
-                        indices={Array.from({ length: sayfaHucreler.length }, (_, i) => i)}
+                        indices={sayfaYerelIndeksleri}
                         baseIndex={sayfaBaslangic}
                         kisaltmaAktif={kisaltmaAktif}
                         genisletAktif={genisletAktif}

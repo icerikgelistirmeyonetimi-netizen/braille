@@ -84,7 +84,10 @@ const KURAL_ZAMAN_IMZASI = [
   'Önce rakam göstergesi (⠼) konur; üst rakam üst kısımda, alt rakam alt kısımda yazılır.',
   'Anahtar değişimi olduğunda yeni zaman imzası bar arasında, iki tarafı boşluklu yazılır.',
 ];
-
+const KURAL_DEGISTIRICI = [
+  'Bu işaretler notanın sol tarafına yazılır.',
+  'Birden fazla nota için ise en başa yazılır.'
+];
 const KURAL_DONANIM = [
   'Donanım eserin başında, zaman imzasından önce, kendi satırına ortalanır.',
   '1–3 diyez/bemol için yalnız işaretler tekrar edilir.',
@@ -235,11 +238,11 @@ export const MUZIK_SURELER = [
 
 /* ───────────────────  3) ESLAR (Rests) — UEB Music  ────────────────────── */
 export const MUZIK_ESLAR = [
-  R('tam es / 16’lık es', ['1-3-4'], '(tam ölçü sessizlik veya 1/16 es)', KURAL_ES, undefined, '𝄻'),
-  R('yarım es / 32’lik es', ['1-3-6'], '(yarım nota sessizlik veya 1/32 es)', KURAL_ES, undefined, '𝄼'),
-  R('dörtlük es / 64’lük es', ['1-2-3-6'], '(dörtlük nota sessizlik veya 1/64 es)', KURAL_ES, undefined, '𝄽'),
-  R('sekizlik es / 128’lik es', ['1-3-4-6'], '(sekizlik nota sessizlik veya 1/128 es)', KURAL_ES, undefined, '𝄾'),
-  R('noktalı dörtlük es', ['1-2-3-6', '3'], '(dörtlük es + 3 noktası uzatma)', KURAL_NOKTALI_NOTA),
+  R('tam (birlik) sus',     ['1-3-4'],   '(4 vuruş sessizlik)',         KURAL_ES, undefined, '𝄻'),
+  R('yarım (ikilik) sus',   ['1-3-6'],   '(2 vuruş sessizlik)',         KURAL_ES, undefined, '𝄼'),
+  R('dörtlük sus',          ['1-2-3-6'], '(1 vuruş sessizlik)',         KURAL_ES, undefined, '𝄽'),
+  R('sekizlik sus',         ['1-3-4-6'], '(yarım vuruş sessizlik)',     KURAL_ES, undefined, '𝄾'),
+  R('noktalı dörtlük sus',  ['1-2-3-6', '3'], '(1,5 vuruş sessizlik)',  KURAL_NOKTALI_NOTA, undefined, '𝄽·'),
 ];
 
 /* ─────────────────────  4) OKTAV İŞARETLERİ  ───────────────────────────── */
@@ -264,44 +267,58 @@ export const MUZIK_ZAMAN_IMZASI = [
   R('cut common (2/2)', ['4-5-6', '1-4'], '(çizgili C; 2/2 ile aynı süre)', KURAL_ZAMAN_IMZASI, undefined, '𝄵'),
 ];
 
-/* ─────────────────  6) DONANIM ve AKSİDENTALLER  ───────────────────────── */
+export const MUZIK_DEGISTIRICI = [
+  R('diyez (sharp)', ['1-4-6'], '(notayı yarım ses inceltir)', KURAL_DEGISTIRICI, undefined, '♯'),
+  R('bemol (flat)', ['1-2-6'], '(notayı yarım ses kalınlaştırır)', KURAL_DEGISTIRICI, undefined, '♭'),
+  R('naturel (natural)', ['1-6'], '(diyez/bemol etkisini iptal eder)', KURAL_DEGISTIRICI, undefined, '♮'),
+  R('çift diyez', ['1-4-6', '1-4-6'], '(notayı bir tam ses inceltir)', KURAL_DEGISTIRICI, undefined, '𝄪'),
+  R('çift bemol', ['1-2-6', '1-2-6'], '(notayı bir tam ses kalınlaştırır)', KURAL_DEGISTIRICI, undefined, '𝄫'),
+ 
+]
+/* ─────────────────  6) DONANIM (Key signature) ─────────────────────────── */
+// UEB Music: 1–3 diyez/bemol → işaret tekrar; 4+ → rakam göstergesi + sayı + işaret.
 export const MUZIK_DONANIM = [
-  R('diyez (sharp)', ['1-4-6'], '(notayı yarım ses kalınlaştırır)', KURAL_DONANIM, undefined, '♯'),
-  R('bemol (flat)', ['1-2-6'], '(notayı yarım ses inceltir)', KURAL_DONANIM, undefined, '♭'),
-  R('bekar (natural)', ['1-6'], '(diyez/bemol etkisini iptal eder)', KURAL_DONANIM, undefined, '♮'),
-  R('çift diyez', ['1-4-6', '1-4-6'], '(notayı bir tam ses kalınlaştırır)', KURAL_DONANIM, undefined, '𝄪'),
-  R('çift bemol', ['1-2-6', '1-2-6'], '(notayı bir tam ses inceltir)', KURAL_DONANIM, undefined, '𝄫'),
-  R('2 diyezli donanım', ['1-4-6', '1-4-6'], '(re majör / si minör)', KURAL_DONANIM),
-  R('3 bemollü donanım', ['1-2-6', '1-2-6', '1-2-6'], '(mi bemol majör / do minör)', KURAL_DONANIM),
-  R('4 diyezli donanım', ['3-4-5-6', '1-4-5', '1-4-6'], '(mi majör / do diyez minör) · # + d (4) + diyez', KURAL_DONANIM),
-  R('4 bemollü donanım', ['3-4-5-6', '1-4-5', '1-2-6'], '(la bemol majör / fa minör) · # + d (4) + bemol', KURAL_DONANIM),
+  R('1 diyezli donanım', ['1-4-6'],                          '(sol majör / mi minör)',           KURAL_DONANIM, undefined, '♯'),
+  R('2 diyezli donanım', ['1-4-6', '1-4-6'],                 '(re majör / si minör)',            KURAL_DONANIM, undefined, '♯♯'),
+  R('3 diyezli donanım', ['1-4-6', '1-4-6', '1-4-6'],        '(la majör / fa diyez minör)',      KURAL_DONANIM, undefined, '♯♯♯'),
+  R('4 diyezli donanım', ['3-4-5-6', '1-4-5', '1-4-6'],      '(mi majör / do diyez minör)',      KURAL_DONANIM, undefined, '#4♯'),
+  R('5 diyezli donanım', ['3-4-5-6', '1-5',   '1-4-6'],      '(si majör / sol diyez minör)',     KURAL_DONANIM, undefined, '#5♯'),
+  R('6 diyezli donanım', ['3-4-5-6', '1-2-4', '1-4-6'],      '(fa diyez majör / re diyez minör)',KURAL_DONANIM, undefined, '#6♯'),
+  R('7 diyezli donanım', ['3-4-5-6', '1-2-4-5', '1-4-6'],    '(do diyez majör / la diyez minör)',KURAL_DONANIM, undefined, '#7♯'),
+  R('1 bemollü donanım', ['1-2-6'],                          '(fa majör / re minör)',            KURAL_DONANIM, undefined, '♭'),
+  R('2 bemollü donanım', ['1-2-6', '1-2-6'],                 '(si bemol majör / sol minör)',     KURAL_DONANIM, undefined, '♭♭'),
+  R('3 bemollü donanım', ['1-2-6', '1-2-6', '1-2-6'],        '(mi bemol majör / do minör)',      KURAL_DONANIM, undefined, '♭♭♭'),
+  R('4 bemollü donanım', ['3-4-5-6', '1-4-5', '1-2-6'],      '(la bemol majör / fa minör)',      KURAL_DONANIM, undefined, '#4♭'),
+  R('5 bemollü donanım', ['3-4-5-6', '1-5',   '1-2-6'],      '(re bemol majör / si bemol minör)',KURAL_DONANIM, undefined, '#5♭'),
+  R('6 bemollü donanım', ['3-4-5-6', '1-2-4', '1-2-6'],      '(sol bemol majör / mi bemol minör)',KURAL_DONANIM, undefined, '#6♭'),
+  R('7 bemollü donanım', ['3-4-5-6', '1-2-4-5', '1-2-6'],    '(do bemol majör / la bemol minör)',KURAL_DONANIM, undefined, '#7♭'),
 ];
 
 /* ─────────────────  7) ÖLÇÜ ÇİZGİLERİ ve TEKRARLAR  ────────────────────── */
 export const MUZIK_OLCU_CIZGILERI = [
   {
-    ad: 'ölçü çizgisi (boş hücre)',
-    aciklama: '(ölçüler arasında bir boşluk hücresi bırakılır)',
+    ad: 'ölçü ayracı (boşluk)',
+    aciklama: 'Braille müzikte ölçü çizgisi yoktur — iki ölçü arasına 1 boşluk hücresi konur.',
     hucreler: [],
     kurallar: KURAL_BARLINE,
     okumaOzeti: 'ölçüler arası boşluk hücresi',
   },
-  R('final çift çubuk', ['1-2-6', '1-3'], '(eserin sonu) · ⠣⠅', KURAL_BARLINE, undefined, '𝄂'),
-  R('bölüm sonu çift çubuk', ['1-2-6', '1-3', '3'], '(yeni bölüm başlayacaksa) · ⠣⠅⠄', KURAL_BARLINE, undefined, '𝄁'),
-  R('başla repeat (start)', ['1-2-6', '2-3-5-6'], '(tekrarlanacak pasajın başı) · ⠣⠶', KURAL_BASKI_TEKRAR, undefined, '𝄆'),
-  R('bitir repeat (end)', ['1-2-6', '2-3'], '(tekrarlanacak pasajın sonu) · ⠣⠆', KURAL_BASKI_TEKRAR, undefined, '𝄇'),
-  R('1. ev (volta 1)', ['3-4-5-6', '2'], '(ilk seferki son) · #1', KURAL_VOLTA),
-  R('2. ev (volta 2)', ['3-4-5-6', '2-3'], '(tekrar sonrası alternatif son) · #2', KURAL_VOLTA),
-  R('müzik kısa çizgisi', ['5'], '(bar içinde repeat sonrası ayırıcı) · 5 noktası', KURAL_BARLINE),
+  R('bitiş çizgisi (final)', ['1-2-6', '1-3'], '(eserin sonu)', KURAL_BARLINE, undefined, '𝄂'),
+  R('bölüm sonu çift çubuk', ['1-2-6', '1-3', '3'], '(yeni bölüm başlıyorsa)', KURAL_BARLINE, undefined, '𝄁'),
+  R('tekrar başlangıcı (röpriz)', ['1-2-6', '2-3-5-6'], '(tekrarlanacak pasajın başı)', KURAL_BASKI_TEKRAR, undefined, '𝄆'),
+  R('tekrar sonu (röpriz)',       ['1-2-6', '2-3'],     '(tekrarlanacak pasajın sonu)', KURAL_BASKI_TEKRAR, undefined, '𝄇'),
+  R('1. ev (volta)', ['3-4-5-6', '2'],   '(ilk seferki son)',           KURAL_VOLTA, undefined, '1.'),
+  R('2. ev (volta)', ['3-4-5-6', '2-3'], '(tekrar sonrası alternatif son)', KURAL_VOLTA, undefined, '2.'),
+  R('müzik kısa çizgisi', ['5'], '(bar içinde tekrar sonrası ayırıcı)', KURAL_BARLINE, undefined, '⠐'),
 ];
 
 /* ─────────────────  8) BAĞLAR ve SLUR İŞARETLERİ  ──────────────────────── */
 export const MUZIK_BAGLAR = [
-  R('bağ (tie)', ['4', '1-4'], '(aynı perdedeki notaları birleştirir) · ⠈⠉', KURAL_BAG, undefined, '⌣'),
-  R('slur (legato)', ['1-4'], '(2–4 farklı notayı bağlar) · ⠉', KURAL_BAG, undefined, '⌒'),
-  R('köşeli slur açılış', ['5-6', '1-2'], '(uzun cümle veya katmanlı slur) · ⠰⠃', KURAL_BAG),
-  R('köşeli slur kapanış', ['4-5', '2-3'], '(köşeli slur sonu) · ⠨⠆', KURAL_BAG),
-  R('çift slur (4+ nota)', ['1-4', '1-4'], '(ilk notadan sonra slur ikilenir; son nota öncesi tek slur ile biter)', KURAL_BAG),
+  R('bağ (tie)',         ['4', '1-4'],     '(aynı perdedeki iki notayı bağlar)', KURAL_BAG, undefined, '⌣'),
+  R('slur (legato)',     ['1-4'],          '(2–4 farklı notayı bağlar)',         KURAL_BAG, undefined, '⌒'),
+  R('köşeli slur (aç)',  ['5-6', '1-2'],   '(uzun cümle / katmanlı slur açılış)',KURAL_BAG, undefined, '⌒['),
+  R('köşeli slur (kapa)',['4-5', '2-3'],   '(uzun cümle / katmanlı slur kapanış)',KURAL_BAG, undefined, ']⌒'),
+  R('çift slur (4+ nota)', ['1-4', '1-4'], '(4 ve daha fazla nota için ikili slur)', KURAL_BAG, undefined, '⌒⌒'),
 ];
 
 /* ─────────────────  9) DİNAMİKLER (sözcük temelli)  ─────────────────────── */
@@ -311,12 +328,12 @@ export const MUZIK_DINAMIKLER = [
   R('pp (pianissimo)', ['3-4-5', '1-2-3-4', '1-2-3-4'], '(çok hafif)', KURAL_WORD_SIGN, undefined, 'pp'),
   R('p (piano)', ['3-4-5', '1-2-3-4'], '(hafif)', KURAL_WORD_SIGN, undefined, 'p'),
   R('mp (mezzo piano)', ['3-4-5', '1-3-4', '1-2-3-4'], '(orta hafif)', KURAL_WORD_SIGN, undefined, 'mp'),
-  R('mf (mezzo forte)', ['3-4-5', '1-3-4', '1-2-4'], '(orta yüksek)', KURAL_WORD_SIGN, undefined, 'mf'),
+  R('mf (mezzo forte)', ['3-4-5', '1-3-4', '1-2-4'], '(orta kuvvet)', KURAL_WORD_SIGN, undefined, 'mf'),
   R('f (forte)', ['3-4-5', '1-2-4'], '(yüksek)', KURAL_WORD_SIGN, undefined, 'f'),
-  R('ff (fortissimo)', ['3-4-5', '1-2-4', '1-2-4'], '(çok yüksek)', KURAL_WORD_SIGN, undefined, 'ff'),
+  R('ff (fortissimo)', ['3-4-5', '1-2-4', '1-2-4'], '(çok kuvvetli)', KURAL_WORD_SIGN, undefined, 'ff'),
   R('sf (sforzando)', ['3-4-5', '2-3-4', '1-2-4'], '(ani vurgu)', KURAL_WORD_SIGN, undefined, 'sf'),
-  R('cresc. (crescendo)', ['3-4-5', '1-4', '1-2-3-5', '3'], '(giderek yükselt) · noktayla biter', KURAL_WORD_SIGN),
-  R('decresc. (decrescendo)', ['3-4-5', '1-4-5', '1-5', '1-4', '1-2-3-5', '3'], '(giderek azalt) · noktayla biter', KURAL_WORD_SIGN),
+  R('cresc. (crescendo)', ['3-4-5', '1-4', '1-2-3-5', '3'], '(giderek kuvvetlenerek) · noktayla biter', KURAL_WORD_SIGN),
+  R('decresc. (decrescendo)', ['3-4-5', '1-4-5', '1-5', '1-4', '1-2-3-5', '3'], '(giderek hafifleyerek) · noktayla biter', KURAL_WORD_SIGN),
   R('dim. (diminuendo)', ['3-4-5', '1-4-5', '2-4', '1-3-4', '3'], '(giderek azalt) · noktayla biter', KURAL_WORD_SIGN),
   R('rit. (ritardando)', ['3-4-5', '1-2-3-5', '2-4', '2-3-4-5', '3'], '(giderek yavaşlat)', KURAL_WORD_SIGN),
 ];
@@ -392,6 +409,10 @@ export const MUZIK_TEKRAR = [
   R('ölçü aralığı tekrarı (#5-8)', ['3-4-5-6', '2-6', '3-6', '2-3-6'], '(5–8. ölçülerin tekrarı) · hyphen sonrası # yenilenmez', KURAL_OLCU_NO_TEKRAR),
 ];
 
+// Menüde kullanılan Türkçe başlıklarla veri sabitlerinin adları uyumlu kalsın.
+export const MUZIK_SUS = MUZIK_ESLAR;
+export const MUZIK_DEGISTIRICILER = MUZIK_DEGISTIRICI;
+
 /* ─────────────────  Menüde gezilebilir bölümler  ───────────────────────── */
 export const MUZIK_BOLUMLER = [
   {
@@ -409,11 +430,11 @@ export const MUZIK_BOLUMLER = [
     veri: MUZIK_SURELER,
   },
   {
-    slug: 'eslar',
-    kisaBaslik: 'Eslar',
-    pageBaslik: 'Müzik · Es (sessizlik) işaretleri',
-    ilerlemeAnahtari: 'muzik-eslar',
-    veri: MUZIK_ESLAR,
+    slug: 'sus',
+    kisaBaslik: 'Sus',
+    pageBaslik: 'Müzik · Sus (sessizlik) işaretleri',
+    ilerlemeAnahtari: 'muzik-sus',
+    veri: MUZIK_SUS,
   },
   {
     slug: 'oktav',
@@ -430,22 +451,29 @@ export const MUZIK_BOLUMLER = [
     veri: MUZIK_ZAMAN_IMZASI,
   },
   {
+    slug: 'degistirici',
+    kisaBaslik: 'Aksidental',
+    pageBaslik: 'Müzik · Aksidentaller (diyez, bemol, naturel)',
+    ilerlemeAnahtari: 'muzik-degistirici',
+    veri: MUZIK_DEGISTIRICILER,
+  },
+  {
     slug: 'donanim',
-    kisaBaslik: 'Donanım / aksidental',
-    pageBaslik: 'Müzik · Donanım ve aksidentaller',
+    kisaBaslik: 'Donanım',
+    pageBaslik: 'Müzik · Donanım (key signature)',
     ilerlemeAnahtari: 'muzik-donanim',
     veri: MUZIK_DONANIM,
   },
   {
     slug: 'olcu-cizgileri',
-    kisaBaslik: 'Ölçü çizgileri',
+    kisaBaslik: 'Ölçü çizgisi ve tekrar',
     pageBaslik: 'Müzik · Ölçü çizgileri ve baskı tekrarları',
     ilerlemeAnahtari: 'muzik-olcu',
     veri: MUZIK_OLCU_CIZGILERI,
   },
   {
     slug: 'bag-slur',
-    kisaBaslik: 'Bağ / slur',
+    kisaBaslik: 'Bağ ve slur',
     pageBaslik: 'Müzik · Bağ ve slur işaretleri',
     ilerlemeAnahtari: 'muzik-bag',
     veri: MUZIK_BAGLAR,
@@ -459,22 +487,22 @@ export const MUZIK_BOLUMLER = [
   },
   {
     slug: 'hairpin',
-    kisaBaslik: 'Hairpin dinamikleri',
-    pageBaslik: 'Müzik · Hairpin (kıl) dinamikleri',
+    kisaBaslik: 'Hairpin',
+    pageBaslik: 'Müzik · Hairpin dinamikleri (cresc./decresc.)',
     ilerlemeAnahtari: 'muzik-hairpin',
     veri: MUZIK_HAIRPIN,
   },
   {
     slug: 'nuans-once',
-    kisaBaslik: 'Nüans (nota öncesi)',
-    pageBaslik: 'Müzik · Nota öncesi nüanslar',
+    kisaBaslik: 'Nüans (önce)',
+    pageBaslik: 'Müzik · Nota öncesi nüanslar (staccato, accent, tenuto)',
     ilerlemeAnahtari: 'muzik-nuans-once',
     veri: MUZIK_NUANS_ONCE,
   },
   {
     slug: 'nuans-sonra',
-    kisaBaslik: 'Nüans (nota sonrası)',
-    pageBaslik: 'Müzik · Nota sonrası nüanslar (fermata, nefes)',
+    kisaBaslik: 'Nüans (sonra)',
+    pageBaslik: 'Müzik · Nota sonrası nüanslar (fermata, nefes, mola)',
     ilerlemeAnahtari: 'muzik-nuans-sonra',
     veri: MUZIK_NUANS_SONRA,
   },
@@ -520,26 +548,43 @@ export const NOTALAR = [
 
 // Süre göstergeleri (temel hücreye eklenecek noktalar) — UEB Music kuralları:
 // sekizlik = temel hücre · dörtlük = +6 · yarım = +3 · tam = +3 ve 6
+// Küçük değerler (16, 32, 64) hücre olarak aynıdır ancak bayrak sayısı ve
+// gruplama davranışı farklıdır (Modül 8, Bölüm 4 Grouping kuralı).
 export const SURE_GOSTERGELERI = [
   {
     ad: 'sekizlik nota', sembol: '♪',
-    aciklama: 'Sekizlik nota temel hücredir; 3 ve 6 noktası eklenmez. Örn. sekizlik Do: 1-4-5.',
-    noktalarEk: [],
+    aciklama: 'Temel hücre; 3 ve 6 noktası eklenmez. Örn. sekizlik Do: 1-4-5.',
+    noktalarEk: [], realValue: 8, bayrak: 1,
   },
   {
     ad: 'dörtlük nota', sembol: '♩',
-    aciklama: 'Dörtlük notada yalnız 6 noktası eklenir. Örn. dörtlük Do: 1-4-5-6.',
-    noktalarEk: [6],
+    aciklama: 'Temel hücreye 6 noktası eklenir. Örn. dörtlük Do: 1-4-5-6.',
+    noktalarEk: [6], realValue: 4, bayrak: 0,
   },
   {
     ad: 'yarım nota', sembol: '𝅗𝅥',
-    aciklama: 'Yarım notada yalnız 3 noktası eklenir. Örn. yarım Do: 1-3-4-5.',
-    noktalarEk: [3],
+    aciklama: 'Temel hücreye 3 noktası eklenir. Örn. yarım Do: 1-3-4-5.',
+    noktalarEk: [3], realValue: 2, bayrak: 0,
   },
   {
     ad: 'tam nota', sembol: '𝅝',
-    aciklama: 'Tam notada hücreye 3 ve 6 noktaları eklenir. Örn. tam Do: 1-3-4-5-6.',
-    noktalarEk: [3, 6],
+    aciklama: 'Temel hücreye 3 ve 6 noktaları eklenir. Örn. tam Do: 1-3-4-5-6.',
+    noktalarEk: [3, 6], realValue: 1, bayrak: 0,
+  },
+  {
+    ad: '16-lık nota', sembol: '𝅘𝅥𝅮',
+    aciklama: '3 ve 6 noktaları eklenir (tam ile aynı hücre). Modül 8 Gruplama: ardışık 3+ adet bulunursa ilk nota tam-değer kalır, sonrakiler sekizlik biçimde yazılır.',
+    noktalarEk: [3, 6], realValue: 16, bayrak: 2,
+  },
+  {
+    ad: '32-lik nota', sembol: '𝅘𝅥𝅯',
+    aciklama: '3 noktası eklenir (yarım ile aynı hücre). Modül 8 Gruplama: ardışık 3+ adet ise grup kuralı uygulanır.',
+    noktalarEk: [3], realValue: 32, bayrak: 3,
+  },
+  {
+    ad: '64-lük nota', sembol: '𝅘𝅥𝅰',
+    aciklama: '6 noktası eklenir (dörtlük ile aynı hücre). Modül 8 Gruplama: ardışık 3+ adet ise grup kuralı uygulanır.',
+    noktalarEk: [6], realValue: 64, bayrak: 4,
   },
 ];
 

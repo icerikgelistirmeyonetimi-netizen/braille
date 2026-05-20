@@ -165,7 +165,7 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
       }
       if (blok.length) tumBloklar.push(blok);
 
-      const bloklariIsle = (bRaw, sonrakiIlkHucre) => {
+      const bloklariIsle = (bRaw, sonrakiIlkHucre, ikiYanindaBoslukluBlok = false) => {
         if (bRaw.length === 0) return;
         let bashCase = 'normal';
         let b = bRaw;
@@ -417,6 +417,18 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             }
           }
           const hA = [...noktalar].sort((a, b) => a - b).join(',');
+          if (birHarfAktif && ci === 0 && ci + 1 < b.length && _KISALTMA_TEK.has(hA)) {
+            let kalanHepsiNoktalama = true;
+            for (let kk = ci + 1; kk < b.length; kk++) {
+              const kkA = [...b[kk]].sort((a, b) => a - b).join(',');
+              if (!_NOKTA_TERS.has(kkA)) { kalanHepsiNoktalama = false; break; }
+            }
+            if (kalanHepsiNoktalama) {
+              harfYaz(_KISALTMA_TEK.get(hA));
+              ci++;
+              continue;
+            }
+          }
           const np = _NOKTA_TERS.get(hA);
           const heceKarsiligi = heceAktif && !sM ? _HECE_TERS.get(hA) : undefined;
           if (np && heceKarsiligi) {
@@ -431,7 +443,8 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             if (ilkHucre && hA === '2,3,6') noktalamaKullan = true;
             else if (sonHucre || kalanHepsiNoktalama) {
               if (hA === '2,6' && sonHucre) {
-                noktalamaKullan = sonrakiIlkHucre == null || buyukHarfIsaretiMi(sonrakiIlkHucre);
+                noktalamaKullan = !(ikiYanindaBoslukluBlok && b.length === 1)
+                  && (sonrakiIlkHucre == null || buyukHarfIsaretiMi(sonrakiIlkHucre));
               } else {
                 noktalamaKullan = true;
               }
@@ -462,7 +475,7 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
       for (let bi = 0; bi < tumBloklar.length; bi++) {
         if (bi > 0) cikis.push(' ');
         const sonrakiIlkHucre = bi + 1 < tumBloklar.length ? (tumBloklar[bi + 1][0] ?? null) : null;
-        bloklariIsle(tumBloklar[bi], sonrakiIlkHucre);
+        bloklariIsle(tumBloklar[bi], sonrakiIlkHucre, bi > 0 && bi + 1 < tumBloklar.length);
       }
       sayfaCiktilari.push(cikis.join(''));
     }

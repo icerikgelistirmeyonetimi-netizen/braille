@@ -172,7 +172,7 @@ h1, h2, h3 { color: var(--fg); }
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 14px 24px 14px 10px;
+    /* padding: 14px 24px 14px 10px; */
     background: linear-gradient(
       180deg,
       color-mix(in srgb, var(--accent) 8%, var(--panel)) 0%,
@@ -2464,6 +2464,15 @@ h1, h2, h3 { color: var(--fg); }
   min-height: 100px;
   white-space: pre-wrap;
 }
+.araclar-muzik-textarea {
+  padding-top: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #f59e0b 9%, transparent), transparent 54px),
+    var(--panel, #fff);
+  border-color: color-mix(in srgb, #f59e0b 45%, var(--panel-border, #ccc));
+  font-size: 1.05em;
+  letter-spacing: 0.01em;
+}
 .araclar-metin-yardim {
   margin: 8px 0 0;
   padding-right: 40px;
@@ -2690,8 +2699,694 @@ h1, h2, h3 { color: var(--fg); }
 .araclar-seslendir-nokta { position: absolute; top: 6px; right: 6px; }
 
 /* Matematik paleti butonu — ses butonunun solunda */
-.araclar-matematik-sarici { position: absolute; top: 6px; right: 44px; z-index: 4; }
+.araclar-matematik-sarici { position: absolute; top: 6px; right: 82px; z-index: 4; }
 .araclar-matematik-sarici .araclar-matematik-btn { position: static; }
+.araclar-muzik-sarici { position: absolute; top: 6px; right: 44px; z-index: 5; }
+.araclar-muzik-sarici .araclar-muzik-btn { position: static; }
+.araclar-muzik-btn.aktif {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #111827;
+}
+.araclar-muzik-yazim-bari {
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: color-mix(in srgb, #f59e0b 10%, var(--panel, #fff));
+  border: 1.5px solid color-mix(in srgb, #f59e0b 42%, var(--panel-border, #ccc));
+  border-radius: var(--radius, 14px);
+  box-shadow: var(--shadow);
+}
+.araclar-muzik-bari-baslik {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: color-mix(in srgb, #92400e 76%, var(--fg, #111));
+}
+.araclar-muzik-sure-secici,
+.araclar-muzik-nota-secici {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.araclar-muzik-sure-btn,
+.araclar-muzik-nota-btn {
+  min-height: 38px;
+  min-width: 46px;
+  padding: 6px 9px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--panel, #fff);
+  color: var(--fg, #111827);
+  border: 1.5px solid var(--panel-border, #d1d5db);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.araclar-muzik-sure-btn.aktif,
+.araclar-muzik-nota-btn:hover {
+  background: #f59e0b;
+  color: #111827;
+  border-color: #d97706;
+}
+.araclar-muzik-sure-sembol,
+.araclar-muzik-nota-sembol {
+  font-size: 1.1em;
+  line-height: 1;
+}
+.araclar-muzik-sure-ad,
+.araclar-muzik-nota-ad {
+  font-size: 0.82em;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.araclar-muzik-ayrac-btn {
+  font-size: 1.1em;
+  font-weight: 900;
+}
+.araclar-muzik-editor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  padding-right: 86px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--panel-border, #d1d5db);
+  border-radius: var(--radius, 12px);
+  box-shadow: var(--shadow);
+}
+.araclar-muzik-bag-durum {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, #2563eb 14%, var(--panel, #fff));
+  border: 1.5px solid #2563eb;
+  border-radius: 10px;
+  color: #1e3a8a;
+  font-weight: 700;
+  font-size: 0.86em;
+}
+.araclar-muzik-bag-durum-iptal {
+  min-height: 26px;
+  min-width: 26px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--panel, #fff);
+  color: #1e3a8a;
+  border: 1.5px solid #2563eb;
+  box-shadow: none;
+}
+.muzik-bag-grup { cursor: pointer; }
+.muzik-bag-grup:hover .muzik-slur { stroke: #d97706; stroke-width: 3; }
+.muzik-tie {
+  stroke-dasharray: none;
+  stroke-width: 2.4;
+}
+.araclar-muzik-ck-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 0;
+  background: var(--panel, #fff);
+  border: 1px solid var(--panel-border, #d1d5db);
+  border-radius: 8px 8px 0 0;
+  border-bottom: none;
+  box-shadow: none;
+  overflow: visible;
+}
+.araclar-muzik-toolbar-grup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding-right: 8px;
+  border-right: 1px solid color-mix(in srgb, #f59e0b 32%, var(--panel-border, #ddd));
+}
+.araclar-muzik-toolbar-grup:last-of-type { border-right: none; }
+.araclar-muzik-toolbar-kategoriler {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.araclar-muzik-kategori-btn {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 4px;
+  border-radius: 0;
+  background: var(--panel, #fff);
+  color: var(--fg, #111827);
+  border: none;
+  border-right: 1px solid var(--panel-border, #e5e7eb);
+  box-shadow: none;
+  font-weight: 400;
+}
+.araclar-muzik-kategori-btn:last-child { border-right: none; }
+.araclar-muzik-kategori-btn:hover { background: color-mix(in srgb, var(--accent, #2563eb) 10%, var(--panel, #fff)); }
+.araclar-muzik-kategori-btn.aktif {
+  background: color-mix(in srgb, var(--accent, #2563eb) 18%, var(--panel, #fff));
+  color: var(--accent, #1e3a8a);
+  font-weight: 600;
+}
+.araclar-muzik-kategori-btn.italik .araclar-muzik-kategori-ikon { font-style: italic; }
+.araclar-muzik-kategori-ikon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
+  font-size: 1.05em;
+  font-weight: 400;
+  line-height: 1;
+  color: #111827;
+}
+.muzik-modifier { cursor: pointer; transition: opacity 0.12s; }
+.muzik-modifier:hover { opacity: 0.6; }
+.muzik-modifier:hover.muzik-hairpin { stroke: #d97706; }
+.araclar-muzik-palet-sembol {
+  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
+}
+.araclar-muzik-palet-nota .araclar-muzik-palet-sembol {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.araclar-muzik-sure-sembol {
+  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
+  font-size: 1.45em;
+}
+.araclar-muzik-kategori-btn.aktif .araclar-muzik-kategori-ikon { color: #111827; }
+.araclar-muzik-palet-nota .araclar-muzik-palet-sembol,
+.araclar-muzik-palet-nota {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 900;
+}
+.araclar-muzik-palet-nota {
+  min-width: 40px;
+}
+.araclar-muzik-ck-palet {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 6px;
+  margin-top: -1px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--panel-border, #d1d5db);
+  border-radius: 0 0 8px 8px;
+  max-height: none;
+  overflow: visible;
+}
+.araclar-muzik-palet-ikon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 2px;
+}
+.araclar-muzik-tek-satir { grid-auto-flow: column; grid-auto-columns: minmax(38px, 1fr); grid-template-columns: none; }
+.araclar-muzik-palet-sure-bari {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  padding: 0;
+  border: none;
+}
+.araclar-muzik-geri-btn { background: color-mix(in srgb, var(--accent, #2563eb) 14%, var(--panel, #fff)); }
+.araclar-muzik-palet-ikon {
+  min-height: 36px;
+  width: 100%;
+  padding: 4px 3px;
+  font-size: 0.78em;
+}
+.araclar-muzik-palet-ikon > span:not(.araclar-muzik-palet-zaman) { font-size: 1.02em; font-weight: 500; }
+.araclar-muzik-palet-ikon[disabled] { opacity: 0.45; cursor: not-allowed; }
+.araclar-muzik-toolbar-etiket {
+  font-size: 0.72em;
+  font-weight: 900;
+  color: color-mix(in srgb, #92400e 72%, var(--fg, #111));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 2px;
+}
+.araclar-muzik-anahtarlar,
+.araclar-muzik-secili-aksiyonlar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.araclar-muzik-anahtar-btn,
+.araclar-muzik-ekle-btn,
+.araclar-muzik-secili-aksiyonlar button {
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.araclar-muzik-anahtar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+.araclar-muzik-anahtar-sembol {
+  font-size: 1.3em;
+  line-height: 1;
+}
+.araclar-muzik-skor-kapsayici {
+  position: relative;
+  overflow-x: auto;
+  background: #fffdf7;
+  border: 1.5px solid color-mix(in srgb, #f59e0b 30%, var(--panel-border, #ddd));
+  border-radius: 14px;
+  padding: 6px 8px;
+}
+.araclar-muzik-skor-svg {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 124px;
+}
+.muzik-staff-line,
+.muzik-ledger {
+  stroke: #111827;
+  stroke-width: 1.4;
+}
+.muzik-ledger { stroke-width: 1.7; }
+.muzik-skor-ogesi { cursor: pointer; outline: none; }
+.muzik-skor-ogesi:focus-visible .muzik-secim-cercevesi,
+.muzik-skor-ogesi.secili .muzik-secim-cercevesi {
+  fill: color-mix(in srgb, #f59e0b 24%, transparent);
+  stroke: #d97706;
+  stroke-width: 2;
+}
+.muzik-clef {
+  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Times New Roman', serif;
+  font-size: 52px;
+  font-weight: 400;
+  fill: #111827;
+}
+.muzik-note-head {
+  fill: #111827;
+  stroke: #111827;
+  stroke-width: 1.8;
+}
+.muzik-note-head.hollow {
+  fill: #fffdf7;
+}
+.muzik-note-head.ghost {
+  fill: color-mix(in srgb, #111827 12%, transparent);
+  stroke: #111827;
+  stroke-dasharray: 2 2;
+}
+.muzik-note-head.mini {
+  fill: #111827;
+  stroke: #111827;
+}
+.muzik-stem,
+.muzik-barline {
+  stroke: #111827;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.muzik-flag {
+  fill: none;
+  stroke: #111827;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.muzik-beam {
+  stroke: #111827;
+  stroke-width: 3;
+  stroke-linecap: square;
+}
+.muzik-rest {
+  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Times New Roman', serif;
+  font-size: 30px;
+  font-weight: 400;
+  fill: #111827;
+}
+.muzik-symbol-text {
+  fill: #111827;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+.muzik-time-signature {
+  fill: #111827;
+  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-size: 23px;
+  font-weight: 700;
+}
+.muzik-time-signature-ust,
+.muzik-time-signature-alt {
+  dominant-baseline: middle;
+}
+.muzik-time-common {
+  font-size: 34px;
+}
+.muzik-accidental {
+  fill: #111827;
+  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', Georgia, 'Times New Roman', serif;
+  font-size: 22px;
+  font-weight: 400;
+}
+.muzik-dynamic {
+  fill: #111827;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 16px;
+  font-weight: 700;
+}
+.muzik-hairpin,
+.muzik-slur,
+.muzik-tuplet-bracket,
+.muzik-ottava-line,
+.muzik-volta {
+  fill: none;
+  stroke: #111827;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.muzik-articulation,
+.muzik-ornament,
+.muzik-ottava,
+.muzik-tuplet-text,
+.muzik-volta-text {
+  fill: #111827;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', Georgia, serif;
+}
+.muzik-ornament { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; font-weight: 700; }
+.muzik-ottava { font-style: italic; font-size: 11px; }
+.muzik-repeat-dot { fill: #111827; }
+.muzik-ogesi-etiket { display: none; }
+.muzik-bos-yardim { fill: #94a3b8; font-size: 14px; font-weight: 600; }
+.araclar-muzik-duzen-paneli {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+  gap: 10px;
+}
+.araclar-muzik-hizli-nota,
+.araclar-muzik-secili-panel,
+.araclar-muzik-modul8-paleti,
+.araclar-muzik-braille-panel {
+  border: 1.5px solid var(--panel-border, #e2e8f0);
+  background: color-mix(in srgb, var(--panel, #fff) 92%, #f59e0b);
+  border-radius: 12px;
+  padding: 10px;
+}
+.araclar-muzik-braille-panel {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.18);
+  border-color: #d97706;
+  background: color-mix(in srgb, #f59e0b 12%, var(--panel, #fff));
+}
+.araclar-muzik-panel-baslik {
+  font-size: 0.82em;
+  font-weight: 900;
+  color: color-mix(in srgb, #92400e 72%, var(--fg, #111));
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+}
+.araclar-muzik-mini-baslik {
+  font-size: 0.75em;
+  font-weight: 800;
+  color: var(--muted, #64748b);
+  margin: 8px 0 4px;
+}
+.araclar-muzik-nota-btn.aktif,
+.araclar-muzik-sure-btn.aktif,
+.araclar-muzik-palet-sekme.aktif {
+  background: #f59e0b;
+  color: #111827;
+  border-color: #d97706;
+}
+.araclar-muzik-ekle-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: #d97706;
+  border-color: #d97706;
+  color: #fff;
+}
+.araclar-muzik-ekleme-toolbar .araclar-muzik-ekle-btn {
+  width: auto;
+  margin-top: 0;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.araclar-muzik-secili-ad {
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.araclar-muzik-secili-aciklama {
+  color: var(--muted, #64748b);
+  font-size: 0.85em;
+}
+.araclar-muzik-secili-aksiyonlar {
+  margin-top: 10px;
+}
+.araclar-muzik-secili-aksiyonlar .tehlike {
+  background: var(--error, #dc2626);
+  border-color: var(--error, #dc2626);
+  color: #fff;
+}
+.araclar-muzik-ck-balon {
+  position: absolute;
+  top: 6px;
+  z-index: 12;
+  width: min(420px, calc(100% - 24px));
+  padding: 10px;
+  background: var(--panel, #fff);
+  color: var(--fg, #111827);
+  border: 1.5px solid color-mix(in srgb, #f59e0b 54%, var(--panel-border, #ddd));
+  border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.22);
+}
+.araclar-muzik-modal-arkaplan {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  animation: araclar-modal-fade 0.12s ease-out;
+}
+.araclar-muzik-modal {
+  width: min(460px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--panel, #fff);
+  color: var(--fg, #111827);
+  border: 1.5px solid color-mix(in srgb, #f59e0b 54%, var(--panel-border, #ddd));
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.32);
+}
+.araclar-muzik-modifier-durum {
+  background: color-mix(in srgb, #16a34a 14%, var(--panel, #fff));
+  border-color: #16a34a;
+  color: #14532d;
+}
+.araclar-muzik-modifier-durum .araclar-muzik-bag-durum-iptal {
+  border-color: #16a34a;
+  color: #14532d;
+}
+@keyframes araclar-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.araclar-muzik-ck-balon-ok {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  background: var(--panel, #fff);
+  border-left: 1.5px solid color-mix(in srgb, #f59e0b 54%, var(--panel-border, #ddd));
+  border-top: 1.5px solid color-mix(in srgb, #f59e0b 54%, var(--panel-border, #ddd));
+  transform: translateX(-50%) rotate(45deg);
+}
+.araclar-muzik-ck-baslik {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.araclar-muzik-ck-kapat {
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--panel, #fff);
+  color: var(--fg, #111827);
+  border-color: var(--panel-border, #ddd);
+  box-shadow: none;
+  font-size: 1.1em;
+}
+.araclar-muzik-ck-satir,
+.araclar-muzik-ck-aksiyonlar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.araclar-muzik-ck-etiket {
+  font-size: 0.78em;
+  font-weight: 700;
+  color: var(--muted, #64748b);
+  min-width: 38px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.araclar-muzik-ck-ses { opacity: 0.94; }
+.araclar-muzik-ck-aciklama {
+  color: var(--muted, #64748b);
+  font-size: 0.85em;
+  margin-bottom: 8px;
+}
+.araclar-muzik-ck-aksiyonlar {
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+.araclar-muzik-ck-aksiyonlar button {
+  min-height: 30px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.araclar-muzik-ck-aksiyonlar .tehlike {
+  background: var(--error, #dc2626);
+  border-color: var(--error, #dc2626);
+  color: #fff;
+}
+.araclar-muzik-paleti-sekmeler {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.araclar-muzik-palet-sekme {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--panel, #fff);
+  color: var(--fg, #111827);
+  border: 1.5px solid var(--panel-border, #d1d5db);
+  box-shadow: none;
+  font-size: 0.82em;
+}
+.araclar-muzik-palet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+.araclar-muzik-palet-ogesi {
+  min-height: 50px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--panel, #fff);
+  color: var(--fg, #111827);
+  border: 1.5px solid var(--panel-border, #d1d5db);
+  border-radius: 10px;
+  box-shadow: none;
+  font-size: 0.78em;
+  text-align: center;
+}
+.araclar-muzik-palet-sembol {
+  font-size: 1.25em;
+  font-weight: 900;
+  color: #92400e;
+}
+.araclar-muzik-palet-zaman {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4em;
+  line-height: 0.82;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.45em;
+  font-weight: 900;
+  color: #92400e;
+}
+.araclar-muzik-palet-ogesi.tip-dinamik .araclar-muzik-palet-sembol,
+.araclar-muzik-palet-ogesi.tip-susleme .araclar-muzik-palet-sembol {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+}
+.araclar-muzik-palet-ogesi.tip-hairpin .araclar-muzik-palet-sembol,
+.araclar-muzik-palet-ogesi.tip-degistirici .araclar-muzik-palet-sembol,
+.araclar-muzik-palet-ogesi.tip-donanim .araclar-muzik-palet-sembol,
+.araclar-muzik-palet-ogesi.tip-zaman .araclar-muzik-palet-sembol {
+  font-size: 1.45em;
+}
+.araclar-muzik-braille-unicode-satiri {
+  padding: 6px 8px;
+  font-family: 'Cambria Math', 'Noto Sans Symbols', 'Apple Symbols', 'Segoe UI Symbol', serif;
+  font-size: 1.4em;
+  line-height: 1.15;
+  letter-spacing: 0;
+  color: var(--fg, #111827);
+  background: var(--panel, #fff);
+  border: 1px solid var(--panel-border, #e5e7eb);
+  border-radius: 6px;
+  word-break: break-all;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.araclar-muzik-braille-unicode-satiri .unicode-hucre { display: inline; }
+.araclar-muzik-braille-bos {
+  padding: 8px;
+  text-align: center;
+  color: var(--muted, #64748b);
+  font-size: 0.82em;
+  background: var(--panel, #fff);
+  border: 1px dashed var(--panel-border, #d1d5db);
+  border-radius: 6px;
+}
+@media (max-width: 700px) {
+  .araclar-muzik-editor { padding-right: 12px; padding-top: 48px; }
+  .araclar-muzik-duzen-paneli { grid-template-columns: 1fr; }
+  .araclar-muzik-palet-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+}
 .araclar-matematik-paneli {
   position: absolute;
   top: calc(100% + 6px);
@@ -3443,6 +4138,13 @@ h1, h2, h3 { color: var(--fg); }
   box-sizing: border-box;
 }
 .araclar-tablet-satir .belge-braille-hucre {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: clamp(1px, 0.35cqw, 3px) clamp(0px, 0.15cqw, 2px);
+}
+.araclar-tablet-grid .belge-braille-hucre {
   min-width: 0;
   width: 100%;
   max-width: 100%;

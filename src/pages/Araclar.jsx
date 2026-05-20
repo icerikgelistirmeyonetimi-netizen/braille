@@ -53,6 +53,12 @@ import {
   KELIME_PARCASI_KISALTMALARI,
   NOKTALAMA,
 } from '../data/braille.js';
+import {
+  NOTALAR as MUZIK_TEMEL_NOTALAR,
+  SURE_GOSTERGELERI as MUZIK_SURE_GOSTERGELERI,
+  MUZIK_BOLUMLER,
+  MUZIK_SEMBOLLERI,
+} from '../data/muzik.js';
 
 // ─── BRF kodlama / çözme ───────────────────────────────────────────────────
 // BRF (Braille Ready Format) standardı:
@@ -1507,10 +1513,18 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
       if (ilkHucre && k === '2,3,6') noktalamaKullan = true;
       else if (sonHucre || kalanHepsiNoktalama) {
         if (k === '2,6' && sonHucre) {
-          let j = idx + 1;
-          while (j < hucreler.length && hucreler[j].length === 0) j++;
-          // Satır/metin sonu: sonraki blok yok → soru işareti
-          noktalamaKullan = j >= hucreler.length || buyukHarfIsaretiMi(hucreler[j]);
+          const ikiYanindaBosluk = idx > 0
+            && idx + 1 < hucreler.length
+            && hucreler[idx - 1].length === 0
+            && hucreler[idx + 1].length === 0;
+          if (ikiYanindaBosluk) {
+            noktalamaKullan = false;
+          } else {
+            let j = idx + 1;
+            while (j < hucreler.length && hucreler[j].length === 0) j++;
+            // Satır/metin sonu: sonraki blok yok → soru işareti
+            noktalamaKullan = j >= hucreler.length || buyukHarfIsaretiMi(hucreler[j]);
+          }
         } else {
           noktalamaKullan = true;
         }
@@ -2300,6 +2314,841 @@ const MATEMATIK_PALETI = [
   },
 ];
 
+// Müzik nota yazım paleti — Modül 8'deki temel notalar ve süre kurallarından türetilir.
+// Görünen metin kullanıcıya okunabilir token olarak kalır; BRF üretirken token doğrudan
+// müzik braille hücresine çevrilir. Boşluklar yalnızca yazım alanını okunur tutmak için yoksayılır.
+const MUZIK_NOTA_PALETI = MUZIK_SURE_GOSTERGELERI.map((sure) => ({
+  ...sure,
+  notalar: MUZIK_TEMEL_NOTALAR.map((nota) => {
+    const noktalar = [...new Set([...nota.noktalar, ...sure.noktalarEk])].sort((a, b) => a - b);
+    return {
+      token: `${nota.ad}${sure.sembol}`,
+      ad: `${nota.ad} · ${sure.ad.replace(/ nota$/i, '')}`,
+      notaAd: nota.ad,
+      sureAd: sure.ad,
+      sembol: sure.sembol,
+      hucreler: [noktalar],
+      noktalar,
+    };
+  }),
+}));
+
+const MUZIK_TOKEN_KAYITLARI = MUZIK_NOTA_PALETI
+  .flatMap((sure) => sure.notalar)
+  .sort((a, b) => b.token.length - a.token.length);
+
+const MUZIK_HUCRE_ANLAM_TABLOSU = new Map(
+  MUZIK_TOKEN_KAYITLARI.map((kayit) => [noktalariAnahtara(kayit.noktalar), kayit]),
+);
+
+const MUZIK_EDITOR_ANAHTARLAR = MUZIK_SEMBOLLERI
+  .filter((oge) => /anahtar/i.test(oge.ad))
+  .map((oge) => ({
+    ...oge,
+    tip: 'anahtar',
+    kategori: 'Anahtarlar',
+    gorunum: oge.sembol || oge.ad,
+  }));
+
+const MUZIK_EDITOR_PALET_GRUPLARI = [
+  {
+    slug: 'notalar',
+    baslik: 'Notalar',
+    ogeler: [],
+  },
+  {
+    slug: 'anahtarlar',
+    baslik: 'Anahtarlar',
+    ogeler: MUZIK_EDITOR_ANAHTARLAR,
+  },
+  ...MUZIK_BOLUMLER
+    .filter((bolum) => bolum.slug !== 'notalar' && bolum.slug !== 'sureler')
+    .map((bolum) => ({
+      slug: bolum.slug,
+      baslik: bolum.kisaBaslik,
+      ogeler: (bolum.veri || []).map((oge) => ({
+        ...oge,
+        tip: bolum.slug === 'sus' ? 'sus' : 'isaret',
+        kategori: bolum.kisaBaslik,
+        gorunum: oge.sembol || oge.okumaOzeti || oge.ad,
+      })),
+    })),
+];
+
+const MUZIK_EDITOR_PALET_ILK = MUZIK_EDITOR_PALET_GRUPLARI[0]?.slug || 'notalar';
+const MUZIK_SATIR_KAPASITESI = 8;
+const MUZIK_SATIR_YUKSEKLIK = 132;
+
+// Modül 8 kurallarına göre her kategorinin uygulama tipi.
+// - 'standalone': skora doğrudan eklenir (notalar, sus, anahtarlar, ölçü çizgileri, tekrar)
+// - 'prepend':    skorun başına eklenir (anahtar)
+// - 'before-note': seçili bir notanın hücrelerinden ÖNCE bağlanır (oktav, aksidental, dinamik, hairpin, nüans-önce, süsleme)
+// - 'after-note':  seçili bir notanın hücrelerinden SONRA bağlanır (fermata, nefes vb.)
+// - 'two-notes':   iki nota seçilerek bağ/slur kurulur
+// - 'header':      eserin başında veya bölüm değişiminde gelir (zaman imzası, donanım)
+const MUZIK_KATEGORI_TIPI = {
+  'notalar':          'standalone',
+  'anahtarlar':       'prepend',
+  'sus':              'standalone',
+  'oktav':            'before-note',
+  'zaman-imzasi':     'header',
+  'degistirici':      'before-note',
+  'donanim':          'header',
+  'olcu-cizgileri':   'standalone',
+  'bag-slur':         'two-notes',
+  'dinamikler':       'before-note',
+  'hairpin':          'before-note',
+  'nuans-once':       'before-note',
+  'nuans-sonra':      'after-note',
+  'suslemeler':       'before-note',
+  'duzensiz-gruplar': 'before-note',
+  'tekrar':           'standalone',
+};
+
+// Müzik notasyonu sembolleriyle her kategori için ikon. Yazı yerine glif kullanılır.
+const MUZIK_KATEGORI_IKON = {
+  notalar:           { sembol: '♪',   etiket: 'Notalar' },
+  anahtarlar:        { sembol: '𝄞',   etiket: 'Anahtarlar' },
+  sus:               { sembol: '𝄽',   etiket: 'Sus (sessizlik)' },
+  oktav:             { sembol: '8va', etiket: 'Oktav işaretleri', italic: true },
+  'zaman-imzasi':    { sembol: '4/4', etiket: 'Zaman imzası' },
+  degistirici:       { sembol: '♯',   etiket: 'Değiştiriciler' },
+  donanim:           { sembol: '♭♭',  etiket: 'Donanım' },
+  'olcu-cizgileri':  { sembol: '𝄁',   etiket: 'Ölçü çizgileri' },
+  'bag-slur':        { sembol: '⌒',   etiket: 'Bağ / slur' },
+  dinamikler:        { sembol: 'f',   etiket: 'Dinamikler', italic: true },
+  hairpin:           { sembol: '<',   etiket: 'Hairpin' },
+  'nuans-once':      { sembol: '>',   etiket: 'Nüans (nota öncesi)' },
+  'nuans-sonra':     { sembol: '𝄐',   etiket: 'Nüans (nota sonrası)' },
+  suslemeler:        { sembol: 'tr',  etiket: 'Süslemeler', italic: true },
+  'duzensiz-gruplar':{ sembol: '³',   etiket: 'Düzensiz gruplar' },
+  tekrar:            { sembol: '𝄎',   etiket: 'Tekrar' },
+};
+
+// Türkçe solfej isimleri (do, re, mi, fa, sol, la, si) → menüde bunlar kullanılır.
+const MUZIK_NOTA_IKON = {
+  do:  'do',
+  re:  're',
+  mi:  'mi',
+  fa:  'fa',
+  sol: 'sol',
+  la:  'la',
+  si:  'si',
+};
+
+const MUZIK_PITCH_Y = {
+  do: 124,
+  re: 118,
+  mi: 112,
+  fa: 106,
+  sol: 100,
+  la: 94,
+  si: 88,
+};
+
+function muzikSureKisaAdi(sure) {
+  return String(sure?.ad || '').replace(/ nota$/i, '').replace(/\s*\(.+\)$/u, '');
+}
+
+function muzikNotaNoktalari(notaAd, sureIndeksi) {
+  const nota = MUZIK_TEMEL_NOTALAR.find((n) => n.ad === notaAd) || MUZIK_TEMEL_NOTALAR[0];
+  const sure = MUZIK_SURE_GOSTERGELERI[sureIndeksi] || MUZIK_SURE_GOSTERGELERI[0];
+  return [...new Set([...nota.noktalar, ...sure.noktalarEk])].sort((a, b) => a - b);
+}
+
+function muzikNotaSkorOgesi(id, notaAd, sureIndeksi, ek = {}) {
+  const sure = MUZIK_SURE_GOSTERGELERI[sureIndeksi] || MUZIK_SURE_GOSTERGELERI[0];
+  const noktalar = muzikNotaNoktalari(notaAd, sureIndeksi);
+  return {
+    id,
+    tip: 'nota',
+    notaAd,
+    sureIndeksi,
+    oktav: ek.oktav ?? 4,                       // varsayılan 4. oktav (middle C)
+    accidental: ek.accidental ?? null,          // 'sharp' | 'flat' | 'natural' | 'doubleSharp' | 'doubleFlat' | null
+    dotted: ek.dotted ?? false,                 // noktalı nota
+    modifiers: ek.modifiers || { oncesi: [], sonrasi: [] },
+    ad: `${notaAd} · ${muzikSureKisaAdi(sure)}`,
+    gorunum: `${notaAd}${sure.sembol}`,
+    hucreler: [noktalar],
+    aciklama: `${notaAd} notasının ${sure.ad} değeri. Noktalar: ${noktalar.join('-')}.`,
+  };
+}
+
+// Diatonik aralık hesabı (Modül 8 Bölüm 3): notaları say (kendi dahil)
+const MUZIK_NOTA_DIYATONIK_SIRA = { do: 0, re: 1, mi: 2, fa: 3, sol: 4, la: 5, si: 6 };
+function muzikDiatonikAralik(prev, cur) {
+  const a = MUZIK_NOTA_DIYATONIK_SIRA[prev.notaAd] ?? 0;
+  const b = MUZIK_NOTA_DIYATONIK_SIRA[cur.notaAd] ?? 0;
+  const absA = (prev.oktav ?? 4) * 7 + a;
+  const absB = (cur.oktav ?? 4) * 7 + b;
+  return Math.abs(absB - absA) + 1;
+}
+
+// Modül 8 Bölüm 3 — Oktav işareti gerekli mi?
+function muzikOktavGerekliMi(prevNota, curNota, ctx = {}) {
+  if (!curNota || curNota.tip !== 'nota') return false;
+  if (ctx.ilkNota) return true;
+  if (ctx.yeniBrailleSatiri) return true;
+  if (ctx.timeKeyDegisimiSonrasi) return true;
+  if (ctx.sectionalDoubleBarlineSonrasi) return true;
+  if (!prevNota) return true;
+  const aralik = muzikDiatonikAralik(prevNota, curNota);
+  const oktavDegisti = (prevNota.oktav ?? 4) !== (curNota.oktav ?? 4);
+  if (aralik <= 3) return false;             // 2'li/3'lü: asla
+  if (aralik <= 5) return oktavDegisti;      // 4'lü/5'li: oktav değiştiyse
+  return true;                                // 6'lı ve üzeri: daima
+}
+
+// 1–7. oktav işareti hücreleri (Modül 8 tablosu)
+const MUZIK_OKTAV_HUCRELERI = [
+  [4],        // 1. oktav (en pes)
+  [4, 5],     // 2. oktav
+  [4, 5, 6],  // 3. oktav
+  [5],        // 4. oktav (orta do)
+  [4, 6],     // 5. oktav
+  [5, 6],     // 6. oktav
+  [6],        // 7. oktav (en tiz)
+];
+function muzikOktavHucresi(oktav) {
+  return MUZIK_OKTAV_HUCRELERI[(oktav || 4) - 1] || MUZIK_OKTAV_HUCRELERI[3];
+}
+
+// Aksidental hücreleri
+const MUZIK_ACCIDENTAL_HUCRELERI = {
+  sharp:       [[1, 4, 6]],
+  flat:        [[1, 2, 6]],
+  natural:     [[1, 6]],
+  doubleSharp: [[1, 4, 6], [1, 4, 6]],
+  doubleFlat:  [[1, 2, 6], [1, 2, 6]],
+};
+function muzikAccidentalHucreleri(acc) {
+  return acc ? (MUZIK_ACCIDENTAL_HUCRELERI[acc] || []) : [];
+}
+
+function muzikMetinKucuk(deger) {
+  return String(deger || '').toLocaleLowerCase('tr');
+}
+
+function muzikOgeGorselTipi(oge) {
+  const ad = muzikMetinKucuk(oge.ad);
+  const kategori = muzikMetinKucuk(oge.kategori);
+  if (oge.tip === 'anahtar') return 'anahtar';
+  if (oge.tip === 'nota') return 'nota';
+  if (oge.tip === 'sus' || ad.includes('sus') || ad.includes(' es')) return 'sus';
+  if (kategori.includes('zaman') || /^\d+\/\d+$/.test(String(oge.gorunum || '')) || ad.includes('common time')) return 'zaman';
+  if (kategori.includes('değiştir') || ad.includes('diyez') || ad.includes('bemol') || ad.includes('natural') || ad.includes('naturel')) return 'degistirici';
+  if (kategori.includes('donanım') || ad.includes('donanım')) return 'donanim';
+  if (kategori.includes('ölçü') || ad.includes('çizgisi') || ad.includes('röpriz') || ad.includes('repeat') || ad.includes('volta') || ad.includes('dolap')) return 'olcu';
+  if (kategori.includes('bağ') || ad.includes('slur') || ad.includes('bağ')) return 'bag';
+  if (kategori.includes('hairpin') || ad.includes('hairpin')) return 'hairpin';
+  if (kategori.includes('dinamik') || /\b(pp|p|mp|mf|f|ff|sf)\b/u.test(ad) || ad.includes('cresc') || ad.includes('decresc') || ad.includes('dim') || ad.includes('rit')) return 'dinamik';
+  if (kategori.includes('nüans') || ad.includes('staccato') || ad.includes('accent') || ad.includes('tenuto') || ad.includes('fermata') || ad.includes('nefes') || ad.includes('caesura')) return 'nuans';
+  if (kategori.includes('süs') || ad.includes('trill') || ad.includes('turn') || ad.includes('mordent') || ad.includes('glissando') || ad.includes('appoggiatura')) return 'susleme';
+  if (kategori.includes('düzensiz') || ad.includes('üçleme') || ad.includes('leme') || ad.includes('tuplet')) return 'tuplet';
+  if (kategori.includes('oktav') || ad.includes('oktav')) return 'oktav';
+  if (kategori.includes('tekrar') || ad.includes('tekrar')) return 'tekrar';
+  return 'metin';
+}
+
+function muzikGorselMetni(oge) {
+  const ad = muzikMetinKucuk(oge.ad);
+  const gorunum = String(oge.gorunum || oge.sembol || '').trim();
+  const tip = muzikOgeGorselTipi(oge);
+  if (tip === 'hairpin') return ad.includes('decresc') ? '>' : '<';
+  if (tip === 'donanim') {
+    const sayi = Number(ad.match(/(\d+)/)?.[1] || 1);
+    const sembol = ad.includes('bemol') ? '♭' : ad.includes('diyez') ? '♯' : '♮';
+    return sembol.repeat(Math.max(1, Math.min(7, sayi)));
+  }
+  if (tip === 'tuplet') return ad.match(/(\d+)/)?.[1] || (ad.includes('üç') ? '3' : 'n');
+  if (tip === 'oktav') return ad.match(/(\d+)/)?.[1] ? `${ad.match(/(\d+)/)?.[1]}. okt.` : 'okt.';
+  if (tip === 'bag') return ad.includes('tie') || ad.includes('bağ') ? '⌣' : '⌒';
+  if (tip === 'dinamik') {
+    const ilk = String(oge.ad || '').match(/^(pp|mp|mf|ff|sf|p|f|cresc\.?|decresc\.?|dim\.?|rit\.?)\b/i)?.[1];
+    if (ilk) return ilk.endsWith('.') ? ilk : ilk;
+  }
+  if (tip === 'nuans') {
+    if (ad.includes('fermata')) return '𝄐';
+    if (ad.includes('nefes')) return ',';
+    if (ad.includes('caesura')) return '//';
+    if (ad.includes('accent')) return '>';
+    if (ad.includes('tenuto')) return '—';
+    if (ad.includes('staccato')) return '•';
+  }
+  if (tip === 'susleme') {
+    if (ad.includes('trill')) return 'tr';
+    if (ad.includes('turn')) return '∽';
+    if (ad.includes('mordent')) return '𝆝';
+    if (ad.includes('glissando')) return 'gliss.';
+  }
+  if (gorunum && !/^ölçüler arası/i.test(gorunum) && gorunum !== oge.ad) return gorunum;
+  return gorunum || oge.ad || '♪';
+}
+
+function muzikZamanImzasiParcalari(deger) {
+  const metin = String(deger || '').trim();
+  const eslesme = metin.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (!eslesme) return null;
+  return { ust: eslesme[1], alt: eslesme[2] };
+}
+
+function muzikKayittanSkorOgesi(id, kayit, ek = {}) {
+  const hucreler = Array.isArray(kayit.hucreler)
+    ? (kayit.hucreler.length === 0 ? [[]] : kayit.hucreler.map((h) => [...h]))
+    : [[]];
+  const temel = {
+    id,
+    tip: ek.tip || kayit.tip || 'isaret',
+    kategori: ek.kategori || kayit.kategori || '',
+    ad: kayit.ad || ek.ad || 'Müzik işareti',
+    gorunum: kayit.gorunum || kayit.sembol || kayit.okumaOzeti || kayit.ad || '♪',
+    aciklama: kayit.aciklama || '',
+    kurallar: kayit.kurallar || [],
+    hucreler,
+  };
+  return {
+    ...temel,
+    gorselTip: muzikOgeGorselTipi(temel),
+    gorselMetin: muzikGorselMetni(temel),
+  };
+}
+
+function muzikSkorMetni(ogeler) {
+  return ogeler.map((oge) => oge.gorunum || oge.ad || '♪').join(' ');
+}
+
+// Modül 8, Bölüm 4A — Bir notadan ÖNCE gelen işaretlerin kesin sırası:
+// 1) forward repeat, 2) volta, 3) opening bracket slur, 4) word/dynamic,
+// 5) triplet/irregular, 6) ornament-accidental, 7) ornament, 8) articulation,
+// 9) accidental, 10) octave
+function muzikModifierOncesiSira(kayit) {
+  const ad = String(kayit.ad || '').toLowerCase();
+  const tip = String(kayit.gorselTip || '');
+  if (/forward|ileri.*tekrar/.test(ad)) return 1;
+  if (/volta|\bev\b|dolap/.test(ad)) return 2;
+  if (tip === 'bag' && /(açılış|aç\b|köşeli.*aç|opening)/.test(ad)) return 3;
+  if (tip === 'dinamik' || tip === 'hairpin') return 4;
+  if (tip === 'tuplet' || /üçleme|leme|tuplet/.test(ad)) return 5;
+  if (tip === 'susleme') return 7;
+  if (tip === 'nuans') return 8;
+  if (tip === 'degistirici' || tip === 'donanim') return 9;
+  if (tip === 'oktav') return 10;
+  return 6;
+}
+
+// Bölüm 4B — Bir notadan SONRA gelen işaretlerin kesin sırası:
+// 1) dot, 2) fermata, 3) slur/opening double, 4) closing bracket slur,
+// 5) tie, 6) hairpin terminator, 7) breath/break, 8) backward repeat
+function muzikModifierSonrasiSira(kayit) {
+  const ad = String(kayit.ad || '').toLowerCase();
+  const tip = String(kayit.gorselTip || '');
+  if (/fermata/.test(ad)) return 2;
+  if (tip === 'bag' && /(kapanış|kapa\b|köşeli.*kapa|closing)/.test(ad)) return 4;
+  if (tip === 'bag' && /(tie|^bağ\b)/.test(ad)) return 5;
+  if (tip === 'bag') return 3;
+  if (tip === 'hairpin' && /(bitir|terminator|son)/.test(ad)) return 6;
+  if (/nefes|kesme|caesura|break|breath/.test(ad)) return 7;
+  if (/backward|geri/.test(ad)) return 8;
+  return 9;
+}
+
+// Modül 8 Bölüm 4 — Gruplama (Grouping/Beaming)
+// Aynı küçük süredeki (16, 32, 64) ardışık 3+ nota gruplandığında:
+//   - İlk nota: gerçek değeriyle yazılır (örn 16-lık hücresi)
+//   - Diğer notalar: sadece pitch hücresi (sekizlik gibi) yazılır
+//   - Okuyucu, baştaki gerçek değerden grubun süresini anlar
+function muzikNotaSadePitchHucresi(notaAd) {
+  const nota = MUZIK_TEMEL_NOTALAR.find((n) => n.ad === notaAd) || MUZIK_TEMEL_NOTALAR[0];
+  return [...nota.noktalar].sort((a, b) => a - b);
+}
+
+// Modül 8 — bir es'in gerçek değerini (dual-meaning) tahmin et:
+// tam-rest (1) ↔ 16'lık rest ; yarım-rest (2) ↔ 32'lik ; dörtlük (4) ↔ 64'lük
+function muzikRestKucukSureDegeri(oge) {
+  if (!oge || oge.tip === 'nota') return null;
+  // Önce explicit realValue alanı (yeni sus modeli)
+  if (oge.tip === 'sus' && oge.realValue) {
+    const dual = { 1: 16, 2: 32, 4: 64, 8: 128 };
+    return dual[oge.realValue] || null;
+  }
+  const ad = String(oge.ad || '').toLowerCase();
+  if (/(tam|birlik).*sus/.test(ad)) return 16;
+  if (/(yarım|ikilik).*sus/.test(ad)) return 32;
+  if (/dörtlük.*sus/.test(ad)) return 64;
+  return null;
+}
+
+// Bir sus öğesinin gerçek (büyük) süre değerini ad'dan çıkar.
+// 1=tam, 2=yarım, 4=dörtlük, 8=sekizlik
+function muzikRestSureFromName(ad) {
+  const lower = String(ad || '').toLowerCase();
+  if (/(tam|birlik).*sus/.test(lower)) return 1;
+  if (/(yarım|ikilik).*sus/.test(lower)) return 2;
+  if (/dörtlük.*sus/.test(lower)) return 4;
+  if (/sekizlik.*sus/.test(lower)) return 8;
+  return null;
+}
+
+// Bir öğenin 16'lık cinsinden süresi (ölçü içi pozisyon takibi için).
+// Formül: 16 / realValue → tam=16, yarım=8, dörtlük=4, sekizlik=2, 16=1, 32=0.5, 64=0.25
+// Noktalı nota/sus değeri 1,5× artar (Modül 8 Bölüm 2).
+function muzikOge16Suresi(oge) {
+  if (!oge) return 0;
+  if (oge.tip === 'nota') {
+    const sure = MUZIK_SURE_GOSTERGELERI[oge.sureIndeksi ?? 0];
+    if (!sure || !sure.realValue) return 0;
+    const base = 16 / sure.realValue;
+    return oge.dotted ? base * 1.5 : base;
+  }
+  if (oge.tip === 'sus' && oge.realValue) {
+    const base = 16 / oge.realValue;
+    return oge.dotted ? base * 1.5 : base;
+  }
+  // Eski yöntem: ad parse (geriye dönük uyumluluk)
+  const ad = String(oge.ad || '').toLowerCase();
+  if (/noktalı dörtlük.*sus/.test(ad)) return 6;
+  if (/(tam|birlik).*sus/.test(ad)) return 16;
+  if (/(yarım|ikilik).*sus/.test(ad)) return 8;
+  if (/dörtlük.*sus/.test(ad)) return 4;
+  if (/sekizlik.*sus/.test(ad)) return 2;
+  return 0;
+}
+
+function muzikOlcuAyraciMi(oge) {
+  if (!oge || oge.tip === 'nota') return false;
+  const ad = String(oge.ad || '').toLowerCase();
+  return /ölçü ayracı|ölçü çizgisi|barline/.test(ad);
+}
+
+// Her öğenin bulunduğu ölçü içindeki başlangıç 16'lık pozisyonunu hesapla.
+// Ölçü ayracı görüldüğünde 0'a sıfırlanır.
+function muzikBeatPozisyonlari(ogeler) {
+  const poz = new Array(ogeler.length).fill(0);
+  let cur = 0;
+  for (let i = 0; i < ogeler.length; i++) {
+    poz[i] = cur;
+    if (muzikOlcuAyraciMi(ogeler[i])) cur = 0;
+    else cur += muzikOge16Suresi(ogeler[i]);
+  }
+  return poz;
+}
+
+// Aynı vuruş içinde mi? Default beat unit = 4 (16'lık) = bir dörtlük (4/4 vb.).
+function muzikAyniVurusMu(p1, p2, beatUnit = 4) {
+  return Math.floor(p1 / beatUnit) === Math.floor(p2 / beatUnit);
+}
+
+// Modül 8 Bölüm 4 — Grouping kuralı:
+// 1) realValue >= 16 (sekizlikten küçük)
+// 2) En az 3 öğe
+// 3) İlk öğe NOTA veya aynı değerde SUS (es) olabilir
+// 4) Sonraki öğeler NOTA olmalı (sus yalnız başta olabilir)
+// 5) Hepsi aynı küçük süre değerinde olmalı
+// 6) Aynı satırda tamamlanmalı (satır sınırı aşılmaz)
+// 7) Aynı VURUŞ içinde olmalı (default beat unit = 4 sixteenths)
+// 8) Grup sonrasında aynı ölçü içinde sekizlik / sekizlik-sus gelmemeli
+function muzikGrupTespit(ogeler, baslangic, beatPos = null, beatUnit = 4) {
+  const bas = ogeler[baslangic];
+  if (!bas) return 0;
+
+  // Bas öğenin "küçük süre" değerini belirle
+  let smallReal = null;
+  if (bas.tip === 'nota') {
+    const basSure = MUZIK_SURE_GOSTERGELERI[bas.sureIndeksi ?? 0];
+    if (basSure && basSure.realValue >= 16) smallReal = basSure.realValue;
+  } else {
+    smallReal = muzikRestKucukSureDegeri(bas);
+  }
+  if (!smallReal) return 0;
+
+  const basSatir = Math.floor(baslangic / MUZIK_SATIR_KAPASITESI);
+  const pozCache = beatPos || muzikBeatPozisyonlari(ogeler);
+
+  let i = baslangic + 1;
+  while (i < ogeler.length) {
+    const o = ogeler[i];
+    if (!o || o.tip !== 'nota') break; // sus yalnız başta olabilir
+    const oSure = MUZIK_SURE_GOSTERGELERI[o.sureIndeksi ?? 0];
+    if (!oSure || oSure.realValue !== smallReal) break;
+    if (Math.floor(i / MUZIK_SATIR_KAPASITESI) !== basSatir) break;
+    // Aynı vuruş kontrolü: bas ile aynı vuruş içinde mi?
+    if (!muzikAyniVurusMu(pozCache[baslangic], pozCache[i], beatUnit)) break;
+    i++;
+  }
+  const sayi = i - baslangic;
+  if (sayi < 3) return 0;
+
+  // Modül 8: Grup sonrası AYNI ölçü içinde sekizlik nota, noktalı sekizlik nota
+  // veya sekizlik sus gelirse grup yapılmaz. Önümüzdeki öğeleri ölçü ayracına kadar tara.
+  for (let j = i; j < ogeler.length; j++) {
+    const o = ogeler[j];
+    if (!o) break;
+    if (muzikOlcuAyraciMi(o)) break; // yeni ölçü başlıyor, kontrol bitti
+    if (o.tip === 'nota') {
+      const oSure = MUZIK_SURE_GOSTERGELERI[o.sureIndeksi ?? 0];
+      if (oSure && oSure.realValue === 8) return 0; // sekizlik nota (noktalı dahil)
+    } else {
+      const ad = String(o.ad || '').toLowerCase();
+      if (/sekizlik.*sus/.test(ad)) return 0;
+      if (/noktalı.*sekizlik.*sus/.test(ad)) return 0;
+    }
+  }
+
+  return sayi;
+}
+
+// Audit F — Ölçü modeli: bar ayraçlarına göre ölçülere böl.
+// Her ölçü: { no, baslangic, son, items, durationHash }
+function muzikOlcuyeBol(ogeler) {
+  const olculer = [];
+  let aktif = { no: 1, baslangic: 0, items: [], indices: [] };
+  for (let i = 0; i < ogeler.length; i++) {
+    const oge = ogeler[i];
+    if (muzikOlcuAyraciMi(oge)) {
+      aktif.son = i - 1;
+      olculer.push(aktif);
+      aktif = { no: olculer.length + 1, baslangic: i + 1, items: [], indices: [] };
+    } else {
+      aktif.items.push(oge);
+      aktif.indices.push(i);
+    }
+  }
+  if (aktif.items.length || olculer.length === 0) {
+    aktif.son = ogeler.length - 1;
+    olculer.push(aktif);
+  }
+  return olculer;
+}
+
+// Audit E — Ölçü hash'i: iki ölçü musical olarak aynı mı?
+// Modül 8: braille bar repeat yalnız nüanslar/dinamik/aksidental/oktav AYNI ise kullanılabilir.
+function muzikOlcuHash(olcu) {
+  if (!olcu || !Array.isArray(olcu.items)) return '';
+  return olcu.items.map((o) => {
+    if (o.tip === 'nota') {
+      const mods = (yon) => (Array.isArray(o.modifiers?.[yon]) ? o.modifiers[yon] : [])
+        .map((m) => m.kayit?.ad || '').sort().join(',');
+      return [
+        'N', o.notaAd, o.sureIndeksi, o.oktav ?? 4,
+        o.accidental || '-', o.dotted ? 'd' : '-',
+        mods('oncesi'), mods('sonrasi'),
+      ].join('|');
+    }
+    if (o.tip === 'sus') {
+      return ['S', o.realValue, o.dotted ? 'd' : '-'].join('|');
+    }
+    return ['X', o.ad || o.tip || ''].join('|');
+  }).join('~');
+}
+
+// Audit E — Otomatik bar repeat: ardışık özdeş ölçüleri 7 işaretiyle değiştir.
+// Her ölçü için autoRepeat bilgisi döndür.
+function muzikAutoBarRepeatHaritasi(olculer) {
+  const harita = new Map();
+  for (let i = 1; i < olculer.length; i++) {
+    if (muzikOlcuHash(olculer[i]) === muzikOlcuHash(olculer[i - 1])
+        && muzikOlcuHash(olculer[i]).length > 0
+        && olculer[i].items.length > 0) {
+      harita.set(i, true);
+    }
+  }
+  return harita;
+}
+
+// Audit G — Bar number alt-rakam hücreleri: sayı işareti olmadan lower-number
+// Modül 8: ölçü numaraları satır başında alt hücrelerde yazılır.
+function muzikBarNumberHucreleri(no) {
+  // Lower-number mapping (Braille music): rakamların 2-3-5-6 vb. alt formları
+  const lowerDigit = {
+    '0': [3, 5, 6],
+    '1': [2],
+    '2': [2, 3],
+    '3': [2, 5],
+    '4': [2, 5, 6],
+    '5': [2, 6],
+    '6': [2, 3, 5],
+    '7': [2, 3, 5, 6],
+    '8': [2, 3, 6],
+    '9': [3, 5],
+  };
+  return String(no).split('').map((d) => lowerDigit[d] || []);
+}
+
+// Ortak grup haritası üretici (BRF ve SVG için)
+function muzikGruplariTespit(ogeler) {
+  const harita = new Map();
+  if (!Array.isArray(ogeler) || !ogeler.length) return harita;
+  const beatPos = muzikBeatPozisyonlari(ogeler);
+  for (let i = 0; i < ogeler.length; i++) {
+    if (harita.has(i)) continue;
+    const grupBoyu = muzikGrupTespit(ogeler, i, beatPos);
+    if (grupBoyu > 0) {
+      for (let k = 0; k < grupBoyu; k++) {
+        harita.set(i + k, { konum: k, boy: grupBoyu });
+      }
+    }
+  }
+  return harita;
+}
+
+function muzikSkorunuBrailleyeCevir(ogeler, baglar = []) {
+  const hucreler = [];
+  const esleme = [];
+  const hucreMeta = []; // her hücre için { ogeId, kaynak: 'modifier'|'accidental'|'octave'|'note'|'note-pitch'|'dot'|'bag'|'sus', etiket }
+  const kaynakParcalar = [];
+  let kaynakIndeksi = 0;
+
+  const metaEkle = (info) => { hucreMeta.push(info); };
+
+  const modHucrelerEkle = (modListesi, ogeId, yon) => {
+    for (const mod of modListesi || []) {
+      const kayit = mod.kayit;
+      if (!kayit || !Array.isArray(kayit.hucreler)) continue;
+      const etiket = kayit.gorunum || kayit.ad || '·';
+      if (kaynakParcalar.length) kaynakIndeksi += 1;
+      kaynakParcalar.push(etiket);
+      for (const hucre of kayit.hucreler) {
+        hucreler.push(Array.isArray(hucre) ? [...hucre] : []);
+        esleme.push(kaynakIndeksi);
+        metaEkle({ ogeId, kaynak: `modifier-${yon}`, etiket: kayit.ad });
+      }
+      kaynakIndeksi += etiket.length;
+    }
+  };
+
+  // Aynı kural seti hem BRF hem SVG için: muzikGruplariTespit
+  const gruplamaHaritasi = muzikGruplariTespit(ogeler);
+
+  // Audit E,F,G — Ölçü modeli + bar repeat tespiti
+  const olculer = muzikOlcuyeBol(ogeler);
+  const autoRepeatHaritasi = muzikAutoBarRepeatHaritasi(olculer);
+  // Hangi öğenin hangi ölçüde ilk olduğunu hızlı bul
+  const ogeOlcuIndeksi = new Map();
+  for (let oi = 0; oi < olculer.length; oi++) {
+    for (const idx of olculer[oi].indices) ogeOlcuIndeksi.set(idx, oi);
+  }
+  // Auto-repeat ölçüsünün ÖĞELERİNİ atla; sadece bir 7 yaz
+  const atlananIndeksler = new Set();
+  for (const [oi] of autoRepeatHaritasi) {
+    for (const idx of (olculer[oi]?.indices || [])) atlananIndeksler.add(idx);
+  }
+
+  // Otomatik oktav için bağlam takibi (Modül 8 Bölüm 3)
+  let sonNota = null;
+  let timeKeyDegisimiBayragi = false;
+  let sectionalBarlineBayragi = false;
+  let yazilanOlculer = new Set();
+
+  for (let idx = 0; idx < ogeler.length; idx++) {
+    const oge = ogeler[idx];
+    if (oge.tip === 'nota') {
+      const oncesiSirali = (Array.isArray(oge.modifiers?.oncesi) ? oge.modifiers.oncesi : [])
+        .slice()
+        .sort((a, b) => muzikModifierOncesiSira(a.kayit) - muzikModifierOncesiSira(b.kayit));
+      modHucrelerEkle(oncesiSirali, oge.id, 'oncesi');
+    }
+
+    const etiket = oge.gorunum || oge.ad || '♪';
+    if (kaynakParcalar.length) kaynakIndeksi += 1;
+    kaynakParcalar.push(etiket);
+    const grupBilgisi = oge.tip === 'nota' ? gruplamaHaritasi.get(idx) : null;
+
+    // Modül 8 Bölüm 4 — Notadan önce: accidental → octave (kuralla) → note
+    if (oge.tip === 'nota') {
+      // Aksidental (note.accidental field)
+      const accHucreleri = muzikAccidentalHucreleri(oge.accidental);
+      for (const h of accHucreleri) {
+        hucreler.push([...h]);
+        esleme.push(kaynakIndeksi);
+        metaEkle({ ogeId: oge.id, kaynak: 'accidental', etiket: `aksidental: ${oge.accidental}` });
+      }
+
+      // Otomatik oktav işareti (interval bazlı)
+      const ilkNotaMi = !sonNota;
+      const ctx = {
+        ilkNota: ilkNotaMi,
+        timeKeyDegisimiSonrasi: timeKeyDegisimiBayragi,
+        sectionalDoubleBarlineSonrasi: sectionalBarlineBayragi,
+      };
+      if (muzikOktavGerekliMi(sonNota, oge, ctx)) {
+        const oktHucre = muzikOktavHucresi(oge.oktav);
+        hucreler.push([...oktHucre]);
+        esleme.push(kaynakIndeksi);
+        metaEkle({ ogeId: oge.id, kaynak: 'octave', etiket: `${oge.oktav}. oktav işareti` });
+      }
+      timeKeyDegisimiBayragi = false;
+      sectionalBarlineBayragi = false;
+      sonNota = oge;
+    }
+
+    // Modül 8 Gruplama: grup içindeki ilk-olmayan notalar pitch-only (sekizlik) yazılır
+    const grupPitchOnly = grupBilgisi && grupBilgisi.konum > 0;
+    const ogeHucreleri = grupPitchOnly
+      ? [muzikNotaSadePitchHucresi(oge.notaAd)]
+      : (Array.isArray(oge.hucreler) && oge.hucreler.length ? oge.hucreler : [[]]);
+    for (const hucre of ogeHucreleri) {
+      hucreler.push(Array.isArray(hucre) ? [...hucre] : []);
+      esleme.push(kaynakIndeksi);
+      const kaynak = oge.tip === 'nota'
+        ? (grupPitchOnly ? 'note-pitch' : 'note')
+        : (oge.tip === 'sus' ? 'rest' : 'sign');
+      metaEkle({ ogeId: oge.id, kaynak, etiket });
+    }
+
+    // Noktalı nota: hücreden hemen sonra dot 3
+    if (oge.tip === 'nota' && oge.dotted) {
+      hucreler.push([3]);
+      esleme.push(kaynakIndeksi);
+      metaEkle({ ogeId: oge.id, kaynak: 'dot', etiket: 'noktalı uzatma (1,5×)' });
+    }
+
+    // Sonraki ilk nota oktav alır (Modül 8 Bölüm 3 + Bölüm 9):
+    // time/key değişimi, sectional barline, print repeat, volta sonrası
+    if (oge.tip !== 'nota') {
+      const adLower = String(oge.ad || '').toLowerCase();
+      if (/(zaman imzas|time sig|donanım|key sig|key signature)/.test(adLower)) {
+        timeKeyDegisimiBayragi = true;
+      }
+      if (/sectional|bölüm sonu/.test(adLower)) {
+        sectionalBarlineBayragi = true;
+      }
+      // Print repeat (başlangıç/bitiş röpriz) sonrası oktav
+      if (/tekrar başlangıcı|tekrar sonu|röpriz|begin.*repeat|end.*repeat/.test(adLower)) {
+        timeKeyDegisimiBayragi = true;
+      }
+      // Volta (1./2. ev) sonrası oktav
+      if (/\bev\b|\bvolta\b|\bdolap\b/.test(adLower)) {
+        timeKeyDegisimiBayragi = true;
+      }
+      // Braille bar repeat sonrası oktav
+      if (/braille.*tekrar|braille.*repeat/.test(adLower)) {
+        timeKeyDegisimiBayragi = true;
+      }
+    }
+
+    kaynakIndeksi += etiket.length;
+
+    if (oge.tip === 'nota') {
+      const sonrasiSirali = (Array.isArray(oge.modifiers?.sonrasi) ? oge.modifiers.sonrasi : [])
+        .slice()
+        .sort((a, b) => muzikModifierSonrasiSira(a.kayit) - muzikModifierSonrasiSira(b.kayit));
+      modHucrelerEkle(sonrasiSirali, oge.id, 'sonrasi');
+    }
+
+    const baglayan = baglar.find((b) => b.basId === oge.id);
+    if (baglayan && baglayan.kayit && Array.isArray(baglayan.kayit.hucreler)) {
+      const bagEtiketi = baglayan.kayit.gorunum || baglayan.kayit.ad || '⌒';
+      kaynakIndeksi += 1;
+      kaynakParcalar.push(bagEtiketi);
+      for (const hucre of baglayan.kayit.hucreler) {
+        hucreler.push(Array.isArray(hucre) ? [...hucre] : []);
+        esleme.push(kaynakIndeksi);
+        metaEkle({ ogeId: oge.id, kaynak: 'bag', etiket: baglayan.kayit.ad });
+      }
+      kaynakIndeksi += bagEtiketi.length;
+    }
+  }
+
+  return { hucreler, esleme, kaynak: kaynakParcalar.join(' '), hucreMeta };
+}
+
+// Hücre indexinden gerçek anlamı bul (öncelik: hucreMeta varsa onu kullan, yoksa eski cursor mantığı)
+function muzikHucreAnlamiKayittan(ogeler, hucreIndeksi, hucreMeta = null) {
+  if (Array.isArray(hucreMeta) && hucreMeta[hucreIndeksi]) {
+    const meta = hucreMeta[hucreIndeksi];
+    const oge = ogeler.find((o) => o.id === meta.ogeId);
+    const ogeAd = oge ? (oge.gorunum || oge.ad || '') : '';
+    const baslikMap = {
+      'modifier-oncesi': `Modifier (önce): ${meta.etiket}`,
+      'modifier-sonrasi': `Modifier (sonra): ${meta.etiket}`,
+      'accidental': meta.etiket,
+      'octave': meta.etiket,
+      'note': `Müzik notası: ${ogeAd}`,
+      'note-pitch': `Gruplanmış nota (pitch-only): ${ogeAd}`,
+      'dot': meta.etiket,
+      'bag': `Bağ/slur: ${meta.etiket}`,
+      'rest': `Sus: ${ogeAd}`,
+      'sign': `Müzik işareti: ${ogeAd}`,
+    };
+    return {
+      tip: meta.kaynak === 'note' || meta.kaynak === 'note-pitch' ? 'muzik' : 'isaret',
+      baslik: baslikMap[meta.kaynak] || `Müzik: ${ogeAd}`,
+      detay: oge?.aciklama || '',
+      noktaStr: '',
+      etiket: ogeAd,
+      kaynak: meta.kaynak,
+    };
+  }
+  // Eski yöntem (geriye dönük): cursor ilerleterek bul
+  let cursor = 0;
+  for (const oge of ogeler) {
+    const ogeHucreleri = Array.isArray(oge.hucreler) && oge.hucreler.length ? oge.hucreler : [[]];
+    if (hucreIndeksi >= cursor && hucreIndeksi < cursor + ogeHucreleri.length) {
+      const hucre = ogeHucreleri[hucreIndeksi - cursor] || [];
+      return {
+        tip: oge.tip === 'nota' ? 'muzik' : 'isaret',
+        baslik: oge.tip === 'nota' ? `Müzik: ${oge.ad}` : `Müzik: ${oge.ad}`,
+        detay: oge.aciklama || (oge.kurallar || []).join(' '),
+        noktaStr: hucre.length ? hucre.join(' · ') : 'boş hücre',
+        etiket: oge.gorunum || oge.ad || '♪',
+      };
+    }
+    cursor += ogeHucreleri.length;
+  }
+  return null;
+}
+
+function muzikMetniniBrailleyeCevir(metin) {
+  const hucreler = [];
+  const esleme = [];
+  let i = 0;
+
+  while (i < metin.length) {
+    const ch = metin[i];
+    if (/\s/u.test(ch)) {
+      i += 1;
+      continue;
+    }
+
+    const kayit = MUZIK_TOKEN_KAYITLARI.find((aday) => metin.startsWith(aday.token, i));
+    if (kayit) {
+      for (const hucre of kayit.hucreler) {
+        hucreler.push(hucre);
+        esleme.push(i);
+      }
+      i += kayit.token.length;
+      continue;
+    }
+
+    // Tanınmayan karakteri güvenli biçimde atla; kullanıcı serbest düzenleme yaptıysa
+    // geçerli müzik tokenları yine BRF'e aktarılabilsin.
+    i += 1;
+  }
+
+  return { hucreler, esleme, kaynak: metin };
+}
+
+function muzikHucreAnlami(noktalar) {
+  const kayit = MUZIK_HUCRE_ANLAM_TABLOSU.get(noktalariAnahtara(noktalar));
+  if (!kayit) {
+    return {
+      tip: 'isaret',
+      baslik: 'Müzik braille hücresi',
+      detay: `Müzik yazım modunda kullanılan hücre. Nokta gösterimi: ${noktalar.join(' · ') || 'boş'}.`,
+      noktaStr: noktalar.join(' · ') || '—',
+      etiket: '♪',
+    };
+  }
+  return {
+    tip: 'muzik',
+    baslik: `Müzik: ${kayit.ad}`,
+    detay: `${kayit.notaAd} notasının ${kayit.sureAd} değeri. Modül 8 kuralı: süre, temel nota hücresine ${kayit.noktalar.join(' · ')} noktalarıyla yazılır.`,
+    noktaStr: kayit.noktalar.join(' · '),
+    etiket: kayit.token,
+  };
+}
+
 export default function Araclar() {
   const [perkinsAktif, setPerkinsAktif] = useState(true);
   const [kisaltmaAktif, setKisaltmaAktif] = useState(true);
@@ -2337,6 +3186,28 @@ export default function Araclar() {
   const [konusuyor, setKonusuyor] = useState(false); // 'metin' | 'nokta' | false
   const [matematikPaletiAcik, setMatematikPaletiAcik] = useState(false);
   const matematikPaletRef = useRef(null);
+  const [muzikModuAktif, setMuzikModuAktif] = useState(false);
+  const [muzikPaletiAcik, setMuzikPaletiAcik] = useState(false);
+  const [muzikSureIndeksi, setMuzikSureIndeksi] = useState(1);
+  const [muzikNotaAd, setMuzikNotaAd] = useState('do');
+  const [muzikPaletSekmesi, setMuzikPaletSekmesi] = useState(null);
+  const [muzikOgeleri, setMuzikOgeleri] = useState([]);
+  const [seciliMuzikOgeId, setSeciliMuzikOgeId] = useState(null);
+  const [muzikDuzenPopupAcik, setMuzikDuzenPopupAcik] = useState(false);
+  const [muzikBaglar, setMuzikBaglar] = useState([]);
+  const [bekleyenBag, setBekleyenBag] = useState(null);
+  const [bekleyenModifier, setBekleyenModifier] = useState(null);
+  const [notalarAdimSureMi, setNotalarAdimSureMi] = useState(true);
+  const bekleyenBagBilgisi = bekleyenBag
+    ? (bekleyenBag.basId
+        ? `${bekleyenBag.kayit.ad}: 2. notayı seçin (Esc ile iptal)`
+        : `${bekleyenBag.kayit.ad}: 1. notayı seçin (Esc ile iptal)`)
+    : null;
+  const bekleyenModifierBilgisi = bekleyenModifier
+    ? `${bekleyenModifier.kayit.ad}: uygulanacak notayı seçin (Esc ile iptal)`
+    : null;
+  const muzikIdRef = useRef(1);
+  const muzikPaletRef = useRef(null);
   const [seciliHucre, setSeciliHucre] = useState(null); // { index }
   const [metinSecimHucreAraligi, setMetinSecimHucreAraligi] = useState(null); // { lo, hi } | null — textarea seçimine göre doldurulabilir
   const [genisletAktif, setGenisletAktif] = useState(true);
@@ -2359,6 +3230,27 @@ export default function Araclar() {
     return () => window.removeEventListener('keydown', kapat);
   }, [seciliHucre]);
 
+  useEffect(() => {
+    if (!muzikDuzenPopupAcik) return;
+    const kapat = (e) => { if (e.key === 'Escape') setMuzikDuzenPopupAcik(false); };
+    window.addEventListener('keydown', kapat);
+    return () => window.removeEventListener('keydown', kapat);
+  }, [muzikDuzenPopupAcik]);
+
+  useEffect(() => {
+    if (!bekleyenBag) return;
+    const kapat = (e) => { if (e.key === 'Escape') setBekleyenBag(null); };
+    window.addEventListener('keydown', kapat);
+    return () => window.removeEventListener('keydown', kapat);
+  }, [bekleyenBag]);
+
+  useEffect(() => {
+    if (!bekleyenModifier) return;
+    const kapat = (e) => { if (e.key === 'Escape') setBekleyenModifier(null); };
+    window.addEventListener('keydown', kapat);
+    return () => window.removeEventListener('keydown', kapat);
+  }, [bekleyenModifier]);
+
   // Matematik paleti dışına tıklayınca veya Escape ile kapat
   useEffect(() => {
     if (!matematikPaletiAcik) return;
@@ -2376,6 +3268,23 @@ export default function Araclar() {
     };
   }, [matematikPaletiAcik]);
 
+  // Müzik paleti dışına tıklayınca veya Escape ile kapat
+  useEffect(() => {
+    if (!muzikPaletiAcik) return;
+    const handleClick = (e) => {
+      if (muzikPaletRef.current && !muzikPaletRef.current.contains(e.target)) {
+        setMuzikPaletiAcik(false);
+      }
+    };
+    const handleKey = (e) => { if (e.key === 'Escape') setMuzikPaletiAcik(false); };
+    document.addEventListener('mousedown', handleClick);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [muzikPaletiAcik]);
+
   useEffect(() => {
     if (!brfOnizlemeAcik) return;
     const kap = (e) => {
@@ -2391,6 +3300,17 @@ export default function Araclar() {
   const textareaRef = useRef(null);
   /** Tıklama işleyicide güncel eşleme/kaynak — closure eski değer tutmasın diye ref. */
   const brailleSecimRef = useRef({ esleme: [], hucreSayisi: 0, kaynak: '' });
+  const muzikSkorKaynakMetni = useMemo(() => muzikSkorMetni(muzikOgeleri), [muzikOgeleri]);
+  const etkinKaynakMetni = muzikModuAktif ? muzikSkorKaynakMetni : girisMetni;
+  const etkinGirdiVar = muzikModuAktif ? muzikOgeleri.length > 0 : !!girisMetni.trim();
+  const seciliMuzikOge = useMemo(
+    () => muzikOgeleri.find((oge) => oge.id === seciliMuzikOgeId) || null,
+    [muzikOgeleri, seciliMuzikOgeId],
+  );
+  const seciliMuzikOgeIndeksi = useMemo(
+    () => muzikOgeleri.findIndex((oge) => oge.id === seciliMuzikOgeId),
+    [muzikOgeleri, seciliMuzikOgeId],
+  );
   useEffect(() => {
     setKelimeBazliKisaltmaTercihleri((onceki) => {
       if (!Object.keys(onceki).length) return onceki;
@@ -2472,6 +3392,224 @@ export default function Araclar() {
     requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = s + ch.length; });
   };
 
+  const insertMuzikToken = (token) => {
+    const ta = textareaRef.current;
+    const v = girisMetni;
+    const s = ta ? ta.selectionStart : v.length;
+    const onceki = v.slice(0, s);
+    const sonraki = v.slice(ta ? ta.selectionEnd : s);
+    const ek = `${onceki && !/\s$/u.test(onceki) ? ' ' : ''}${token} `;
+    const yeni = onceki + ek + sonraki;
+    setGirisMetni(yeni);
+    requestAnimationFrame(() => {
+      if (!ta) return;
+      ta.focus();
+      const pos = onceki.length + ek.length;
+      ta.selectionStart = ta.selectionEnd = pos;
+    });
+  };
+
+  const muzikModunuDegistir = () => {
+    setMuzikModuAktif((onceki) => {
+      const yeni = !onceki;
+      setMuzikPaletiAcik(yeni);
+      if (yeni) setMatematikPaletiAcik(false);
+      return yeni;
+    });
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  const muzikYeniId = () => `muzik-${muzikIdRef.current++}`;
+
+  const muzikNotaEkle = (notaAd = muzikNotaAd, sureIndeksi = muzikSureIndeksi) => {
+    const oge = muzikNotaSkorOgesi(muzikYeniId(), notaAd, sureIndeksi);
+    setMuzikOgeleri((onceki) => [...onceki, oge]);
+    setSeciliMuzikOgeId(oge.id);
+  };
+
+  const muzikAnahtarBasaEkle = (anahtar) => {
+    const oge = muzikKayittanSkorOgesi(muzikYeniId(), anahtar, { tip: 'anahtar', kategori: 'Anahtarlar' });
+    setMuzikOgeleri((onceki) => {
+      if (onceki[0]?.tip === 'anahtar') return [oge, ...onceki.slice(1)];
+      return [oge, ...onceki];
+    });
+    setSeciliMuzikOgeId(oge.id);
+  };
+
+  const muzikIsaretEkle = (kayit) => {
+    const oge = muzikKayittanSkorOgesi(muzikYeniId(), kayit, { tip: kayit.tip || 'isaret', kategori: kayit.kategori });
+    // Sus mu? Açık realValue alanı ekle (Modül 8 dual-meaning + grouping için)
+    const restReal = muzikRestSureFromName(kayit.ad);
+    if (restReal !== null) {
+      oge.tip = 'sus';
+      oge.realValue = restReal;
+      oge.dotted = /noktalı/.test(String(kayit.ad || '').toLowerCase());
+    }
+    setMuzikOgeleri((onceki) => [...onceki, oge]);
+    setSeciliMuzikOgeId(oge.id);
+  };
+
+  const muzikBagBaslat = (kayit) => {
+    setBekleyenBag({ kayit, basId: null });
+    setMuzikPaletSekmesi(null);
+    setMuzikDuzenPopupAcik(false);
+  };
+
+  const muzikBagTamamla = (notaId) => {
+    if (!bekleyenBag) return false;
+    if (!bekleyenBag.basId) {
+      setBekleyenBag({ ...bekleyenBag, basId: notaId });
+      return true;
+    }
+    if (bekleyenBag.basId === notaId) {
+      setBekleyenBag(null);
+      return true;
+    }
+    // Modül 8 Bölüm 5 — Tie aynı perde validasyonu
+    const isTie = /^(tie|bağ)\b/i.test(String(bekleyenBag.kayit?.ad || ''));
+    if (isTie) {
+      const basOge = muzikOgeleri.find((o) => o.id === bekleyenBag.basId);
+      const sonOge = muzikOgeleri.find((o) => o.id === notaId);
+      if (basOge && sonOge && basOge.tip === 'nota' && sonOge.tip === 'nota') {
+        if (basOge.notaAd !== sonOge.notaAd || (basOge.oktav ?? 4) !== (sonOge.oktav ?? 4)) {
+          window.alert('Tie yalnızca aynı perde ve aynı oktavdaki notalar arasında kullanılabilir. Farklı perdeler için "slur" kullanın.');
+          setBekleyenBag(null);
+          return true;
+        }
+      }
+    }
+    const yeniBag = {
+      id: `bag-${muzikIdRef.current++}`,
+      basId: bekleyenBag.basId,
+      sonId: notaId,
+      kayit: bekleyenBag.kayit,
+    };
+    setMuzikBaglar((onceki) => [...onceki, yeniBag]);
+    setBekleyenBag(null);
+    return true;
+  };
+
+  const muzikBagSil = (bagId) => {
+    setMuzikBaglar((onceki) => onceki.filter((b) => b.id !== bagId));
+  };
+
+  const muzikModifierBaslat = (kayit, yon) => {
+    setBekleyenModifier({ kayit, yon });
+    setMuzikPaletSekmesi(null);
+    setMuzikDuzenPopupAcik(false);
+  };
+
+  const muzikModifierUygula = (notaOgesi) => {
+    if (!bekleyenModifier) return false;
+    const { kayit, yon } = bekleyenModifier;
+    const adLower = String(kayit.ad || '').toLowerCase();
+
+    // Audit M — Oktav modifier'ı doğrudan note.oktav alanına yazılmalı
+    // (yoksa hem auto-oktav hem manuel modifier emit edilir → çift oktav işareti)
+    const oktavMatch = /(\d+)\s*\.\s*oktav/i.exec(adLower);
+    if (oktavMatch) {
+      const oktavSayi = Math.min(7, Math.max(1, parseInt(oktavMatch[1], 10)));
+      setMuzikOgeleri((onceki) => onceki.map((oge) =>
+        oge.id === notaOgesi.id ? { ...oge, oktav: oktavSayi } : oge
+      ));
+      setBekleyenModifier(null);
+      return true;
+    }
+
+    // Aksidental modifier → note.accidental alanına (Audit M aynı sorun)
+    let accId = null;
+    if (/^çift\s*diyez|double.*sharp/.test(adLower)) accId = 'doubleSharp';
+    else if (/^çift\s*bemol|double.*flat/.test(adLower)) accId = 'doubleFlat';
+    else if (/^diyez|^sharp/.test(adLower)) accId = 'sharp';
+    else if (/^bemol|^flat/.test(adLower)) accId = 'flat';
+    else if (/^naturel|^natural|^bekar/.test(adLower)) accId = 'natural';
+    if (accId) {
+      setMuzikOgeleri((onceki) => onceki.map((oge) =>
+        oge.id === notaOgesi.id ? { ...oge, accidental: accId } : oge
+      ));
+      setBekleyenModifier(null);
+      return true;
+    }
+
+    // Varsayılan: modifier listesine ekle
+    setMuzikOgeleri((onceki) => onceki.map((oge) => {
+      if (oge.id !== notaOgesi.id) return oge;
+      const mevcut = Array.isArray(oge.modifiers?.[yon]) ? oge.modifiers[yon] : [];
+      return {
+        ...oge,
+        modifiers: {
+          ...(oge.modifiers || {}),
+          [yon]: [...mevcut, { id: `mod-${muzikIdRef.current++}`, kayit }],
+        },
+      };
+    }));
+    setBekleyenModifier(null);
+    return true;
+  };
+
+  const muzikModifierSil = (notaId, yon, modId) => {
+    setMuzikOgeleri((onceki) => onceki.map((oge) => {
+      if (oge.id !== notaId) return oge;
+      const liste = Array.isArray(oge.modifiers?.[yon]) ? oge.modifiers[yon] : [];
+      return {
+        ...oge,
+        modifiers: {
+          ...(oge.modifiers || {}),
+          [yon]: liste.filter((m) => m.id !== modId),
+        },
+      };
+    }));
+  };
+
+  const muzikNotaTiklandi = (oge) => {
+    if (bekleyenBag && oge.tip === 'nota') {
+      muzikBagTamamla(oge.id);
+      return;
+    }
+    if (bekleyenModifier && oge.tip === 'nota') {
+      muzikModifierUygula(oge);
+      return;
+    }
+    setSeciliMuzikOgeId(oge.id);
+    setMuzikDuzenPopupAcik(true);
+  };
+
+  const muzikSeciliNotayiGuncelle = (patch) => {
+    setMuzikOgeleri((onceki) => onceki.map((oge) => {
+      if (oge.id !== seciliMuzikOgeId || oge.tip !== 'nota') return oge;
+      const notaAd = patch.notaAd ?? oge.notaAd;
+      const sureIndeksi = patch.sureIndeksi ?? oge.sureIndeksi;
+      // Yeni hücreyi süreye göre yeniden hesapla; ama meta alanları KORU
+      return muzikNotaSkorOgesi(oge.id, notaAd, sureIndeksi, {
+        oktav: patch.oktav ?? oge.oktav,
+        accidental: patch.accidental !== undefined ? patch.accidental : oge.accidental,
+        dotted: patch.dotted !== undefined ? patch.dotted : oge.dotted,
+        modifiers: oge.modifiers,
+      });
+    }));
+  };
+
+  const muzikOgeSil = (id = seciliMuzikOgeId) => {
+    if (!id) return;
+    setMuzikOgeleri((onceki) => onceki.filter((oge) => oge.id !== id));
+    setMuzikBaglar((onceki) => onceki.filter((b) => b.basId !== id && b.sonId !== id));
+    setSeciliMuzikOgeId(null);
+    setMuzikDuzenPopupAcik(false);
+  };
+
+  const muzikOgeTasi = (yon) => {
+    if (!seciliMuzikOgeId) return;
+    setMuzikOgeleri((onceki) => {
+      const i = onceki.findIndex((oge) => oge.id === seciliMuzikOgeId);
+      if (i < 0) return onceki;
+      const j = i + yon;
+      if (j < 0 || j >= onceki.length) return onceki;
+      const yeni = [...onceki];
+      [yeni[i], yeni[j]] = [yeni[j], yeni[i]];
+      return yeni;
+    });
+  };
+
   // İndir: dönüştür + kaydet
   const ozelKisaltmaVarMi = Object.keys(kelimeBazliKisaltmaTercihleri).length > 0;
   const hucreYorumlariAktif = kisaltmaAktif || ozelKisaltmaVarMi;
@@ -2484,6 +3622,10 @@ export default function Araclar() {
       yorumTercihleri: karakterYorumTercihleri,
     })
     : (m, o) => metniBrailleyeCevir(m, { ...o, yorumTercihleri: karakterYorumTercihleri });
+
+  const etkinCevirFn = muzikModuAktif
+    ? (m) => muzikMetniniBrailleyeCevir(m)
+    : cevirFn;
 
   const brfOnizlemeKagitBoyutu = useMemo(() => {
     if (brfOnizlemePreset === BRF_KAGIT_PRESET_STANDART.id)
@@ -2523,6 +3665,15 @@ export default function Araclar() {
     if (cevirDebounceRef.current != null) {
       clearTimeout(cevirDebounceRef.current);
       cevirDebounceRef.current = null;
+    }
+    if (muzikModuAktif) {
+      cevirIstekRef.current += 1;
+      if (!muzikOgeleri.length) {
+        setCevirSonuc({ hucreler: [], esleme: [], kaynak: '' });
+        return;
+      }
+      setCevirSonuc(muzikSkorunuBrailleyeCevir(muzikOgeleri, muzikBaglar));
+      return;
     }
     const w = cevirWorkerRef.current;
     if (!w) return;
@@ -2576,7 +3727,7 @@ export default function Araclar() {
         cevirDebounceRef.current = null;
       }
     };
-  }, [girisMetni, hucreYorumlariAktif, kisaltmaAktif, kisaltmaSistemler, kelimeBazliKisaltmaTercihleri, karakterYorumTercihleri]);
+  }, [girisMetni, muzikOgeleri, muzikBaglar, muzikModuAktif, hucreYorumlariAktif, kisaltmaAktif, kisaltmaSistemler, kelimeBazliKisaltmaTercihleri, karakterYorumTercihleri]);
 
   const hucrelerCache = cevirSonuc.hucreler;
   const eslemeCache = cevirSonuc.esleme;
@@ -2585,7 +3736,7 @@ export default function Araclar() {
   /** BRF ön izleme: mevcut hücre önbelleğinden (Worker/anh çeviri tek); modal kapalıyken hesaplanmaz. */
   const brfOnizlemeDosyaMetni = useMemo(() => {
     if (!brfOnizlemeAcik) return '';
-    if (!(girisMetni || '').trim()) return '';
+    if (!etkinGirdiVar) return '';
     if (!hucrelerCache.length) return '';
     try {
       return hucreleriBRFDizgesine(hucrelerCache, brfOnizlemeKagitBoyutu);
@@ -2593,7 +3744,7 @@ export default function Araclar() {
       console.error('BRF ön izleme hatası:', err);
       return '';
     }
-  }, [brfOnizlemeAcik, girisMetni, hucrelerCache, brfOnizlemeKagitBoyutu]);
+  }, [brfOnizlemeAcik, etkinGirdiVar, hucrelerCache, brfOnizlemeKagitBoyutu]);
 
   const brfOnizlemeSayfalari = useMemo(
     () => brfIcindekiSayfaMetinleri(brfOnizlemeDosyaMetni),
@@ -2641,13 +3792,15 @@ export default function Araclar() {
     const seciliSayfaBaslangic = seciliSayfa * brailleSayfaBoyutu;
     return {
       index: seciliHucre.index,
-      anlam: hucreAnlami(hucrelerCache, seciliHucre.index, hucreYorumlariAktif, {
-        ...hucreAnlamiOrtakOpts,
-        baslangicHucre: seciliSayfaBaslangic,
-        baslangicDurumu: sayfaBaslangicDurumlari[seciliSayfa],
-      }),
+      anlam: muzikModuAktif
+        ? (muzikHucreAnlamiKayittan(muzikOgeleri, seciliHucre.index, cevirSonuc.hucreMeta) || muzikHucreAnlami(hucrelerCache[seciliHucre.index]))
+        : hucreAnlami(hucrelerCache, seciliHucre.index, hucreYorumlariAktif, {
+          ...hucreAnlamiOrtakOpts,
+          baslangicHucre: seciliSayfaBaslangic,
+          baslangicDurumu: sayfaBaslangicDurumlari[seciliSayfa],
+        }),
     };
-  }, [seciliHucre, hucrelerCache, hucreYorumlariAktif, brailleSayfaBoyutu, hucreAnlamiOrtakOpts, sayfaBaslangicDurumlari]);
+  }, [seciliHucre, hucrelerCache, muzikOgeleri, muzikModuAktif, hucreYorumlariAktif, brailleSayfaBoyutu, hucreAnlamiOrtakOpts, sayfaBaslangicDurumlari]);
 
   const seciliHucreKelimeBaglami = useMemo(
     () => (seciliHucreDetayi
@@ -2717,7 +3870,10 @@ export default function Araclar() {
   const seciliHucreYorumAyariBilgisi =
     seciliHucreAyarBilgisi || seciliHucreEksiAyariBilgisi || seciliHucreOndalikVirgulAyariBilgisi;
   const sayfaHucreAnlamlari = useMemo(() => {
-    if (!girisMetni || sayfaHucreler.length === 0) return [];
+    if (!etkinGirdiVar || sayfaHucreler.length === 0) return [];
+    if (muzikModuAktif) return sayfaHucreler.map((noktalar, i) => (
+      muzikHucreAnlamiKayittan(muzikOgeleri, sayfaBaslangic + i, cevirSonuc.hucreMeta) || muzikHucreAnlami(noktalar)
+    ));
     return sayfaAnlamlariniTopluHesapla(
       hucrelerCache,
       sayfaBaslangic,
@@ -2730,13 +3886,15 @@ export default function Araclar() {
     );
   }, [
     brailleSayfa,
-    girisMetni,
+    etkinGirdiVar,
+    muzikOgeleri,
     hucrelerCache,
     sayfaBaslangic,
     sayfaSonIndeks,
     hucreYorumlariAktif,
     hucreAnlamiOrtakOpts,
     sayfaBaslangicDurumlari,
+    muzikModuAktif,
   ]);
 
   /** Erişilebilir + tablet: Unicode satırı render içinde tekrar hesaplanmasın. */
@@ -2785,6 +3943,17 @@ export default function Araclar() {
 
     const baseCharIdx = esleme[targetIdx];
     if (baseCharIdx === undefined || baseCharIdx === -1) return;
+
+    if (muzikModuAktif) {
+      const kayit = MUZIK_TOKEN_KAYITLARI.find((aday) => kaynak.startsWith(aday.token, baseCharIdx));
+      const finalStart = baseCharIdx;
+      const finalEnd = baseCharIdx + (kayit?.token.length || 1);
+      ta.focus();
+      ta.setSelectionRange(finalStart, finalEnd);
+      setSeciliHucre({ index: globalIdx });
+      setMetinSecimHucreAraligi(null);
+      return;
+    }
 
     /** @type {number[]} */
     const cluster = [];
@@ -2886,7 +4055,7 @@ export default function Araclar() {
 
     setSeciliHucre({ index: globalIdx });
     setMetinSecimHucreAraligi(null);
-  }, [hucrelerCache, hucreYorumlariAktif, karakterYorumTercihleri]);
+  }, [hucrelerCache, hucreYorumlariAktif, karakterYorumTercihleri, muzikModuAktif]);
 
   const getHucreTipiRengi = (anlam, paraBirimiHucre) => {
     if (paraBirimiHucre) return 'var(--braille-noktalama-fill)';
@@ -2900,6 +4069,8 @@ export default function Araclar() {
     if (isKisaltma) return '#ef4444';
 
     if (anlam.tip === 'noktalama') return '#10b981';
+
+    if (anlam.tip === 'muzik') return '#d97706';
 
     if (anlam.tip === 'islem' || (anlam.tip === 'isaret' && baslikMetni.includes('Bölük'))) return '#7c3aed';
 
@@ -2919,6 +4090,29 @@ export default function Araclar() {
 
     const sStart = ta.selectionStart;
     const sEnd = ta.selectionEnd;
+
+    if (muzikModuAktif) {
+      let lo = Infinity;
+      let hi = -1;
+      for (let i = 0; i < hucreSayisi; i++) {
+        const bas = esleme[i];
+        if (typeof bas !== 'number' || bas < 0) continue;
+        const kayit = MUZIK_TOKEN_KAYITLARI.find((aday) => kaynak.startsWith(aday.token, bas));
+        const bit = bas + (kayit?.token.length || 1);
+        if (Math.max(sStart, bas) < Math.min(sEnd, bit)) {
+          lo = Math.min(lo, i);
+          hi = Math.max(hi, i);
+        }
+      }
+      if (hi !== -1) {
+        setMetinSecimHucreAraligi({ lo, hi });
+        const hedefSayfa = Math.floor(lo / brailleSayfaBoyutu);
+        if (hedefSayfa !== brailleSayfa) setBrailleSayfa(hedefSayfa);
+      } else {
+        setMetinSecimHucreAraligi(null);
+      }
+      return;
+    }
 
     // Uzun seçimlerde (birden fazla kelime veya çok karakter) braille eşleştirme döngüsü sayfayı kilitleyebilir
     const seciliMetin = ta.value.substring(sStart, sEnd).trim();
@@ -3018,7 +4212,7 @@ export default function Araclar() {
     } else {
       setMetinSecimHucreAraligi(null);
     }
-  }, [brailleSayfa, brailleSayfaBoyutu, hucrelerCache, hucreYorumlariAktif, karakterYorumTercihleri]);
+  }, [brailleSayfa, brailleSayfaBoyutu, hucrelerCache, hucreYorumlariAktif, karakterYorumTercihleri, muzikModuAktif]);
 
   const metinSecimHucreAraliginiGuncelle = useCallback(() => {
     senkronizeMetinSecimVurgusu();
@@ -3096,13 +4290,15 @@ export default function Araclar() {
   }, [brailleSayfa]);
 
   const brfIndir = () => {
-    if (!girisMetni.trim()) return;
+    if (!etkinGirdiVar) return;
     let brf;
     try {
-      if (hucrelerCache.length > 0 && kaynakCache === girisMetni) {
+      if (muzikModuAktif) {
+        brf = hucreleriBRFDizgesine(muzikSkorunuBrailleyeCevir(muzikOgeleri, muzikBaglar).hucreler, brfOnizlemeKagitBoyutu);
+      } else if (hucrelerCache.length > 0 && kaynakCache === girisMetni) {
         brf = hucreleriBRFDizgesine(hucrelerCache, brfOnizlemeKagitBoyutu);
       } else {
-        brf = metniBRFe(girisMetni, cevirFn, brfOnizlemeKagitBoyutu);
+        brf = metniBRFe(girisMetni, etkinCevirFn, brfOnizlemeKagitBoyutu);
       }
     } catch (e) {
       console.error('BRF indirme hatası:', e);
@@ -3120,7 +4316,15 @@ export default function Araclar() {
   };
 
   const temizle = () => {
-    setGirisMetni('');
+    if (muzikModuAktif) {
+      setMuzikOgeleri([]);
+      setMuzikBaglar([]);
+      setBekleyenBag(null);
+      setSeciliMuzikOgeId(null);
+      setMuzikDuzenPopupAcik(false);
+    } else {
+      setGirisMetni('');
+    }
     setKelimeBazliKisaltmaTercihleri({});
     setKarakterYorumTercihleri({});
     setHucreAyarPaneliAcik(false);
@@ -3140,7 +4344,9 @@ export default function Araclar() {
   };
 
   const metniSeslendir = () =>
-    sesToggle('metin', () => girisMetni);
+    sesToggle('metin', () => (muzikModuAktif
+      ? (muzikOgeleri.map((oge) => oge.ad || oge.gorunum).join(', ') || '')
+      : girisMetni));
 
   const hucreAyariniDegistir = (sistemAnahtari) => {
     if (!seciliHucreYorumAyariBilgisi) return;
@@ -3224,9 +4430,17 @@ export default function Araclar() {
   // Braille nokta numaralarını sesli oku: "m: 1 3 4, e: 1 5, ..."
   const noktalarıSeslendir = () =>
     sesToggle('nokta', () => {
-      if (!girisMetni.trim()) return '';
+      if (!etkinGirdiVar) return '';
+      if (muzikModuAktif) {
+        const { hucreler } = muzikSkorunuBrailleyeCevir(muzikOgeleri, muzikBaglar);
+        if (!hucreler.length) return 'Müzik yazım alanında geçerli nota yok.';
+        return hucreler.map((noktalar, i) => {
+          const anlam = muzikHucreAnlamiKayittan(muzikOgeleri, i, cevirSonuc.hucreMeta) || muzikHucreAnlami(noktalar);
+          return `${anlam.baslik}: nokta ${noktalar.join(' ')}`;
+        }).join(', ');
+      }
       const kaynakMetin = girisMetni;
-      const { hucreler, esleme } = cevirFn(girisMetni, { buyukHarfIsareti: true, sayiIsareti: true });
+      const { hucreler, esleme } = etkinCevirFn(girisMetni, { buyukHarfIsareti: true, sayiIsareti: true });
       const parcalar = [];
       for (let i = 0; i < hucreler.length; i++) {
         const n = hucreler[i];
@@ -3254,6 +4468,28 @@ export default function Araclar() {
       }
       return parcalar.join(', ');
     });
+
+  const muzikBrailleUnicode = useMemo(
+    () => (muzikModuAktif ? hucrelerCache.map(noktalardanUnicode).join('') : ''),
+    [muzikModuAktif, hucrelerCache],
+  );
+
+  const aktifMuzikPaletGrubu = useMemo(
+    () => (muzikPaletSekmesi ? MUZIK_EDITOR_PALET_GRUPLARI.find((grup) => grup.slug === muzikPaletSekmesi) || null : null),
+    [muzikPaletSekmesi],
+  );
+  useEffect(() => { setNotalarAdimSureMi(true); }, [muzikPaletSekmesi]);
+  const muzikSatirlar = useMemo(() => {
+    if (!muzikOgeleri.length) return [[]];
+    const rows = [];
+    for (let i = 0; i < muzikOgeleri.length; i += MUZIK_SATIR_KAPASITESI) {
+      rows.push(muzikOgeleri.slice(i, i + MUZIK_SATIR_KAPASITESI));
+    }
+    return rows;
+  }, [muzikOgeleri]);
+  const muzikGruplamaHaritasi = useMemo(() => muzikGruplariTespit(muzikOgeleri), [muzikOgeleri]);
+  const seciliMuzikSatir = seciliMuzikOgeIndeksi >= 0 ? Math.floor(seciliMuzikOgeIndeksi / MUZIK_SATIR_KAPASITESI) : 0;
+  const seciliMuzikKolon = seciliMuzikOgeIndeksi >= 0 ? seciliMuzikOgeIndeksi % MUZIK_SATIR_KAPASITESI : 0;
 
   const processBrfFile = (dosya) => {
     if (!dosya) return;
@@ -3295,34 +4531,564 @@ export default function Araclar() {
 
       {/* ── Üst: başlık ── */}
       <div className="yazma-bolum yazma-bolum-ust">
-        <PageHeader baslik="Metin → BRF" />
+        <PageHeader baslik={muzikModuAktif ? 'Müzik → BRF' : 'Metin → BRF'} />
       </div>
 
       {/* ── Orta: içerik + klavye ── */}
       <div className="yazma-bolum yazma-bolum-orta">
 
         <>
-            <div className="araclar-alan-sarici">
-              <textarea
-                ref={textareaRef}
-                className="yazma-metin araclar-metin araclar-textarea"
-                value={girisMetni}
-                onChange={(e) => setGirisMetni(e.target.value)}
-                onMouseUp={metinSecimHucreAraliginiGuncelle}
-                onKeyUp={metinSecimHucreAraliginiGuncelle}
-                onDoubleClick={metinCiftTikSeciminiIsle}
-                placeholder="Metin girin…"
-                aria-label="Dönüştürülecek metin"
-                aria-describedby="araclar-metin-braille-ipucu"
-                spellCheck={false}
-                autoCorrect="off"
-                autoCapitalize="off"
-              />
+            <div className="araclar-alan-sarici" ref={muzikPaletRef}>
+              {muzikModuAktif ? (
+                <div className="araclar-muzik-editor" aria-label="Müzik skor editörü">
+                  {bekleyenBagBilgisi && (
+                    <div className="araclar-muzik-bag-durum" role="status" aria-live="polite">
+                      <span className="araclar-muzik-bag-durum-metin">{bekleyenBagBilgisi}</span>
+                      <button type="button" className="araclar-muzik-bag-durum-iptal" onClick={() => setBekleyenBag(null)} aria-label="Bağ seçimini iptal et">×</button>
+                    </div>
+                  )}
+                  {bekleyenModifierBilgisi && (
+                    <div className="araclar-muzik-bag-durum araclar-muzik-modifier-durum" role="status" aria-live="polite">
+                      <span className="araclar-muzik-bag-durum-metin">{bekleyenModifierBilgisi}</span>
+                      <button type="button" className="araclar-muzik-bag-durum-iptal" onClick={() => setBekleyenModifier(null)} aria-label="Modifier seçimini iptal et">×</button>
+                    </div>
+                  )}
+                  <div className="araclar-muzik-ck-toolbar" role="toolbar" aria-label="Müzik araç çubuğu">
+                    {MUZIK_EDITOR_PALET_GRUPLARI.map((grup) => {
+                      const ikon = MUZIK_KATEGORI_IKON[grup.slug] || { sembol: '?', etiket: grup.baslik };
+                      const tam = ikon.etiket || grup.baslik;
+                      return (
+                        <button
+                          key={grup.slug}
+                          type="button"
+                          className={'araclar-muzik-kategori-btn' + (muzikPaletSekmesi === grup.slug ? ' aktif' : '') + (ikon.italic ? ' italik' : '')}
+                          onClick={() => setMuzikPaletSekmesi((o) => (o === grup.slug ? null : grup.slug))}
+                          aria-pressed={muzikPaletSekmesi === grup.slug}
+                          aria-expanded={muzikPaletSekmesi === grup.slug}
+                          aria-label={tam}
+                          title={tam}
+                        >
+                          <span className="araclar-muzik-kategori-ikon" aria-hidden="true">{ikon.sembol}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {aktifMuzikPaletGrubu && (
+                    <div className="araclar-muzik-ck-palet" role="region" aria-label={`${aktifMuzikPaletGrubu.baslik} ikonları`}>
+                      {aktifMuzikPaletGrubu.slug === 'notalar' ? (
+                        notalarAdimSureMi ? (
+                          <div className="araclar-muzik-palet-ikon-grid araclar-muzik-tek-satir" role="group" aria-label="Önce süre seçin">
+                            {MUZIK_SURE_GOSTERGELERI.map((sure, idx) => (
+                              <button
+                                key={sure.ad}
+                                type="button"
+                                className={'araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-sure-btn' + (muzikSureIndeksi === idx ? ' aktif' : '')}
+                                onClick={() => { setMuzikSureIndeksi(idx); setNotalarAdimSureMi(false); }}
+                                aria-pressed={muzikSureIndeksi === idx}
+                                title={muzikSureKisaAdi(sure)}
+                                aria-label={muzikSureKisaAdi(sure)}
+                              >
+                                <span className="araclar-muzik-palet-sembol">{sure.sembol}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="araclar-muzik-palet-ikon-grid araclar-muzik-tek-satir" role="group" aria-label="Eklenecek notayı seçin">
+                            <button
+                              type="button"
+                              className="araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-geri-btn"
+                              onClick={() => setNotalarAdimSureMi(true)}
+                              title={`Süre: ${muzikSureKisaAdi(MUZIK_SURE_GOSTERGELERI[muzikSureIndeksi])} — değiştirmek için tıkla`}
+                              aria-label="Süre seçimine dön"
+                            >
+                              <span className="araclar-muzik-palet-sembol">←{MUZIK_SURE_GOSTERGELERI[muzikSureIndeksi]?.sembol}</span>
+                            </button>
+                            {MUZIK_TEMEL_NOTALAR.map((nota) => (
+                              <button
+                                key={nota.ad}
+                                type="button"
+                                className="araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-palet-nota"
+                                onClick={() => muzikNotaEkle(nota.ad, muzikSureIndeksi)}
+                                title={`${nota.ad} (${muzikSureKisaAdi(MUZIK_SURE_GOSTERGELERI[muzikSureIndeksi])})`}
+                                aria-label={`${nota.ad} ekle`}
+                              >
+                                <span className="araclar-muzik-palet-sembol" aria-hidden="true">{MUZIK_NOTA_IKON[nota.ad] || nota.ad.charAt(0).toUpperCase()}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )
+                      ) : (
+                        <div className="araclar-muzik-palet-ikon-grid">
+                        {(aktifMuzikPaletGrubu?.ogeler || []).map((oge) => {
+                          const ogeGorselTip = muzikOgeGorselTipi(oge);
+                          const ogeGorselMetin = muzikGorselMetni(oge);
+                          const zamanParcalari = ogeGorselTip === 'zaman' ? muzikZamanImzasiParcalari(ogeGorselMetin) : null;
+                          const kategoriTipi = MUZIK_KATEGORI_TIPI[aktifMuzikPaletGrubu.slug] || 'standalone';
+                          const notaVarMi = muzikOgeleri.some((o) => o.tip === 'nota');
+                          const modifierTipiMi = kategoriTipi === 'before-note' || kategoriTipi === 'after-note';
+                          const bagModuMu = kategoriTipi === 'two-notes';
+                          const devreDisi = (modifierTipiMi || bagModuMu) && !notaVarMi;
+                          const onClickHandler = () => {
+                            if (oge.tip === 'anahtar' || kategoriTipi === 'prepend') return muzikAnahtarBasaEkle(oge);
+                            if (bagModuMu) return muzikBagBaslat(oge);
+                            if (modifierTipiMi) return muzikModifierBaslat(oge, kategoriTipi === 'before-note' ? 'oncesi' : 'sonrasi');
+                            return muzikIsaretEkle(oge);
+                          };
+                          const ipucu = bagModuMu
+                            ? `${oge.ad} — iki notayı seçerek uygula`
+                            : modifierTipiMi
+                              ? `${oge.ad} — uygulanacak notayı seçin`
+                              : (oge.aciklama ? `${oge.ad} — ${oge.aciklama}` : oge.ad);
+                          return (
+                            <button
+                              key={`${aktifMuzikPaletGrubu.slug}-${oge.ad}`}
+                              type="button"
+                              className={`araclar-muzik-palet-ogesi araclar-muzik-palet-ikon tip-${ogeGorselTip}`}
+                              onClick={onClickHandler}
+                              disabled={devreDisi}
+                              title={devreDisi ? `${oge.ad} — önce bir nota ekleyin` : ipucu}
+                              aria-label={oge.ad}
+                              aria-disabled={devreDisi || undefined}
+                            >
+                              {zamanParcalari ? (
+                                <span className="araclar-muzik-palet-zaman" aria-hidden="true">
+                                  <span>{zamanParcalari.ust}</span>
+                                  <span>{zamanParcalari.alt}</span>
+                                </span>
+                              ) : (
+                                <span className="araclar-muzik-palet-sembol">{String(ogeGorselMetin).slice(0, 8)}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="araclar-muzik-skor-kapsayici" role="application" aria-label="Müzik çizim alanı">
+                    {muzikSatirlar.map((satir, satirIdx) => (
+                    <svg
+                      key={satirIdx}
+                      className="araclar-muzik-skor-svg"
+                      viewBox={`0 0 760 170`}
+                      aria-label={`Porte çizimi satır ${satirIdx + 1}`}
+                    >
+                      {[64, 76, 88, 100, 112].map((y) => (
+                        <line key={y} x1="24" x2={735} y1={y} y2={y} className="muzik-staff-line" />
+                      ))}
+                      {satirIdx === 0 && muzikOgeleri.length === 0 && (
+                        <text x="56" y="94" className="muzik-bos-yardim">Önce bir anahtar veya nota ekleyin…</text>
+                      )}
+                      {muzikBaglar.map((bag) => {
+                        const basIdx = muzikOgeleri.findIndex((o) => o.id === bag.basId);
+                        const sonIdx = muzikOgeleri.findIndex((o) => o.id === bag.sonId);
+                        if (basIdx < 0 || sonIdx < 0) return null;
+                        const basSatir = Math.floor(basIdx / MUZIK_SATIR_KAPASITESI);
+                        const sonSatir = Math.floor(sonIdx / MUZIK_SATIR_KAPASITESI);
+                        if (basSatir !== satirIdx && sonSatir !== satirIdx) return null;
+                        const tieMi = /tie|bağ\b/i.test(bag.kayit.ad || '');
+                        const yEgri = tieMi ? 116 : 52;
+                        const yKontrol = tieMi ? 132 : 32;
+                        const x1 = basSatir === satirIdx ? 68 + (basIdx % MUZIK_SATIR_KAPASITESI) * 74 : 24;
+                        const x2 = sonSatir === satirIdx ? 68 + (sonIdx % MUZIK_SATIR_KAPASITESI) * 74 : 735;
+                        const midX = (x1 + x2) / 2;
+                        return (
+                          <g key={bag.id} className="muzik-bag-grup" onClick={(e) => { e.stopPropagation(); muzikBagSil(bag.id); }} role="button" aria-label={`${bag.kayit.ad} — kaldırmak için tıkla`}>
+                            <path d={`M ${x1} ${yEgri} Q ${midX} ${yKontrol} ${x2} ${yEgri}`} className={'muzik-slur' + (tieMi ? ' muzik-tie' : '')} />
+                          </g>
+                        );
+                      })}
+                      {satir.map((oge, i) => {
+                        const x = 68 + i * 74;
+                        const secili = oge.id === seciliMuzikOgeId || (bekleyenBag && bekleyenBag.basId === oge.id);
+                        const noteY = MUZIK_PITCH_Y[oge.notaAd] || 100;
+                        const sure = MUZIK_SURE_GOSTERGELERI[oge.sureIndeksi] || MUZIK_SURE_GOSTERGELERI[0];
+                        const globalIdx = satirIdx * MUZIK_SATIR_KAPASITESI + i;
+                        const grupBilgisi = oge.tip === 'nota' ? muzikGruplamaHaritasi.get(globalIdx) : null;
+                        // 16/32/64 küçük süreler: bayrak >=2, dolu nota başı (hollow değil)
+                        const kucukSure = oge.tip === 'nota' && (sure.realValue >= 16);
+                        const hollow = oge.tip === 'nota' && !kucukSure && (/yarım|tam/i.test(sure.ad));
+                        const stem = oge.tip === 'nota' && !/tam/i.test(sure.ad);
+                        const bayrakSayisi = oge.tip === 'nota' ? (Number.isFinite(sure.bayrak) ? sure.bayrak : (/sekizlik/i.test(sure.ad) ? 1 : 0)) : 0;
+                        // Gruplanmış notalarda bayrak yok, beam çizilir (son nota hariç)
+                        const flagAdet = grupBilgisi ? 0 : bayrakSayisi;
+                        const beamAdet = grupBilgisi && grupBilgisi.konum < grupBilgisi.boy - 1 ? bayrakSayisi : 0;
+                        const flag = flagAdet > 0;
+                        const gorselTip = oge.gorselTip || muzikOgeGorselTipi(oge);
+                        const gorselMetin = oge.gorselMetin || muzikGorselMetni(oge);
+                        return (
+                          <g
+                            key={oge.id}
+                            className={'muzik-skor-ogesi' + (secili ? ' secili' : '')}
+                            role="button"
+                            tabIndex="0"
+                            aria-label={oge.ad}
+                            onClick={() => muzikNotaTiklandi(oge)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') muzikNotaTiklandi(oge); }}
+                          >
+                            {secili && <rect x={x - 25} y="24" width="58" height="122" rx="12" className="muzik-secim-cercevesi" />}
+                            {oge.tip === 'anahtar' ? (
+                              <>
+                                <text x={x - 18} y="111" className="muzik-clef">{oge.gorunum}</text>
+                                <text x={x - 18} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : oge.tip === 'nota' ? (
+                              <>
+                                {oge.notaAd === 'do' && <line x1={x - 15} x2={x + 17} y1="124" y2="124" className="muzik-ledger" />}
+                                {oge.accidental && (
+                                  <text x={x - 22} y={noteY + 5} textAnchor="middle" className="muzik-accidental">
+                                    {({ sharp: '♯', flat: '♭', natural: '♮', doubleSharp: '𝄪', doubleFlat: '𝄫' })[oge.accidental] || ''}
+                                  </text>
+                                )}
+                                <ellipse cx={x} cy={noteY} rx="9" ry="6.5" transform={`rotate(-18 ${x} ${noteY})`} className={hollow ? 'muzik-note-head hollow' : 'muzik-note-head'} />
+                                {oge.dotted && (
+                                  <circle cx={x + 16} cy={noteY} r="2.2" className="muzik-note-head" />
+                                )}
+                                {(() => {
+                                  const stemAsagi = noteY <= 88;
+                                  const stemX = stemAsagi ? x - 9 : x + 9;
+                                  const tipY = stemAsagi ? noteY + 52 : noteY - 52;
+                                  // Sonraki nota varsa onun bilgisini al (beam için)
+                                  const sonrakiOge = grupBilgisi && grupBilgisi.konum < grupBilgisi.boy - 1 ? satir[i + 1] : null;
+                                  const sonrakiNoteY = sonrakiOge && sonrakiOge.tip === 'nota' ? (MUZIK_PITCH_Y[sonrakiOge.notaAd] || 100) : null;
+                                  const sonrakiX = x + 74;
+                                  const sonrakiStemX = stemAsagi ? sonrakiX - 9 : sonrakiX + 9;
+                                  const sonrakiTipY = sonrakiNoteY != null ? (stemAsagi ? sonrakiNoteY + 52 : sonrakiNoteY - 52) : tipY;
+                                  const beamOfset = (k) => (stemAsagi ? -k * 4 : k * 4);
+                                  return <>
+                                    {stem && (stemAsagi
+                                      ? <line x1={stemX} x2={stemX} y1={noteY + 3} y2={tipY} className="muzik-stem" />
+                                      : <line x1={stemX} x2={stemX} y1={noteY - 3} y2={tipY} className="muzik-stem" />)}
+                                    {/* Bayraklar (gruplanmamışsa) */}
+                                    {[...Array(flagAdet)].map((_, fi) => {
+                                      const yBase = stemAsagi ? (tipY - fi * 7) : (tipY + fi * 7);
+                                      return stemAsagi
+                                        ? <path key={`flag-${fi}`} d={`M ${stemX} ${yBase} c -16 -7 -16 -20 -2 -28`} className="muzik-flag" />
+                                        : <path key={`flag-${fi}`} d={`M ${stemX} ${yBase} c 16 7 16 20 2 28`} className="muzik-flag" />;
+                                    })}
+                                    {/* Beam çizgileri (gruptaki son nota hariç) */}
+                                    {[...Array(beamAdet)].map((_, bi) => (
+                                      <line key={`beam-${bi}`}
+                                        x1={stemX} x2={sonrakiStemX}
+                                        y1={tipY + beamOfset(bi)} y2={sonrakiTipY + beamOfset(bi)}
+                                        className="muzik-beam" />
+                                    ))}
+                                  </>;
+                                })()}
+                                {(() => {
+                                  const oncesi = Array.isArray(oge.modifiers?.oncesi) ? oge.modifiers.oncesi : [];
+                                  const sonrasi = Array.isArray(oge.modifiers?.sonrasi) ? oge.modifiers.sonrasi : [];
+                                  let solOf = 0; let ustOf = 0; let altOf = 0;
+                                  const cizimler = [];
+                                  const hepsi = [
+                                    ...oncesi.map((m) => ({ ...m, yon: 'oncesi' })),
+                                    ...sonrasi.map((m) => ({ ...m, yon: 'sonrasi' })),
+                                  ];
+                                  hepsi.forEach((mod, idx) => {
+                                    const modTip = muzikOgeGorselTipi(mod.kayit);
+                                    const modMetin = muzikGorselMetni(mod.kayit);
+                                    const key = mod.id || `mod-${idx}`;
+                                    const onClick = (e) => { e.stopPropagation(); muzikModifierSil(oge.id, mod.yon, mod.id); };
+                                    const baslik = `${mod.kayit.ad} — kaldırmak için tıkla`;
+                                    if (modTip === 'degistirici' || modTip === 'donanim') {
+                                      const px = x - 18 - solOf;
+                                      solOf += 11;
+                                      cizimler.push(
+                                        <text key={key} x={px} y={noteY + 4} textAnchor="middle" className="muzik-accidental muzik-modifier" onClick={onClick}>
+                                          <title>{baslik}</title>{modMetin}
+                                        </text>
+                                      );
+                                    } else if (modTip === 'dinamik') {
+                                      const py = 138 + altOf;
+                                      altOf += 12;
+                                      cizimler.push(
+                                        <text key={key} x={x} y={py} textAnchor="middle" className="muzik-dynamic muzik-modifier" onClick={onClick}>
+                                          <title>{baslik}</title>{modMetin}
+                                        </text>
+                                      );
+                                    } else if (modTip === 'hairpin') {
+                                      const isDec = String(modMetin).includes('>');
+                                      cizimler.push(
+                                        <path key={key} d={isDec
+                                          ? `M ${x - 18} 132 L ${x + 22} 138 M ${x - 18} 144 L ${x + 22} 138`
+                                          : `M ${x - 18} 138 L ${x + 22} 132 M ${x - 18} 138 L ${x + 22} 144`}
+                                          className="muzik-hairpin muzik-modifier" onClick={onClick} >
+                                          <title>{baslik}</title>
+                                        </path>
+                                      );
+                                    } else if (modTip === 'oktav') {
+                                      const py = 54 - ustOf;
+                                      ustOf += 11;
+                                      cizimler.push(
+                                        <text key={key} x={x} y={py} textAnchor="middle" className="muzik-ottava muzik-modifier" onClick={onClick}>
+                                          <title>{baslik}</title>{modMetin}
+                                        </text>
+                                      );
+                                    } else if (modTip === 'tuplet') {
+                                      const py = 48 - ustOf;
+                                      ustOf += 14;
+                                      cizimler.push(
+                                        <g key={key} className="muzik-modifier" onClick={onClick}>
+                                          <title>{baslik}</title>
+                                          <path d={`M ${x - 14} ${py + 4} v -4 H ${x + 14} v 4`} className="muzik-tuplet-bracket" />
+                                          <text x={x} y={py - 1} textAnchor="middle" className="muzik-tuplet-text">{modMetin}</text>
+                                        </g>
+                                      );
+                                    } else if (modTip === 'bag') {
+                                      cizimler.push(
+                                        <path key={key} d={`M ${x - 14} 54 C ${x - 4} 42 ${x + 8} 42 ${x + 14} 54`} className="muzik-slur muzik-modifier" onClick={onClick} >
+                                          <title>{baslik}</title>
+                                        </path>
+                                      );
+                                    } else {
+                                      const py = 52 - ustOf;
+                                      ustOf += 12;
+                                      cizimler.push(
+                                        <text key={key} x={x} y={py} textAnchor="middle" className={(modTip === 'susleme' ? 'muzik-ornament' : 'muzik-articulation') + ' muzik-modifier'} onClick={onClick}>
+                                          <title>{baslik}</title>{modMetin}
+                                        </text>
+                                      );
+                                    }
+                                  });
+                                  return cizimler;
+                                })()}
+                                <text x={x - 18} y="145" className="muzik-ogesi-etiket">{oge.gorunum}</text>
+                              </>
+                            ) : gorselTip === 'sus' ? (
+                              <>
+                                <text x={x - 16} y="101" className="muzik-rest">{gorselMetin}</text>
+                                <text x={x - 22} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : gorselTip === 'olcu' || gorselTip === 'tekrar' ? (
+                              <>
+                                {/volta|dolap/i.test(oge.ad) ? (
+                                  <>
+                                    <path d={`M ${x - 18} 48 H ${x + 18} V 58`} className="muzik-volta" />
+                                    <text x={x - 12} y="45" className="muzik-volta-text">{gorselMetin || '1.'}</text>
+                                  </>
+                                ) : (
+                                  <>
+                                    <line x1={x} x2={x} y1="62" y2="114" className="muzik-barline" />
+                                    {/çift|bitiş|repeat|röpriz|section|final/i.test(oge.ad) && <line x1={x + 7} x2={x + 7} y1="62" y2="114" className="muzik-barline" />}
+                                    {/repeat|röpriz/i.test(oge.ad) && <><circle cx={x + 13} cy="82" r="2" className="muzik-repeat-dot" /><circle cx={x + 13} cy="98" r="2" className="muzik-repeat-dot" /></>}
+                                  </>
+                                )}
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{gorselMetin}</text>
+                              </>
+                            ) : gorselTip === 'zaman' ? (
+                              <>
+                                {muzikZamanImzasiParcalari(gorselMetin) ? (
+                                  <>
+                                    <text x={x} y="83" textAnchor="middle" className="muzik-time-signature muzik-time-signature-ust">
+                                      {muzikZamanImzasiParcalari(gorselMetin).ust}
+                                    </text>
+                                    <text x={x} y="107" textAnchor="middle" className="muzik-time-signature muzik-time-signature-alt">
+                                      {muzikZamanImzasiParcalari(gorselMetin).alt}
+                                    </text>
+                                  </>
+                                ) : (
+                                  <text x={x} y="98" textAnchor="middle" className="muzik-time-signature muzik-time-common">{gorselMetin}</text>
+                                )}
+                                <text x={x - 18} y="145" className="muzik-ogesi-etiket">zaman</text>
+                              </>
+                            ) : gorselTip === 'degistirici' || gorselTip === 'donanim' ? (
+                              <>
+                                <text x={x} y="98" textAnchor="middle" className="muzik-accidental">{gorselMetin}</text>
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : gorselTip === 'dinamik' ? (
+                              <>
+                                <text x={x} y="126" textAnchor="middle" className="muzik-dynamic">{gorselMetin}</text>
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : gorselTip === 'hairpin' ? (
+                              <>
+                                {String(gorselMetin).includes('>') ? (
+                                  <path d={`M ${x - 24} 122 L ${x + 18} 111 M ${x - 24} 122 L ${x + 18} 133`} className="muzik-hairpin" />
+                                ) : (
+                                  <path d={`M ${x - 22} 111 L ${x + 22} 122 L ${x - 22} 133`} className="muzik-hairpin" />
+                                )}
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : gorselTip === 'bag' ? (
+                              <>
+                                <path d={`M ${x - 24} 54 C ${x - 8} 38 ${x + 16} 38 ${x + 28} 54`} className="muzik-slur" />
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : gorselTip === 'nuans' ? (
+                              <>
+                                <text x={x} y="54" textAnchor="middle" className="muzik-articulation">{gorselMetin}</text>
+                                <ellipse cx={x} cy="92" rx="9" ry="6" transform={`rotate(-18 ${x} 92)`} className="muzik-note-head ghost" />
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : gorselTip === 'susleme' ? (
+                              <>
+                                <text x={x} y="58" textAnchor="middle" className="muzik-ornament">{gorselMetin}</text>
+                                <ellipse cx={x} cy="94" rx="9" ry="6" transform={`rotate(-18 ${x} 94)`} className="muzik-note-head ghost" />
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : gorselTip === 'tuplet' ? (
+                              <>
+                                <path d={`M ${x - 24} 54 v -8 H ${x + 24} v 8`} className="muzik-tuplet-bracket" />
+                                <text x={x} y="48" textAnchor="middle" className="muzik-tuplet-text">{gorselMetin}</text>
+                                <ellipse cx={x - 14} cy="94" rx="6" ry="4" className="muzik-note-head mini" />
+                                <ellipse cx={x} cy="94" rx="6" ry="4" className="muzik-note-head mini" />
+                                <ellipse cx={x + 14} cy="94" rx="6" ry="4" className="muzik-note-head mini" />
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : gorselTip === 'oktav' ? (
+                              <>
+                                <text x={x} y="52" textAnchor="middle" className="muzik-ottava">{gorselMetin}</text>
+                                <path d={`M ${x - 18} 58 H ${x + 22}`} className="muzik-ottava-line" />
+                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            ) : (
+                              <>
+                                <text x={x} y="80" textAnchor="middle" className="muzik-symbol-text">{String(gorselMetin).slice(0, 8)}</text>
+                                <text x={x - 25} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
+                              </>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                    ))}
+                  </div>
+
+                    {muzikDuzenPopupAcik && seciliMuzikOge && seciliMuzikOgeIndeksi >= 0 && (
+                      <div className="araclar-muzik-modal-arkaplan" role="presentation" onClick={() => setMuzikDuzenPopupAcik(false)}>
+                      <div
+                        className="araclar-muzik-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Nota düzenleme penceresi"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="araclar-muzik-ck-baslik">
+                          {seciliMuzikOge.tip === 'nota' ? 'Notayı düzenle' : seciliMuzikOge.ad}
+                          <button type="button" className="araclar-muzik-ck-kapat" onClick={() => setMuzikDuzenPopupAcik(false)} aria-label="Kapat">×</button>
+                        </div>
+                        {seciliMuzikOge.tip === 'nota' ? (
+                          <>
+                            <div className="araclar-muzik-ck-satir" aria-label="Süre seç">
+                              {MUZIK_SURE_GOSTERGELERI.map((sure, idx) => (
+                                <button
+                                  key={sure.ad}
+                                  type="button"
+                                  className={'araclar-muzik-sure-btn' + (seciliMuzikOge.sureIndeksi === idx ? ' aktif' : '')}
+                                  onClick={() => muzikSeciliNotayiGuncelle({ sureIndeksi: idx })}
+                                  title={`${muzikSureKisaAdi(sure)} — ${sure.aciklama || ''}`}
+                                  aria-label={muzikSureKisaAdi(sure)}
+                                >
+                                  <span className="araclar-muzik-sure-sembol" aria-hidden="true">{sure.sembol}</span>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="araclar-muzik-ck-satir araclar-muzik-ck-ses" aria-label="Ses seç">
+                              {MUZIK_TEMEL_NOTALAR.map((nota) => (
+                                <button
+                                  key={nota.ad}
+                                  type="button"
+                                  className={'araclar-muzik-nota-btn araclar-muzik-palet-nota' + (seciliMuzikOge.notaAd === nota.ad ? ' aktif' : '')}
+                                  onClick={() => muzikSeciliNotayiGuncelle({ notaAd: nota.ad })}
+                                  title={nota.ad}
+                                  aria-label={nota.ad}
+                                >{MUZIK_NOTA_IKON[nota.ad] || nota.ad.charAt(0).toUpperCase()}</button>
+                              ))}
+                            </div>
+                            <div className="araclar-muzik-ck-satir" aria-label="Oktav seç">
+                              <span className="araclar-muzik-ck-etiket">Oktav</span>
+                              {[1,2,3,4,5,6,7].map((o) => (
+                                <button
+                                  key={`okt-${o}`}
+                                  type="button"
+                                  className={'araclar-muzik-sure-btn' + ((seciliMuzikOge.oktav ?? 4) === o ? ' aktif' : '')}
+                                  onClick={() => muzikSeciliNotayiGuncelle({ oktav: o })}
+                                  title={`${o}. oktav`}
+                                  aria-label={`${o}. oktav`}
+                                >{o}</button>
+                              ))}
+                            </div>
+                            <div className="araclar-muzik-ck-satir" aria-label="Aksidental">
+                              <span className="araclar-muzik-ck-etiket">Aks.</span>
+                              {[
+                                { id: null, label: '✗', title: 'Aksidental yok' },
+                                { id: 'sharp', label: '♯', title: 'Diyez' },
+                                { id: 'flat', label: '♭', title: 'Bemol' },
+                                { id: 'natural', label: '♮', title: 'Naturel' },
+                                { id: 'doubleSharp', label: '𝄪', title: 'Çift diyez' },
+                                { id: 'doubleFlat', label: '𝄫', title: 'Çift bemol' },
+                              ].map((acc) => (
+                                <button
+                                  key={`acc-${acc.id || 'none'}`}
+                                  type="button"
+                                  className={'araclar-muzik-sure-btn' + ((seciliMuzikOge.accidental ?? null) === acc.id ? ' aktif' : '')}
+                                  onClick={() => muzikSeciliNotayiGuncelle({ accidental: acc.id })}
+                                  title={acc.title}
+                                  aria-label={acc.title}
+                                >{acc.label}</button>
+                              ))}
+                            </div>
+                            <div className="araclar-muzik-ck-satir" aria-label="Noktalı nota">
+                              <span className="araclar-muzik-ck-etiket">Nokta</span>
+                              <button
+                                type="button"
+                                className={'araclar-muzik-sure-btn' + (seciliMuzikOge.dotted ? ' aktif' : '')}
+                                onClick={() => muzikSeciliNotayiGuncelle({ dotted: !seciliMuzikOge.dotted })}
+                                title="Noktalı nota (değeri 1,5×)"
+                                aria-label="Noktalı nota"
+                              >{seciliMuzikOge.dotted ? '· açık' : '· kapalı'}</button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="araclar-muzik-ck-aciklama">{seciliMuzikOge.aciklama || 'Modül 8 müzik işareti.'}</div>
+                        )}
+                        <div className="araclar-muzik-ck-aksiyonlar">
+                          <button type="button" onClick={() => muzikOgeTasi(-1)}>←</button>
+                          <button type="button" onClick={() => muzikOgeTasi(1)}>→</button>
+                          <button type="button" className="tehlike" onClick={() => muzikOgeSil()}>Sil</button>
+                        </div>
+                      </div>
+                      </div>
+                    )}
+
+                  <div className="araclar-muzik-braille-panel" aria-label="Müzik Braille çıktısı">
+                    <div className="araclar-muzik-panel-baslik">Braille çıktısı</div>
+                    {hucrelerCache.length > 0 ? (
+                      <div className="araclar-muzik-braille-unicode-satiri" lang="zxx">
+                        {hucrelerCache.map((hucre, idx) => (
+                          <span key={idx} className="unicode-hucre">{noktalardanUnicode(hucre)}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="araclar-muzik-braille-bos">Henüz Braille çıktısı yok.</div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <textarea
+                  ref={textareaRef}
+                  className="yazma-metin araclar-metin araclar-textarea"
+                  value={girisMetni}
+                  onChange={(e) => setGirisMetni(e.target.value)}
+                  onMouseUp={metinSecimHucreAraliginiGuncelle}
+                  onKeyUp={metinSecimHucreAraliginiGuncelle}
+                  onDoubleClick={metinCiftTikSeciminiIsle}
+                  placeholder="Metin girin…"
+                  aria-label="Dönüştürülecek metin"
+                  aria-describedby="araclar-metin-braille-ipucu"
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                />
+              )}
               <button
                 type="button"
                 className={'araclar-seslendir-btn' + (konusuyor === 'metin' ? ' aktif' : '')}
                 onClick={metniSeslendir}
-                disabled={!girisMetni.trim()}
+                disabled={!etkinGirdiVar}
                 aria-label={konusuyor === 'metin' ? 'Durdur' : 'Metni Seslendir'}
                 title={konusuyor === 'metin' ? 'Durdur' : 'Metni Seslendir'}
               >
@@ -3331,11 +5097,29 @@ export default function Araclar() {
                   : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
                 }
               </button>
+              <div className="araclar-muzik-sarici">
+                <button
+                  type="button"
+                  className={'araclar-seslendir-btn araclar-muzik-btn' + (muzikModuAktif ? ' aktif' : '')}
+                  onClick={muzikModunuDegistir}
+                  aria-label={muzikModuAktif ? 'Müzik nota yazım modunu kapat' : 'Müzik nota yazım modunu aç'}
+                  aria-pressed={muzikModuAktif}
+                  aria-expanded={muzikPaletiAcik}
+                  title={muzikModuAktif ? 'Müzik nota yazımı açık' : 'Müzik nota yazımı'}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M9 18V5l10-2v13" />
+                    <circle cx="6" cy="18" r="3" />
+                    <circle cx="16" cy="16" r="3" />
+                  </svg>
+                </button>
+              </div>
               <div className="araclar-matematik-sarici" ref={matematikPaletRef}>
                 <button
                   type="button"
                   className={'araclar-seslendir-btn araclar-matematik-btn' + (matematikPaletiAcik ? ' aktif' : '')}
                   onClick={() => setMatematikPaletiAcik((v) => !v)}
+                  disabled={muzikModuAktif}
                   aria-label="Matematik / özel işaretler"
                   aria-expanded={matematikPaletiAcik}
                   title="Matematik / özel işaretler"
@@ -3381,7 +5165,7 @@ export default function Araclar() {
          
 
             {/* Noktalı braille görünümü */}
-            {girisMetni && (
+            {!muzikModuAktif && girisMetni && (
               <div className="araclar-nokta-sarici">
                 {erisilebilirMod ? (
                   <div
@@ -3799,7 +5583,7 @@ export default function Araclar() {
             <div className="araclar-brf-grup">
               <button
                 type="button"
-                disabled={!girisMetni.trim()}
+                disabled={!etkinGirdiVar}
                 onClick={brfIndir}
                 className="araclar-brf-grup-ilk"
                 aria-label="BRF İndir"
@@ -3809,7 +5593,7 @@ export default function Araclar() {
               </button>
               <button
                 type="button"
-                disabled={!girisMetni.trim()}
+                disabled={!etkinGirdiVar}
                 onClick={() => setBrfOnizlemeAcik(true)}
                 className="araclar-brf-grup-son araclar-brf-grup-onizle"
                 aria-label="Kabartmalı çıktı için BRF ön izlemesi"
@@ -3824,7 +5608,7 @@ export default function Araclar() {
             <button
               type="button"
               onClick={temizle}
-              disabled={!girisMetni}
+              disabled={!etkinGirdiVar}
               className="araclar-controls-temizle"
               aria-label="Temizle"
               title="Metni temizle"
@@ -3834,7 +5618,7 @@ export default function Araclar() {
             </button>
             <button
               type="button"
-              disabled={!girisMetni}
+              disabled={!etkinGirdiVar}
               className={'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (tabletModuAktif ? ' aktif' : '')}
               onClick={() => {
                 const eskiBoyut = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
