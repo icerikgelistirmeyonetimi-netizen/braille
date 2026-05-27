@@ -6,7 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "qa:music-pdf": "node scripts/music-braille-pdf-examples-qa.mjs",
+    "qa:score-layout": "node scripts/music-score-layout-qa.cjs",
+    "qa:score-clef": "node scripts/music-score-clef-qa.cjs",
+    "qa:score-beam": "node scripts/music-score-beam-qa.mjs",
+    "qa:score-barline": "node scripts/music-score-barline-qa.cjs",
+    "qa:playback": "node scripts/music-playback-qa.mjs",
+    "qa:brf-reader": "node scripts/music-brf-reader-qa.mjs"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^8.0.0",

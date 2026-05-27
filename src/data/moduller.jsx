@@ -528,9 +528,10 @@ export const MODULLER = [
     altBaslik: 'BRF Dönüştürücü',
     ikon: Ikon.araclar,
     ogeler: [
-      { yol: '/araclar',    baslik: 'Metin → BRF',   ikon: Ikon.araclar },
-      { yol: '/belge-brf',  baslik: 'Belge → BRF',   ikon: Ikon.belgeBrf },
-      { yol: '/brf-oku',    baslik: 'BRF → Metin',   ikon: Ikon.brfOku },
+      { yol: '/araclar',         baslik: 'Metin → BRF',  ikon: Ikon.araclar },
+      { yol: '/belge-brf',       baslik: 'Belge → BRF',  ikon: Ikon.belgeBrf },
+      { yol: '/brf-oku',         baslik: 'BRF → Metin',  ikon: Ikon.brfOku },
+      { yol: '/muzik-brf-yazim', baslik: 'Müzik → BRF',  ikon: Ikon.muzikSembol },
     ]
   }
 ];

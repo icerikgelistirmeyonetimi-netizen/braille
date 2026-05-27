@@ -13,6 +13,8 @@
 // için korunmuştur.
 // =============================================================================
 
+import { muzikKontraksiyonsuzMetinHucreleri } from '../utils/music/musicHeaderEngine.js';
+
 /**
  * @typedef {Object} MuzikOge
  * @property {string} ad
@@ -399,6 +401,132 @@ export const MUZIK_DUZENSIZ_GRUPLAR = [
   R('yedileme (septuplet)', ['4-5-6', '2-3-5-6', '3'], '(7 nota anlık süresinde)', KURAL_DUZENSIZ_GRUP, undefined, '7'),
 ];
 
+const tempoHucreleri = (metin) => muzikKontraksiyonsuzMetinHucreleri(metin);
+
+export const MUZIK_TEMPO_ISARETLERI = [
+  {
+    ad: 'Largo',
+    sembol: 'largo',
+    dil: 'it',
+    hucreler: tempoHucreleri('largo'),
+    aciklama: 'Largo çok yavaş tempoyu belirtir. Metronom örneğinde yavaş vuruşlarla gösterilir.',
+    kurallar: [
+      'Tempo işaretleri müzik braillede metin ifadesi olarak yazılır.',
+      'Kontraksiyonsuz braille harfleriyle gösterilir.',
+      'Müzik başlığında veya eser içinde tempo bilgisi olarak kullanılabilir.',
+    ],
+    ornekler: ['Largo: çok yavaş.'],
+  },
+  {
+    ad: 'Adagio',
+    sembol: 'adagio',
+    dil: 'it',
+    hucreler: tempoHucreleri('adagio'),
+    aciklama: 'Adagio yavaş tempoyu belirtir.',
+    kurallar: [
+      'Tempo işaretleri kontraksiyonsuz metin olarak okunur.',
+      'Adagio, Largo kadar ağır olmayan yavaş bir tempodur.',
+    ],
+    ornekler: ['Adagio: yavaş.'],
+  },
+  {
+    ad: 'Andante',
+    sembol: 'andante',
+    dil: 'it',
+    hucreler: tempoHucreleri('andante'),
+    aciklama: 'Andante yürür gibi orta-yavaş tempoyu belirtir.',
+    kurallar: [
+      'Tempo ifadesi metin olarak yazılır.',
+      'Andante genellikle rahat ve yürüyüş benzeri hız anlamına gelir.',
+    ],
+    ornekler: ['Andante: yürür gibi.'],
+  },
+  {
+    ad: 'Moderato',
+    sembol: 'moderato',
+    dil: 'it',
+    hucreler: tempoHucreleri('moderato'),
+    aciklama: 'Moderato orta tempoyu belirtir.',
+    kurallar: [
+      'Tempo işareti müzik bilgisini verir, notanın perdesini değiştirmez.',
+      'Metronom örneği orta hızda verilir.',
+    ],
+    ornekler: ['Moderato: orta hız.'],
+  },
+  {
+    ad: 'Allegro',
+    sembol: 'allegro',
+    dil: 'it',
+    hucreler: tempoHucreleri('allegro'),
+    aciklama: 'Allegro hızlı ve canlı tempoyu belirtir.',
+    kurallar: [
+      'Tempo işareti kontraksiyonsuz metin olarak yazılır.',
+      'Allegro, hızlı metronom vuruşuyla örneklenir.',
+    ],
+    ornekler: ['Allegro: hızlı.'],
+  },
+  {
+    ad: 'Vivace',
+    sembol: 'vivace',
+    dil: 'it',
+    hucreler: tempoHucreleri('vivace'),
+    aciklama: 'Vivace canlı ve hızlı tempoyu belirtir.',
+    kurallar: [
+      'Tempo işareti metin olarak yazılır.',
+      'Allegrodan daha canlı hissedilebilir.',
+    ],
+    ornekler: ['Vivace: canlı hızlı.'],
+  },
+  {
+    ad: 'Presto',
+    sembol: 'presto',
+    dil: 'it',
+    hucreler: tempoHucreleri('presto'),
+    aciklama: 'Presto çok hızlı tempoyu belirtir.',
+    kurallar: [
+      'Tempo ifadesi metin hücreleriyle gösterilir.',
+      'Metronom örneği çok hızlı vuruşlarla verilir.',
+    ],
+    ornekler: ['Presto: çok hızlı.'],
+  },
+  {
+    ad: 'Ritardando',
+    sembol: 'rit.',
+    dil: 'it',
+    hucreler: tempoHucreleri('rit.'),
+    aciklama: 'Ritardando veya rit. gittikçe yavaşlama anlamına gelir.',
+    kurallar: [
+      'Ritardando bir gürlük değil, tempo değişimidir.',
+      'Ses örneğinde metronom aralıkları giderek açılır.',
+    ],
+    ornekler: ['rit.: gittikçe yavaşla.'],
+  },
+  {
+    ad: 'Accelerando',
+    sembol: 'accel.',
+    dil: 'it',
+    hucreler: tempoHucreleri('accel.'),
+    aciklama: 'Accelerando veya accel. gittikçe hızlanma anlamına gelir.',
+    kurallar: [
+      'Accelerando tempo değişimidir.',
+      'Ses örneğinde metronom aralıkları giderek kısalır.',
+    ],
+    ornekler: ['accel.: gittikçe hızlan.'],
+  },
+  {
+    ad: 'A tempo',
+    sembol: 'a tempo',
+    dil: 'it',
+    hucreler: tempoHucreleri('a tempo'),
+    aciklama: 'A tempo, önceki ana tempoya geri dön anlamına gelir.',
+    kurallar: [
+      'İki kelimeli tempo ifadeleri metin olarak gösterilir.',
+      'Müzik içinde tempo değişiminden sonra ana tempoya dönüşü belirtir.',
+    ],
+    ornekler: ['a tempo: eski tempoya dön.'],
+  },
+];
+
 /* ─────────────────  15) BRAILLE TEKRAR İŞARETLERİ  ─────────────────────── */
 export const MUZIK_TEKRAR = [
   R('braille repeat işareti', ['2-3-5-6'], '(önceki ölçü/parçayı aynen tekrarlar) · ⠶', KURAL_BRAILLE_REPEAT, undefined, '𝄎'),
@@ -449,6 +577,14 @@ export const MUZIK_BOLUMLER = [
     pageBaslik: 'Müzik · Zaman imzaları',
     ilerlemeAnahtari: 'muzik-zaman',
     veri: MUZIK_ZAMAN_IMZASI,
+  },
+  {
+    slug: 'tempo',
+    kisaBaslik: 'Tempo İşaretleri',
+    pageBaslik: 'Müzik · Tempo İşaretleri',
+    aciklama: 'Largo, Andante, Allegro gibi tempo işaretlerini ve hız değişimlerini öğren.',
+    ilerlemeAnahtari: 'muzik-tempo',
+    veri: MUZIK_TEMPO_ISARETLERI,
   },
   {
     slug: 'degistirici',

@@ -1,0 +1,197 @@
+import React from 'react';
+import MuzikScoreToolbar from './MuzikScoreToolbar.jsx';
+import MuzikScoreSvg from './MuzikScoreSvg.jsx';
+import MuzikNotaEditModal from './MuzikNotaEditModal.jsx';
+import MuzikKeySignatureModal from './MuzikKeySignatureModal.jsx';
+
+export default function MuzikBrfScoreEditor({
+  aktifArac,
+  bekleyenBag,
+  bekleyenModifier,
+  bekleyenTuplet,
+  ifadeGirisi,
+  setIfadeGirisi,
+  seciliSureIdx,
+  sureSecildi,
+  notaEkle,
+  notaEkleKonuma,
+  sonKullanilanOktav,
+  ifadeEkle,
+  aracEkleHandler,
+  tupletTamamla,
+  aracTikla,
+  setSonKullanilanOktav,
+  setSeciliSureIdx,
+
+  // bunu ekle
+  sonEklenenOgeId,
+
+  slurTamamla,
+  slurCancel,
+  modifierCancel,
+  tupletCancel,
+  setAktifArac,
+  setBekleyenBag,
+  barlineMenu,
+  setBarlineMenu,
+  barlineTiklandi,
+  inlineTimeSignatureEkle,
+  inlineKeySignatureEkle,
+  olcuCizgisiniDegistir,
+  olcuCizgisiniSil,
+  muzikSatirlar,
+  olcuBrailleSonuclari,
+  skorUstuHeaderSatirlari,
+  svgGlobalIndexBul,
+  svgYerlesimHaritasi,
+  svgCizilecekOgeler,
+  svgBeamGruplari,
+  ogeXHesapla,
+  satirIcindeBeamliMi,
+  ilkSatirHeaderBilgisi,
+  muzikHeader,
+  muzikBaglar,
+  hoverBrailleOgeId,
+  setHoverBrailleOgeId,
+  seciliOgeId,
+  setSeciliOgeId,
+  hoverBrailleBagId,
+  setHoverBrailleBagId,
+  hoverCizgiBagId,
+  setHoverCizgiBagId,
+  seciliBagId,
+  setSeciliBagId,
+  popupAcik,
+  setPopupAcik,
+  anahtarPopupAcik,
+  setAnahtarPopupAcik,
+  seciliOge,
+  mevcutAnahtar,
+  anahtarGlyphAl,
+  anahtarYAl,
+  anahtarFontClassAl,
+  muzikOgeleri,
+  notaTiklandi,
+  notaSuresiniCiftTiklaDegistir,
+  seciliOgeyiGuncelle,
+  bagTipiTieMi,
+  bagYonunuHesapla,
+  bagCizimNoktalari,
+  bagHitRectHesapla,
+  ledgerCizgileri,
+  gorunenSatirBrailleLejantMaplari,
+  gorunenSatirBrailleLejantlari,
+  baslangicBrailleBilgisi,
+  muzikSatirOlculeri,
+  baslangicBrailleLejantlari,
+  baslangicBrailleLejantMapi,
+  seciliNotayiGuncelle,
+  seciliOgeyiSil,
+  seciliNotayiSusaCevir,
+  seciliSusuNotayaCevir,
+  seciliEditorOgeId,
+  anahtariDegistir,
+}) {
+  return (
+    <div className="w-full flex flex-col gap-3" role="tabpanel" aria-label="Skor (nota yazımı)">
+      <MuzikScoreToolbar
+        aktifArac={aktifArac}
+        bekleyenBag={bekleyenBag}
+        setBekleyenBag={setBekleyenBag}
+        bekleyenModifier={bekleyenModifier}
+        bekleyenTuplet={bekleyenTuplet}
+        ifadeGirisi={ifadeGirisi}
+        setIfadeGirisi={setIfadeGirisi}
+        seciliSureIdx={seciliSureIdx}
+        sureSecildi={sureSecildi}
+        notaEkle={notaEkle}
+        ifadeEkle={() => { ifadeEkle(); setAktifArac(null); }}
+        aracEkleHandler={aracEkleHandler}
+        tupletTamamla={tupletTamamla}
+        aracTikla={aracTikla}
+        slurTamamla={() => { slurTamamla(); setAktifArac(null); }}
+        slurCancel={slurCancel}
+        modifierCancel={modifierCancel}
+        tupletCancel={tupletCancel}
+      />
+
+      <MuzikScoreSvg
+        muzikSatirlar={muzikSatirlar}
+        olcuBrailleSonuclari={olcuBrailleSonuclari}
+        skorUstuHeaderSatirlari={skorUstuHeaderSatirlari}
+        svgGlobalIndexBul={svgGlobalIndexBul}
+        svgYerlesimHaritasi={svgYerlesimHaritasi}
+        svgCizilecekOgeler={svgCizilecekOgeler}
+        svgBeamGruplari={svgBeamGruplari}
+        ogeXHesapla={ogeXHesapla}
+        satirIcindeBeamliMi={satirIcindeBeamliMi}
+        ilkSatirHeaderBilgisi={ilkSatirHeaderBilgisi}
+
+        notaEkleKonuma={notaEkleKonuma}
+        seciliSureIdx={seciliSureIdx}
+        sonKullanilanOktav={sonKullanilanOktav}
+        setSonKullanilanOktav={setSonKullanilanOktav}
+        setSeciliSureIdx={setSeciliSureIdx}
+        sonEklenenOgeId={sonEklenenOgeId}
+
+        muzikHeader={muzikHeader}
+        muzikBaglar={muzikBaglar}
+        barlineMenu={barlineMenu}
+        setBarlineMenu={setBarlineMenu}
+        barlineTiklandi={barlineTiklandi}
+        inlineTimeSignatureEkle={inlineTimeSignatureEkle}
+        inlineKeySignatureEkle={inlineKeySignatureEkle}
+        olcuCizgisiniDegistir={olcuCizgisiniDegistir}
+        olcuCizgisiniSil={olcuCizgisiniSil}
+        hoverBrailleOgeId={hoverBrailleOgeId}
+        setHoverBrailleOgeId={setHoverBrailleOgeId}
+        hoverBrailleBagId={hoverBrailleBagId}
+        setHoverBrailleBagId={setHoverBrailleBagId}
+        hoverCizgiBagId={hoverCizgiBagId}
+        setHoverCizgiBagId={setHoverCizgiBagId}
+        seciliOgeId={seciliOgeId}
+        setSeciliOgeId={setSeciliOgeId}
+        seciliBagId={seciliBagId}
+        setSeciliBagId={setSeciliBagId}
+        muzikSatirOlculeri={muzikSatirOlculeri}
+        setPopupAcik={setPopupAcik}
+        setAnahtarPopupAcik={setAnahtarPopupAcik}
+        mevcutAnahtar={mevcutAnahtar}
+        anahtarGlyphAl={anahtarGlyphAl}
+        anahtarYAl={anahtarYAl}
+        anahtarFontClassAl={anahtarFontClassAl}
+        muzikOgeleri={muzikOgeleri}
+        notaTiklandi={notaTiklandi}
+        notaSuresiniCiftTiklaDegistir={notaSuresiniCiftTiklaDegistir}
+        bagTipiTieMi={bagTipiTieMi}
+        bagYonunuHesapla={bagYonunuHesapla}
+        bagCizimNoktalari={bagCizimNoktalari}
+        bagHitRectHesapla={bagHitRectHesapla}
+        ledgerCizgileri={ledgerCizgileri}
+        gorunenSatirBrailleLejantMaplari={gorunenSatirBrailleLejantMaplari}
+        gorunenSatirBrailleLejantlari={gorunenSatirBrailleLejantlari}
+        baslangicBrailleBilgisi={baslangicBrailleBilgisi}
+        baslangicBrailleLejantlari={baslangicBrailleLejantlari}
+        baslangicBrailleLejantMapi={baslangicBrailleLejantMapi}
+      />
+      <MuzikNotaEditModal
+        popupAcik={popupAcik}
+        seciliOge={seciliOge}
+        seciliEditorOgeId={seciliEditorOgeId}
+        setPopupAcik={setPopupAcik}
+        seciliNotayiGuncelle={seciliNotayiGuncelle}
+        seciliOgeyiGuncelle={seciliOgeyiGuncelle}
+        seciliOgeyiSil={seciliOgeyiSil}
+        seciliNotayiSusaCevir={seciliNotayiSusaCevir}
+        seciliSusuNotayaCevir={seciliSusuNotayaCevir}
+        mevcutAnahtar={mevcutAnahtar}
+      />
+      <MuzikKeySignatureModal
+        anahtarPopupAcik={anahtarPopupAcik}
+        setAnahtarPopupAcik={setAnahtarPopupAcik}
+        muzikOgeleri={muzikOgeleri}
+        anahtariDegistir={anahtariDegistir}
+      />
+    </div>
+  );
+}

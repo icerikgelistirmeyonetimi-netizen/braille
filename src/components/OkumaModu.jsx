@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 
 const HUCRE_SIRASI = [1, 4, 2, 5, 3, 6];
@@ -49,13 +49,102 @@ export default function OkumaModuListesi({
   onKapat,
   rtl = false,
   seslendirmeDili = 'tr',
+  ogeSesiCal,
+  ogeSesiGecikmeMs = 1200,
+  okumaModuOgeSesiGecikmeMs = 900,
+  okumaModuOgeSesiAktif = false,
+  okumaModundaSadeceOgeSesi = false,
 }) {
   const sonOkunanRef = useRef(null);
+  const sonOkumaOgesiRef = useRef({ oge: null, time: 0 });
+  const okumaOgeSesiTimerRef = useRef(null);
+
+  const okumaOgeSesiTemizle = useCallback(() => {
+    if (okumaOgeSesiTimerRef.current) {
+      clearTimeout(okumaOgeSesiTimerRef.current);
+      okumaOgeSesiTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     konus(`${baslik} okuma modu. ${ogeler.length} öğe listelendi. Bir kutunun üzerine gelince adı ve Braille noktaları okunur.`);
-    return () => konusmayiDurdur();
-  }, [baslik, ogeler.length]);
+    return () => {
+      okumaOgeSesiTemizle();
+      konusmayiDurdur();
+    };
+  }, [baslik, ogeler.length, okumaOgeSesiTemizle]);
+
+  const okumaOgesiniSeslendirVeCal = useCallback((oge) => {
+    if (!oge) return;
+
+    const now = Date.now();
+    if (sonOkumaOgesiRef.current.oge === oge && now - sonOkumaOgesiRef.current.time < 250) {
+      return;
+    }
+    sonOkumaOgesiRef.current = { oge, time: now };
+
+    okumaOgeSesiTemizle();
+
+    const sesCalabilir = okumaModuOgeSesiAktif && typeof ogeSesiCal === 'function';
+
+    if (okumaModundaSadeceOgeSesi) {
+      konusmayiDurdur();
+      okumaOgeSesiTemizle();
+
+      if (sesCalabilir) {
+        ogeSesiCal(oge);
+      }
+
+      return;
+    }
+
+    const etiket = typeof getEtiket === 'function' ? getEtiket(oge) : oge.ad;
+    const altEtiket = typeof getAltEtiket === 'function' ? getAltEtiket(oge) : '';
+    const metin = [etiket, altEtiket].filter(Boolean).join('. ');
+
+    const seslendirmeKapali =
+      window.localStorage.getItem('seslendirmeKapali') === 'true' ||
+      window.localStorage.getItem('sesKapali') === 'true' ||
+      window.localStorage.getItem('konusmaKapali') === 'true';
+
+    if (seslendirmeKapali) {
+      if (sesCalabilir) {
+        ogeSesiCal(oge);
+      }
+      return;
+    }
+
+    if (metin) {
+      konus(metin, { kesintiyle: true });
+    }
+
+    console.log('OKUMA MODU SES', {
+      ad: oge?.ad,
+      sesCalabilir,
+      okumaModuOgeSesiAktif,
+      ogeSesiCalTipi: typeof ogeSesiCal,
+    });
+
+    if (sesCalabilir) {
+      const gecikmeMs = Number.isFinite(Number(okumaModuOgeSesiGecikmeMs))
+        ? Number(okumaModuOgeSesiGecikmeMs)
+        : Number(ogeSesiGecikmeMs) || 900;
+
+      okumaOgeSesiTimerRef.current = window.setTimeout(() => {
+        ogeSesiCal(oge);
+        okumaOgeSesiTimerRef.current = null;
+      }, gecikmeMs);
+    }
+  }, [
+    getEtiket,
+    getAltEtiket,
+    ogeSesiCal,
+    ogeSesiGecikmeMs,
+    okumaModuOgeSesiGecikmeMs,
+    okumaModuOgeSesiAktif,
+    okumaModundaSadeceOgeSesi,
+    okumaOgeSesiTemizle,
+  ]);
 
   const okut = (oge, index) => {
     const etiket = getEtiket(oge, index);
@@ -84,7 +173,11 @@ export default function OkumaModuListesi({
           <div className="okuma-modu-kicker">Okuma modu</div>
           <div className="okuma-modu-baslik">{baslik}</div>
         </div>
-        <button type="button" className="okuma-modu-kapat" onClick={onKapat} aria-label="Öğrenme moduna dön">
+        <button type="button" className="okuma-modu-kapat" onClick={() => {
+          okumaOgeSesiTemizle();
+          konusmayiDurdur();
+          onKapat?.();
+        }} aria-label="Öğrenme moduna dön">
           Öğrenmeye Dön
         </button>
       </div>
@@ -100,9 +193,16 @@ export default function OkumaModuListesi({
               type="button"
               role="listitem"
               className="okuma-modu-kutu"
-              onMouseEnter={() => okut(oge, index)}
-              onFocus={() => okut(oge, index)}
-              onMouseLeave={() => { sonOkunanRef.current = null; }}
+              onPointerEnter={() => okumaOgesiniSeslendirVeCal(oge)}
+              onFocus={() => okumaOgesiniSeslendirVeCal(oge)}
+              onPointerLeave={() => {
+                sonOkunanRef.current = null;
+                okumaOgeSesiTemizle();
+              }}
+              onBlur={() => {
+                sonOkunanRef.current = null;
+                okumaOgeSesiTemizle();
+              }}
               onClick={() => onSec(index)}
               aria-label={`${etiket}. Braille noktaları: ${hucreNoktaMetni(hucreler)}. Öğrenme modunda aç.`}
             >

@@ -1,12 +1,18 @@
 import React from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import IsaretSayfasi from '../components/IsaretSayfasi.jsx';
+import MuzikNotaEgitimi from './MuzikNotaEgitimi.jsx';
 import { MUZIK_BOLUMLER } from '../data/muzik.js';
 
 export default function MuzikBrailleSayfa() {
   const { slug } = useParams();
   const bolum = MUZIK_BOLUMLER.find((b) => b.slug === slug);
   if (!bolum) return <Navigate to="/muzik" replace />;
+
+  if (slug === 'notalar') {
+    return <MuzikNotaEgitimi />;
+  }
+
   return (
     <IsaretSayfasi
       baslik={bolum.pageBaslik}

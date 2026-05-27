@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
@@ -18,7 +18,17 @@ export default function CokHucreOkuyucu({
   bittiMesaji = 'Tebrikler! Tamamladınız.',
   rtl = false,
   bolumAnahtari,
-  ikiHucreYanYana = false
+  ikiHucreYanYana = false,
+  ogeSesiCal,
+  ogeSesiGecikmeMs = 2600,
+  ogeSesiOnceCal = false,
+  ogeSesiHerZaman = false,
+  okumaModundaSadeceOgeSesi = false,
+  sadeceHucreYonergesiOku = false,
+  ogeSesiSonrasiKonusmaGecikmeMs = 900,
+  ilkOgeSesiHariciCalindi = false,
+  sesKaydiButonuGoster = false,
+  sesKaydiButonEtiketi = 'Ses Kaydını Dinle',
 }) {
   const [indeks, setIndeks] = useState(() => {
     const k = indeksAl(bolumAnahtari);
@@ -29,6 +39,9 @@ export default function CokHucreOkuyucu({
   const [yanlis, setYanlis] = useState([]);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const ogeSesiTimerRef = useRef(null);
+  const tekrarSesiTimerRef = useRef(null);
+  const [ogeSesiAktif, setOgeSesiAktif] = useState(Boolean(ogeSesiHerZaman));
   const [okumaModu, setOkumaModu] = useState(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
@@ -43,6 +56,19 @@ export default function CokHucreOkuyucu({
   const aktif = aktifListe[indeks];
   const hucreSayisi = aktif ? aktif.hucreler.length : 0;
 
+  const kelimeYonergeMetniAl = useCallback((oge) => {
+    if (!oge) return '';
+
+    const hucreYonergesi =
+      `${oge.hucreler?.length || 0} braille hücresinden oluşur. Lütfen noktalarına dokunun.`;
+
+    if (sadeceHucreYonergesiOku) {
+      return hucreYonergesi;
+    }
+
+    return `${oge.yazi}, okunuşu: ${oge.okunus}. ${oge.anlam || ''} ${hucreYonergesi}`;
+  }, [sadeceHucreYonergesiOku]);
+
   // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
   useEffect(() => {
     if (bolumAnahtari && !kayitlilarModu) indeksKaydet(bolumAnahtari, indeks);
@@ -52,6 +78,20 @@ export default function CokHucreOkuyucu({
     clearTimeout(toastTimerRef.current);
     setToast(mesaj);
     toastTimerRef.current = setTimeout(() => setToast(null), 2000);
+  };
+
+  const tumSesleriDurdur = () => {
+    konusmayiDurdur();
+
+    if (ogeSesiTimerRef.current) {
+      clearTimeout(ogeSesiTimerRef.current);
+      ogeSesiTimerRef.current = null;
+    }
+
+    if (tekrarSesiTimerRef.current) {
+      clearTimeout(tekrarSesiTimerRef.current);
+      tekrarSesiTimerRef.current = null;
+    }
   };
 
   const kaydetSonra = () => {
@@ -93,13 +133,101 @@ export default function CokHucreOkuyucu({
       return;
     }
     const k = ogeler[indeks];
-    const metin = `${k.yazi}, okunuşu: ${k.okunus}. ${k.anlam || ''} ` +
-                  `${k.hucreler.length} braille hücresinden oluşur. Lütfen noktalarına dokunun.`;
-    konus(metin);
-    const tekrar = () => konus(metin, { kesintiyle: true });
+    if (!k) return undefined;
+
+    const metin = kelimeYonergeMetniAl(k);
+    const gecikme = ogeSesiOnceCal ? 250 : 250;
+    const sesAktifMi = ogeSesiHerZaman || ogeSesiAktif;
+
+    if (ogeSesiTimerRef.current) {
+      clearTimeout(ogeSesiTimerRef.current);
+      ogeSesiTimerRef.current = null;
+    }
+    if (tekrarSesiTimerRef.current) {
+      clearTimeout(tekrarSesiTimerRef.current);
+      tekrarSesiTimerRef.current = null;
+    }
+
+    let konusmaTimer = null;
+
+    const ilkOgeMi = indeks === 0 && !kayitlilarModu;
+    const ilkSesZatenCalindi = ilkOgeMi && ilkOgeSesiHariciCalindi;
+
+    if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function') {
+      if (!ilkSesZatenCalindi) {
+        ogeSesiTimerRef.current = window.setTimeout(() => {
+          ogeSesiCal(k);
+        }, gecikme);
+      }
+
+      konusmaTimer = window.setTimeout(() => {
+        konus(metin);
+      }, gecikme + ogeSesiSonrasiKonusmaGecikmeMs);
+    } else {
+      konusmaTimer = window.setTimeout(() => {
+        konus(metin);
+      }, gecikme);
+
+      if (sesAktifMi && typeof ogeSesiCal === 'function') {
+        ogeSesiTimerRef.current = window.setTimeout(() => {
+          ogeSesiCal(k);
+          ogeSesiTimerRef.current = null;
+        }, gecikme + ogeSesiGecikmeMs);
+      }
+    }
+
+    const tekrar = () => {
+      if (tekrarSesiTimerRef.current) {
+        clearTimeout(tekrarSesiTimerRef.current);
+        tekrarSesiTimerRef.current = null;
+      }
+
+      if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function') {
+        ogeSesiCal(k);
+        tekrarSesiTimerRef.current = window.setTimeout(() => {
+          konus(metin, { kesintiyle: true });
+          tekrarSesiTimerRef.current = null;
+        }, ogeSesiSonrasiKonusmaGecikmeMs);
+        return;
+      }
+
+      konus(metin, { kesintiyle: true });
+
+      if (sesAktifMi && typeof ogeSesiCal === 'function') {
+        tekrarSesiTimerRef.current = window.setTimeout(() => {
+          ogeSesiCal(k);
+          tekrarSesiTimerRef.current = null;
+        }, ogeSesiGecikmeMs);
+      }
+    };
     window.addEventListener('yonergeTekrar', tekrar);
-    return () => window.removeEventListener('yonergeTekrar', tekrar);
-  }, [indeks, bitti, ogeler, bittiMesaji]);
+
+    return () => {
+      if (konusmaTimer) clearTimeout(konusmaTimer);
+      if (ogeSesiTimerRef.current) {
+        clearTimeout(ogeSesiTimerRef.current);
+        ogeSesiTimerRef.current = null;
+      }
+      if (tekrarSesiTimerRef.current) {
+        clearTimeout(tekrarSesiTimerRef.current);
+        tekrarSesiTimerRef.current = null;
+      }
+      window.removeEventListener('yonergeTekrar', tekrar);
+    };
+  }, [
+    indeks,
+    bitti,
+    ogeler,
+    bittiMesaji,
+    ogeSesiCal,
+    ogeSesiGecikmeMs,
+    ogeSesiOnceCal,
+    ogeSesiHerZaman,
+    ogeSesiAktif,
+    ogeSesiSonrasiKonusmaGecikmeMs,
+    ilkOgeSesiHariciCalindi,
+    kelimeYonergeMetniAl,
+  ]);
 
   // Hücre değişince o hücrenin noktalarını seslendir (ilk hücre hariç)
   useEffect(() => {
@@ -131,6 +259,11 @@ export default function CokHucreOkuyucu({
             getHucreler={(oge) => oge.hucreler || []}
             onSec={okumaOgesiSec}
             onKapat={() => setOkumaModu(false)}
+            ogeSesiCal={ogeSesiCal}
+            ogeSesiGecikmeMs={ogeSesiGecikmeMs}
+            okumaModuOgeSesiGecikmeMs={900}
+            okumaModuOgeSesiAktif={typeof ogeSesiCal === 'function'}
+            okumaModundaSadeceOgeSesi={okumaModundaSadeceOgeSesi}
           />
         </div>
         <div className="controls">
@@ -170,6 +303,8 @@ export default function CokHucreOkuyucu({
   const ikiHucreTekSatir = ikiHucreYanYana && hucreSayisi === 2;
 
   const oncekiHucre = () => {
+    tumSesleriDurdur();
+
     if (hucreIndeksi > 0) {
       setHucreIndeksi((i) => i - 1);
     } else if (!ilkKelime) {
@@ -180,6 +315,8 @@ export default function CokHucreOkuyucu({
     }
   };
   const sonrakiHucre = () => {
+    tumSesleriDurdur();
+
     if (sonHucre) {
       basariBildir('Sıradaki kelime.');
       setTimeout(() => setIndeks((i) => i + 1), 500);
@@ -215,6 +352,29 @@ export default function CokHucreOkuyucu({
             İlerleme: {indeks + 1} / {aktifListe.length}
           {hucreSayisi > 1 && ` • Hücre ${guvenliHucreIndeksi + 1} / ${hucreSayisi}`}
         </div>
+        {sesKaydiButonuGoster && typeof ogeSesiCal === 'function' && aktif && (
+          <div
+            className="controls"
+            style={{
+              justifyContent: 'flex-start',
+              padding: 0,
+              marginTop: 8,
+              marginBottom: 8,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                tumSesleriDurdur();
+                ogeSesiCal(aktif);
+              }}
+              aria-label={sesKaydiButonEtiketi}
+            >
+              🔊
+              <span className="btn-etiket">{sesKaydiButonEtiketi}</span>
+            </button>
+          </div>
+        )}
         {kayitliSayisi > 0 && (
           <div className="banner-grup-secim" style={{ margin: '4px 0 0' }}>
             <button type="button" className={!kayitlilarModu ? 'aktif' : ''} aria-pressed={!kayitlilarModu} onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tümü</button>
@@ -334,7 +494,40 @@ export default function CokHucreOkuyucu({
         <button
           type="button"
           aria-label="Tekrar dinle"
-          onClick={() => konus(`${k.yazi}, okunuşu ${k.okunus}. ${k.anlam || ''}`, { kesintiyle: true })}
+          onClick={() => {
+            tumSesleriDurdur();
+
+            const sesAktifMi = ogeSesiHerZaman || ogeSesiAktif;
+            const tekrarMetni = kelimeYonergeMetniAl(aktif || k);
+
+            if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function' && aktif) {
+              ogeSesiCal(aktif);
+
+              if (tekrarSesiTimerRef.current) {
+                clearTimeout(tekrarSesiTimerRef.current);
+              }
+
+              tekrarSesiTimerRef.current = window.setTimeout(() => {
+                konus(tekrarMetni, { kesintiyle: true });
+                tekrarSesiTimerRef.current = null;
+              }, ogeSesiSonrasiKonusmaGecikmeMs);
+
+              return;
+            }
+
+            konus(tekrarMetni, { kesintiyle: true });
+
+            if (sesAktifMi && typeof ogeSesiCal === 'function' && aktif) {
+              if (tekrarSesiTimerRef.current) {
+                clearTimeout(tekrarSesiTimerRef.current);
+              }
+
+              tekrarSesiTimerRef.current = window.setTimeout(() => {
+                ogeSesiCal(aktif);
+                tekrarSesiTimerRef.current = null;
+              }, ogeSesiGecikmeMs);
+            }
+          }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           <span className="btn-etiket">Tekrar</span>
@@ -361,6 +554,7 @@ export default function CokHucreOkuyucu({
               type="button"
               aria-label="Atla, sonraki"
               onClick={() => {
+                tumSesleriDurdur();
                 basariBildir('Sıradaki.');
                 setTimeout(() => setIndeks((i) => i + 1), 500);
               }}
