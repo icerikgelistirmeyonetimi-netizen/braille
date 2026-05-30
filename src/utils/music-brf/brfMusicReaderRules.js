@@ -8,9 +8,19 @@ import {
 } from './brfMusicReaderConstants.js';
 import { asciiBrfToUnicodeBraille } from './import/musicBrailleCellUtils.js';
 import { SURE_GOSTERGELERI } from '../../data/muzik.js';
+import { MUZIK_ALT_RAKAM } from '../music/musicConstants.js';
 import { musicBrailleReverseMapsOlustur } from './musicBrailleReverseMaps.js';
 
 const REVERSE_MAPS = musicBrailleReverseMapsOlustur();
+
+// Alt-hücre (lower-cell) rakamları: ölçü numarası vb. için kullanılır.
+// dash anahtarı → rakam karakteri eşlemesi (ör. '2-3' → '2').
+const LOWER_DIGIT_BY_DASH = new Map(
+  Object.entries(MUZIK_ALT_RAKAM || {}).map(([digit, dots]) => [
+    (Array.isArray(dots) ? dots : []).slice().sort((a, b) => a - b).join('-'),
+    digit,
+  ]),
+);
 
 const NOTA_DIATONIC_INDEX = {
   do: 0,
@@ -24,6 +34,58 @@ const NOTA_DIATONIC_INDEX = {
 
 function nowId(prefix, n) {
   return `${prefix}-${Date.now()}-${n}`;
+}
+
+let MODIFIER_ID_SAYACI = 0;
+function yeniModifierId() {
+  MODIFIER_ID_SAYACI += 1;
+  return `mod-imp-${MODIFIER_ID_SAYACI}`;
+}
+
+// tokens[i] konumundan başlayarak, en uzun süsleme/nüans/dinamik/hairpin
+// hücre dizisini eşleştirir. Bulursa { entry, length } döndürür.
+function matchModifierSequence(tokens, i) {
+  const map = REVERSE_MAPS.modifierByCellKey;
+  if (!map || map.size === 0) return null;
+  const maxLen = Math.min(REVERSE_MAPS.modifierMaxLen || 1, tokens.length - i);
+
+  for (let len = maxLen; len >= 1; len -= 1) {
+    const parcalar = [];
+    let gecerli = true;
+    for (let k = 0; k < len; k += 1) {
+      const t = tokens[i + k];
+      if (!t || t.type !== 'braille') { gecerli = false; break; }
+      parcalar.push(dotsToDashKey(t.dots));
+    }
+    if (!gecerli) continue;
+    const seqKey = parcalar.join('|');
+    const entry = map.get(seqKey);
+    if (entry) return { entry, length: len };
+  }
+
+  return null;
+}
+
+// Notaya bağlanacak bir modifier kaydını ilgili notaya (oncesi → bekleyen,
+// sonrasi → son nota) iliştirir.
+function attachModifierToNote(noteItem, yon, kayit) {
+  if (!noteItem) return;
+  if (!noteItem.modifiers || typeof noteItem.modifiers !== 'object') {
+    noteItem.modifiers = { oncesi: [], sonrasi: [] };
+  }
+  const yer = yon === 'sonrasi' ? 'sonrasi' : 'oncesi';
+  const mevcut = Array.isArray(noteItem.modifiers[yer]) ? noteItem.modifiers[yer] : [];
+  noteItem.modifiers[yer] = [...mevcut, { id: yeniModifierId(), kayit }];
+}
+
+// Bekleyen "oncesi" modifierleri yeni oluşan notaya yükler.
+function flushPendingModifiers(context, noteItem) {
+  const bekleyen = Array.isArray(context.pendingModifiers) ? context.pendingModifiers : [];
+  if (bekleyen.length === 0) return;
+  for (const m of bekleyen) {
+    attachModifierToNote(noteItem, 'oncesi', m.kayit);
+  }
+  context.pendingModifiers = [];
 }
 
 export function normalizeBrfText(brfText = '') {
@@ -48,6 +110,7 @@ export function createReaderContext(options = {}) {
     currentOctave: 4,
     pendingOctave: null,
     pendingAccidental: null,
+    pendingModifiers: [],
     pendingTie: null,
     pendingTieFromId: null,
     activeMeasure: 1,
@@ -363,24 +426,72 @@ function selectCandidate(candidates = [], context, groupState, cell, lookaheadDo
   const dots = Array.isArray(cell?.dots) ? cell.dots : [];
   const has3 = dots.includes(3);
   const has6 = dots.includes(6);
+  const expected = Number(context.expectedMeasure16 || 0);
+  const useMeasureContext = expected > 0;
 
-  let preferredRealValue = null;
+  const chooseByScore = (realValues, preferredOrder = []) => {
+    const options = clean.filter((candidate) => realValues.includes(Number(candidate.realValue)));
+    if (!options.length) return null;
+    if (options.length === 1) return options[0];
+
+    let best = options[0];
+    let bestScore = candidateScore(best, context, lookaheadDotted);
+
+    for (let i = 1; i < options.length; i += 1) {
+      const candidate = options[i];
+      const score = candidateScore(candidate, context, lookaheadDotted);
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      } else if (score === bestScore) {
+        const currentValue = Number(candidate.realValue);
+        const bestValue = Number(best.realValue);
+        const currentPreferred = preferredOrder.indexOf(currentValue);
+        const bestPreferred = preferredOrder.indexOf(bestValue);
+        if (currentPreferred >= 0 && (bestPreferred < 0 || currentPreferred < bestPreferred)) {
+          best = candidate;
+          bestScore = score;
+        }
+      }
+    }
+
+    return best;
+  };
 
   if (!has3 && !has6) {
-    preferredRealValue = 8;
-  } else if (!has3 && has6) {
-    preferredRealValue = 4;
-  } else if (has3 && !has6) {
-    preferredRealValue = 2;
-  } else if (has3 && has6) {
-    preferredRealValue = 16;
+    const preferred = clean.find((candidate) => Number(candidate.realValue) === 8);
+    if (preferred) return applyLookaheadDot(preferred);
+    return applyLookaheadDot(clean[0]);
   }
 
-  if (preferredRealValue != null) {
-    const preferred = clean.find((candidate) => Number(candidate.realValue) === preferredRealValue);
-    if (preferred) {
-      return applyLookaheadDot(preferred);
-    }
+  if (!useMeasureContext) {
+    const fallback = has3 && has6 ? 16 : has3 ? 2 : 4;
+    const preferred = clean.find((candidate) => Number(candidate.realValue) === fallback);
+    if (preferred) return applyLookaheadDot(preferred);
+    return applyLookaheadDot(clean[0]);
+  }
+
+  // Genel skor geri dönüş: nota-spesifik aday filtresi başarısız olduğunda
+  // (örn. sus hücreleri farklı gerçek değerlere sahip olduğunda) tüm adayları
+  // candidateScore ile karşılaştır.
+  const scoreAllCandidates = () => {
+    const allRv = clean.map((c) => Number(c.realValue));
+    return chooseByScore(allRv, []);
+  };
+
+  if (!has3 && has6) {
+    const selected = chooseByScore([4, 64], [4, 64]) || clean.find((candidate) => Number(candidate.realValue) === 4) || scoreAllCandidates() || clean[0];
+    return applyLookaheadDot(selected);
+  }
+
+  if (has3 && !has6) {
+    const selected = chooseByScore([2, 32], [2, 32]) || clean.find((candidate) => Number(candidate.realValue) === 2) || scoreAllCandidates() || clean[0];
+    return applyLookaheadDot(selected);
+  }
+
+  if (has3 && has6) {
+    const selected = chooseByScore([1, 16], [16, 1]) || clean.find((candidate) => Number(candidate.realValue) === 1) || scoreAllCandidates() || clean[0];
+    return applyLookaheadDot(selected);
   }
 
   return applyLookaheadDot(clean[0]);
@@ -826,6 +937,8 @@ function readNoteCell(cell, context, groupState, candidates) {
     dotCount: Number(selected.dotCount || 0),
   }, selectedDuration16);
 
+  flushPendingModifiers(context, noteItem);
+
   const noteGlobalIndex = context.noteSequence.length;
   noteItem.noteGlobalIndex = noteGlobalIndex;
   context.noteSequence.push(noteItem.id);
@@ -836,6 +949,11 @@ function readNoteCell(cell, context, groupState, candidates) {
   context.lastNote = noteItem;
   context.pendingOctave = null;
   context.pendingAccidental = null;
+  // Grup içinde gerçek içerik (nota) yazıldı; bir önceki barline marker'ı
+  // (örn. grup başındaki ⠣⠶ başlangıç tekrarı) lastSeparatorCreatedBarline'ı
+  // true bırakmış olabilir. İçerik geldiyse grubun sonundaki boşluk kapanış
+  // ölçü çizgisini oluşturabilmeli; bayrağı sıfırla.
+  context.lastSeparatorCreatedBarline = false;
 
   return pushDebug(context, cell, {
     category: 'note',
@@ -845,8 +963,8 @@ function readNoteCell(cell, context, groupState, candidates) {
   });
 }
 
-function readRestCell(cell, context, candidates) {
-  const selected = selectCandidate(candidates, context, null, cell);
+function readRestCell(cell, context, candidates, groupState = null) {
+  const selected = selectCandidate(candidates, context, groupState, cell);
   if (!selected) return null;
   const selectedDuration16 = duration16(selected);
 
@@ -865,6 +983,7 @@ function readRestCell(cell, context, candidates) {
   context.items.push(restItem);
   context.pendingOctave = null;
   context.pendingAccidental = null;
+  context.lastSeparatorCreatedBarline = false;
 
   return pushDebug(context, cell, {
     category: 'rest',
@@ -899,6 +1018,135 @@ export function readMusicBrailleGroup(group = [], context) {
         });
       }
       i += clefLen - 1;
+      continue;
+    }
+
+    // Volta (1./2. ev): sayı göstergesi ⠼ (3-4-5-6) + rakam (2 → 1. ev, 2-3 → 2. ev).
+    // Export'ta ardından dot-3 ayraç hücresi gelebilir; onu da tüketiriz.
+    if (dashKey === '3-4-5-6') {
+      const next1 = tokens[i + 1] ? dotsToDashKey(tokens[i + 1].dots) : '';
+      const voltaTip = next1 === '2' ? 'volta1' : (next1 === '2-3' ? 'volta2' : null);
+      if (voltaTip) {
+        const voltaAd = voltaTip === 'volta1' ? '1. ev (volta)' : '2. ev (volta)';
+        const item = pushSpecialItem(context, {
+          id: nowId(voltaTip, context.items.length),
+          tip: voltaTip,
+          ad: voltaAd,
+          gorunum: voltaTip === 'volta1' ? '1.' : '2.',
+          hucreler: voltaTip === 'volta1' ? [[3, 4, 5, 6], [2]] : [[3, 4, 5, 6], [2, 3]],
+          measureNo: context.activeMeasure,
+        });
+        pushDebug(context, cell, { category: voltaTip, meaning: `${voltaAd} sayı göstergesi`, effect: 'çok hücreli işaret', itemId: item.id });
+        pushDebug(context, tokens[i + 1], { category: voltaTip, meaning: voltaAd, effect: 'çok hücreli işaret tamamlandı', itemId: item.id });
+        let tuketilen = 1;
+        // İsteğe bağlı dot-3 volta ayracı
+        const next2 = tokens[i + 2] ? dotsToDashKey(tokens[i + 2].dots) : '';
+        if (next2 === '3') {
+          consumedAugmentationDotCells.add(tokens[i + 2]);
+          pushDebug(context, tokens[i + 2], { category: voltaTip, meaning: 'volta ayracı (dot 3)', effect: 'volta sayısından sonra ayraç', itemId: item.id });
+          tuketilen = 2;
+        }
+        i += tuketilen;
+        continue;
+      }
+    }
+
+    // Alt-hücre rakamları (ölçü numarası) ve braille tekrar işareti.
+    // NOT: Bu blok süsleme eşleştiricisinden ÖNCE çalışmalı; çünkü bazı
+    // tek hücreli süslemeler (trill ⠖=2-3-5, turn ⠲=2-5-6) alt-rakamlarla
+    // (6, 4) AYNI hücreyi paylaşır. Ölçü başı/sonundaki rakam dizileri
+    // ölçü numarasıdır; süsleme yalnızca grup ORTASINDA (nota komşuluğunda)
+    // değerlendirilir.
+    if (LOWER_DIGIT_BY_DASH.has(dashKey)) {
+      let j = i;
+      while (
+        j < tokens.length &&
+        tokens[j]?.type === 'braille' &&
+        LOWER_DIGIT_BY_DASH.has(dotsToDashKey(tokens[j].dots))
+      ) {
+        j += 1;
+      }
+      const runLen = j - i;
+      const grupBasi = i === 0;
+      const grupSonu = j >= tokens.length;
+      const tumGrup = grupBasi && grupSonu;
+
+      // Tek hücreli ⠶ (2-3-5-6) tüm grubu kaplıyorsa: braille tekrar işareti
+      // (önceki ölçüyü aynen tekrarla).
+      if (tumGrup && runLen === 1 && dashKey === '2-3-5-6') {
+        const item = pushSpecialItem(context, {
+          id: nowId('braille-repeat', context.items.length),
+          tip: 'brailleRepeat',
+          ad: 'braille repeat işareti',
+          gorunum: '𝄎',
+          hucreler: [[2, 3, 5, 6]],
+          measureNo: context.activeMeasure,
+        });
+        pushDebug(context, cell, {
+          category: 'repeat',
+          meaning: 'braille repeat işareti',
+          effect: 'önceki ölçüyü aynen tekrarlar',
+          itemId: item.id,
+        });
+        continue;
+      }
+
+      // Grup başı veya grup sonundaki rakam dizisi → ölçü numarası (atlanır).
+      if (grupBasi || grupSonu) {
+        const digits = [];
+        for (let k = i; k < j; k += 1) {
+          digits.push(LOWER_DIGIT_BY_DASH.get(dotsToDashKey(tokens[k].dots)));
+        }
+        const barNo = digits.join('');
+        for (let k = i; k < j; k += 1) {
+          pushDebug(context, tokens[k], {
+            category: 'bar-number',
+            meaning: `${barNo}. ölçü numarası`,
+            effect: 'ölçü numarası / kılavuz (müzik içeriği değil; atlandı)',
+          });
+        }
+        i = j - 1;
+        continue;
+      }
+      // Aksi halde grup ortasında — süsleme/nüans eşleştiricisine bırak.
+    }
+
+    // Süsleme / nüans / dinamik / hairpin gibi notaya bağlı çok-hücreli
+    // işaretler. En uzun eşleşme önceliklidir; tek hücreli süslemeler
+    // (trill 2-3-5, turn 2-5-6 vb.) nota/aksidental ile çakışmaz.
+    const modMatch = matchModifierSequence(tokens, i);
+    if (modMatch) {
+      const { entry, length } = modMatch;
+      if (entry.yon === 'sonrasi') {
+        if (context.lastNote) {
+          attachModifierToNote(context.lastNote, 'sonrasi', entry.kayit);
+        } else {
+          context.warnings.push({
+            type: 'modifier-no-source',
+            lineIndex: cell.lineIndex,
+            cellIndex: cell.cellIndex,
+            message: `${entry.ad} işareti bir notadan sonra gelmelidir.`,
+          });
+        }
+      } else {
+        context.pendingModifiers = [
+          ...(Array.isArray(context.pendingModifiers) ? context.pendingModifiers : []),
+          { ad: entry.ad, kategori: entry.kategori, kayit: entry.kayit },
+        ];
+      }
+
+      for (let c = 0; c < length; c += 1) {
+        pushDebug(context, tokens[i + c], {
+          category: entry.kategori === 'susleme' ? 'susleme' : entry.kategori,
+          meaning: entry.ad,
+          effect: c === 0
+            ? `${entry.kategori} işareti (${entry.yon === 'sonrasi' ? 'nota sonrası' : 'nota öncesi'})${length > 1 ? ' — çok hücreli' : ''}`
+            : 'çok hücreli işaret sürdü',
+          itemId: entry.yon === 'sonrasi' ? (context.lastNote?.id || null) : null,
+        });
+      }
+
+      i += length - 1;
       continue;
     }
 
@@ -948,7 +1196,9 @@ export function readMusicBrailleGroup(group = [], context) {
         });
         pushDebug(context, cell, { category: 'repeat', meaning: 'başlangıç tekrarı başlangıç hücresi', effect: 'çok hücreli işaret', itemId: item.id });
         pushDebug(context, tokens[i + 1], { category: 'repeat', meaning: 'başlangıç tekrarı', effect: 'çok hücreli işaret tamamlandı', itemId: item.id });
-        barlineSonrasiDurumuSifirla(context);
+        // beginRepeat bir ölçü-başı işaretidir; öncesindeki boşluk zaten ölçüyü
+        // ilerletmiş olur. Tekrar ilerletirsek fazladan boş ölçü oluşur.
+        barlineSonrasiDurumuSifirla(context, false);
         i += 1;
         continue;
       }
@@ -1082,7 +1332,7 @@ export function readMusicBrailleGroup(group = [], context) {
 
     const restCandidates = REVERSE_MAPS.restByCellKey.get(dashKey);
     if (Array.isArray(restCandidates) && restCandidates.length > 0) {
-      readRestCell(cell, context, restCandidates);
+      readRestCell(cell, context, restCandidates, groupState);
       continue;
     }
 
@@ -1196,6 +1446,22 @@ export function detectHeaderLineType(tokens = []) {
 
   if (matchedTimeSignature) {
     return { type: 'time-signature', value: matchedTimeSignature };
+  }
+
+  // Karma satır: "allegro. 4/4" gibi başlık + boşluk + zaman imzası aynı satırda.
+  // Boşluktan sonraki kısmı zaman imzası olarak kontrol et.
+  const spaceIdx = tokens.findIndex((t) => t.type === 'space');
+  if (spaceIdx > 0) {
+    const suffix = tokens.slice(spaceIdx + 1).filter((t) => t.type === 'braille');
+    if (suffix.length > 0) {
+      const suffixPattern = suffix.map((t) => dotsToKey(t.dots)).join('|');
+      const suffixTs = TIME_SIGNATURE_PATTERNS[suffixPattern] || null;
+      if (suffixTs) {
+        const prefix = tokens.slice(0, spaceIdx).filter((t) => t.type === 'braille');
+        const text = prefix.map((t) => BRAILLE_LETTERS_TR[dotsToKey(t.dots)] || '').join('').trim();
+        return { type: 'title+time-signature', value: text, timeSignature: suffixTs };
+      }
+    }
   }
 
   const letterCount = braille.filter((t) => BRAILLE_LETTERS_TR[dotsToKey(t.dots)]).length;

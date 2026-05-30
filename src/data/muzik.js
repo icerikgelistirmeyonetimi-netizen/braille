@@ -324,9 +324,8 @@ export const MUZIK_BAGLAR = [
 ];
 
 /* ─────────────────  9) DİNAMİKLER (sözcük temelli)  ─────────────────────── */
-// Tüm dinamikler önünde söz işareti ⠜ (3-4-5) bulunur.
+// Tüm dinamikler önünde söz işareti ⠜ (3-4-5) bulunur; söz işareti kendisi dinamik değildir.
 export const MUZIK_DINAMIKLER = [
-  R('söz işareti', ['3-4-5'], '(her sözcüğün/kısaltmanın önünde) · ⠜', KURAL_WORD_SIGN, undefined, '⠜'),
   R('pp (pianissimo)', ['3-4-5', '1-2-3-4', '1-2-3-4'], '(çok hafif)', KURAL_WORD_SIGN, undefined, 'pp'),
   R('p (piano)', ['3-4-5', '1-2-3-4'], '(hafif)', KURAL_WORD_SIGN, undefined, 'p'),
   R('mp (mezzo piano)', ['3-4-5', '1-3-4', '1-2-3-4'], '(orta hafif)', KURAL_WORD_SIGN, undefined, 'mp'),
@@ -374,20 +373,20 @@ export const MUZIK_NUANS_SONRA = [
 
 /* ─────────────────────  13) SÜSLEMELER (Ornaments)  ────────────────────── */
 export const MUZIK_SUSLEMELER = [
-  R('kısa appoggiatura', ['2-6'], '(saplama yan nota; küçük çapraz çizgili)', KURAL_NUANS_ONCE),
-  R('uzun appoggiatura', ['5', '2-6'], '(uzun yan nota; çapraz çizgisiz)', KURAL_NUANS_ONCE),
+  R('kısa appoggiatura', ['2-6'], '(saplama yan nota; küçük çapraz çizgili)', KURAL_NUANS_ONCE, undefined, '♪'),
+  R('uzun appoggiatura', ['5', '2-6'], '(uzun yan nota; çapraz çizgisiz)', KURAL_NUANS_ONCE, undefined, '♩'),
   R('trill', ['2-3-5'], '(iki nota arası hızlı titreşim)', KURAL_TRILL, undefined, 'tr'),
-  R('bemollü trill', ['1-2-6', '2-3-5'], '(bemol etkili trill)', KURAL_TRILL),
-  R('diyezli trill', ['1-4-6', '2-3-5'], '(diyez etkili trill)', KURAL_TRILL),
+  R('bemollü trill', ['1-2-6', '2-3-5'], '(bemol etkili trill)', KURAL_TRILL, undefined, 'tr♭'),
+  R('diyezli trill', ['1-4-6', '2-3-5'], '(diyez etkili trill)', KURAL_TRILL, undefined, 'tr♯'),
   R('turn (notalar arası)', ['2-5-6'], '(üst-asıl-alt-asıl dönüşü)', KURAL_TURN, undefined, '∽'),
-  R('turn (nota üstünde)', ['6', '2-5-6'], '(notanın tam üstünde/altında)', KURAL_TURN),
-  R('ters turn (notalar arası)', ['2-5-6', '1-2-3'], '(alt-asıl-üst-asıl dönüşü)', KURAL_TURN),
-  R('ters turn (nota üstünde)', ['6', '2-5-6', '1-2-3'], '(ters turn, nota üstünde/altında)', KURAL_TURN),
-  R('üst mordent', ['5', '2-3-5'], '(asıl-üst-asıl)', KURAL_TURN),
-  R('uzun üst mordent', ['5-6', '2-3-5'], '(birden çok salınımlı üst mordent)', KURAL_TURN),
-  R('alt mordent', ['5', '2-3-5', '1-2-3'], '(asıl-alt-asıl)', KURAL_TURN),
-  R('uzun alt mordent', ['5-6', '2-3-5', '1-2-3'], '(birden çok salınımlı alt mordent)', KURAL_TURN),
-  R('glissando', ['4', '1'], '(iki nota arası kaydırma) · ⠈⠁', KURAL_NUANS_SONRA),
+  R('turn (nota üstünde)', ['6', '2-5-6'], '(notanın tam üstünde/altında)', KURAL_TURN, undefined, '∽⁺'),
+  R('ters turn (notalar arası)', ['2-5-6', '1-2-3'], '(alt-asıl-üst-asıl dönüşü)', KURAL_TURN, undefined, '∾'),
+  R('ters turn (nota üstünde)', ['6', '2-5-6', '1-2-3'], '(ters turn, nota üstünde/altında)', KURAL_TURN, undefined, '∾⁺'),
+  R('üst mordent', ['5', '2-3-5'], '(asıl-üst-asıl)', KURAL_TURN, undefined, '∿'),
+  R('uzun üst mordent', ['5-6', '2-3-5'], '(birden çok salınımlı üst mordent)', KURAL_TURN, undefined, '≈'),
+  R('alt mordent', ['5', '2-3-5', '1-2-3'], '(asıl-alt-asıl)', KURAL_TURN, undefined, '⌇'),
+  R('uzun alt mordent', ['5-6', '2-3-5', '1-2-3'], '(birden çok salınımlı alt mordent)', KURAL_TURN, undefined, '⌇⌇'),
+  R('glissando', ['4', '1'], '(iki nota arası kaydırma) · ⠈⠁', KURAL_NUANS_SONRA, undefined, '/'),
 ];
 
 /* ─────────────────  14) DÜZENSİZ NOTA GRUPLARI  ────────────────────────── */

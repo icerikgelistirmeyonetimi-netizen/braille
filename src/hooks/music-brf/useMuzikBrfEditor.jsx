@@ -33,8 +33,10 @@ import {
   muzikKontraksiyonsuzMetinHucreleri,
 } from '../../utils/music/index.js';
 import { muzikOgeleriOlcuTamamla, normalOlcuCizgisiMi } from '../../utils/music-brf/musicMeasureHelpers.js';
+import { muzikOlcuyeBol } from '../../utils/music/musicMeasureEngine.js';
 import { varsayilanMuzikHeaderOlustur } from '../../utils/music-brf/musicHeaderHelpers.js';
 import { varsayilanOktavAnahtaraGoreAl } from '../../utils/music-brf/musicScoreHelpers.jsx';
+import { nuansSmuflGlyph } from '../../utils/music-brf/musicConstants.js';
 import { useMusicScoreLayout } from './useMusicScoreLayout.js';
 import { useBrailleOutput } from './useBrailleOutput.js';
 
@@ -57,10 +59,14 @@ export function useMuzikBrfEditor() {
   const [anahtarPopupAcik, setAnahtarPopupAcik] = useState(false);
   const [barlineMenu, setBarlineMenu] = useState(null);
   const [ifadeGirisi, setIfadeGirisi] = useState('');
+  // Volta ekleme modu: null veya { tip: 'volta1' | 'volta2' }
+  const [voltaEkleModu, setVoltaEkleModu] = useState(null);
+  // İlk tıklanan barline/measure ID'si (başlangıç noktası)
+  const [voltaEkleBaslangicId, setVoltaEkleBaslangicId] = useState(null);
   const [bekleyenTuplet, setBekleyenTuplet] = useState(null);
   const [muzikHeader, setMuzikHeader] = useState(() => varsayilanMuzikHeaderOlustur());
   const [muzikUyarilari, setMuzikUyarilari] = useState([]);
-  const [includeBarNumbers, setIncludeBarNumbers] = useState(false);
+  const [includeBarNumbers, setIncludeBarNumbers] = useState(true);
   const [seciliSureIdx, setSeciliSureIdx] = useState(1);
   const [seciliOgeId, setSeciliOgeId] = useState(null);
   const [sonEklenenOgeId, setSonEklenenOgeId] = useState(null);
@@ -227,12 +233,19 @@ export function useMuzikBrfEditor() {
   );
 
   const anahtarGlyphAl = (anahtar) => {
-    if (!anahtar) return '𝄞';
+    // Standart Unicode müzik karakterleri (Bravura Text fontu destekler):
+    //   U+1D11E = G clef (sol anahtarı)
+    //   U+1D122 = F clef (fa anahtarı)
+    //   U+1D121 = C clef (do anahtarı)
+    const SOL = String.fromCodePoint(0x1D11E);
+    const FA  = String.fromCodePoint(0x1D122);
+    const DO  = String.fromCodePoint(0x1D121);
+    if (!anahtar) return SOL;
 
     const ad = String(anahtar.ad || '').toLowerCase();
-    if (/fa|bass/i.test(ad)) return '𝄢';
-    if (/do|alto|tenor/i.test(ad)) return '𝄡';
-    return anahtar.gorunum || '𝄞';
+    if (/fa|bass/i.test(ad)) return FA;
+    if (/do|alto|tenor/i.test(ad)) return DO;
+    return anahtar.gorunum || SOL;
   };
 
   const onceAnahtarGarantiEt = (ogeler) => {
@@ -247,7 +260,7 @@ export function useMuzikBrfEditor() {
     oge?.otomatikOlcuCizgisi === true,
   );
 
-  const notaEkle = (notaAd, sureIdxOverride) => {
+  const notaEkle = (notaAd, sureIdxOverride, dotted = false) => {
     const kullanilacakSure = (typeof sureIdxOverride === 'number') ? sureIdxOverride : seciliSureIdx;
     const kullanilacakOktav = Number.isFinite(Number(sonKullanilanOktav))
       ? guvenliOktavAl(sonKullanilanOktav, varsayilanGuvenliOktavAl())
@@ -255,6 +268,7 @@ export function useMuzikBrfEditor() {
 
     const oge = muzikNotaSkorOgesi(yeniId(), notaAd, kullanilacakSure, {
       oktav: kullanilacakOktav,
+      dotted: !!dotted,
     });
 
     setMuzikOgeleri((onceki) => [
@@ -274,6 +288,7 @@ export function useMuzikBrfEditor() {
     oktav,
     sureIdx,
     insertAfterId,
+    dotted = false,
   } = {}) => {
     const kullanilacakSure = Number.isInteger(sureIdx)
       ? sureIdx
@@ -286,6 +301,7 @@ export function useMuzikBrfEditor() {
 
     const oge = muzikNotaSkorOgesi(yeniId(), notaAd || 'do', kullanilacakSure, {
       oktav: kullanilacakOktav,
+      dotted: !!dotted,
     });
 
     setMuzikOgeleri((onceki) => {
@@ -295,10 +311,20 @@ export function useMuzikBrfEditor() {
         return [...garantiListe, oge];
       }
 
-      const insertIndex = garantiListe.findIndex((item) => item.id === insertAfterId);
+      let insertIndex = garantiListe.findIndex((item) => item.id === insertAfterId);
 
       if (insertIndex < 0) {
         return [...garantiListe, oge];
+      }
+
+      // Zaman imzası / donanım değişikliklerinin önüne nota eklenemez:
+      // hedef ögenin hemen ardında varsa, son change item'ın sonrasına kaydır.
+      while (
+        insertIndex + 1 < garantiListe.length &&
+        (garantiListe[insertIndex + 1]?.tip === 'timeSignatureChange' ||
+         garantiListe[insertIndex + 1]?.tip === 'keySignatureChange')
+      ) {
+        insertIndex += 1;
       }
 
       return [
@@ -387,6 +413,9 @@ export function useMuzikBrfEditor() {
       return;
     }
 
+    // Başka bir menü başlığına geçilince bekleyen slur/tie seçimi otomatik iptal.
+    if (bekleyenBag) setBekleyenBag(null);
+
     setAktifArac((o) => o === toolId ? null : toolId);
   };
 
@@ -453,6 +482,342 @@ export function useMuzikBrfEditor() {
     editorDegisti();
   };
 
+  // ─── Volta ekleme yardımcıları ────────────────────────────────────────────
+
+  const voltaEkleModuBaslat = (tip) => {
+    setVoltaEkleModu({ tip });
+    setVoltaEkleBaslangicId(null);
+  };
+
+  const voltaEkleModIptal = () => {
+    setVoltaEkleModu(null);
+    setVoltaEkleBaslangicId(null);
+  };
+
+  // Birinci ölçü için insertAfterId null olur; null ile "henüz tıklanmadı" (null)
+  // arasını ayırt etmek için sentinel kullanılır.
+  const VOLTA_BASLANGIC_SENTINEL = '__VOLT_START__';
+
+  /**
+   * Ölçü başı + tıklaması — iki aşamalı:
+   *   1. tık → başlangıç ölçüsünü seç
+   *   2. tık → bitiş ölçüsü belirlendi; volta marker'ı oluştur
+   */
+  const voltaBarlineEkle = (insertAfterIdArg) => {
+    if (!voltaEkleModu?.tip) return;
+    const tip = voltaEkleModu.tip;
+
+    // ── 1. tık ───────────────────────────────────────────────────────────────
+    // voltaEkleBaslangicId null → henüz tıklanmadı; sentinel veya gerçek ID sakla
+    if (voltaEkleBaslangicId === null) {
+      setVoltaEkleBaslangicId(insertAfterIdArg ?? VOLTA_BASLANGIC_SENTINEL);
+      return;
+    }
+
+    // ── 2. tık ───────────────────────────────────────────────────────────────
+    const rawStartId = voltaEkleBaslangicId === VOLTA_BASLANGIC_SENTINEL
+      ? null
+      : voltaEkleBaslangicId;
+    const endId = insertAfterIdArg;   // bu ölçünün endBarlineId'si
+
+    const voltaHucreler = tip === 'volta1'
+      ? [[3, 4, 5, 6], [2]]
+      : [[3, 4, 5, 6], [2, 3]];
+
+    const yeniOge = {
+      id: yeniId(),
+      tip,
+      ad: tip === 'volta1' ? '1. ev' : '2. ev',
+      gorunum: tip === 'volta1' ? '1.' : '2.',
+      hucreler: voltaHucreler,
+      auto: false,
+      autoBarline: false,
+      otomatikOlcuCizgisi: false,
+      _voltaBitisBarlineId: endId,
+    };
+
+    setMuzikOgeleri((onceki) => {
+      if (rawStartId === null) {
+        // Birinci ölçü → anahtar/header'dan hemen sonraya ekle
+        const garantiListe = onceAnahtarGarantiEt(onceki);
+        const ilkNotaIdx = garantiListe.findIndex((item) => item.tip !== 'anahtar');
+        if (ilkNotaIdx <= 0) return [yeniOge, ...garantiListe];
+        const sonuc = [...garantiListe];
+        sonuc.splice(ilkNotaIdx, 0, yeniOge);
+        return sonuc;
+      }
+      const idx = onceki.findIndex((item) => item.id === rawStartId);
+      const sonuc = [...onceki];
+      if (idx >= 0) sonuc.splice(idx + 1, 0, yeniOge);
+      else sonuc.push(yeniOge);
+      return sonuc;
+    });
+
+    setVoltaEkleModu(null);
+    setVoltaEkleBaslangicId(null);
+    editorDegisti();
+  };
+
+  /**
+   * Ölçü numarasına göre volta ekler.
+   * basOlcuNo  = 1-tabanlı başlangıç ölçüsü (volta bu ölçüden ÖNCE = önceki barline'dan SONRA eklenir)
+   * bitisOlcuNo = bracket'in görsel bitiş ölçüsü (o ölçünün son barline ID'si _voltaBitisBarlineId olarak kaydedilir)
+   */
+  const voltaMeasureEkle = (tip, basOlcuNo, bitisOlcuNo) => {
+    const olculer = muzikOlcuyeBol(muzikOgeleriOlcuTamamlanmis, muzikHeader);
+    const basIdx   = Number(basOlcuNo)  - 2;  // 0-tabanlı, önceki ölçü
+    const bitisIdx = Number(bitisOlcuNo) - 1; // 0-tabanlı, bitiş ölçüsü
+
+    // Başlangıç: önceki ölçünün son öğesi (barline) sonrasına ekle
+    let insertAfterId = null;
+    if (basIdx >= 0 && olculer[basIdx]) {
+      const items = olculer[basIdx].items || [];
+      const sonOge = items[items.length - 1];
+      if (sonOge?.id) insertAfterId = sonOge.id;
+    }
+
+    // Bitiş: bitiş ölçüsünün son öğesi (barline) ID'si
+    let bitisBarlineId = null;
+    if (bitisIdx >= 0 && olculer[bitisIdx]) {
+      const items = olculer[bitisIdx].items || [];
+      const sonOge = items[items.length - 1];
+      if (sonOge?.id) bitisBarlineId = sonOge.id;
+    }
+
+    const voltaHucreler = tip === 'volta1'
+      ? [[3, 4, 5, 6], [2]]
+      : [[3, 4, 5, 6], [2, 3]];
+
+    const yeniOge = {
+      id: yeniId(),
+      tip,
+      ad: tip === 'volta1' ? '1. ev' : '2. ev',
+      gorunum: tip === 'volta1' ? '1.' : '2.',
+      hucreler: voltaHucreler,
+      auto: false,
+      autoBarline: false,
+      otomatikOlcuCizgisi: false,
+      _voltaBasOlcu: Number(basOlcuNo),
+      _voltaBitisOlcu: Number(bitisOlcuNo) || Number(basOlcuNo),
+      ...(bitisBarlineId ? { _voltaBitisBarlineId: bitisBarlineId } : {}),
+    };
+
+    setMuzikOgeleri((onceki) => {
+      if (insertAfterId === null && basIdx < 0) {
+        // basOlcu = 1 → anahtar öğesinden hemen sonraya ekle
+        const garantiListe = onceAnahtarGarantiEt(onceki);
+        const anahtarSonIdx = garantiListe.findIndex((item) => item.tip !== 'anahtar');
+        if (anahtarSonIdx <= 0) return [yeniOge, ...garantiListe];
+        const sonuc = [...garantiListe];
+        sonuc.splice(anahtarSonIdx, 0, yeniOge);
+        return sonuc;
+      }
+      if (!insertAfterId) return [...onceki, yeniOge];
+      const idx = onceki.findIndex((item) => item.id === insertAfterId);
+      if (idx < 0) return [...onceki, yeniOge];
+      const sonuc = [...onceki];
+      sonuc.splice(idx + 1, 0, yeniOge);
+      return sonuc;
+    });
+
+    editorDegisti();
+  };
+
+  /**
+   * Volta marker'ını sil. Eğer silinen volta1 ise, ondan sonra gelen ilk volta2
+   * de "bağlı dolap" sayılır ve birlikte silinir.
+   */
+  const voltaSil = (voltaOgeId) => {
+    if (!voltaOgeId) return;
+    setMuzikOgeleri((onceki) => {
+      const idx = onceki.findIndex((oge) => oge.id === voltaOgeId);
+      if (idx < 0) return onceki;
+
+      const silinecek = onceki[idx];
+      const sonuc = [...onceki];
+      sonuc.splice(idx, 1);
+
+      // Volta1 silinirse, sonrasındaki ilk volta2 da silinsin (bağlı dolap)
+      if (silinecek.tip === 'volta1') {
+        // splice sonrası idx hala doğru — sonraki volta2'yi ara
+        for (let i = idx; i < sonuc.length; i += 1) {
+          if (sonuc[i]?.tip === 'volta2') {
+            sonuc.splice(i, 1);
+            break;
+          }
+        }
+      }
+
+      return sonuc;
+    });
+    editorDegisti();
+  };
+
+  /**
+   * Mevcut bir volta'nın başlangıç/bitiş ölçüsünü değiştir.
+   * Eski volta (ve volta1 ise bağlı volta2) silinir, aynı tipte yeni volta
+   * eklenir — hepsi tek setMuzikOgeleri call'unda olur (state senkron).
+   */
+  const voltaGuncelle = (voltaOgeId, { basOlcuNo, bitisOlcuNo }) => {
+    if (!voltaOgeId) return;
+
+    setMuzikOgeleri((onceki) => {
+      const idx = onceki.findIndex((oge) => oge.id === voltaOgeId);
+      if (idx < 0) return onceki;
+      const tip = onceki[idx].tip;
+
+      // 1) Eski volta'yı kaldır, volta1 ise sonraki volta2'yi de kaldır
+      const temiz = [...onceki];
+      temiz.splice(idx, 1);
+      if (tip === 'volta1') {
+        for (let i = idx; i < temiz.length; i += 1) {
+          if (temiz[i]?.tip === 'volta2') {
+            temiz.splice(i, 1);
+            break;
+          }
+        }
+      }
+
+      // 2) Yeni konumlardan insertAfterId & bitisBarlineId hesapla
+      //    voltaMeasureEkle ile aynı kural: auto-completed listede ölçüler
+      //    bulunur, ancak insertAfterId/bitisBarlineId MUTLAKA `temiz`'te
+      //    var olan gerçek bir öğe olmalı — aksi halde splice hatalı yere düşer.
+      const temizTamamlanmis = muzikOgeleriOlcuTamamla({
+        muzikOgeleri: temiz,
+        muzikHeader,
+        muzikSusSkorOgesi,
+        sureGostergeleri: MUZIK_SURE_GOSTERGELERI,
+      });
+      const olculer = muzikOlcuyeBol(temizTamamlanmis, muzikHeader);
+      const basIdx   = Number(basOlcuNo)  - 2;
+      const bitisIdx = Number(bitisOlcuNo) - 1;
+
+      // Gerçek (muzikOgeleri'de var olan) son öğe ID'sini al — auto-barline'ları
+      // atla. Auto-barline temiz'te yoktur, splice -1 döner.
+      const temizIdSet = new Set(temiz.map((it) => it.id));
+      const sonGercekId = (items) => {
+        for (let i = items.length - 1; i >= 0; i -= 1) {
+          const it = items[i];
+          if (it?.id && temizIdSet.has(it.id)) return it.id;
+        }
+        return null;
+      };
+
+      let insertAfterId = null;
+      if (basIdx >= 0 && olculer[basIdx]) {
+        insertAfterId = sonGercekId(olculer[basIdx].items || []);
+      }
+      let bitisBarlineId = null;
+      if (bitisIdx >= 0 && olculer[bitisIdx]) {
+        bitisBarlineId = sonGercekId(olculer[bitisIdx].items || []);
+      }
+
+      const voltaHucreler = tip === 'volta1'
+        ? [[3, 4, 5, 6], [2]]
+        : [[3, 4, 5, 6], [2, 3]];
+
+      const yeniOge = {
+        id: yeniId(),
+        tip,
+        ad: tip === 'volta1' ? '1. ev' : '2. ev',
+        gorunum: tip === 'volta1' ? '1.' : '2.',
+        hucreler: voltaHucreler,
+        auto: false,
+        autoBarline: false,
+        otomatikOlcuCizgisi: false,
+        _voltaBasOlcu: Number(basOlcuNo),
+        _voltaBitisOlcu: Number(bitisOlcuNo) || Number(basOlcuNo),
+        ...(bitisBarlineId ? { _voltaBitisBarlineId: bitisBarlineId } : {}),
+      };
+
+      // 3) Doğru pozisyona ekle
+      if (insertAfterId === null && basIdx < 0) {
+        // bas = 1 → anahtar/header'dan hemen sonra
+        const garantiListe = onceAnahtarGarantiEt(temiz);
+        const anahtarSonIdx = garantiListe.findIndex((item) => item.tip !== 'anahtar');
+        if (anahtarSonIdx <= 0) return [yeniOge, ...garantiListe];
+        const sonuc = [...garantiListe];
+        sonuc.splice(anahtarSonIdx, 0, yeniOge);
+        return sonuc;
+      }
+      if (!insertAfterId) return [...temiz, yeniOge];
+      const insertIdx = temiz.findIndex((item) => item.id === insertAfterId);
+      if (insertIdx < 0) return [...temiz, yeniOge];
+      const sonuc = [...temiz];
+      sonuc.splice(insertIdx + 1, 0, yeniOge);
+      return sonuc;
+    });
+
+    editorDegisti();
+  };
+
+  // Braille kısaltma tekrar: ses skora kopyalar (görsel), BRF'e sadece kısaltma yazar
+  const brailleReferansEkle = (oge) => {
+    const olculer = muzikOlcuyeBol(muzikOgeleriOlcuTamamlanmis, muzikHeader);
+    let kaynaklarOlcuListesi = [];
+
+    if (oge._repeatN !== undefined) {
+      // Son gerçek (brailleShorthand olmayan) ölçüyü _repeatN kez kopyala
+      let prevOlcu = null;
+      for (let i = olculer.length - 1; i >= 0; i--) {
+        if (olculer[i].items?.[0]?.tip !== 'brailleShorthand') { prevOlcu = olculer[i]; break; }
+      }
+      if (!prevOlcu) { isaretEkle({ ...oge, tip: 'isaret' }); return; }
+      for (let i = 0; i < oge._repeatN; i++) kaynaklarOlcuListesi.push(prevOlcu);
+    } else if (oge._refStart !== undefined) {
+      // Ölçü numarası / aralığı tekrarı (1-tabanlı)
+      const start = oge._refStart - 1;
+      const end = oge._refEnd !== undefined ? oge._refEnd - 1 : start;
+      for (let i = start; i <= end; i++) {
+        if (olculer[i]) kaynaklarOlcuListesi.push(olculer[i]);
+      }
+    } else if (oge._countBack !== undefined) {
+      // Geri sayım tekrarı: _countBack ölçü geri git, _playBars kadar çal
+      const playBars = oge._playBars !== undefined ? oge._playBars : oge._countBack;
+      const sourceIdx = olculer.length - oge._countBack;
+      for (let i = 0; i < playBars; i++) {
+        if (olculer[sourceIdx + i]) kaynaklarOlcuListesi.push(olculer[sourceIdx + i]);
+      }
+    }
+
+    if (kaynaklarOlcuListesi.length === 0) {
+      isaretEkle({ ...oge, tip: 'isaret' });
+      return;
+    }
+
+    const yeniOgeler = [];
+    const repeatNMod = oge._repeatN !== undefined;
+    for (let copyIdx = 0; copyIdx < kaynaklarOlcuListesi.length; copyIdx++) {
+      const kaynakOlcu = kaynaklarOlcuListesi[copyIdx];
+      // repeat×N: sadece ilk kopyada braille hücresi yazılır; devamı BRF'de görünmez
+      const yazilacakHucreler = repeatNMod && copyIdx > 0 ? [] : oge.hucreler;
+      // Braille kısaltma işaretçisi (BRF motoru için)
+      yeniOgeler.push({
+        id: yeniId(),
+        tip: 'brailleShorthand',
+        hucreler: yazilacakHucreler,
+        ad: oge.ad || 'Braille kısaltma',
+        gorunum: oge.sembol || oge.gorunum || '♻',
+        _measureCount: 1,
+        _repeatContinuation: repeatNMod && copyIdx > 0,
+      });
+      // Kaynak ölçü öğelerini _repeatCopy bayrağıyla klonla (görselde göstermek için)
+      for (const item of (kaynakOlcu.items || [])) {
+        const t = item.tip || '';
+        if (
+          t === 'anahtar' || t === 'barline' || t === 'finalBarline' ||
+          t === 'beginRepeat' || t === 'endRepeat' || t === 'brailleShorthand' ||
+          item.autoBarline || item.otomatikOlcuCizgisi
+        ) continue;
+        yeniOgeler.push({ ...item, id: yeniId(), _repeatCopy: true, _sourceId: item.id });
+      }
+      // Barline eklemeye gerek yok — muzikOgeleriOlcuTamamla otomatik ekler
+    }
+
+    setMuzikOgeleri((onceki) => [...onceAnahtarGarantiEt(onceki), ...yeniOgeler]);
+    editorDegisti();
+  };
+
   const bagBaslat = (kayit) => {
     const bagTipi = kayit?.tip || kayit?.kayit?.tip || kayit?.id || 'slur';
     const isTie = bagTipi === 'tie' || /^(tie|bağ)\b/i.test(String(kayit?.ad || ''));
@@ -471,8 +836,8 @@ export function useMuzikBrfEditor() {
     setAktifKategori(null);
   };
 
-  const modifierBaslat = (kayit, yon) => {
-    setBekleyenModifier({ kayit, yon });
+  const modifierBaslat = (kayit, yon, plasiyasyon = null) => {
+    setBekleyenModifier({ kayit, yon, plasiyasyon });
     setAktifKategori(null);
   };
 
@@ -490,12 +855,46 @@ export function useMuzikBrfEditor() {
       });
     }
 
-    const k = { ...oge, tip: 'isaret', gorunum: oge.sembol || oge.ad };
-    if (toolId === 'dinamikler') return modifierBaslat(k, 'oncesi');
-    if (toolId === 'suslemeler') return modifierBaslat(k, 'oncesi');
+    const k = { ...oge, tip: 'isaret', gorunum: nuansSmuflGlyph(oge?.ad || '') || oge.sembol || oge.ad };
+    // gorselTip, BRF export sıralama fonksiyonlarının (muzikModifierOncesiSira vb.) kullandığı alan.
+    if (toolId === 'dinamikler') return modifierBaslat({ ...k, gorselTip: 'dinamik' }, 'oncesi');
+    // Nüans işaretleri: nota öncesi (staccato, accent, tenuto vb.) ve sonrası (fermata, nefes, caesura).
+    if (toolId === 'nuans-once')  return modifierBaslat({ ...k, kategori: 'nuans', gorselTip: 'nuans' }, 'oncesi');
+    if (toolId === 'nuans-sonra') {
+      const adLower = String(oge?.ad || '').toLowerCase();
+      const temelK = { ...k, kategori: 'nuans', gorselTip: 'nuans' };
+      // "notalar arası fermata" → iki nota arasına standalone isaret
+      if (/notalar arası fermata/.test(adLower)) return modifierBaslat(temelK, 'sonrasi', 'nota-arasi');
+      // "ölçü çizgisi üstü fermata" → barline'ın kendi modifier'ı olarak eklenir (ayrı element değil)
+      if (/ölçü çizgisi üstü fermata/.test(adLower)) return modifierBaslat(temelK, 'sonrasi', 'olcu-cizgisi');
+      // "nefes işareti" ve "caesura" → iki nota arasına standalone isaret
+      if (/nefes işareti|caesura/.test(adLower)) return modifierBaslat(temelK, 'sonrasi', 'nota-arasi');
+      // Diğerleri (fermata, kare, üçgen) → nota sonrası modifier
+      return modifierBaslat(temelK, 'sonrasi');
+    }
+    // Süslemeler her zaman modifier hücresi olarak eklenir; adı "bemol"/"diyez"
+    // ile başlasa bile (bemollü/diyezli trill) notanın aksidentali yapılmamalı.
+    if (toolId === 'suslemeler') return modifierBaslat({ ...k, kategori: 'susleme', gorselTip: 'susleme' }, 'oncesi');
     if (toolId === 'duzensiz-gruplar') return tupletBaslat(k);
-    if (toolId === 'tekrar') return isaretEkle(k);
-    if (toolId === 'sus') return isaretEkle({ ...oge, tip: 'sus' });
+    if (toolId === 'tekrar') {
+      if (oge._repeatN !== undefined || oge._refStart !== undefined || oge._countBack !== undefined) {
+        return brailleReferansEkle(oge);
+      }
+      return isaretEkle(k);
+    }
+    if (toolId === 'sus') {
+      // Yeni yol: sureIndeksi açıkça verilmişse muzikSusSkorOgesi ile ekle
+      if (Number.isInteger(oge?.sureIndeksi)) {
+        const susOge = muzikSusSkorOgesi(yeniId(), oge.sureIndeksi, { dotted: !!oge.dotted });
+        setMuzikOgeleri((onceki) => [...onceAnahtarGarantiEt(onceki), susOge]);
+        setSeciliOgeId(susOge.id);
+        setSonEklenenOgeId(susOge.id);
+        editorDegisti();
+        return;
+      }
+      // Eski yol: MUZIK_ESLAR kayıt nesnesi (geriye dönük uyumluluk)
+      return isaretEkle({ ...oge, tip: 'sus' });
+    }
     return isaretEkle(k);
   };
 
@@ -518,7 +917,10 @@ export function useMuzikBrfEditor() {
     if (!bekleyenModifier) return;
     const { kayit, yon } = bekleyenModifier;
     const adLower = String(kayit.ad || '').toLowerCase();
-    const oktavMatch = /(\d+)\s*\.\s*oktav/i.exec(adLower);
+    // Süslemeler (ör. "bemollü trill", "diyezli trill") aksidental/oktav
+    // kısayollarına TAKILMADAN, kendi hücreleriyle modifier olarak eklenir.
+    const suslemeMi = kayit.kategori === 'susleme';
+    const oktavMatch = !suslemeMi && /(\d+)\s*\.\s*oktav/i.exec(adLower);
     if (oktavMatch) {
       const o = Math.min(7, Math.max(1, parseInt(oktavMatch[1], 10)));
       setMuzikOgeleri((onceki) => onceki.map((og) => og.id === notaOgesi.id ? { ...og, oktav: o } : og));
@@ -527,11 +929,13 @@ export function useMuzikBrfEditor() {
       return;
     }
     let accId = null;
-    if (/^çift\s*diyez/.test(adLower)) accId = 'doubleSharp';
-    else if (/^çift\s*bemol/.test(adLower)) accId = 'doubleFlat';
-    else if (/^diyez/.test(adLower)) accId = 'sharp';
-    else if (/^bemol/.test(adLower)) accId = 'flat';
-    else if (/^naturel|^bekar/.test(adLower)) accId = 'natural';
+    if (!suslemeMi) {
+      if (/^çift\s*diyez/.test(adLower)) accId = 'doubleSharp';
+      else if (/^çift\s*bemol/.test(adLower)) accId = 'doubleFlat';
+      else if (/^diyez/.test(adLower)) accId = 'sharp';
+      else if (/^bemol/.test(adLower)) accId = 'flat';
+      else if (/^naturel|^bekar/.test(adLower)) accId = 'natural';
+    }
     if (accId) {
       setMuzikOgeleri((onceki) => onceki.map((og) => og.id === notaOgesi.id ? { ...og, accidental: accId } : og));
       setBekleyenModifier(null);
@@ -820,14 +1224,55 @@ export function useMuzikBrfEditor() {
     setBekleyenTuplet({ ...bekleyenTuplet, notaIdler: [...ids, notaId] });
   };
 
-  const barlineTiklandi = (oge, event, yerlesim = null) => {
+  const tupletSil = (tupletId) => {
+    if (!tupletId) return;
+    setMuzikTupletler((onceki) => onceki.filter((t) => t.id !== tupletId));
+    editorDegisti();
+  };
+
+  /**
+   * @param {object} oge  - Tıklanan öğe (barline veya sentetik barline ref)
+   * @param {Event}  event
+   * @param {object} [yerlesim]
+   * @param {object} [ekstra]  - { inlineDeleteId?, inlineType?, insertAfterId? }
+   *   inline change item için: inlineDeleteId = o item'in ID'si, inlineType = 'timeSignatureChange' | 'keySignatureChange'
+   */
+  const barlineTiklandi = (oge, event, yerlesim = null, ekstra = {}) => {
     event?.stopPropagation?.();
     if (event?.preventDefault) event.preventDefault();
     if (!oge?.id) return;
 
+    // Ölçü çizgisi üstü fermata → barline'ın kendi modifiers dizisine ekle (ayrı element yok)
+    if (bekleyenModifier?.plasiyasyon === 'olcu-cizgisi') {
+      const kayit = bekleyenModifier.kayit;
+      const yeniModId = `olcu-mod-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const yeniMod = { id: yeniModId, kayit };
+      setMuzikOgeleri((prev) => {
+        // Gerçek barline ID'sini bul
+        let hedefId = oge.id;
+        const gercekSet = new Set(prev.map((o) => o.id));
+        if (!gercekSet.has(hedefId)) {
+          const tamIdx = (muzikOgeleriOlcuTamamlanmis || []).findIndex((o) => o.id === hedefId);
+          if (tamIdx >= 0) {
+            for (let i = tamIdx; i >= 0; i -= 1) {
+              if (gercekSet.has(muzikOgeleriOlcuTamamlanmis[i]?.id)) {
+                hedefId = muzikOgeleriOlcuTamamlanmis[i].id; break;
+              }
+            }
+          }
+        }
+        return prev.map((o) => {
+          if (o.id !== hedefId) return o;
+          const mevcut = Array.isArray(o.modifiers) ? o.modifiers : [];
+          return { ...o, modifiers: [...mevcut, yeniMod] };
+        });
+      });
+      setBekleyenModifier(null); editorDegisti(); return;
+    }
+
     const gercekIdSet = new Set((muzikOgeleri || []).map((item) => item.id));
 
-    let insertAfterId = gercekIdSet.has(oge.id) ? oge.id : null;
+    let insertAfterId = ekstra?.insertAfterId || (gercekIdSet.has(oge.id) ? oge.id : null);
 
     if (!insertAfterId) {
       const tamamlanmisIndex = (muzikOgeleriOlcuTamamlanmis || [])
@@ -854,6 +1299,9 @@ export function useMuzikBrfEditor() {
       measureIndex: yerlesim?.measureIndex ?? null,
       x: event?.clientX || 120,
       y: event?.clientY || 120,
+      // Sadece inline change item silinmek istenirse kendi ID'si buraya gelir
+      inlineDeleteId: ekstra?.inlineDeleteId || null,
+      inlineType: ekstra?.inlineType || null,
     });
 
     setSeciliOgeId(null);
@@ -1390,7 +1838,30 @@ export function useMuzikBrfEditor() {
     const editId = ogeEditorIdAl(oge);
     const idToSelect = editId || oge.id;
 
-    if (bekleyenModifier && oge.tip === 'nota') { modifierUygula({ ...oge, id: idToSelect }); return; }
+    if (bekleyenModifier && oge.tip === 'nota') {
+      if (bekleyenModifier.plasiyasyon === 'nota-arasi') {
+        // İki nota ARASINA: bu notanın hemen ardına standalone isaret ekle
+        const kayit = bekleyenModifier.kayit;
+        const yeniId = `arasi-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const yeniIsaret = {
+          id: yeniId, tip: 'isaret',
+          ad: kayit.ad, gorunum: nuansSmuflGlyph(kayit.ad) || kayit.sembol || kayit.gorunum || kayit.ad,
+          hucreler: Array.isArray(kayit.hucreler) ? kayit.hucreler : [],
+          kategori: 'nuans', gorselTip: 'nuans', plasiyasyon: 'nota-arasi',
+        };
+        setMuzikOgeleri((prev) => {
+          const idx = prev.findIndex((o) => o.id === idToSelect);
+          if (idx < 0) return [...prev, yeniIsaret];
+          return [...prev.slice(0, idx + 1), yeniIsaret, ...prev.slice(idx + 1)];
+        });
+        setBekleyenModifier(null); editorDegisti(); return;
+      }
+      if (bekleyenModifier.plasiyasyon === 'olcu-cizgisi') {
+        // Ölçü çizgisi modundayken nota tıklanırsa ipucu göster — barline gerekiyor
+        return;
+      }
+      modifierUygula({ ...oge, id: idToSelect }); return;
+    }
     if (bekleyenBag && oge.tip === 'nota') { bagTamamla(idToSelect); return; }
     if (bekleyenTuplet && oge.tip === 'nota') { tupletEkle(idToSelect); return; }
 
@@ -1470,6 +1941,42 @@ export function useMuzikBrfEditor() {
     editorDegisti();
   };
 
+  /** Seçili notanın belirtilen modifier'ını (dinamik, süsleme) siler. */
+  const seciliNotaModifierSil = (modId, yon = 'oncesi', explicitOgeId = null) => {
+    const hedefId = explicitOgeId || seciliEditorOgeId || seciliOgeId;
+    if (!hedefId || !modId) return;
+    setMuzikOgeleri((onceki) => onceki.map((og) => {
+      if (og.id !== hedefId || !og.modifiers) return og;
+      const mevcut = Array.isArray(og.modifiers[yon]) ? og.modifiers[yon] : [];
+      return {
+        ...og,
+        modifiers: {
+          ...og.modifiers,
+          [yon]: mevcut.filter((m) => m.id !== modId),
+        },
+      };
+    }));
+    editorDegisti();
+  };
+
+  /** Seçili notanın belirtilen modifier'ını yeni bir kayıtla değiştirir (süsleme değiştirme). */
+  const seciliNotaModifierGuncelle = (modId, yeniKayit, yon = 'oncesi', explicitOgeId = null) => {
+    const hedefId = explicitOgeId || seciliEditorOgeId || seciliOgeId;
+    if (!hedefId || !modId || !yeniKayit) return;
+    setMuzikOgeleri((onceki) => onceki.map((og) => {
+      if (og.id !== hedefId || !og.modifiers) return og;
+      const mevcut = Array.isArray(og.modifiers[yon]) ? og.modifiers[yon] : [];
+      return {
+        ...og,
+        modifiers: {
+          ...og.modifiers,
+          [yon]: mevcut.map((m) => (m.id === modId ? { ...m, kayit: yeniKayit } : m)),
+        },
+      };
+    }));
+    editorDegisti();
+  };
+
   const seciliOgeyiSil = () => {
     const hedefId = seciliEditorOgeId || seciliOgeId;
     if (!hedefId) return;
@@ -1481,6 +1988,19 @@ export function useMuzikBrfEditor() {
     )));
     setSeciliOgeId(null);
     setPopupAcik(false);
+    editorDegisti();
+  };
+
+  /**
+   * Seçili slur/tie bağını siler.
+   * @param {string|string[]} bagIds - Silinecek bağ ID'leri (merged slur için birden fazla olabilir)
+   */
+  const seciliBagiSil = (bagIds) => {
+    if (!bagIds) return;
+    const silSet = new Set(Array.isArray(bagIds) ? bagIds : [bagIds]);
+    if (!silSet.size) return;
+    setMuzikBaglar((onceki) => onceki.filter((b) => !silSet.has(b.id)));
+    setSeciliBagId(null);
     editorDegisti();
   };
 
@@ -1727,6 +2247,14 @@ export function useMuzikBrfEditor() {
           oktav: guvenliOktavAl(item.oktav, varsayilanGuvenliOktavAl()),
           accidental: item.accidental || null,
           dotted: Boolean(item.dotted),
+          // Süsleme / nüans / dinamik / hairpin gibi notaya bağlı modifier'lar
+          // reader tarafından item.modifiers içinde gelir; eksiksiz çizim için koru.
+          modifiers: (item.modifiers && typeof item.modifiers === 'object')
+            ? {
+                oncesi: Array.isArray(item.modifiers.oncesi) ? item.modifiers.oncesi : [],
+                sonrasi: Array.isArray(item.modifiers.sonrasi) ? item.modifiers.sonrasi : [],
+              }
+            : { oncesi: [], sonrasi: [] },
         }),
         importKaynak: 'brf-reader',
         kaynakReaderItem: item,
@@ -1760,20 +2288,83 @@ export function useMuzikBrfEditor() {
       return brfReaderBarlineOgesiOlustur(item, index);
     }
 
+    if (item?.tip === 'volta1' || item?.tip === 'volta2') {
+      const voltaTip = item.tip;
+      return {
+        id: item.id || `brf-reader-${voltaTip}-${index}`,
+        tip: voltaTip,
+        ad: item.ad || (voltaTip === 'volta1' ? '1. ev' : '2. ev'),
+        gorunum: item.gorunum || (voltaTip === 'volta1' ? '1.' : '2.'),
+        hucreler: Array.isArray(item.hucreler) && item.hucreler.length
+          ? item.hucreler
+          : (voltaTip === 'volta1' ? [[3, 4, 5, 6], [2]] : [[3, 4, 5, 6], [2, 3]]),
+        editorId: item.editorId || item.sourceId || item.ogeId || item.kaynakOgeId || item.meta?.ogeId || null,
+        sourceId: item.sourceId || item.editorId || item.ogeId || item.kaynakOgeId || item.meta?.ogeId || null,
+        kaynakOgeId: item.kaynakOgeId || item.ogeId || item.editorId || item.sourceId || item.meta?.ogeId || null,
+        kind: 'manual',
+        auto: false,
+        autoBarline: false,
+        otomatikOlcuCizgisi: false,
+        importKaynak: 'brf-reader',
+        kaynakReaderItem: item,
+      };
+    }
+
     return null;
   };
 
   const brfReaderSonucundanSkorOgeleriAl = (readerResult) => {
     const measures = Array.isArray(readerResult?.measures) ? readerResult.measures : [];
     const ogeler = [];
+    const BARLINE_TIPLERI = ['barline', 'finalBarline', 'sectionalBarline', 'beginRepeat', 'endRepeat'];
+
+    // Volta kapsamı ve ölçü-tekrarı genişletmesi için ölçü bazlı iz bilgisi:
+    const olcuKapanisBarlineId = [];          // measureIndex -> kapanış barline öğe id
+    const voltaKayitlari = [];                 // { oge, measureIndex }
+    let oncekiOlcuIcerik = [];                 // bir önceki ölçünün nota/sus öğeleri (kopya kaynağı)
 
     measures.forEach((measure, measureIndex) => {
       const measureItems = Array.isArray(measure?.items) ? measure.items : [];
+      const olcuTekrariMi = measureItems.some((it) => it?.tip === 'brailleRepeat');
+      let sonBarlineOge = null;
+      let buOlcuIcerik = [];
 
-      measureItems.forEach((item) => {
-        const oge = brfReaderIteminiSkorOgesineCevir(item, ogeler.length);
-        if (oge) ogeler.push(oge);
-      });
+      if (olcuTekrariMi && oncekiOlcuIcerik.length) {
+        // Braille ölçü tekrarı (⠶): önceki ölçünün nota/sus öğelerini kopyalayarak
+        // skoru eksiksiz göster. (Export tarafı özdeş ölçüleri tekrar ⠶'ya çevirir.)
+        oncekiOlcuIcerik.forEach((kaynak) => {
+          const klon = {
+            ...kaynak,
+            id: `${kaynak.id}-rpt-${measureIndex}`,
+            modifiers: kaynak.modifiers
+              ? {
+                  oncesi: Array.isArray(kaynak.modifiers.oncesi) ? [...kaynak.modifiers.oncesi] : [],
+                  sonrasi: Array.isArray(kaynak.modifiers.sonrasi) ? [...kaynak.modifiers.sonrasi] : [],
+                }
+              : undefined,
+            _repeatCopy: true,
+            _sourceId: kaynak.id,
+            importKaynak: 'brf-reader',
+          };
+          ogeler.push(klon);
+          buOlcuIcerik.push(klon);
+        });
+      } else {
+        measureItems.forEach((item) => {
+          const oge = brfReaderIteminiSkorOgesineCevir(item, ogeler.length);
+          if (!oge) return;
+          ogeler.push(oge);
+          if (oge.tip === 'volta1' || oge.tip === 'volta2') {
+            voltaKayitlari.push({ oge, measureIndex });
+          }
+          if (oge.tip === 'nota' || oge.tip === 'sus') {
+            buOlcuIcerik.push(oge);
+          }
+          if (BARLINE_TIPLERI.includes(oge.tip)) {
+            sonBarlineOge = oge;
+          }
+        });
+      }
 
       if (measureIndex < measures.length - 1) {
         const son = ogeler[ogeler.length - 1];
@@ -1783,13 +2374,47 @@ export function useMuzikBrfEditor() {
         const nextMeasureBeginsWithRepeat = nextMeasureFirstOge?.tip === 'beginRepeat';
 
         if (
-          !['barline', 'finalBarline', 'sectionalBarline', 'beginRepeat', 'endRepeat'].includes(son?.tip)
+          !BARLINE_TIPLERI.includes(son?.tip)
           && !nextMeasureBeginsWithRepeat
         ) {
-          ogeler.push(brfReaderBarlineOgesiOlustur({ tip: 'barline' }, ogeler.length));
+          const barlineOge = brfReaderBarlineOgesiOlustur({ tip: 'barline' }, ogeler.length);
+          ogeler.push(barlineOge);
+          sonBarlineOge = barlineOge;
         }
       }
+
+      olcuKapanisBarlineId[measureIndex] = sonBarlineOge?.id || null;
+      // Sonraki ölçü-tekrarı için içerik referansını güncelle (boş ölçüde koru).
+      if (buOlcuIcerik.length) oncekiOlcuIcerik = buOlcuIcerik;
     });
+
+    // ── Volta kapsamı (braille'de bitiş verilmez; kuraldan türetilir) ──────────
+    // 1. ev: 2. ev'in başladığı yere kadar uzar → bitişi, 2. ev'den hemen önceki
+    //   ölçünün kapanış çizgisi.
+    // 2. ev: kendisinden önceki 1. ev kaç ölçü kapsıyorsa o kadar ölçü kapsar.
+    for (let k = 0; k < voltaKayitlari.length; k++) {
+      const cur = voltaKayitlari[k];
+      if (cur.oge.tip === 'volta1') {
+        const next = voltaKayitlari[k + 1];
+        if (next && next.oge.tip === 'volta2') {
+          const span = next.measureIndex - cur.measureIndex; // kapsanan ölçü sayısı
+          cur.oge._voltaOlcuSayisi = span;
+          const bitisOlcu = next.measureIndex - 1;
+          const bid = olcuKapanisBarlineId[bitisOlcu];
+          if (bid) cur.oge._voltaBitisBarlineId = bid;
+        }
+      } else if (cur.oge.tip === 'volta2') {
+        const prev = voltaKayitlari[k - 1];
+        const span = (prev && prev.oge.tip === 'volta1' && prev.oge._voltaOlcuSayisi)
+          ? prev.oge._voltaOlcuSayisi
+          : 1;
+        const bitisOlcu = cur.measureIndex + span - 1;
+        // Son ölçüye taşarsa kapanış çizgisi olmayabilir → SVG yedek yolu satır
+        // sonuna kadar uzatır; o yüzden yalnızca geçerli bir çizgi varsa bağla.
+        const bid = olcuKapanisBarlineId[bitisOlcu];
+        if (bid) cur.oge._voltaBitisBarlineId = bid;
+      }
+    }
 
     if (ogeler.length === 0) {
       (readerResult?.items || []).forEach((item) => {
@@ -1888,9 +2513,11 @@ export function useMuzikBrfEditor() {
     )) || null;
   }, [seciliOgeId, seciliEditorOgeId, muzikOgeleri, gorselOgeler]);
 
-  const gorselBaglar = canonicalReaderSkorBaglar.length > 0
-    ? canonicalReaderSkorBaglar
-    : muzikBaglar;
+  // gorselBaglar her zaman muzikBaglar'ı kullanmalı.
+  // canonicalReaderSkorBaglar, canonical BRF round-trip'ten gelen yeni reader ID'leri içerir
+  // (örn. brf-tie-1234567890-0) ve bunlar svgCizilecekOgeler'deki editör ID'leriyle eşleşmez.
+  // Bu yüzden svgGlobalIndexBul -1 döndürür ve tüm slur/tie çizimi atlanır.
+  const gorselBaglar = muzikBaglar;
 
   const gorselKaynakReaderMi = canonicalReaderSkorOgeleri.length > 0;
 
@@ -1985,6 +2612,22 @@ export function useMuzikBrfEditor() {
     }));
 
     setMuzikOgeleri((onceki) => onceki.filter((oge) => !otomatikOlcuCizgisiStateOgesiMi(oge)));
+    editorDegisti();
+  };
+
+  // Header donanımını (key signature) değiştir. `donanim` ya DONANIM_LISTESI
+  // öğesi (ad/hucreler/sembol) ya da null (donanımı kaldır) olur.
+  const donanimiDegistir = (donanim) => {
+    setMuzikHeader((h) => ({
+      ...h,
+      keySignature: donanim
+        ? {
+            ad: donanim.ad,
+            gorunum: donanim.sembol || donanim.ad,
+            hucreler: donanim.hucreler,
+          }
+        : null,
+    }));
     editorDegisti();
   };
 
@@ -2165,12 +2808,16 @@ export function useMuzikBrfEditor() {
     tupletBaslat,
     tupletTamamla,
     tupletEkle,
+    tupletSil,
     notaTiklandi,
     seciliOge,
     seciliEditorOgeId,
     seciliNotayiGuncelle,
     seciliOgeyiGuncelle,
     seciliOgeyiSil,
+    seciliNotaModifierSil,
+    seciliNotaModifierGuncelle,
+    seciliBagiSil,
     seciliNotayiSusaCevir,
     seciliSusuNotayaCevir,
     susEkle,
@@ -2180,6 +2827,7 @@ export function useMuzikBrfEditor() {
     includeBarNumbers,
     setIncludeBarNumbers,
     setTimeSignature,
+    donanimiDegistir,
     setMuzikHeader,
     setMuzikOgeleri,
     setMuzikBaglar,
@@ -2191,6 +2839,14 @@ export function useMuzikBrfEditor() {
     barlineMenu,
     setBarlineMenu,
     barlineTiklandi,
+    voltaEkleModu,
+    voltaEkleBaslangicId,
+    voltaEkleModuBaslat,
+    voltaEkleModIptal,
+    voltaBarlineEkle,
+    voltaMeasureEkle,
+    voltaSil,
+    voltaGuncelle,
     inlineTimeSignatureEkle,
     inlineKeySignatureEkle,
     olcuCizgisiniDegistir,

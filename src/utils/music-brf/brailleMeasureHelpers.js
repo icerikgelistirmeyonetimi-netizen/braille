@@ -11,6 +11,7 @@ import {
   brailleNoteLabel,
   brailleNotaEtiketiAl,
   brailleBagKisaEtiketiAl,
+  brailleKisaCellLabelAl,
   getBrailleItemLabel,
   brailleTooltipAl,
   brailleHoverIdAl,
@@ -35,6 +36,7 @@ export {
   brailleNoteLabel,
   brailleNotaEtiketiAl,
   brailleBagKisaEtiketiAl,
+  brailleKisaCellLabelAl,
   getBrailleItemLabel,
   brailleTooltipAl,
   brailleHoverIdAl,
@@ -296,49 +298,14 @@ export function brailleAnlamNotaAdiAl(anlam) {
 }
 
 export function brailleAnlamNotaMi(anlam) {
-  const metin = brailleMetinBirlesikAl(anlam);
+  // Sadece KESİN nota cell'leri "nota" sayılır → legend'den çıkarılır.
+  // Aksidental, nokta, oktav, slur, tie, bag gibi modifier cell'leri ASLA
+  // nota değildir; bunlar legend'de görünmeli.
   const tip = brailleTemizMetin(anlam?.tip).toLocaleLowerCase('tr');
   const kaynak = brailleTemizMetin(anlam?.kaynak).toLocaleLowerCase('tr');
 
-  if (tip === 'nota' || kaynak === 'note' || kaynak === 'note-pitch') {
-    return true;
-  }
-
-  if (
-    metin.includes('anahtar') ||
-    metin.includes('clef') ||
-    metin.includes('donanım') ||
-    metin.includes('donanim') ||
-    metin.includes('key signature') ||
-    metin.includes('tempo') ||
-    metin.includes('başlık') ||
-    metin.includes('baslik') ||
-    metin.includes('besteci') ||
-    metin.includes('composer') ||
-    metin.includes('header')
-  ) {
-    return false;
-  }
-
-  if (metin.includes('oktav') || metin.includes('octave')) {
-    return false;
-  }
-
-  if (
-    metin.includes('ölçü') ||
-    metin.includes('olcu') ||
-    metin.includes('zaman') ||
-    metin.includes('süre') ||
-    metin.includes('sure') ||
-    metin.includes('sus') ||
-    metin.includes('es') ||
-    metin.includes('barline') ||
-    metin.includes('measure')
-  ) {
-    return false;
-  }
-
-  return Boolean(brailleAnlamNotaAdiAl(anlam));
+  // Sadece bu üç durumda nota say
+  return tip === 'nota' || kaynak === 'note' || kaynak === 'note-pitch';
 }
 
 export function brailleAnlamTekrarMi(anlam) {

@@ -8,6 +8,20 @@
   unicode-range: U+0600-U+06FF, U+0750-U+077F, U+FB50-U+FDFF, U+FE70-U+FEFF;
 }
 
+/* Bravura Text — Standart SMuFL müzik fontu (Steinberg Media Technologies).
+   Sol anahtarı, fa anahtarı, do anahtarı, rest, accidental vb. Unicode müzik
+   karakterlerinin doğru rendering'i için kullanılır.
+   Lisans: SIL Open Font License 1.1 — public/fonts/bravura/OFL.txt
+   Yerel olarak ship edilir (CDN bağımlılığı YOK). */
+@font-face {
+  font-family: 'Bravura Text';
+  src: url('/fonts/bravura/BravuraText.woff2') format('woff2'),
+       url('/fonts/bravura/BravuraText.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ============================================================
    İki tema:
      - Varsayılan ("normal"): modern, hafif, beyaz arka plan
@@ -3222,7 +3236,7 @@ h1, h2, h3 { color: var(--fg); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
   font-size: 1.05em;
   font-weight: 400;
   line-height: 1;
@@ -3232,13 +3246,13 @@ h1, h2, h3 { color: var(--fg); }
 .muzik-modifier:hover { opacity: 0.6; }
 .muzik-modifier:hover.muzik-hairpin { stroke: #d97706; }
 .araclar-muzik-palet-sembol {
-  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
 }
 .araclar-muzik-palet-nota .araclar-muzik-palet-sembol {
   font-family: Georgia, 'Times New Roman', serif;
 }
 .araclar-muzik-sure-sembol {
-  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
   font-size: 1.45em;
 }
 .araclar-muzik-kategori-btn.aktif .araclar-muzik-kategori-ikon { color: #111827; }
@@ -3336,8 +3350,25 @@ h1, h2, h3 { color: var(--fg); }
 }
 .muzik-anahtar-grup { cursor: pointer; }
 .muzik-anahtar-grup:hover .muzik-clef { fill: #475569; }
-/* Clef glyph — gözle görülür şekilde büyük tutulur (notalar küçük kalsa da) */
-.muzik-clef { font-size: 78px !important; }
+/* Clef glyph — SMuFL standardı: 1 em = 4 staff space. Porte yüksekliği 48px
+   (4×12) olduğundan font-size 48 ile glyph staff'a tam oturur.
+   Bravura'nın clef baseline'ı OnStaff anchor satırında (G4 = treble, F3 = bass). */
+.muzik-clef { font-size: 48px !important; }
+
+/* Ölçü başı play butonu — düz, tek renk, gölgesiz sade ikon; hover'da belirir */
+.muzik-olcu-play-btn {
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.muzik-olcu-play-btn .muzik-olcu-play-core {
+  transition: fill 140ms ease;
+}
+.muzik-olcu-play-btn:hover .muzik-olcu-play-core {
+  fill: #1d4ed8;
+}
+.muzik-olcu-play-btn:active .muzik-olcu-play-core {
+  fill: #1e40af;
+}
 .muzik-note-head { stroke-width: 1.4 !important; }
 .muzik-octave-clamp-label {
   font-size: 9px;
@@ -3360,6 +3391,14 @@ h1, h2, h3 { color: var(--fg); }
   fill: #111827;
 }
 .muzik-time-sig-glyph { font-size: 34px; }
+/* SMuFL zaman imzası rakamları (timeSig0–9, U+E080–E089). Bravura'da bu
+   glifler ~0.5em yükseklikte tasarlandığından dize başına 2 porte aralığını
+   doldurması için daha büyük font kullanılır. */
+.muzik-time-sig-digit {
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-size: 48px;
+  fill: #111827;
+}
 .muzik-key-sig-glyph {
   font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
   font-size: 20px;
@@ -3373,12 +3412,21 @@ h1, h2, h3 { color: var(--fg); }
 }
 .muzik-ledger { stroke-width: 1; }
 .muzik-skor-ogesi { cursor: pointer; outline: none; }
+/* Standart seçim/hover kutusu — notalar, suslar, header ve ölçü-başı
+   inline öğeleri aynı tasarımı kullanır: hover'da kesikli, seçimde dolu mavi. */
 g:hover .muzik-note-hover-rect,
 .muzik-nota-braille-hover .muzik-note-hover-rect {
-  fill: rgba(59, 130, 246, 0.15);
-  stroke: rgba(59, 130, 246, 0.85);
-  stroke-width: 1.5;
+  fill: rgba(59, 130, 246, 0.10);
+  stroke: #3b82f6;
+  stroke-width: 1.4;
+  stroke-dasharray: 4 3;
   pointer-events: none;
+}
+.muzik-skor-ogesi.secili .muzik-note-hover-rect {
+  fill: rgba(59, 130, 246, 0.18);
+  stroke: #3b82f6;
+  stroke-width: 1.8;
+  stroke-dasharray: none;
 }
 .muzik-note-hover-rect {
   fill: transparent;
@@ -3392,7 +3440,7 @@ g:hover .muzik-note-hover-rect,
   stroke-width: 2;
 }
 .muzik-clef {
-  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Times New Roman', serif;
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', 'Segoe UI Symbol', 'Times New Roman', serif;
   font-size: 52px;
   font-weight: 400;
   fill: #111827;
@@ -3432,7 +3480,7 @@ g:hover .muzik-note-hover-rect,
   stroke-linecap: square;
 }
 .muzik-rest {
-  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', 'Segoe UI Symbol', 'Times New Roman', serif;
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', 'Segoe UI Symbol', 'Times New Roman', serif;
   font-size: 30px;
   font-weight: 400;
   fill: #111827;
@@ -3445,7 +3493,7 @@ g:hover .muzik-note-hover-rect,
 }
 .muzik-time-signature {
   fill: #111827;
-  font-family: 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', Georgia, 'Times New Roman', serif;
   font-size: 23px;
   font-weight: 700;
 }
@@ -3469,13 +3517,13 @@ g:hover .muzik-note-hover-rect,
 }
 .muzik-accidental {
   fill: #111827;
-  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', Georgia, 'Times New Roman', serif;
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', Georgia, 'Times New Roman', serif;
   font-size: 22px;
   font-weight: 400;
 }
 .muzik-dynamic {
   fill: #111827;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Bravura Text', 'Cambria Math', Georgia, 'Times New Roman', serif;
   font-style: italic;
   font-size: 16px;
   font-weight: 700;
@@ -3499,9 +3547,35 @@ g:hover .muzik-note-hover-rect,
   fill: #111827;
   font-weight: 600;
   font-size: 14px;
-  font-family: 'Cambria Math', 'Bravura Text', 'Noto Music', Georgia, serif;
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', Georgia, serif;
 }
-.muzik-ornament { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; font-weight: 700; }
+.muzik-ornament { font-family: 'Bravura Text', 'Cambria Math', Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; font-weight: 700; }
+/* Süslemeler — SMuFL glyph'leri (çizim yerine yüklü müzik fontu). */
+.muzik-ornament-glyph {
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-size: 22px;
+  font-weight: 400;
+  fill: #111827;
+  pointer-events: none;
+  user-select: none;
+}
+/* Nüans / artikülasyon glyph'leri — notahead'e yakın, biraz daha büyük. */
+.muzik-nuans-glyph {
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-size: 30px;
+  font-weight: 400;
+  fill: #111827;
+  pointer-events: none;
+  user-select: none;
+}
+.muzik-grace-note {
+  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-size: 24px;
+  font-weight: 400;
+  fill: #1c1c1c;
+  pointer-events: none;
+  user-select: none;
+}
 .muzik-ottava { font-style: italic; font-size: 11px; }
 .muzik-repeat-dot { fill: #111827; }
 .muzik-ogesi-etiket { display: none; }

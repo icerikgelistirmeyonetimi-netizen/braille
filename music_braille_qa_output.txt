@@ -1,0 +1,11 @@
+﻿Running Braille music QA...
+node : Skipping realValue 128 rest test because SURE_GOSTERGELERI does not cont
+ain 128.
+At line:1 char:1
++ node scripts/music-braille-qa.mjs 2>&1 | Out-File .\music_braille_qa_ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Skipping realVa...ot contain 128. 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+All Braille music QA checks passed.

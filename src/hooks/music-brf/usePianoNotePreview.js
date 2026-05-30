@@ -195,17 +195,29 @@ export function usePianoNotePreview({
       const result = audio.play();
 
       const baslatSonrasi = () => {
-        const effectiveVolume = Number.isFinite(Number(context?.volume))
+        const baseVolume = Number.isFinite(Number(context?.volume))
           ? Math.max(0, Math.min(1, Number(context.volume)))
           : volume;
 
-        fadeIn(audio, effectiveVolume, 18);
+        // İnsanlaştırma: ±4% velocity jitter — daha doğal, robot gibi değil
+        const jitter = 1 + (Math.random() - 0.5) * 0.08;
+        const effectiveVolume = Math.min(1, Math.max(0.02, baseVolume * jitter));
 
-        if (context?.cutOff === true) {
-          const durationMs = Number(context?.durationMs) || sureMsAl(oge.sureIndeksi);
+        // Kısa notalar için orantılı fadeIn (staccatissimo, ornament vb.)
+        const durationMs = context?.cutOff === true
+          ? (Number(context?.durationMs) || sureMsAl(oge.sureIndeksi))
+          : null;
+        const fadeinMs = durationMs !== null
+          ? Math.max(5, Math.min(18, durationMs * 0.25))  // en fazla %25'i fadeIn
+          : 18;
 
+        fadeIn(audio, effectiveVolume, fadeinMs);
+
+        if (context?.cutOff === true && durationMs !== null) {
+          // Kısa notalar: fadeOut süresi de orantılı (durationMs'in %40'ı, max 45ms)
+          const fadeoutMs = Math.max(20, Math.min(45, durationMs * 0.4));
           const timerId = window.setTimeout(() => {
-            fadeOutAndStop(audio, 45);
+            fadeOutAndStop(audio, fadeoutMs);
             activeTimersRef.current.delete(timerId);
           }, durationMs);
 

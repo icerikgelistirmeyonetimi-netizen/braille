@@ -70,6 +70,16 @@ export function muzikOlcuyeBol(ogeler, header = null, tupletNotaIdMap = null) {
     }
 
     if (muzikOlcuAyraciMi(oge)) {
+      // Volta marker'ları (1. ev / 2. ev) kendi başlarına ayrı bir "phantom
+      // ölçü" oluşturmasın — sonraki gerçek ölçünün PREFIX'i olsunlar.
+      // Bu sayede braille hücreleri (⠼⠁ / ⠼⠃) doğru ölçünün başında çıkar,
+      // ayrıca görsel layout'taki volta-prefix yaklaşımıyla tutarlı kalır.
+      if (oge?.tip === 'volta1' || oge?.tip === 'volta2') {
+        aktif.items.push(oge);
+        aktif.indices.push(i);
+        continue;
+      }
+
       aktif.items.push(oge);
       aktif.indices.push(i);
 

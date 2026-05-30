@@ -3,10 +3,10 @@ import {
   NOTALAR as MUZIK_TEMEL_NOTALAR,
   SURE_GOSTERGELERI as MUZIK_SURE_GOSTERGELERI,
 } from '../../data/muzik.js';
-import { SURE_KISA } from '../../utils/music-brf/musicConstants.js';
+import { SURE_KISA, SUS_KISA } from '../../utils/music-brf/musicConstants.js';
 import { muzikSureKisaAdi } from '../../utils/music/index.js';
 
-export default function MuzikNotaEditModal({ popupAcik, seciliOge, seciliEditorOgeId, setPopupAcik, seciliNotayiGuncelle, seciliOgeyiGuncelle, seciliOgeyiSil, seciliNotayiSusaCevir, seciliSusuNotayaCevir, mevcutAnahtar }) {
+export default function MuzikNotaEditModal({ popupAcik, seciliOge, seciliEditorOgeId, setPopupAcik, seciliNotayiGuncelle, seciliOgeyiGuncelle, seciliOgeyiSil, seciliNotayiSusaCevir, seciliSusuNotayaCevir, mevcutAnahtar, seciliNotaModifierSil }) {
   if (!popupAcik || !seciliOge) return null;
 
   const editEnabled = Boolean(seciliEditorOgeId);
@@ -60,7 +60,11 @@ export default function MuzikNotaEditModal({ popupAcik, seciliOge, seciliEditorO
                   onClick={() => guncelle({ sureIndeksi: idx })}
                   disabled={!editEnabled}
                   title={muzikSureKisaAdi(sure)}>
-                  <span className="text-base">{SURE_KISA[idx] || sure.sembol}</span>
+                  <span className="text-base">
+                    {susMu
+                      ? (SUS_KISA[idx] || sure.sembol)
+                      : (SURE_KISA[idx] || sure.sembol)}
+                  </span>
                 </button>
               ))}
             </div>
@@ -114,6 +118,38 @@ export default function MuzikNotaEditModal({ popupAcik, seciliOge, seciliEditorO
                 {seciliOge.dotted ? '· açık' : '· kapalı'}
               </button>
             </div>
+            {notaMi && (() => {
+              const oncesiMods = Array.isArray(seciliOge.modifiers?.oncesi) ? seciliOge.modifiers.oncesi : [];
+              const sonrasiMods = Array.isArray(seciliOge.modifiers?.sonrasi) ? seciliOge.modifiers.sonrasi : [];
+              const tumMods = [
+                ...oncesiMods.map((m) => ({ ...m, yon: 'oncesi' })),
+                ...sonrasiMods.map((m) => ({ ...m, yon: 'sonrasi' })),
+              ];
+              if (tumMods.length === 0) return null;
+              return (
+                <div className="flex flex-col gap-1.5 rounded-md border border-violet-200 bg-violet-50 p-2">
+                  <span className="text-xs font-medium text-violet-800">Bağlı işaretler (dinamik / süsleme)</span>
+                  <div className="flex flex-wrap gap-1">
+                    {tumMods.map((m) => {
+                      const label = m.kayit?.sembol || String(m.kayit?.ad || '').split(' ')[0];
+                      return (
+                        <span key={m.id} className="inline-flex items-center gap-1 rounded-md border border-violet-300 bg-white px-1.5 py-0.5 text-xs font-medium text-violet-900">
+                          <span className="italic">{label}</span>
+                          {editEnabled && (
+                            <button
+                              type="button"
+                              className="ml-0.5 text-rose-500 hover:text-rose-700 font-bold leading-none"
+                              title={`${label} sil`}
+                              onClick={() => seciliNotaModifierSil?.(m.id, m.yon)}
+                            >×</button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
             {notaMi && (
               <div className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 p-2">
                 <span className="text-xs font-medium text-amber-900">Bu notayı susa çevir</span>

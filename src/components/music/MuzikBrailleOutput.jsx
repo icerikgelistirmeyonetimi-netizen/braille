@@ -55,7 +55,7 @@ export default function MuzikBrailleOutput({
   }
 
   return (
-    <div className="w-full flex flex-col gap-3" role="tabpanel" aria-label="Braille çıktısı">
+    <div className="w-full min-w-0 flex flex-col gap-3" role="tabpanel" aria-label="Braille çıktısı">
       <div className="text-sm font-semibold text-slate-700">
         Braille çıktısı — <span className="text-slate-900 font-bold">{hucreler.length}</span> hücre
       </div>
@@ -67,13 +67,15 @@ export default function MuzikBrailleOutput({
       )}
 
       {brfOkunurOzet && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 min-w-0 overflow-hidden">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-800">
             Çözümlenmiş Müzik Okuması
           </div>
-          <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-words text-sm leading-6 text-emerald-950">
-            {brfOkunurOzet}
-          </pre>
+          <div className="overflow-x-auto">
+            <pre className="max-h-[320px] overflow-y-auto whitespace-pre font-mono text-sm leading-6 text-emerald-950">
+              {brfOkunurOzet}
+            </pre>
+          </div>
         </div>
       )}
 
@@ -117,21 +119,23 @@ export default function MuzikBrailleOutput({
       </div>
 
       {brfHamMetin && (
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 min-w-0 overflow-hidden">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600">
             Ham BRF
           </div>
-          <pre
-            className="max-h-[220px] overflow-auto whitespace-pre-wrap break-words font-mono text-base leading-7 text-slate-900"
-            style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
-          >
-            {brfHamMetin}
-          </pre>
+          <div className="overflow-x-auto">
+            <pre
+              className="max-h-[220px] overflow-y-auto whitespace-pre font-mono text-base leading-7 text-slate-900"
+              style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
+            >
+              {brfHamMetin}
+            </pre>
+          </div>
         </div>
       )}
 
       {brfOkumaSonucu && (
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 min-w-0 overflow-hidden">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600">
             BRF Müzik Okuma Tanılama
           </div>
@@ -146,21 +150,25 @@ export default function MuzikBrailleOutput({
               Uyarı: <span className="font-bold text-slate-900">{brfReaderWarnings.length}</span>
             </div>
           </div>
-          <BrfMusicCellDebugTable cells={brfReaderCells} />
+          <div className="overflow-x-auto">
+            <BrfMusicCellDebugTable cells={brfReaderCells} />
+          </div>
         </div>
       )}
 
       {brfExportMetni && !brfHamMetin && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 min-w-0 overflow-hidden">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
             Yeniden üretilen BRF export önizleme — 40 hücre / ölçü bazlı satır
           </div>
-          <pre
-            className="max-h-[260px] overflow-auto whitespace-pre font-mono text-lg leading-7 text-slate-900"
-            style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
-          >
-            {brfExportMetni}
-          </pre>
+          <div className="overflow-x-auto">
+            <pre
+              className="max-h-[260px] overflow-y-auto whitespace-pre font-mono text-lg leading-7 text-slate-900"
+              style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
+            >
+              {brfExportMetni}
+            </pre>
+          </div>
         </div>
       )}
 

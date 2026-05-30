@@ -4,11 +4,16 @@ import {
   SURE_GOSTERGELERI as MUZIK_SURE_GOSTERGELERI,
   MUZIK_BOLUMLER,
   MUZIK_SEMBOLLERI,
+  MUZIK_DINAMIKLER,
+  MUZIK_HAIRPIN,
 } from '../../data/muzik.js';
 import { MUZIK_NOTA_IKON } from '../music/index.js';
 
-// Süre seçici buton metinleri (sekizlik, dörtlük, yarım, tam, 16, 32, 64)
+// Süre seçici buton metinleri — nota sembolleri (sekizlik, dörtlük, yarım, tam, 16, 32, 64)
 export const SURE_KISA = ['♪', '♩', '𝅗𝅥', '𝅝', '𝅘𝅥𝅮', '𝅘𝅥𝅯', '𝅘𝅥𝅰'];
+
+// Sus (rest) sembolleri — SURE_KISA ile aynı index sırası
+export const SUS_KISA = ['𝄾', '𝄽', '𝄼', '𝄻', '𝄿', '𝅀', '𝅁'];
 export const MUZIK_VARSAYILAN_ZAMAN_IMZASI = '4/4';
 
 // Sadece SVG skor görünümü için layout sabitleri.
@@ -188,16 +193,134 @@ export const MUSIC_EDITOR_TOOLBAR = [
   { id: 'sus', icon: '𝄽', label: 'Sus' },
   { id: 'bag-tie', icon: '⌒', label: 'Tie' },
   { id: 'bag-slur', icon: '︵', label: 'Slur' },
+  { id: 'nuans-once', icon: '·', label: 'Nüans (önce)' },
+  { id: 'nuans-sonra', icon: '𝄐', label: 'Nüans (sonra)' },
   { id: 'dinamikler', icon: '𝒇', label: 'Dinamik', italic: true },
   { id: 'expression', icon: 'T', label: 'İfade' },
   { id: 'suslemeler', icon: 'tr', label: 'Süsleme', italic: true },
   { id: 'duzensiz-gruplar', icon: '³', label: 'Tuplet' },
-  { id: 'tekrar', icon: '𝄆', label: 'Tekrar' },
+  { id: 'tekrar', icon: '⠶', label: 'Tekrar kısaltmaları' },
   { id: 'olcu-cizgileri', icon: '𝄂', label: 'Bitiş' },
 ];
 
 export function veriBolumAl(slug) {
   return (MUZIK_BOLUMLER.find((b) => b.slug === slug)?.veri) || [];
+}
+
+// Nüans / artikülasyon → SMuFL (Bravura Text) glyph eşlemesi.
+// Anahtar: verinin 'ad' alanı küçük harfe çevrilmiş hali.
+export const NUANS_SMUFL_GLYPH = {
+  // Nota öncesi (oncesi)
+  'staccato':               '',  // articStaccatoAbove
+  'staccatissimo':          '',  // articStaccatissimoAbove
+  'mezzo-staccato':         '',  // articTenutoStaccatoAbove (portato)
+  'tenuto (agogic accent)': '',  // articTenutoAbove
+  'accent':                 '',  // articAccentAbove
+  'expressive accent':      '',  // articStressAbove
+  'reversed accent':        '',  // articUnstressAbove
+  'martellato':             '',  // articMarcatoAbove
+  'staccato accent':        '',  // articMarcatoStaccatoAbove
+  'swell (<>)':             '',  // articSoftAccentAbove
+  // Nota sonrası (sonrasi)
+  'fermata (durak)':            '',  // fermataAbove
+  'notalar arası fermata':      '',  // fermataAbove
+  'ölçü çizgisi üstü fermata':  '',  // fermataLongAbove
+  'kare fermata':               '',  // fermataAboveSquare
+  'üçgen fermata':              '',  // fermataShortAbove
+  'nefes işareti':              '',  // breathMarkComma
+  'caesura (break / //)':       '',  // caesura
+};
+
+export function nuansSmuflGlyph(ad) {
+  if (!ad) return '';
+  return NUANS_SMUFL_GLYPH[String(ad).toLowerCase().trim()] || '';
+}
+
+// Bir modifier kaydı nüans mı (categoria === 'nuans' ya da NUANS_SMUFL_GLYPH'te var)?
+export function nuansModifierMi(kayit) {
+  if (!kayit || typeof kayit !== 'object') return false;
+  if (kayit.kategori === 'nuans') return true;
+  return Boolean(NUANS_SMUFL_GLYPH[String(kayit.ad || '').toLowerCase().trim()]);
+}
+
+// Süsleme (ornament) → SMuFL (Bravura Text) glyph eşlemesi.
+// Çizim yerine yüklü müzik fontunun glyph'leri kullanılır.
+// Anahtar: süslemenin 'ad' alanı küçük harfe çevrilmiş hali.
+export const SUSLEME_SMUFL_GLYPH = {
+  'kısa appoggiatura': '',        // graceNoteAcciaccaturaStemUp (çizgili)
+  'uzun appoggiatura': '',        // graceNoteAppoggiaturaStemUp
+  trill: '',                      // ornamentTrill
+  'bemollü trill': '',      // trill + bemol
+  'diyezli trill': '',      // trill + diyez
+  'turn (notalar arası)': '',     // ornamentTurn
+  'turn (nota üstünde)': '',
+  'ters turn (notalar arası)': '', // ornamentTurnInverted
+  'ters turn (nota üstünde)': '',
+  'üst mordent': '',              // ornamentShortTrill (üst mordent)
+  'uzun üst mordent': '',         // ornamentTremblement
+  'alt mordent': '',              // ornamentMordent (alt mordent)
+  'uzun alt mordent': '',
+};
+
+// Süsleme adından SMuFL glyph'i döndürür (yoksa boş string).
+export function suslemeSmuflGlyph(ad) {
+  if (!ad) return '';
+  return SUSLEME_SMUFL_GLYPH[String(ad).toLowerCase().trim()] || '';
+}
+
+// Appoggiatura/acciaccatura grace notası mı?
+export function suslemeGraceMi(ad) {
+  return /appoggiatura|acciaccatura/i.test(String(ad || ''));
+}
+
+// ─── Dinamikler (SMuFL) ──────────────────────────────────────────────────────
+// Dinamik tek-harf → SMuFL (Bravura) dinamik glyph eşlemesi.
+// Çizim/italik metin yerine yüklü müzik fontunun dinamik glyph'leri kullanılır.
+export const DINAMIK_SMUFL_HARF = {
+  p: '', // dynamicPiano
+  m: '', // dynamicMezzo
+  f: '', // dynamicForte
+  r: '', // dynamicRinforzando
+  s: '', // dynamicSforzando
+  z: '', // dynamicZ
+  n: '', // dynamicNiente
+};
+
+// Dinamik sembolünü (pp, mf, sf, ff...) SMuFL glyph dizisine çevirir.
+// Yalnızca harfleri p/m/f/r/s/z/n olan kısaltmalar glyph'e dönüşür;
+// cresc./dim./rit. gibi sözcük temelli dinamikler için boş döner (italik metin kullanılır).
+export function dinamikSmuflGlyph(sembol) {
+  const s = String(sembol || '').trim();
+  if (!s) return '';
+  const harfler = s.split('');
+  if (!harfler.every((h) => DINAMIK_SMUFL_HARF[h.toLowerCase()])) return '';
+  return harfler.map((h) => DINAMIK_SMUFL_HARF[h.toLowerCase()]).join('');
+}
+
+// Dinamik + hairpin kayıt adlarının kümesi (küçük harf).
+const DINAMIK_ADLAR = new Set(
+  [...(MUZIK_DINAMIKLER || []), ...(MUZIK_HAIRPIN || [])]
+    .map((r) => String(r?.ad || '').toLowerCase().trim())
+    .filter(Boolean),
+);
+
+// Bir modifier kaydı dinamik mi? (süslemeden ayırt etmek için.)
+// Süslemeler kayit.kategori === 'susleme' ile saklanır; dinamiklerde bu yoktur.
+// Ayrıca ad'a göre MUZIK_DINAMIKLER / MUZIK_HAIRPIN üyeliğiyle de doğrularız.
+export function dinamikModifierMi(kayit) {
+  if (!kayit || typeof kayit !== 'object') return false;
+  if (kayit.kategori === 'susleme') return false;
+  return DINAMIK_ADLAR.has(String(kayit.ad || '').toLowerCase().trim());
+}
+
+// Dinamik kaydından kısa görsel etiketi döndürür.
+// 'cresc. (crescendo)' → 'cresc.'; sembolü varsa onu tercih eder.
+export function dinamikEtiketAl(kayit) {
+  if (!kayit) return '';
+  if (kayit.sembol) return String(kayit.sembol);
+  const ad = String(kayit.ad || '').trim();
+  const idx = ad.indexOf(' (');
+  return idx > 0 ? ad.slice(0, idx) : ad;
 }
 
 // Modül 8 Bölüm 4 — Donanım listesi (header'a yazılır)

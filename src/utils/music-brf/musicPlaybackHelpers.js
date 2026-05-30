@@ -3,7 +3,179 @@ import {
   muzikNotaArizaDegeriAl,
   muzikArizaOffsetAl,
   keySignatureAccidentalsAl,
+  muzikNotaMidiAl,
 } from './musicPianoAudioHelpers.js';
+
+// ─── Süsleme yardımcıları ────────────────────────────────────────────────────
+
+/**
+ * MIDI numarasından Türkçe nota adı + oktav + arıza döndürür.
+ * Yarım tonlar daima diyez (♯) olarak temsil edilir.
+ * accidental alanı her zaman açık yazılır (key sig müdahalesini önlemek için).
+ */
+const MIDI_SINIFLAR = [
+  { ad: 'do',  ariza: 'natural' },  //  0 = C
+  { ad: 'do',  ariza: 'sharp'   },  //  1 = C♯
+  { ad: 're',  ariza: 'natural' },  //  2 = D
+  { ad: 're',  ariza: 'sharp'   },  //  3 = D♯
+  { ad: 'mi',  ariza: 'natural' },  //  4 = E
+  { ad: 'fa',  ariza: 'natural' },  //  5 = F
+  { ad: 'fa',  ariza: 'sharp'   },  //  6 = F♯
+  { ad: 'sol', ariza: 'natural' },  //  7 = G
+  { ad: 'sol', ariza: 'sharp'   },  //  8 = G♯
+  { ad: 'la',  ariza: 'natural' },  //  9 = A
+  { ad: 'la',  ariza: 'sharp'   },  // 10 = A♯
+  { ad: 'si',  ariza: 'natural' },  // 11 = B
+];
+
+function midiToNota(midi) {
+  const cls  = MIDI_SINIFLAR[((midi % 12) + 12) % 12];
+  const oktav = Math.floor(midi / 12) - 1;
+  return { notaAd: cls.ad, oktav, accidental: cls.ariza };
+}
+
+/**
+ * Diyatonik üst komşu (mi→fa = +1, si→do = +1, diğerleri = +2).
+ * Kromatik notalar (diyezli) için +1 yarım ton kullanılır.
+ */
+const DOGAL_SINIFLAR = [0, 2, 4, 5, 7, 9, 11]; // C D E F G A B
+const DIYATONIK_YUKARI = [2, 2, 1, 2, 2, 2, 1]; // C→D, D→E, E→F …
+
+function diatonikUstMidi(baseMidi) {
+  const pc  = ((baseMidi % 12) + 12) % 12;
+  const idx = DOGAL_SINIFLAR.indexOf(pc);
+  return idx >= 0 ? baseMidi + DIYATONIK_YUKARI[idx] : baseMidi + 1;
+}
+
+function diatonikAltMidi(baseMidi) {
+  const pc  = ((baseMidi % 12) + 12) % 12;
+  const idx = DOGAL_SINIFLAR.indexOf(pc);
+  if (idx < 0) return baseMidi - 1;
+  const prevIdx = (idx - 1 + 7) % 7;
+  return baseMidi - DIYATONIK_YUKARI[prevIdx];
+}
+
+/**
+ * Bir nota playback event'ini süslemeye göre birden fazla kısa event'e böler.
+ * Sonuç: yeni event dizisi (orijinal event dahil edilmeyebilir).
+ */
+function ornamentEventleriGenislet(baseEvent, velocity) {
+  const oge = baseEvent.oge;
+  const oncesiMods = Array.isArray(oge?.modifiers?.oncesi) ? oge.modifiers.oncesi : [];
+  if (oncesiMods.length === 0) return [baseEvent];
+
+  // İlk süsleme modifier'ı al (birden fazla varsa birincisi)
+  const ornMod = oncesiMods.find((m) => {
+    const ad = String(m?.kayit?.ad || '').toLowerCase();
+    return (
+      /appoggiatura|acciaccatura|trill|mordent|turn|glissando/.test(ad)
+    );
+  });
+  if (!ornMod) return [baseEvent];
+
+  const ad = String(ornMod.kayit?.ad || '').toLowerCase();
+  const ctx = baseEvent.playbackPitchContext || {};
+  const baseMidi = muzikNotaMidiAl(oge, ctx);
+  if (!Number.isFinite(baseMidi)) return [baseEvent];
+
+  const ustMidi = diatonikUstMidi(baseMidi);
+  const altMidi = diatonikAltMidi(baseMidi);
+  const total   = baseEvent.durationBeats;
+  const baseId  = oge.id;
+
+  // Sanal nota nesnesi oluşturucu (MIDI'dan, boş context ile çalar)
+  // id = baseId korunur → score highlight orijinal notada kalmaya devam eder
+  // Süsleme notaları ana notadan biraz daha yumuşak çalınır (doğal hissiyat)
+  const ornamentVelocity = Math.min(0.97, velocity * 0.88);
+  const sanal = (midi, durationBeats, _idx) => ({
+    id: baseId,
+    tip: 'nota',
+    oge: { ...oge, ...midiToNota(midi), id: baseId, _ornamentVirtual: true },
+    ogeler: [{ ...oge, ...midiToNota(midi) }],
+    durationBeats,
+    play: true,
+    tied: false,
+    playbackPitchContext: {},   // açık arıza var, context gerekmez
+    velocity: ornamentVelocity,
+    _ornamentExpanded: true,
+  });
+
+  // Ana nota event'inin süresini kısaltan kopyası — normal sustain (cutOff yok)
+  const anaKopya = (durationBeats) => ({ ...baseEvent, durationBeats });
+
+  // ── Kısa appoggiatura / acciaccatura ──────────────────────────────────────
+  if (/kısa appoggiatura|acciaccatura/.test(ad)) {
+    const grace = total * 0.12;
+    return [sanal(ustMidi, grace, 0), anaKopya(total - grace)];
+  }
+
+  // ── Uzun appoggiatura ─────────────────────────────────────────────────────
+  if (/uzun appoggiatura/.test(ad)) {
+    const half = total * 0.5;
+    return [sanal(ustMidi, half, 0), anaKopya(half)];
+  }
+
+  // ── Trill ─────────────────────────────────────────────────────────────────
+  if (/^trill|bemollü trill|diyezli trill/.test(ad)) {
+    // Her çift (ana + üst) için süre: ~16'lık çiftler, max 8 çift (yoğunluk sınırı)
+    const ciftSayisi = Math.min(8, Math.max(2, Math.round(total * 4)));
+    const birimSure  = total / (ciftSayisi * 2);
+    // Trill: ana notadan başla, üst notalara git, son nota ana nota
+    const events = [];
+    for (let i = 0; i < ciftSayisi; i++) {
+      // İlk nota biraz daha kuvvetli (trill başlangıcı)
+      const v = i === 0 ? Math.min(0.97, ornamentVelocity * 1.08) : ornamentVelocity;
+      events.push({ ...sanal(baseMidi, birimSure, i * 2), velocity: v });
+      events.push(sanal(ustMidi, birimSure, i * 2 + 1));
+    }
+    return events;
+  }
+
+  // ── Üst mordent (asıl → üst → asıl) ─────────────────────────────────────
+  if (/üst mordent/.test(ad)) {
+    // short: notanın %16-20'si, ama maksimum 0.15 beat (kısa tutulması için)
+    const short = Math.min(total * 0.20, 0.15);
+    return [
+      sanal(baseMidi, short, 0),
+      sanal(ustMidi,  short, 1),
+      { ...anaKopya(total - short * 2), velocity },  // ana nota tam velocity
+    ];
+  }
+
+  // ── Alt mordent (asıl → alt → asıl) ─────────────────────────────────────
+  if (/alt mordent/.test(ad)) {
+    const short = Math.min(total * 0.20, 0.15);
+    return [
+      sanal(baseMidi, short, 0),
+      sanal(altMidi,  short, 1),
+      { ...anaKopya(total - short * 2), velocity },
+    ];
+  }
+
+  // ── Ters turn: alt → asıl → üst → asıl ──────────────────────────────────
+  if (/ters turn/.test(ad)) {
+    const q = total / 4;
+    return [
+      sanal(altMidi,  q, 0),
+      sanal(baseMidi, q, 1),
+      sanal(ustMidi,  q, 2),
+      anaKopya(q),
+    ];
+  }
+
+  // ── Turn: üst → asıl → alt → asıl ───────────────────────────────────────
+  if (/turn/.test(ad)) {
+    const q = total / 4;
+    return [
+      sanal(ustMidi,  q, 0),
+      sanal(baseMidi, q, 1),
+      sanal(altMidi,  q, 2),
+      anaKopya(q),
+    ];
+  }
+
+  return [baseEvent];
+}
 
 export function muzikTempoBpmAl(header = {}) {
   const bpmValue = header?.bpm ?? header?.tempoBpm ?? null;
@@ -212,6 +384,26 @@ export function muzikPlaybackSequenceOlustur(ogeler = []) {
       break;
     }
 
+    // ── Volta 1. ev ───────────────────────────────────────────────────────────
+    // 2. geçişteyiz (içindeki endRepeat zaten atlandı) → bu bölümü atla
+    if (oge.tip === 'volta1') {
+      const endKey = voltaBolumEndRepeatKeyAl(visible, i);
+      if (endKey && repeatedEndIds.has(endKey)) {
+        i = volta1AtlamaIndeksiAl(visible, i);
+        continue;
+      }
+      // 1. geçiş: volta1 marker'ını işaret etme, notalar çalınsın
+      i += 1;
+      continue;
+    }
+
+    // ── Volta 2. ev ───────────────────────────────────────────────────────────
+    // Marker'ı atla, sonrasındaki notalar normal çalınsın
+    if (oge.tip === 'volta2') {
+      i += 1;
+      continue;
+    }
+
     if (
       oge.tip === 'nota' ||
       oge.tip === 'sus' ||
@@ -264,6 +456,38 @@ function sonrakiPlaybackIndexAl(items, startIndex) {
   return startIndex;
 }
 
+/**
+ * volta1 ile başlayan bölümü atlayıp volta2'nin başlangıcına (veya volta2'den
+ * sonraki ilk nota/sus indeksine) döner.
+ * Çağrı: i konumundaki öge volta1'dir ve 2. geçişteyiz.
+ */
+function volta1AtlamaIndeksiAl(visible, currentIdx) {
+  // volta2'yi bul
+  for (let j = currentIdx + 1; j < visible.length; j += 1) {
+    if (visible[j]?.tip === 'volta2') return j;
+  }
+  // volta2 yoksa: volta1 içindeki endRepeat'in hemen sonrasına atla
+  for (let j = currentIdx + 1; j < visible.length; j += 1) {
+    if (playbackBarlineTipiAl(visible[j]) === 'end-repeat') return j + 1;
+  }
+  return currentIdx + 1;
+}
+
+/**
+ * Mevcut konumdan önce gelen (ve henüz atlanmamış) en yakın endRepeat'in
+ * anahtar değerini döndürür.  volta1 bölümünün endRepeat'ini bulmak için kullanılır.
+ */
+function voltaBolumEndRepeatKeyAl(visible, voltaIdx) {
+  for (let j = voltaIdx + 1; j < visible.length; j += 1) {
+    if (playbackBarlineTipiAl(visible[j]) === 'end-repeat') {
+      return visible[j].id || `end-repeat-${j}`;
+    }
+    // Başka bir volta ya da final'e gelince dur
+    if (visible[j]?.tip === 'volta2' || playbackBarlineTipiAl(visible[j]) === 'final') break;
+  }
+  return null;
+}
+
 export function muzikPlaybackListesiOlustur(ogeler = []) {
   const visible = (ogeler || []).filter((oge) => !oge?.hidden && !oge?.gizli);
   const result = [];
@@ -300,6 +524,23 @@ export function muzikPlaybackListesiOlustur(ogeler = []) {
       break;
     }
 
+    // ── Volta 1. ev ───────────────────────────────────────────────────────────
+    if (oge.tip === 'volta1') {
+      const endKey = voltaBolumEndRepeatKeyAl(visible, i);
+      if (endKey && repeatedEndIds.has(endKey)) {
+        i = volta1AtlamaIndeksiAl(visible, i);
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+
+    // ── Volta 2. ev ───────────────────────────────────────────────────────────
+    if (oge.tip === 'volta2') {
+      i += 1;
+      continue;
+    }
+
     if (muzikPlaybackOgeMi(oge)) {
       result.push(oge);
     }
@@ -309,9 +550,174 @@ export function muzikPlaybackListesiOlustur(ogeler = []) {
   return result;
 }
 
-export function muzikPlaybackEventListesiOlustur({ ogeler = [], baglar = [], muzikHeader = {} }) {
+// ─── Dinamik ses seviyeleri ──────────────────────────────────────────────────
+// mf = 0.75 → hook'un varsayılan sesiyle birebir eşleşir; pp/fff arasında
+// duyulabilir ama abartısız bir kademeli fark oluşturur.
+const DINAMIK_VELOCITY = {
+  ppp: 0.22,
+  pp:  0.35,
+  p:   0.48,
+  mp:  0.62,
+  mf:  0.75,  // varsayılan — hook volume ile aynı
+  f:   0.85,
+  ff:  0.92,
+  fff: 0.97,
+  sf:  0.93,  // sforzando: anlık güçlü vuruş
+  sfz: 0.93,
+  fz:  0.93,
+};
+
+/**
+ * Dinamik sembolden 0-1 arası ses seviyesi döndürür.
+ * Tanınmayan semboller için null (= varsayılan korunur).
+ */
+export function muzikDinamikVelocityAl(sembol = '') {
+  const s = String(sembol || '').toLowerCase().replace(/[.\s]/g, '');
+  return DINAMIK_VELOCITY[s] ?? null;
+}
+
+/** Sembolden cresc/decresc modu algılar: 'cresc' | 'decresc' | null */
+function dinamikGradyanModuAl(sembol = '', ad = '') {
+  const s = String(sembol || '').toLowerCase();
+  const a = String(ad || '').toLowerCase();
+  const text = s + ' ' + a;
+  if (/cresc|crescendo/.test(text)) return 'cresc';
+  if (/decresc|decrescendo|dim\b|diminuendo/.test(text)) return 'decresc';
+  return null;
+}
+
+/**
+ * Notanın modifiers.oncesi dizisini tarar; ilk sabit dinamiği ve/veya
+ * cresc/decresc modunu döndürür.
+ */
+function notaDinamikBilgisiAl(oge) {
+  const mods = Array.isArray(oge?.modifiers?.oncesi) ? oge.modifiers.oncesi : [];
+  let velocity = null;
+  let gradyan = null;
+  let sfNote = false; // sforzando: anlık vuruş → sonraki notada eski seviyeye dön
+  for (const mod of mods) {
+    const sembol = String(mod?.kayit?.sembol || '');
+    const ad = String(mod?.kayit?.ad || '');
+    if (velocity === null) {
+      velocity = muzikDinamikVelocityAl(sembol || ad.split(' ')[0]);
+    }
+    if (gradyan === null) {
+      gradyan = dinamikGradyanModuAl(sembol, ad);
+    }
+    // sf/sfz/fz tespiti: anlık ani vurgu
+    if (!sfNote) {
+      const s = (sembol || ad).toLowerCase().replace(/\s|\(.*\)/g, '');
+      sfNote = /^sf[z]?$|^fz$/.test(s);
+    }
+  }
+  return { velocity, gradyan, sfNote };
+}
+
+// ─── Nüans / Artikülasyon ────────────────────────────────────────────────────
+
+/**
+ * Nota öncesi (oncesi) ve sonrası (sonrasi) modifier'larından artikülasyon bilgisi çıkarır.
+ */
+function notaArticulationBilgisiAl(oge) {
+  const oncesi  = Array.isArray(oge?.modifiers?.oncesi)  ? oge.modifiers.oncesi  : [];
+  const sonrasi = Array.isArray(oge?.modifiers?.sonrasi) ? oge.modifiers.sonrasi : [];
+
+  const art = {
+    staccato:      false,
+    staccatissimo: false,
+    mezzoStaccato: false,
+    tenuto:        false,
+    accent:        false,
+    staccatoAccent:false,
+    martellato:    false,
+    swell:         false,
+    fermata:       false,
+    breath:        false,
+    caesura:       false,
+  };
+
+  for (const mod of oncesi) {
+    const ad = String(mod?.kayit?.ad || '').toLocaleLowerCase('tr');
+    if (/staccatissimo/.test(ad))               { art.staccatissimo = true; }
+    else if (/mezzo.staccato/.test(ad))          { art.mezzoStaccato = true; }
+    else if (/staccato accent/.test(ad))         { art.staccatoAccent = true; art.accent = true; }
+    else if (/^staccato$/.test(ad))              { art.staccato = true; }
+    else if (/tenuto/.test(ad))                  { art.tenuto = true; }
+    else if (/martellato/.test(ad))              { art.martellato = true; art.accent = true; }
+    else if (/expressive accent|reversed accent/.test(ad)) { art.accent = true; }
+    else if (/^accent$/.test(ad))                { art.accent = true; }
+    else if (/swell/.test(ad))                   { art.swell = true; }
+  }
+
+  for (const mod of sonrasi) {
+    const ad = String(mod?.kayit?.ad || '').toLocaleLowerCase('tr');
+    if (/fermata/.test(ad))       { art.fermata = true; }
+    else if (/nefes işareti/.test(ad)) { art.breath = true; }
+    else if (/caesura/.test(ad))  { art.caesura = true; }
+  }
+
+  return art;
+}
+
+/**
+ * baseEvent'e artikülasyon parametrelerini uygular; ek gap event'leri döndürür.
+ * durationBeats: nota'nın mevcut ritim süresi (tie zinciri dahil).
+ */
+function articulationUygula(baseEvent, art, durationBeats) {
+  if (!art) return;
+
+  // ── Velocity çarpanı ────────────────────────────────────────────────────────
+  let mult = 1.0;
+  if (art.martellato)          mult = 1.45;
+  else if (art.staccatoAccent) mult = 1.35;
+  else if (art.accent)         mult = 1.30;
+  else if (art.swell)          mult = 1.15;
+  else if (art.tenuto)         mult = 1.05;
+
+  if (mult !== 1.0) {
+    baseEvent.velocity = Math.min(0.97, Number(baseEvent.velocity) * mult);
+  }
+
+  // ── Fermata: ritim slotunu uzat ─────────────────────────────────────────────
+  if (art.fermata) {
+    baseEvent.durationBeats = durationBeats * 1.75;
+    // Fermata sonrası hafif bir sessizlik (nefes boşluğu) — küçük gap eklenmez
+    // çünkü piyano doğal olarak sönümlenir; scheduler bekleme süresi yeterli.
+  }
+
+  // ── CutOff (staccato türleri) ────────────────────────────────────────────────
+  let cutFraction = null;
+  if (art.staccatissimo)       cutFraction = 0.12;  // çok kısa — ama min audible korunur
+  else if (art.staccatoAccent) cutFraction = 0.28;
+  else if (art.martellato)     cutFraction = 0.28;
+  else if (art.staccato)       cutFraction = 0.32;
+  else if (art.mezzoStaccato)  cutFraction = 0.55;
+
+  if (cutFraction !== null) {
+    // Staccato notaları biraz daha sert çalınır (attack compensation)
+    const attackBoost = art.staccatissimo ? 1.12 : 1.06;
+    baseEvent.velocity = Math.min(0.97, Number(baseEvent.velocity) * attackBoost);
+    baseEvent._articulationCutOff      = true;
+    baseEvent._articulationCutFraction = cutFraction;
+  }
+}
+
+export function muzikPlaybackEventListesiOlustur({ ogeler = [], baglar = [], muzikHeader = {}, tupletler = [] }) {
   const repeatExpanded = muzikPlaybackSequenceOlustur(ogeler);
   const ogeMap = new Map((ogeler || []).map((o) => [o.id, o]));
+
+  // Tuplet: noteId → çarpan (inTimeOf / played)
+  // Örnek: üçleme 3:2 → her nota * (2/3)
+  const tupletCarpanHaritasi = new Map();
+  (tupletler || []).forEach((tuplet) => {
+    const played = Number(tuplet?.ratio?.played);
+    const inTimeOf = Number(tuplet?.ratio?.inTimeOf);
+    if (!Number.isFinite(played) || played <= 0 || !Number.isFinite(inTimeOf) || inTimeOf <= 0) return;
+    const carpan = inTimeOf / played;
+    (tuplet.notaIdler || []).forEach((id) => {
+      if (id) tupletCarpanHaritasi.set(id, carpan);
+    });
+  });
   const tieNextMap = playbackTieSonrakiHaritasiOlustur(baglar, ogeMap);
 
   const result = [];
@@ -319,6 +725,15 @@ export function muzikPlaybackEventListesiOlustur({ ogeler = [], baglar = [], muz
 
   let keySignatureAccidentals = keySignatureAccidentalsAl(muzikHeader.keySignature);
   const measureAccidentals = new Map();
+  // mf = 0.75 → hook varsayılanıyla aynı, fark hissedilmez
+  let currentVelocity = 0.75;
+  // Geçerli cresc/decresc modu (null = yok)
+  let gradyanMod = null;  // 'cresc' | 'decresc' | null
+  // sf geri yükleme: sf notasından ÖNCE seviyeyi sakla, sonraki notada geri ver
+  let preSfVelocity = null;
+  // Daha yumuşak crescendo/decrescendo: 0.04 → mf'den ff'ye ~5 nota
+  const CRESC_ADIM   = 0.04;
+  const DECRESC_ADIM = 0.04;
 
   for (let i = 0; i < repeatExpanded.length; i += 1) {
     const oge = repeatExpanded[i];
@@ -350,12 +765,41 @@ export function muzikPlaybackEventListesiOlustur({ ogeler = [], baglar = [], muz
         ogeler: [oge],
         durationBeats: muzikSureBeatAl(oge),
         play: false,
+        velocity: currentVelocity,
       });
       continue;
     }
 
     if (oge.tip !== 'nota') {
       continue;
+    }
+
+    // sf sonrası: bir önceki notada sf varsa bu notada eski seviyeye dön
+    if (preSfVelocity !== null) {
+      currentVelocity = preSfVelocity;
+      preSfVelocity = null;
+    }
+
+    // Dinamik işle: sabit seviye ve/veya cresc/decresc modu
+    const { velocity: notaVelocity, gradyan: notaGradyan, sfNote } = notaDinamikBilgisiAl(oge);
+    if (notaVelocity !== null) {
+      if (sfNote) {
+        // sforzando: anlık yüksek vuruş → sonraki notada eski seviyeye dön
+        preSfVelocity = currentVelocity;
+      }
+      currentVelocity = notaVelocity;
+      gradyanMod = null;
+    }
+    if (notaGradyan !== null) {
+      gradyanMod = notaGradyan;
+    }
+    // Gradyan modu aktifse bu notada adım at (sabit dinamik bu notada yoksa)
+    if (notaVelocity === null && gradyanMod !== null) {
+      if (gradyanMod === 'cresc') {
+        currentVelocity = Math.min(0.97, currentVelocity + CRESC_ADIM);
+      } else if (gradyanMod === 'decresc') {
+        currentVelocity = Math.max(0.22, currentVelocity - DECRESC_ADIM);
+      }
     }
 
     const notaAd = normalizeNotaAd(oge.notaAd || oge.ad || '');
@@ -374,7 +818,9 @@ export function muzikPlaybackEventListesiOlustur({ ogeler = [], baglar = [], muz
     };
 
     const group = [oge];
-    let durationBeats = muzikSureBeatAl(oge);
+    // Tuplet çarpanı: bu nota tuplet grubundaysa süreye uygula
+    const tupletCarpan = tupletCarpanHaritasi.get(oge.id) ?? 1;
+    let durationBeats = muzikSureBeatAl(oge) * tupletCarpan;
     let current = oge;
     let nextIndex = i;
 
@@ -391,14 +837,15 @@ export function muzikPlaybackEventListesiOlustur({ ogeler = [], baglar = [], muz
       if (!next || next.tip !== 'nota') break;
       if (consumed.has(`${foundIndex}:${next.id}`)) break;
 
+      const nextCarpan = tupletCarpanHaritasi.get(next.id) ?? 1;
       group.push(next);
-      durationBeats += muzikSureBeatAl(next);
+      durationBeats += muzikSureBeatAl(next) * nextCarpan;
       consumed.add(`${foundIndex}:${next.id}`);
       current = next;
       nextIndex = foundIndex;
     }
 
-    result.push({
+    const baseEvent = {
       id: oge.id,
       tip: 'nota',
       oge,
@@ -407,7 +854,25 @@ export function muzikPlaybackEventListesiOlustur({ ogeler = [], baglar = [], muz
       play: true,
       tied: group.length > 1,
       playbackPitchContext: pitchContext,
-    });
+      velocity: currentVelocity,
+    };
+
+    // Artikülasyon: velocity, fermata, cutOff
+    const art = notaArticulationBilgisiAl(oge);
+    articulationUygula(baseEvent, art, durationBeats);
+
+    // Süsleme varsa event'i genişlet; yoksa orijinali ekle
+    const genisletilmis = ornamentEventleriGenislet(baseEvent, currentVelocity);
+    for (const ev of genisletilmis) {
+      result.push(ev);
+    }
+
+    // Nefes işareti / caesura → nota sonrası kısa gap
+    if (art.caesura) {
+      result.push({ tip: 'gap', durationBeats: 0.5, id: `gap-caesura-${oge.id}`, play: false });
+    } else if (art.breath) {
+      result.push({ tip: 'gap', durationBeats: 0.2, id: `gap-breath-${oge.id}`, play: false });
+    }
   }
 
   return result;

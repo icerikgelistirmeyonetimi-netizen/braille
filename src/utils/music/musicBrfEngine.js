@@ -15,7 +15,8 @@ import { MUZIK_BAGLAR } from '../../data/muzik.js';
 // Modül 8 Bölüm 4A — Bir notadan ÖNCE gelen işaretlerin kesin sırası (1-10)
 export function muzikModifierOncesiSira(kayit) {
   const ad = String(kayit.ad || '').toLowerCase();
-  const tip = String(kayit.gorselTip || '');
+  // gorselTip yoksa kategori alanına da bak (round-trip/import uyumluluğu)
+  const tip = String(kayit.gorselTip || kayit.kategori || '');
   if (/forward|ileri.*tekrar/.test(ad)) return 1;
   if (/volta|\bev\b|dolap/.test(ad)) return 2;
   if (tip === 'bag' && /(açılış|aç\b|köşeli.*aç|opening)/.test(ad)) return 3;
@@ -31,7 +32,7 @@ export function muzikModifierOncesiSira(kayit) {
 // Modül 8 Bölüm 4B — Bir notadan SONRA gelen işaretlerin kesin sırası
 export function muzikModifierSonrasiSira(kayit) {
   const ad = String(kayit.ad || '').toLowerCase();
-  const tip = String(kayit.gorselTip || '');
+  const tip = String(kayit.gorselTip || kayit.kategori || '');
   if (/fermata/.test(ad)) return 2;
   if (tip === 'bag' && /(kapanış|kapa\b|köşeli.*kapa|closing)/.test(ad)) return 4;
   if (tip === 'bag' && /(tie|^bağ\b)/.test(ad)) return 5;
@@ -120,6 +121,14 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       return 'endRepeat';
     }
 
+    if (tip === 'volta1' || /1\.\s*ev|1\.\s*dolap|volta\s*1/.test(ad)) {
+      return 'volta1';
+    }
+
+    if (tip === 'volta2' || /2\.\s*ev|2\.\s*dolap|volta\s*2/.test(ad)) {
+      return 'volta2';
+    }
+
     if (
       tip === 'finalbarline' ||
       tip === 'final-barline' ||
@@ -204,7 +213,7 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       for (const hucre of kayit.hucreler) {
         hucreler.push(Array.isArray(hucre) ? [...hucre] : []);
         esleme.push(kaynakIndeksi);
-        metaEkle({ ogeId, kaynak: `modifier-${yon}`, etiket: kayit.ad });
+        metaEkle({ ogeId, kaynak: `modifier-${yon}`, etiket: kayit.ad, modId: mod.id });
       }
       kaynakIndeksi += etiket.length;
     }
@@ -520,6 +529,17 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
   for (const [oi] of autoRepeatHaritasi) {
     for (const idx of (olculer[oi]?.indices || [])) atlananIndeksler.add(idx);
   }
+  // brailleShorthand ölçüleri: kısaltma öğesi dışındaki tüm öğeleri atla
+  for (let oi = 0; oi < olculer.length; oi++) {
+    const olcu = olculer[oi];
+    if (!olcu.indices.length) continue;
+    const firstItemIdx = olcu.indices[0];
+    if (ogeler[firstItemIdx]?.tip === 'brailleShorthand') {
+      for (const itemIdx of olcu.indices) {
+        if (itemIdx !== firstItemIdx) atlananIndeksler.add(itemIdx);
+      }
+    }
+  }
 
   let sonNota = null;
   let yeniBrailleSatiriBayragi = false;
@@ -535,7 +555,9 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       yazilanOlculer.add(olcuIdx);
       const olcu = olculer[olcuIdx];
       const yeniSatir = !!olcu.startsNewBrailleLine;
-      if (yeniSatir && !autoRepeatHaritasi.get(olcuIdx)) {
+      const firstItemShorthand = ogeler[olcu.indices[0]]?.tip === 'brailleShorthand';
+      const shorthandContinuation = firstItemShorthand && ogeler[olcu.indices[0]]?._repeatContinuation === true;
+      if (yeniSatir && !autoRepeatHaritasi.get(olcuIdx) && !shorthandContinuation) {
         yeniBrailleSatiriBayragi = true;
         if (includeBarNumbers) {
           const barNo = header?.pickupMeasure ? olcuIdx : olcuIdx + 1;
@@ -557,13 +579,47 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
         kaynakParcalar.push('𝄎');
         hucreler.push([2, 3, 5, 6]);
         esleme.push(kaynakIndeksi);
-        metaEkle({ ogeId: null, kaynak: 'bar-repeat', etiket: `Ölçü ${olcuIdx + 1}: bar repeat (önceki ölçüyle aynı)` });
+        metaEkle({ ogeId: null, olcuIdx, kaynak: 'bar-repeat', etiket: `Ölçü ${olcuIdx + 1}: bar repeat (önceki ölçüyle aynı)` });
         kaynakIndeksi += 1;
+        // Ölçü sonu boşluğu: skip edilen barline'ın yerine — son ölçü değilse ekle
+        if (olcuIdx < olculer.length - 1) {
+          hucreler.push([]);
+          esleme.push(kaynakIndeksi);
+          metaEkle({ ogeId: null, kaynak: 'spacer', etiket: 'ölçü sonu boşluğu' });
+        }
         timeKeyDegisimiBayragi = true;
       }
     }
     if (atlananIndeksler.has(idx)) continue;
     if (brfImportArtikOgesiMi(oge)) continue;
+
+    // brailleShorthand: sadece kısaltma hücrelerini yaz, _repeatCopy notaları atlanmış
+    if (oge.tip === 'brailleShorthand') {
+      const shorthandHucreler = Array.isArray(oge.hucreler) ? oge.hucreler : [];
+      if (shorthandHucreler.length > 0) {
+        // Gerçek kısaltma hücrelerini yaz
+        if (kaynakParcalar.length) kaynakIndeksi += 1;
+        const kisaltmaEtiket = oge.gorunum || oge.ad || 'kısaltma';
+        kaynakParcalar.push(kisaltmaEtiket);
+        for (const hucre of shorthandHucreler) {
+          hucreler.push(Array.isArray(hucre) ? [...hucre] : []);
+          esleme.push(kaynakIndeksi);
+          metaEkle({ ogeId: oge.id, olcuIdx, kaynak: 'braille-shorthand', etiket: oge.ad || 'Braille kısaltma' });
+        }
+        kaynakIndeksi += kisaltmaEtiket.length;
+        // Ölçü sonu boşluğu (barline atlandığı için manuel ekle)
+        if (olcuIdx !== undefined && olcuIdx < olculer.length - 1) {
+          hucreler.push([]);
+          esleme.push(kaynakIndeksi);
+          metaEkle({ ogeId: null, kaynak: 'spacer', etiket: 'ölçü sonu boşluğu' });
+        }
+      }
+      // Boş hucreler: devam kopyası (repeat×N), BRF'de hiçbir şey yazma
+      yeniBrailleSatiriBayragi = false;
+      timeKeyDegisimiBayragi = true;
+      sonNota = null;
+      continue;
+    }
 
     if (oge.tip === 'timeSignatureChange') {
       const etiket = oge.gorunum || oge.ad || 'zaman değişimi';
@@ -729,6 +785,76 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       modHucrelerEkle(sonrasiSirali, oge.id, 'sonrasi');
     }
 
+    // Barline modifier'ları (ölçü çizgisi üstü fermata vb.): barline'dan ÖNCE yaz
+    if (['barline', 'sectionalBarline', 'finalBarline', 'beginRepeat', 'endRepeat'].includes(oge.tip)
+        && Array.isArray(oge.modifiers) && oge.modifiers.length > 0) {
+      // Barline hücrelerini geçici olarak beklet: modifier hücreleri önce yazılır
+      // Not: Zaten yukarıda barline hücresi eklenmiş durumda — modifier'ları barline'dan önce değil,
+      // standart braille kuralına göre barline'dan önce eklenmesi için barline hücrelerini SİL,
+      // modifierleri yaz, sonra tekrar barline yaz. Basit yaklaşım: sonuna ekle.
+      oge.modifiers.forEach((mod) => {
+        if (!mod?.kayit?.hucreler) return;
+        for (const hucre of mod.kayit.hucreler) {
+          hucreler.push(Array.isArray(hucre) ? [...hucre] : []);
+          esleme.push(kaynakIndeksi);
+          metaEkle({ ogeId: oge.id, kaynak: 'modifier-sonrasi', etiket: mod.kayit.ad || '', modId: mod.id });
+        }
+      });
+    }
+
+  }
+
+  // ─── Volta BRF kuralları (Post-processing) ─────────────────────────────
+  // Rule 4: Eğer volta sayısından SONRA gelen ilk dolu hücre dots 1, 2 veya 3
+  // içeriyorsa, volta sayısı ile o hücre arasına dot-3 ayraç hücresi eklenir.
+  // (örn: Angels We Have Heard on High)
+  // Volta cell metadata'da tip 'volta1' veya 'volta2' olarak işaretli, ve
+  // hucreSira === hucreSayisi - 1 (yani volta'nın SON hücresi — sayı).
+  {
+    const yeniHucreler = [];
+    const yeniEsleme  = [];
+    const yeniMeta    = [];
+
+    for (let i = 0; i < hucreler.length; i += 1) {
+      yeniHucreler.push(hucreler[i]);
+      yeniEsleme.push(esleme[i]);
+      yeniMeta.push(hucreMeta[i]);
+
+      const m = hucreMeta[i];
+      const voltaMi = m && (m.tip === 'volta1' || m.tip === 'volta2');
+      const sonHucre = voltaMi && (m.hucreSira === (m.hucreSayisi || 0) - 1);
+      if (!sonHucre) continue;
+
+      // Sonraki dolu hücreyi bul
+      let next = i + 1;
+      while (next < hucreler.length && (!Array.isArray(hucreler[next]) || hucreler[next].length === 0)) {
+        next += 1;
+      }
+      if (next >= hucreler.length) continue;
+
+      const sonraki = hucreler[next];
+      const dot123Var = sonraki.some((d) => d === 1 || d === 2 || d === 3);
+      if (!dot123Var) continue;
+
+      // Dot-3 ayraç hücresi ekle
+      yeniHucreler.push([3]);
+      yeniEsleme.push(esleme[i]);
+      yeniMeta.push({
+        ogeId: m.ogeId,
+        kaynak: 'volta-ayrac',
+        etiket: 'Volta ayracı (dot 3)',
+        tip: 'volta-separator',
+      });
+    }
+
+    hucreler.length = 0;
+    esleme.length = 0;
+    hucreMeta.length = 0;
+    yeniHucreler.forEach((h, idx) => {
+      hucreler.push(h);
+      esleme.push(yeniEsleme[idx]);
+      hucreMeta.push(yeniMeta[idx]);
+    });
   }
 
   const repeatOnerileri = muzikRepeatAdaylariniBul(olculer, baglar, autoRepeatHaritasi);
@@ -751,8 +877,8 @@ export function muzikHucreAnlamiKayittan(ogeler, hucreIndeksi, hucreMeta = null)
     const oge = ogeler.find((o) => o.id === meta.ogeId);
     const ogeAd = oge ? (oge.gorunum || oge.ad || '') : '';
     const baslikMap = {
-      'modifier-oncesi': `Modifier (önce): ${meta.etiket}`,
-      'modifier-sonrasi': `Modifier (sonra): ${meta.etiket}`,
+      'modifier-oncesi': `${meta.etiket}`,
+      'modifier-sonrasi': `${meta.etiket}`,
       accidental: meta.etiket,
       octave: meta.etiket,
       note: ogeAd,

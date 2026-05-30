@@ -27,12 +27,14 @@ export function brfMuzikOku(brfText, options = {}) {
 
     if (!context.items.length) {
       const headerType = detectHeaderLineType(cells);
-      if (headerType.type === 'title' && !context.header.title) {
+      if ((headerType.type === 'title' || headerType.type === 'title+time-signature') && !context.header.title) {
         context.header.title = headerType.value || '';
       }
       if (headerType.type === 'time-signature' && !context.header.timeSignature) {
-        const ts = headerType.value;
-        setReaderTimeSignature(context, ts);
+        setReaderTimeSignature(context, headerType.value);
+      }
+      if (headerType.type === 'title+time-signature' && !context.header.timeSignature) {
+        setReaderTimeSignature(context, headerType.timeSignature);
       }
       if (headerType.type !== 'music') {
         cells.forEach((cell) => {

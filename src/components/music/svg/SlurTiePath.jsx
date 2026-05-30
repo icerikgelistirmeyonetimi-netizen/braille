@@ -166,8 +166,9 @@ function SlurTiePath({
     type,
   });
 
-  const activeColor = selected ? '#16a34a' : active ? '#22c55e' : 'currentColor';
-  const activeOpacity = selected ? 1 : active ? 0.95 : 0.75;
+  // Hover/select renkleri notalarla / voltalarla / aksidentallerle aynı mavi tema
+  const activeColor = selected ? '#2563eb' : active ? '#3b82f6' : 'currentColor';
+  const activeOpacity = selected ? 1 : active ? 0.92 : 0.75;
 
   return (
     <path

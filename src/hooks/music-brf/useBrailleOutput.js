@@ -102,6 +102,18 @@ function brailleHucreleriniSkorOlculerineDagit({
       const measureCells = hucreItems.filter((item) => {
         if (overlaydeGosterme(item.anlam)) return false;
 
+        // Bar-repeat cell: match by olcuIdx instead of ogeId
+        if (item.anlam?.kaynak === 'bar-repeat') {
+          const thisMeasureIdx = measure?.measureIndex ?? measureIdx;
+          return typeof item.anlam?.olcuIdx === 'number' && item.anlam.olcuIdx === thisMeasureIdx;
+        }
+
+        // brailleShorthand cell: match by olcuIdx (item is filtered out of SVG layout)
+        if (item.anlam?.kaynak === 'braille-shorthand') {
+          const thisMeasureIdx = measure?.measureIndex ?? measureIdx;
+          return typeof item.anlam?.olcuIdx === 'number' && item.anlam.olcuIdx === thisMeasureIdx;
+        }
+
         const ogeId = brailleItemOgeIdAl(item);
         if (!ogeId) return false;
 
@@ -197,6 +209,7 @@ export function useBrailleOutput({
           : notaMi
             ? (kaynakOge?.notaAd || temelAnlam.etiket)
             : temelAnlam.etiket,
+        ...(typeof meta?.olcuIdx === 'number' ? { olcuIdx: meta.olcuIdx } : {}),
       };
 
       return normalizeBrailleMeaning(nord);

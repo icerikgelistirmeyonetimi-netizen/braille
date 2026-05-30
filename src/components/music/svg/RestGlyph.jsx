@@ -1,12 +1,19 @@
-// Dinlenme (sus) işaretleri için
+// Dinlenme (sus) işaretleri için — Unicode müzik karakterleri (Bravura Text destekler)
+//   U+1D13B 𝄻 whole rest
+//   U+1D13C 𝄼 half rest
+//   U+1D13D 𝄽 quarter rest
+//   U+1D13E 𝄾 eighth rest
+//   U+1D13F 𝄿 16th rest
+//   U+1D140 𝅀 32nd rest
+//   U+1D141 𝅁 64th rest
 const glyphMap = {
-  1: '𝄻',   // tam sus
-  2: '𝄼',   // yarım sus
-  4: '𝄽',   // dörtlük sus
-  8: '𝄾',   // sekizlik sus
-  16: '𝄿',
-  32: '𝅀',
-  64: '𝅁',
+  1:  String.fromCodePoint(0x1D13B),
+  2:  String.fromCodePoint(0x1D13C),
+  4:  String.fromCodePoint(0x1D13D),
+  8:  String.fromCodePoint(0x1D13E),
+  16: String.fromCodePoint(0x1D13F),
+  32: String.fromCodePoint(0x1D140),
+  64: String.fromCodePoint(0x1D141),
 };
 
 function RestGlyph({ item, x, onClick, autoRest }) {
@@ -20,27 +27,17 @@ function RestGlyph({ item, x, onClick, autoRest }) {
       onClick={isAuto ? undefined : onClick}
       pointerEvents={isAuto ? 'none' : undefined}
     >
-      {!isAuto && (
-        <rect
-          x={x - 20}
-          y={72}
-          width={40}
-          height={48}
-          rx={10}
-          className="muzik-note-hover-rect"
-        />
-      )}
       <text
         x={x}
-        y={102}
+        y={104}
         textAnchor="middle"
-        className="select-none fill-zinc-900 text-[26px]"
-        style={{ fontFamily: 'serif' }}
+        className="select-none fill-zinc-900 text-[36px]"
+        style={{ fontFamily: "'Bravura Text', 'Cambria Math', 'Noto Music', serif" }}
       >
         {glyph}
       </text>
       {item.dotted && (
-        <circle cx={x + 14} cy={96} r={2.1} className="fill-zinc-900" />
+        <circle cx={x + 16} cy={96} r={2.4} className="fill-zinc-900" />
       )}
     </g>
   );

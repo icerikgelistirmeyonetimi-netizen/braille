@@ -1,4 +1,5 @@
 import { BRAILLE_CATEGORY_COLORS, normalizeBrailleColorStyle } from './brailleColors.js';
+import { MUZIK_SUSLEMELER, MUZIK_DINAMIKLER, MUZIK_HAIRPIN, MUZIK_NUANS_ONCE, MUZIK_NUANS_SONRA } from '../../data/muzik.js';
 
 function normalizeText(value) {
   return String(value || '').trim();
@@ -6,6 +7,49 @@ function normalizeText(value) {
 
 function lower(value) {
   return normalizeText(value).toLowerCase();
+}
+
+// Tüm nüans (oncesi/sonrasi) adları — ayrı kategorilerde gruplanır.
+const NUANS_ONCE_ADLARI = new Set(
+  (Array.isArray(MUZIK_NUANS_ONCE) ? MUZIK_NUANS_ONCE : []).map((o) => lower(o.ad)),
+);
+const NUANS_SONRA_ADLARI = new Set(
+  (Array.isArray(MUZIK_NUANS_SONRA) ? MUZIK_NUANS_SONRA : []).map((o) => lower(o.ad)),
+);
+
+// Tüm süsleme adları — legend'da tek girdiyle gruplanır.
+const SUSLEME_ADLARI = new Set(
+  (Array.isArray(MUZIK_SUSLEMELER) ? MUZIK_SUSLEMELER : []).map((o) => lower(o.ad)),
+);
+
+// Bir anlamın süsleme olup olmadığını belirler (kaynak işareti veya ad eşleşmesi).
+export function brailleSuslemeMi(anlam = {}) {
+  const kaynak = lower(anlam.kaynak || anlam.source || anlam.type || '');
+  const tip = lower(anlam.tip || anlam.category || '');
+  if (kaynak === 'susleme' || tip === 'susleme') return true;
+  const ad = lower(anlam.ad || anlam.name || '');
+  const etiket = lower(anlam.etiket || anlam.label || '');
+  return SUSLEME_ADLARI.has(ad) || SUSLEME_ADLARI.has(etiket);
+}
+
+// Tüm dinamik + hairpin adları — legend'da tek "dinamik" girdisiyle gruplanır.
+const DINAMIK_ADLARI = new Set(
+  [...(Array.isArray(MUZIK_DINAMIKLER) ? MUZIK_DINAMIKLER : []),
+   ...(Array.isArray(MUZIK_HAIRPIN) ? MUZIK_HAIRPIN : [])]
+    .map((o) => lower(o.ad))
+    .filter(Boolean),
+);
+
+// Bir anlamın dinamik/ifade işareti olup olmadığını belirler (ad/etiket eşleşmesi).
+// "söz işareti" tek başına dinamik değildir ama dinamik hücre dizisinin parçasıdır;
+// modifier kaynağıyla geldiğinde dinamik sayılır.
+export function brailleDinamikMi(anlam = {}) {
+  const kaynak = lower(anlam.kaynak || anlam.source || anlam.type || '');
+  const tip = lower(anlam.tip || anlam.category || '');
+  if (kaynak === 'dynamic' || tip === 'dynamic' || kaynak === 'dinamik' || tip === 'dinamik') return true;
+  const ad = lower(anlam.ad || anlam.name || '');
+  const etiket = lower(anlam.etiket || anlam.label || '');
+  return DINAMIK_ADLARI.has(ad) || DINAMIK_ADLARI.has(etiket);
 }
 
 const SLUR_KAYNAKLARI = new Set([
@@ -72,6 +116,21 @@ export function brailleKategoriAl(anlam = {}) {
   const tip = a.tip;
   const text = `${kaynak} ${tip} ${a.baslik} ${a.etiket} ${a.ad}`.toLowerCase();
 
+  // Süslemeler — TÜMÜ tek kategoride (legend tek renk/tek girdi). Nota/aksidental
+  // gibi yanlış eşleşmeleri önlemek için en başta kontrol edilir
+  // ("turn (notalar arası)" → nota değil; "bemollü trill" → aksidental değil).
+  if (kaynak === 'susleme' || tip === 'susleme'
+    || SUSLEME_ADLARI.has(lower(a.ad)) || SUSLEME_ADLARI.has(lower(a.etiket))) {
+    return 'susleme';
+  }
+
+  // Dinamikler (p/f/mf/cresc/dim/hairpin…) — TÜMÜ tek "dinamik" kategorisinde.
+  // Süslemeden sonra, nota/aksidental kontrollerinden önce bakılır.
+  if (kaynak === 'dynamic' || tip === 'dynamic' || kaynak === 'dinamik' || tip === 'dinamik'
+    || DINAMIK_ADLARI.has(lower(a.ad)) || DINAMIK_ADLARI.has(lower(a.etiket))) {
+    return 'dynamic';
+  }
+
   if (isSlurMeaning(kaynak, tip, text)) {
     return 'slur';
   }
@@ -86,6 +145,25 @@ export function brailleKategoriAl(anlam = {}) {
 
   if (kaynak === 'octave' || tip === 'oktav' || text.includes('oktav')) {
     return 'oktav';
+  }
+
+  // Volta (1. ev / 2. ev) — kendi kategorileri (renk + lejant + açıklama)
+  if (kaynak === 'volta1' || tip === 'volta1') return 'volta1';
+  if (kaynak === 'volta2' || tip === 'volta2') return 'volta2';
+  if (text.includes('volta') || text.includes('dolap')) {
+    return /(^|[^0-9])2/.test(`${kaynak}${tip}`) ? 'volta2' : 'volta1';
+  }
+
+  // Tekrar başlangıcı / bitişi: barline'dan ayrı kategori
+  if (kaynak === 'beginrepeat' || tip === 'beginrepeat') return 'beginrepeat';
+  if (kaynak === 'endrepeat' || tip === 'endrepeat') return 'endrepeat';
+
+  // Ölçü çizgileri
+  if (
+    kaynak === 'barline' || kaynak === 'finalbarline' || kaynak === 'sectionalbarline'
+    || tip === 'barline' || tip === 'finalbarline' || tip === 'sectionalbarline'
+  ) {
+    return 'barline';
   }
 
   if (
@@ -160,8 +238,17 @@ export function brailleKategoriAl(anlam = {}) {
   }
 
   if (kaynak.includes('modifier') || tip.includes('modifier')) {
+    const etiketLower = lower(a.etiket);
+    if (NUANS_ONCE_ADLARI.has(etiketLower) || a.kategori === 'nuans' && kaynak.includes('oncesi')) {
+      return 'nuans-once';
+    }
+    if (NUANS_SONRA_ADLARI.has(etiketLower) || a.kategori === 'nuans' && kaynak.includes('sonrasi')) {
+      return 'nuans-sonra';
+    }
     return kaynak || tip || 'modifier';
   }
+
+  if (kaynak === 'dot' || tip === 'dot') return 'dot';
 
   if (kaynak === 'sign' || tip === 'isaret' || tip === 'işaret') {
     return 'sign';
@@ -195,6 +282,44 @@ export function brailleLejantEtiketiAl(anlam = {}) {
       ? a.etiket
       : 'slur';
   }
+
+  // ── Tek-girdi (kategorik) lejant'lar — etiket nüansları gizlenir ─────────
+  // Nüanslar: her nüans (staccato, fermata…) için ayrı girdi açılmasın → tek grup
+  if (kategori === 'nuans-once')  return 'nüans (önce)';
+  if (kategori === 'nuans-sonra') return 'nüans (sonra)';
+  // Süslemeler: her süsleme (trill, turn, mordent…) için ayrı girdi açılmasın
+  // → tek "süsleme" girdisi (tek renk). Ayrıntı tıklayınca panelde gösterilir.
+  if (kategori === 'susleme') return 'süsleme';
+  // Dinamikler: her dinamik (p/f/mf/cresc…) için ayrı girdi açılmasın → tek "dinamik"
+  if (kategori === 'dynamic') return 'dinamik';
+  // Oktav: 4., 5. vb. ayırma → tek "Oktav işareti" girdisi
+  if (kategori === 'oktav') return 'oktav işareti';
+  // Aksidental: sharp/flat/natural ayırma → tek "Aksidental" girdisi
+  if (kategori === 'accidental') return 'aksidental';
+  // Ölçü çizgileri (barline / final / sectional)
+  if (a.kaynak === 'finalbarline' || a.kaynak === 'finalBarline') return 'bitiş çizgisi';
+  if (a.kaynak === 'sectionalbarline' || a.kaynak === 'sectionalBarline') return 'bölüm çizgisi';
+  if (kategori === 'beginrepeat') return 'tekrar başlangıcı';
+  if (kategori === 'endrepeat') return 'tekrar bitişi';
+  if (kategori === 'volta1') return '1. ev (volta)';
+  if (kategori === 'volta2') return '2. ev (volta)';
+  if (kategori === 'dot') return 'noktalı uzatma';
+  if (kategori === 'barline' || a.kaynak === 'barline') return 'ölçü çizgisi';
+  // Bar repeat: her ölçü için ayrı girdi açılmasın → tek "braille tekrar"
+  if (kategori === 'bar-repeat') return 'braille tekrar';
+  // Bar number: her ölçü numarası için ayrı girdi açılmasın
+  if (kategori === 'bar-number') return 'ölçü numarası';
+  // Nota: pitch ayırma (do/re/mi…) yerine tek "Nota" girdisi olsun
+  if (kategori === 'nota') return 'nota';
+  // Sus: süre ayırma → tek "Sus" girdisi
+  if (kategori === 'sus') return 'sus';
+  // Tie/Slur/Bag → tek girdi
+  if (kategori === 'tie') return 'uzatma bağı (tie)';
+  if (kategori === 'bag') return 'bağ';
+  // Nokta cell'i
+  if (a.kaynak === 'dot') return 'noktalı uzatma';
+  // Tuplet
+  if (kategori === 'tuplet') return 'tuplet';
 
   if (a.etiket) return a.etiket;
   if (a.ad) return a.ad;
@@ -297,6 +422,47 @@ export function brailleBagKisaEtiketiAl(anlam = {}) {
   if (kategori === 'tie') return 'tie';
   if (kategori === 'slur') return 'slur';
   if (kategori === 'bag') return 'bağ';
+
+  return '';
+}
+
+/**
+ * Cell altına gösterilecek KISA etiket. Tek karakter ya da kısa kod.
+ *   Oktav → oktav numarası ("5")
+ *   Aksidental → sembol (♯ ♭ ♮ 𝄪 𝄫)
+ *   Nokta → "·"
+ *   Diğer → boş
+ */
+export function brailleKisaCellLabelAl(anlam = {}) {
+  if (!anlam) return '';
+  const a = normalizeBrailleMeaning(anlam);
+  const kategori = brailleKategoriAl(a);
+  const kaynak = String(a.kaynak || '').toLowerCase();
+  const etiket = String(a.etiket || '').toLowerCase();
+
+  // Oktav → numarayı çıkar
+  if (kategori === 'oktav') {
+    const m = /(\d)\s*\.\s*oktav/.exec(etiket);
+    if (m) return m[1];
+    const m2 = /(\d)/.exec(etiket);
+    if (m2) return m2[1];
+    return 'okt';
+  }
+
+  // Aksidental → sembol
+  if (kategori === 'accidental') {
+    if (/double.*sharp|cift.*diyez|iki.*diyez/.test(etiket)) return String.fromCodePoint(0x1D12A);
+    if (/double.*flat|cift.*bemol|iki.*bemol/.test(etiket))  return String.fromCodePoint(0x1D12B);
+    if (/sharp|diyez/.test(etiket))  return '♯';
+    if (/flat|bemol/.test(etiket))   return '♭';
+    if (/natural|naturel|bekar/.test(etiket)) return '♮';
+    return '♯';
+  }
+
+  // Nokta (dotted)
+  if (kaynak === 'dot' || /noktalı uzatma|noktal.{1,3}uzatma/.test(etiket)) {
+    return '·';
+  }
 
   return '';
 }

@@ -34,7 +34,7 @@ export default function MuzikBarlineTimeSignatureModal({
 
   const left = Math.min(
     Math.max(Number(barlineMenu.x) || 24, 12),
-    window.innerWidth - 260,
+    window.innerWidth - 280,
   );
 
   const top = Math.min(
@@ -49,7 +49,7 @@ export default function MuzikBarlineTimeSignatureModal({
       onClick={close}
     >
       <div
-        className="absolute w-[240px] rounded-xl border border-slate-200 bg-white shadow-xl p-3 flex flex-col gap-2"
+        className="absolute w-[260px] rounded-xl border border-slate-200 bg-white shadow-xl p-3 flex flex-col gap-2"
         style={{ left, top }}
         role="dialog"
         aria-modal="true"
@@ -58,7 +58,11 @@ export default function MuzikBarlineTimeSignatureModal({
       >
         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
           <span className="text-sm font-bold text-slate-800">
-            Ölçü çizgisi işlemleri
+            {barlineMenu.inlineType === 'timeSignatureChange'
+              ? 'Zaman imzası değişikliği'
+              : barlineMenu.inlineType === 'keySignatureChange'
+                ? 'Donanım değişikliği'
+                : 'Ölçü çizgisi işlemleri'}
           </span>
           <button
             type="button"
@@ -72,12 +76,33 @@ export default function MuzikBarlineTimeSignatureModal({
 
         {mode === 'menu' && (
           <>
+            {/* Inline change item tıklandığında: o item'i sil butonu */}
+            {barlineMenu.inlineDeleteId && (
+              <>
+                <button
+                  type="button"
+                  className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-100 hover:border-red-400"
+                  onClick={() => {
+                    olcuCizgisiniSil(barlineMenu.inlineDeleteId);
+                    close();
+                  }}
+                >
+                  {barlineMenu.inlineType === 'keySignatureChange'
+                    ? '🗑 Donanım değişikliğini sil'
+                    : '🗑 Zaman imzası değişikliğini sil'}
+                </button>
+                <div className="my-1 h-px bg-slate-200" />
+              </>
+            )}
+
             <button
               type="button"
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-amber-50 hover:border-amber-300"
               onClick={() => setMode('time')}
             >
-              Zaman imzası ekle
+              {barlineMenu.inlineType === 'timeSignatureChange'
+                ? 'Zaman imzasını değiştir'
+                : 'Zaman imzası ekle'}
             </button>
 
             <button
@@ -85,76 +110,116 @@ export default function MuzikBarlineTimeSignatureModal({
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:border-emerald-300"
               onClick={() => setMode('key')}
             >
-              Donanım ekle / değiştir
+              {barlineMenu.inlineType === 'keySignatureChange'
+                ? 'Donanımı değiştir'
+                : 'Donanım ekle / değiştir'}
             </button>
 
-            <div className="my-1 h-px bg-slate-200" />
+            {/* Ölçü çizgisi işlemleri — sadece doğrudan barline'a tıklandığında göster */}
+            {!barlineMenu.inlineType && (
+              <>
+                <div className="my-1 h-px bg-slate-200" />
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pb-0.5">Çizgi tipi</div>
 
-            <button
-              type="button"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              onClick={() => {
-                olcuCizgisiniDegistir(barlineMenu, 'barline');
-                close();
-              }}
-            >
-              Normal ölçü çizgisi yap
-            </button>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {/* Normal barline */}
+                  <button
+                    type="button"
+                    title="Normal ölçü çizgisi"
+                    aria-label="Normal ölçü çizgisi yap"
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white py-2 text-slate-700 hover:bg-slate-50 hover:border-slate-400"
+                    onClick={() => { olcuCizgisiniDegistir(barlineMenu, 'barline'); close(); }}
+                  >
+                    <svg width="28" height="32" viewBox="0 0 28 32">
+                      <line x1="14" y1="4" x2="14" y2="28" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                    <span className="text-[10px] text-slate-500 leading-none">Normal</span>
+                  </button>
 
-            <button
-              type="button"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              onClick={() => {
-                olcuCizgisiniDegistir(barlineMenu, 'sectionalBarline');
-                close();
-              }}
-            >
-              Bölüm sonu çizgisi yap
-            </button>
+                  {/* Sectional / double barline */}
+                  <button
+                    type="button"
+                    title="Bölüm sonu çizgisi (çift)"
+                    aria-label="Bölüm sonu çizgisi yap"
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white py-2 text-slate-700 hover:bg-slate-50 hover:border-slate-400"
+                    onClick={() => { olcuCizgisiniDegistir(barlineMenu, 'sectionalBarline'); close(); }}
+                  >
+                    <svg width="28" height="32" viewBox="0 0 28 32">
+                      <line x1="9"  y1="4" x2="9"  y2="28" stroke="currentColor" strokeWidth="2"/>
+                      <line x1="17" y1="4" x2="17" y2="28" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                    <span className="text-[10px] text-slate-500 leading-none">Çift</span>
+                  </button>
 
-            <button
-              type="button"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              onClick={() => {
-                olcuCizgisiniDegistir(barlineMenu, 'finalBarline');
-                close();
-              }}
-            >
-              Bitiş çizgisi yap
-            </button>
+                  {/* Final barline */}
+                  <button
+                    type="button"
+                    title="Bitiş çizgisi (ince + kalın)"
+                    aria-label="Bitiş çizgisi yap"
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white py-2 text-slate-700 hover:bg-slate-50 hover:border-slate-400"
+                    onClick={() => { olcuCizgisiniDegistir(barlineMenu, 'finalBarline'); close(); }}
+                  >
+                    <svg width="28" height="32" viewBox="0 0 28 32">
+                      <line x1="8"  y1="4" x2="8"  y2="28" stroke="currentColor" strokeWidth="1.5"/>
+                      <line x1="17" y1="4" x2="17" y2="28" stroke="currentColor" strokeWidth="5"/>
+                    </svg>
+                    <span className="text-[10px] text-slate-500 leading-none">Bitiş</span>
+                  </button>
 
-            <button
-              type="button"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              onClick={() => {
-                olcuCizgisiniDegistir(barlineMenu, 'beginRepeat');
-                close();
-              }}
-            >
-              Tekrar başlangıcı yap
-            </button>
+                  {/* Begin repeat */}
+                  <button
+                    type="button"
+                    title="Tekrar başlangıcı  |:"
+                    aria-label="Tekrar başlangıcı yap"
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white py-2 text-slate-700 hover:bg-slate-50 hover:border-slate-400"
+                    onClick={() => { olcuCizgisiniDegistir(barlineMenu, 'beginRepeat'); close(); }}
+                  >
+                    <svg width="28" height="32" viewBox="0 0 28 32">
+                      <line x1="6"  y1="4" x2="6"  y2="28" stroke="currentColor" strokeWidth="5"/>
+                      <line x1="13" y1="4" x2="13" y2="28" stroke="currentColor" strokeWidth="1.5"/>
+                      <circle cx="20" cy="11" r="2.2" fill="currentColor"/>
+                      <circle cx="20" cy="21" r="2.2" fill="currentColor"/>
+                    </svg>
+                    <span className="text-[10px] text-slate-500 leading-none">|: Tekrar</span>
+                  </button>
 
-            <button
-              type="button"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              onClick={() => {
-                olcuCizgisiniDegistir(barlineMenu, 'endRepeat');
-                close();
-              }}
-            >
-              Tekrar sonu yap
-            </button>
+                  {/* End repeat */}
+                  <button
+                    type="button"
+                    title="Tekrar sonu  :|"
+                    aria-label="Tekrar sonu yap"
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white py-2 text-slate-700 hover:bg-slate-50 hover:border-slate-400"
+                    onClick={() => { olcuCizgisiniDegistir(barlineMenu, 'endRepeat'); close(); }}
+                  >
+                    <svg width="28" height="32" viewBox="0 0 28 32">
+                      <circle cx="8"  cy="11" r="2.2" fill="currentColor"/>
+                      <circle cx="8"  cy="21" r="2.2" fill="currentColor"/>
+                      <line x1="15" y1="4" x2="15" y2="28" stroke="currentColor" strokeWidth="1.5"/>
+                      <line x1="22" y1="4" x2="22" y2="28" stroke="currentColor" strokeWidth="5"/>
+                    </svg>
+                    <span className="text-[10px] text-slate-500 leading-none">Tekrar :|</span>
+                  </button>
 
-            <button
-              type="button"
-              className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-50 hover:border-red-300"
-              onClick={() => {
-                olcuCizgisiniSil(barlineMenu);
-                close();
-              }}
-            >
-              Ölçü çizgisini sil
-            </button>
+                  {/* Delete barline */}
+                  <button
+                    type="button"
+                    title="Ölçü çizgisini sil"
+                    aria-label="Ölçü çizgisini sil"
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg border border-red-200 bg-white py-2 text-red-500 hover:bg-red-50 hover:border-red-400"
+                    onClick={() => { olcuCizgisiniSil(barlineMenu); close(); }}
+                  >
+                    <svg width="28" height="32" viewBox="0 0 28 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="7,9 21,9"/>
+                      <path d="M11,9V7h6v2"/>
+                      <path d="M10,9l1,14h6l1-14"/>
+                      <line x1="12" y1="13" x2="12" y2="20"/>
+                      <line x1="16" y1="13" x2="16" y2="20"/>
+                    </svg>
+                    <span className="text-[10px] leading-none">Sil</span>
+                  </button>
+                </div>
+              </>
+            )}
 
             <button
               type="button"

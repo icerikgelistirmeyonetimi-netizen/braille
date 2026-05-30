@@ -83,6 +83,26 @@ export function skorBarlineTipiAl(oge = {}) {
     return 'beginRepeat';
   }
 
+  if (
+    tip === 'volta1' ||
+    ad.includes('1. ev') ||
+    ad.includes('1.ev') ||
+    ad.includes('volta 1') ||
+    ad.includes('volta1')
+  ) {
+    return 'volta1';
+  }
+
+  if (
+    tip === 'volta2' ||
+    ad.includes('2. ev') ||
+    ad.includes('2.ev') ||
+    ad.includes('volta 2') ||
+    ad.includes('volta2')
+  ) {
+    return 'volta2';
+  }
+
   return 'normal';
 }
 
@@ -247,6 +267,13 @@ export function skorBarlineParcalariAl({
       y2: bottomY,
       width: s.thickWidth,
     });
+    return parts;
+  }
+
+  // volta1 / volta2 — görsel olarak çizgi YOK; bracket ayrıca çizilir
+  // (eskiden ince bir vertical çizgi vardı; bracket'le birlikte kafa karıştırıcıydı
+  //  ve volta marker'ın kendi 64px ölçüsünde yer kapladığında stray line oluşturuyordu)
+  if (type === 'volta1' || type === 'volta2') {
     return parts;
   }
 

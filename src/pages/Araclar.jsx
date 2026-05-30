@@ -3084,42 +3084,72 @@ function muzikOlcuUyari(measure) {
 
 // Audit E — Ölçü hash'i: iki ölçü musical olarak aynı mı?
 // Modül 8: braille bar repeat yalnız nüanslar/dinamik/aksidental/oktav AYNI ise kullanılabilir.
-function muzikOlcuHash(olcu) {
+// Müzikal içerik olmayan öğe tipleri — hash hesabında atlanır
+const ARACLAR_HASH_ATLANAN_TIPLER = new Set([
+  'anahtar', 'barline', 'sectionalBarline', 'finalBarline',
+  'beginRepeat', 'endRepeat', 'timeSignatureChange', 'keySignatureChange',
+]);
+
+function muzikOlcuHash(olcu, baglar = []) {
   if (!olcu || !Array.isArray(olcu.items)) return '';
-  return olcu.items.map((o) => {
-    if (o.tip === 'nota') {
-      const mods = (yon) => (Array.isArray(o.modifiers?.[yon]) ? o.modifiers[yon] : [])
-        .map((m) => m.kayit?.ad || '').sort().join(',');
-      return [
-        'N', o.notaAd, o.sureIndeksi, o.oktav ?? 4,
-        o.accidental || '-', o.dotted ? 'd' : '-',
-        mods('oncesi'), mods('sonrasi'),
-      ].join('|');
-    }
-    if (o.tip === 'sus') {
-      return ['S', o.realValue, o.dotted ? 'd' : '-'].join('|');
-    }
-    return ['X', o.ad || o.tip || ''].join('|');
-  }).join('~');
+
+  const itemIds = new Set(olcu.items.filter((o) => o?.id).map((o) => o.id));
+
+  // Tamamen bu ölçü içinde başlayıp biten bağlar için nota başına imza üret
+  const notaBagImzasi = new Map();
+  for (const b of (baglar || [])) {
+    const tip = String(b.tip || b.kayit?.tip || 'bag').toLowerCase();
+    const bagIds = (Array.isArray(b.notaIdler) && b.notaIdler.length >= 2)
+      ? b.notaIdler.filter(Boolean)
+      : [b.basId, b.sonId].filter(Boolean);
+    if (bagIds.length < 2 || !bagIds.every((id) => itemIds.has(id))) continue;
+    bagIds.forEach((id, i) => {
+      const rol = i === 0 ? 'bas' : i === bagIds.length - 1 ? 'son' : 'ara';
+      const mevcut = notaBagImzasi.get(id) || [];
+      mevcut.push(`${tip}-${rol}`);
+      notaBagImzasi.set(id, mevcut);
+    });
+  }
+
+  return olcu.items
+    .filter((o) => o && !ARACLAR_HASH_ATLANAN_TIPLER.has(o.tip))
+    .map((o) => {
+      if (o.tip === 'nota') {
+        const mods = (yon) => (Array.isArray(o.modifiers?.[yon]) ? o.modifiers[yon] : [])
+          .map((m) => m.kayit?.ad || '').sort().join(',');
+        const bagImza = (notaBagImzasi.get(o.id) || []).sort().join(',');
+        return [
+          'N', o.notaAd, o.sureIndeksi, o.oktav ?? 4,
+          o.accidental || '-', o.dotted ? 'd' : '-',
+          mods('oncesi'), mods('sonrasi'),
+          bagImza,
+        ].join('|');
+      }
+      if (o.tip === 'sus') return ['S', o.realValue, o.dotted ? 'd' : '-'].join('|');
+      return ['X', o.ad || o.tip || ''].join('|');
+    })
+    .join('~');
 }
 
-// Audit Aşama 6 — Otomatik bar repeat: ardışık özdeş ölçüleri 7 ile değiştir.
+// Audit Aşama 6 — Otomatik bar repeat: ardışık özdeş ölçüleri ⠶ ile değiştir.
 // Modül 8 Bölüm 10: yalnız nüanslar/dinamik/aksidental/slur/oktav AYNI ise.
 // Ayrıca ölçü sınırlarını aşan bag/slur varsa repeat uygulanmaz.
 function muzikBarRepeatUygunMu(prev, cur, baglar) {
   if (!prev || !cur) return false;
   if (!prev.items.length || !cur.items.length) return false;
-  if (muzikOlcuHash(prev) !== muzikOlcuHash(cur)) return false;
-  // Cross-measure bag/slur: prev'in herhangi öğesi bag.basId iken bag.sonId cur'da
-  // veya cur'un öğeleri bag.sonId iken bag.basId prev'de ise repeat geçersiz
+  // Hash artık ölçü içi bağları da kapsıyor
+  if (muzikOlcuHash(prev, baglar) !== muzikOlcuHash(cur, baglar)) return false;
   const prevIds = new Set(prev.items.map((o) => o.id));
   const curIds = new Set(cur.items.map((o) => o.id));
+  // Cross-measure bağ kontrolü (biri önceki ölçüde başlayıp diğerinde bitiyor)
   for (const b of (baglar || [])) {
-    const basInPrev = prevIds.has(b.basId);
-    const sonInCur = curIds.has(b.sonId);
-    const basInCur = curIds.has(b.basId);
-    const sonInPrev = prevIds.has(b.sonId);
-    if ((basInPrev && sonInCur) || (basInCur && sonInPrev)) return false;
+    const basIds = Array.isArray(b.notaIdler) ? b.notaIdler : [b.basId, b.sonId].filter(Boolean);
+    if (basIds.length < 2) continue;
+    const basId = basIds[0];
+    const sonId = basIds[basIds.length - 1];
+    if ((prevIds.has(basId) && curIds.has(sonId)) || (curIds.has(basId) && prevIds.has(sonId))) {
+      return false;
+    }
   }
   return true;
 }
@@ -3127,6 +3157,10 @@ function muzikBarRepeatUygunMu(prev, cur, baglar) {
 function muzikAutoBarRepeatHaritasi(olculer, baglar = []) {
   const harita = new Map();
   for (let i = 1; i < olculer.length; i++) {
+    // brailleShorthand ölçülerini asla otomatik tekrar olarak işaretleme
+    const prevFirst = olculer[i - 1]?.items?.[0];
+    const curFirst = olculer[i]?.items?.[0];
+    if (prevFirst?.tip === 'brailleShorthand' || curFirst?.tip === 'brailleShorthand') continue;
     if (muzikBarRepeatUygunMu(olculer[i - 1], olculer[i], baglar)) {
       harita.set(i, true);
     }
@@ -3399,14 +3433,20 @@ function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, tupletle
         // Yeni Braille satırı: ilk gerçek notaya oktav işareti zorunlu (Modül 8 Bölüm 3)
         timeKeyDegisimiBayragi = true;
       }
-      // Otomatik bar repeat: bu ölçü öncekiyle özdeşse 7 işareti emit et, öğeleri atla
+      // Otomatik bar repeat: bu ölçü öncekiyle özdeşse ⠶ işareti emit et, öğeleri atla
       if (autoRepeatHaritasi.get(olcuIdx)) {
         if (kaynakParcalar.length) kaynakIndeksi += 1;
         kaynakParcalar.push('𝄎');
         hucreler.push([2, 3, 5, 6]);
         esleme.push(kaynakIndeksi);
-        metaEkle({ ogeId: null, kaynak: 'bar-repeat', etiket: `Ölçü ${olcuIdx + 1}: bar repeat (önceki ölçüyle aynı)` });
+        metaEkle({ ogeId: null, olcuIdx, kaynak: 'bar-repeat', etiket: `Ölçü ${olcuIdx + 1}: bar repeat (önceki ölçüyle aynı)` });
         kaynakIndeksi += 1;
+        // Ölçü sonu boşluğu: skip edilen barline'ın yerine — son ölçü değilse ekle
+        if (olcuIdx < olculer.length - 1) {
+          hucreler.push([]);
+          esleme.push(kaynakIndeksi);
+          metaEkle({ ogeId: null, kaynak: 'spacer', etiket: 'ölçü sonu boşluğu' });
+        }
         timeKeyDegisimiBayragi = true;
       }
     }

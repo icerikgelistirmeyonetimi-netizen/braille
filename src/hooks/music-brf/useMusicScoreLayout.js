@@ -54,7 +54,8 @@ export function useMusicScoreLayout({
   sureGostergeleri,
 }) {
   const svgCizilecekOgeler = useMemo(() => (
-    muzikOgeleriOlcuTamamlanmis.filter((oge) => oge.tip !== 'anahtar')
+    // brailleShorthand: BRF kısaltma işaretçisi — SVG'de doğrudan çizilmez
+    muzikOgeleriOlcuTamamlanmis.filter((oge) => oge.tip !== 'anahtar' && oge.tip !== 'brailleShorthand')
   ), [muzikOgeleriOlcuTamamlanmis]);
 
   const zamanImzasindanVurusBirim16Al = () => {
@@ -242,6 +243,15 @@ export function useMusicScoreLayout({
         return;
       }
 
+      // Volta marker'ları (1. ev / 2. ev) sadece metadata'dır — kendi başlarına
+      // bir ölçü oluşturmasınlar. Sonraki gerçek ölçüye baş eklenti olarak
+      // dahil olurlar. Bu sayede bracket sadece üstte çizilir, layout'ta
+      // yer kaplamaz, başka ölçüleri ileri itmez.
+      if (oge?.tip === 'volta1' || oge?.tip === 'volta2') {
+        currentItems.push({ oge, idx });
+        return;
+      }
+
       currentItems.push({ oge, idx });
       if (olcuCizgisiMi(oge)) {
         pushMeasure();
@@ -253,7 +263,11 @@ export function useMusicScoreLayout({
   }
 
   const olcuGorunurOgeleriAl = (measure) => (
-    (measure?.items || []).filter((oge) => !normalOlcuCizgisiMi(oge))
+    (measure?.items || []).filter((oge) => (
+      !normalOlcuCizgisiMi(oge) &&
+      oge?.tip !== 'volta1' &&
+      oge?.tip !== 'volta2'
+    ))
   );
 
   const olcuVisibleItemsAl = (measure) => {
@@ -806,7 +820,12 @@ export function useMusicScoreLayout({
 
         measure.items.forEach((oge) => {
           let x;
+          const isVoltaMarker = oge.tip === 'volta1' || oge.tip === 'volta2';
           if (oge.tip === 'beginRepeat' && measureBeginsWithBeginRepeat && measure.items[0] === oge) {
+            x = measureStartX;
+          } else if (isVoltaMarker) {
+            // Volta marker'ı görsel olarak yer kaplamaz — bracket başlangıcı için
+            // measureStartX referans nokta olarak kaydedilir.
             x = measureStartX;
           } else if (olcuCizgisiMi(oge)) {
             x = measureEndX;

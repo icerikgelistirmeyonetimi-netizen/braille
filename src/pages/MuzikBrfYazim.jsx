@@ -5,7 +5,6 @@ import React, { useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import { useMuzikBrfEditor } from '../hooks/music-brf/useMuzikBrfEditor.jsx';
 import { anahtarYAl, anahtarFontClassAl, bagTipiTieMi, bagYonunuHesapla, bagCizimNoktalari, bagHitRectHesapla, ledgerCizgileri } from '../utils/music-brf/musicScoreHelpers.jsx';
-import MuzikScoreHeader from '../components/music/MuzikScoreHeader.jsx';
 import MuzikBrfViewTabs from '../components/music/MuzikBrfViewTabs.jsx';
 import MuzikBrfScoreEditor from '../components/music/MuzikBrfScoreEditor.jsx';
 import MuzikBrailleOutput from '../components/music/MuzikBrailleOutput.jsx';
@@ -83,6 +82,7 @@ export default function MuzikBrfYazim() {
     aktifBrfKaynakMetni,
     setMuzikHeader,
     setTimeSignature,
+    donanimiDegistir,
     setMuzikOgeleri,
     setMuzikTupletler,
     setPopupAcik,
@@ -104,8 +104,6 @@ export default function MuzikBrfYazim() {
     notaEkleKonuma,
     sureSecildi,
     aracTikla,
-    includeBarNumbers,
-    setIncludeBarNumbers,
     brfDosyasiYukle,
     aracEkleHandler,
     anahtariDegistir,
@@ -116,12 +114,16 @@ export default function MuzikBrfYazim() {
     tupletCancel,
     ifadeEkle,
     tupletTamamla,
+    tupletSil,
     notaTiklandi,
     seciliOge,
     seciliEditorOgeId,
     seciliNotayiGuncelle,
     seciliOgeyiGuncelle,
     seciliOgeyiSil,
+    seciliNotaModifierSil,
+    seciliNotaModifierGuncelle,
+    seciliBagiSil,
     seciliNotayiSusaCevir,
     seciliSusuNotayaCevir,
     anahtarGlyphAl,
@@ -129,7 +131,17 @@ export default function MuzikBrfYazim() {
     setBekleyenModifier,
     setAktifKategori,
     brfImportKirli,
+    voltaEkleModu,
+    voltaEkleBaslangicId,
+    voltaEkleModuBaslat,
+    voltaEkleModIptal,
+    voltaBarlineEkle,
+    voltaMeasureEkle,
+    voltaSil,
+    voltaGuncelle,
   } = useMuzikBrfEditor();
+
+  const olcuSayisi = (muzikSatirOlculeri || []).reduce((sum, row) => sum + (row?.length || 0), 0);
 
   const gosterilecekBrfMetni =
     brfImportKirli
@@ -161,21 +173,9 @@ export default function MuzikBrfYazim() {
   // Aşama 1: Braille metin/anlam/lejant saf helper'ları utils/music-brf altına taşındı.
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-4">
+    <div className="w-full mx-auto max-w-[1600px] px-4 py-4 min-w-0 overflow-x-hidden">
       <PageHeader baslik="Müzik BRF Yazım" />
       <div className="space-y-4">
-        <MuzikScoreHeader
-          muzikHeader={muzikHeader}
-          setMuzikHeader={setMuzikHeader}
-          setTimeSignature={setTimeSignature}
-          brfDosyasiYukle={async (file) => {
-            await brfDosyasiYukle(file);
-            setAktifSekme('braille');
-          }}
-          includeBarNumbers={includeBarNumbers}
-          setIncludeBarNumbers={setIncludeBarNumbers}
-        />
-
         <MuzikBrfViewTabs aktifSekme={aktifSekme} setAktifSekme={setAktifSekme} />
 
         {Array.isArray(muzikUyarilari) && muzikUyarilari.length > 0 && (
@@ -201,6 +201,9 @@ export default function MuzikBrfYazim() {
             notaEkle={notaEkle}
             notaEkleKonuma={notaEkleKonuma}
             ifadeEkle={ifadeEkle}
+            setMuzikHeader={setMuzikHeader}
+            setTimeSignature={setTimeSignature}
+            brfDosyasiYukle={async (file) => { await brfDosyasiYukle(file); setAktifSekme('braille'); }}
             aracEkleHandler={aracEkleHandler}
             tupletTamamla={tupletTamamla}
             aracTikla={aracTikla}
@@ -211,6 +214,7 @@ export default function MuzikBrfYazim() {
             setAktifArac={setAktifArac}
             setBekleyenBag={setBekleyenBag}
             muzikSatirlar={muzikSatirlar}
+            muzikSatirOlculeri={muzikSatirOlculeri}
             olcuBrailleSonuclari={olcuBrailleSonuclari}
             skorUstuHeaderSatirlari={skorUstuHeaderSatirlari}
             svgGlobalIndexBul={svgGlobalIndexBul}
@@ -269,10 +273,26 @@ export default function MuzikBrfYazim() {
             baslangicBrailleLejantlari={baslangicBrailleLejantlari}
             baslangicBrailleLejantMapi={baslangicBrailleLejantMapi}
             seciliOgeyiSil={seciliOgeyiSil}
+            seciliNotaModifierSil={seciliNotaModifierSil}
+            seciliNotaModifierGuncelle={seciliNotaModifierGuncelle}
+            seciliBagiSil={seciliBagiSil}
+            muzikTupletler={muzikTupletler}
+            tupletSil={tupletSil}
             seciliNotayiSusaCevir={seciliNotayiSusaCevir}
             seciliSusuNotayaCevir={seciliSusuNotayaCevir}
             sonEklenenOgeId={sonEklenenOgeId}
             anahtariDegistir={anahtariDegistir}
+            setTimeSignature={setTimeSignature}
+            donanimiDegistir={donanimiDegistir}
+            olcuSayisi={olcuSayisi}
+            voltaEkleModu={voltaEkleModu}
+            voltaEkleBaslangicId={voltaEkleBaslangicId}
+            voltaEkleModuBaslat={voltaEkleModuBaslat}
+            voltaEkleModIptal={voltaEkleModIptal}
+            voltaBarlineEkle={voltaBarlineEkle}
+            voltaMeasureEkle={voltaMeasureEkle}
+            voltaSil={voltaSil}
+            voltaGuncelle={voltaGuncelle}
           />
         )}
 

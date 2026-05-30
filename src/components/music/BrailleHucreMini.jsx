@@ -4,6 +4,7 @@ import {
   brailleAnlamOgeIdAl,
   brailleBagKisaEtiketiAl,
   brailleKategoriAl,
+  brailleKisaCellLabelAl,
   getBrailleItemLabel,
   brailleNotaEtiketiAl,
   brailleRenkAl,
@@ -28,16 +29,22 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
   onLeave,
   onClick,
   index = 0,
+  etiketGizle = false,
 }) {
   const kategori = brailleKategoriAl(anlam);
   const notaMi = kategori === 'nota';
   const bagMi = kategori === 'bag';
   const susMu = kategori === 'sus';
   const oktavMi = kategori === 'oktav';
+  const accidentalMi = kategori === 'accidental';
+  const dotMu = (anlam?.kaynak === 'dot');
   const notaEtiketi = notaMi ? brailleNotaEtiketiAl(anlam) : '';
   const bagEtiketi = bagMi ? brailleBagKisaEtiketiAl(anlam) : '';
   const susEtiketi = susMu ? getBrailleItemLabel(anlam) : '';
-  const oktavEtiketi = oktavMi ? getBrailleItemLabel(anlam) : '';
+  // Oktav, aksidental ve nokta için KISA etiket (5 / ♯ / · vb.)
+  const kisaEtiketi = (oktavMi || accidentalMi || dotMu)
+    ? brailleKisaCellLabelAl(anlam)
+    : '';
   const stil = notaMi ? BRAILLE_NOTA_STILI : (renkStil || brailleRenkAl(anlam));
   const cfg = yerlesim?.cfg || BRAILLE_HUCRE_TEMA.normal;
   const zeminRengi = brailleHexToRgba(stil.fill, notaMi ? 0.08 : 0.12);
@@ -54,13 +61,20 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
   };
 
   const aktif = hoverAktif || seciliAktif;
-  const label = notaMi
-    ? notaEtiketi
-    : (bagMi
-      ? bagEtiketi
-      : (susMu
-        ? susEtiketi
-        : (oktavMi ? oktavEtiketi : '')));
+  const label = etiketGizle
+    ? ''
+    : (notaMi
+      ? notaEtiketi
+      : (bagMi
+        ? bagEtiketi
+        : (susMu
+          ? susEtiketi
+          : kisaEtiketi)));
+
+  // Mavi hover/select tema (notalarla / volta ile aynı stil)
+  const hoverMavi   = 'rgba(59,130,246,0.10)';
+  const seciliMavi  = 'rgba(59,130,246,0.18)';
+  const hoverStroke = '#3b82f6';
 
   return (
     <div
@@ -75,11 +89,13 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
         alignItems: 'center',
         gap: 2,
         boxSizing: 'border-box',
-        marginLeft: index > 0 ? -1 : 0,
-        cursor: onClick ? 'pointer' : 'default',
+        marginLeft: index > 0 ? 2 : 0,
+        // onClick yoksa sarmalayıcı span'in (pointer) imlecini devral.
+        cursor: onClick ? 'pointer' : 'inherit',
         outline: 'none',
         boxShadow: 'none',
-        transform: aktif ? 'translateY(-1px)' : 'none',
+        transition: 'filter 120ms ease',
+        filter: aktif ? 'drop-shadow(0 1px 3px rgba(59,130,246,0.25))' : 'none',
       }}
     >
       <div
@@ -90,10 +106,15 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
           alignItems: 'center',
           justifyContent: 'center',
           boxSizing: 'border-box',
-          borderRadius: 0,
-          backgroundColor: aktif ? aktifArkaPlan : zeminRengi,
-          boxShadow: 'none',
-          border: `1px solid ${brailleHexToRgba(stil.fill, 0.22)}`,
+          borderRadius: 6,
+          backgroundColor: seciliAktif ? seciliMavi
+            : hoverAktif ? hoverMavi
+            : zeminRengi,
+          boxShadow: aktif ? 'inset 0 0 0 1px rgba(255,255,255,0.4)' : 'none',
+          border: `${seciliAktif ? 1.6 : hoverAktif ? 1.4 : 1}px ${hoverAktif && !seciliAktif ? 'dashed' : 'solid'} ${
+            hoverAktif || seciliAktif ? hoverStroke : brailleHexToRgba(stil.fill, 0.28)
+          }`,
+          transition: 'background-color 120ms ease, border-color 120ms ease',
         }}
       >
         <svg
