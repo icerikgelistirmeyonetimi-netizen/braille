@@ -1182,10 +1182,11 @@ export default function MuzikScoreSvg({
     <div
       className="w-full p-3 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col gap-2"
       role="application"
-      aria-label="Müzik çizim alanı"
+      aria-roledescription="Müzik notası editörü"
+      aria-label={`Müzik çizim alanı, ${muzikSatirlar?.length || 0} satır. Notalara Tab ile gezinip Enter ile düzenleyebilirsiniz. Tam sözel okuma için BRF okuma sekmesine geçin.`}
     >
       {/* ── Skor satırları (yatay scroll için kendi container'ı) ────────── */}
-      <div className="w-full flex flex-col gap-2 overflow-x-auto">
+      <div className="muzik-skor-scroll w-full flex flex-col gap-2 overflow-x-auto">
       {muzikSatirlar.map((satir, satirIdx) => {
         const satirOlculeri = muzikSatirOlculeri?.[satirIdx] || [];
         const satirOlcuBrailleleri = olcuBrailleSonuclari[satirIdx] || [];
@@ -1285,6 +1286,7 @@ export default function MuzikScoreSvg({
               {/* Sol anahtar altında "B" butonu → eser bilgileri + header braille popup */}
               {satirIdx === 0 && (
                 <g
+                  className="muzik-header-braille-btn"
                   role="button"
                   tabIndex={0}
                   aria-label="Eser bilgileri ve header braille"
@@ -1617,11 +1619,22 @@ export default function MuzikScoreSvg({
                   const overlayHeight = 44;
                   const overlayX = x - overlayWidth / 2;
                   const overlayY = noteY - overlayHeight / 2;
+                  // Erisilebilirlik: notanin Turkce sozel adi (perde + oktav + sure + nokta + ariza)
+                  const _sureAdlari = ['sekizlik', 'dörtlük', 'yarım', 'tam', 'on altılık', 'otuz ikili', 'altmış dörtlük'];
+                  const _arizaAdlari = { sharp: 'diyez', diyez: 'diyez', flat: 'bemol', bemol: 'bemol', natural: 'naturel', naturel: 'naturel', doubleSharp: 'çift diyez', doubleFlat: 'çift bemol' };
+                  const notaErisimEtiketi = [
+                    oge.notaAd || oge.ad || 'nota',
+                    _arizaAdlari[oge.accidental] || '',
+                    Number.isFinite(Number(oge.oktav)) ? `${oge.oktav}. oktav` : '',
+                    _sureAdlari[oge.sureIndeksi ?? 0] || '',
+                    oge.dotted ? 'noktalı' : '',
+                  ].filter(Boolean).join(' ');
                   return (
                     <g
                       key={oge.id}
                       role={oge._repeatCopy ? undefined : 'button'}
                       tabIndex={oge._repeatCopy ? undefined : 0}
+                      aria-label={oge._repeatCopy ? undefined : `Nota: ${notaErisimEtiketi}`}
                       pointerEvents={oge._repeatCopy ? 'none' : 'all'}
                       style={{
                         pointerEvents: oge._repeatCopy ? 'none' : 'all',
@@ -1952,9 +1965,18 @@ export default function MuzikScoreSvg({
                 if (oge.tip === 'sus') {
                   const susSecili = oge.id === seciliOgeId;
                   const susHoverAktif = hoverBrailleOgeId === oge.id || playbackOgeId === oge.id;
+                  const _susSureAdlari = ['sekizlik', 'dörtlük', 'yarım', 'tam', 'on altılık', 'otuz ikili', 'altmış dörtlük'];
+                  const susErisimEtiketi = `Sus: ${_susSureAdlari[oge.sureIndeksi ?? 0] || ''}${oge.dotted ? ' noktalı' : ''}${oge.autoRest || oge.otomatik ? ' (otomatik)' : ''}`;
+                  const susEtkilesimli = !(oge._repeatCopy || oge.autoRest || oge.otomatik);
                   return (
                     <g
                       key={oge.id}
+                      role={susEtkilesimli ? 'button' : 'img'}
+                      tabIndex={susEtkilesimli ? 0 : undefined}
+                      aria-label={susErisimEtiketi}
+                      onKeyDown={susEtkilesimli ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); notaTiklandi(oge, e); }
+                      } : undefined}
                       opacity={oge._repeatCopy ? 0.32 : oge.autoRest || oge.otomatik ? 0.48 : 1}
                       pointerEvents={oge._repeatCopy || oge.autoRest || oge.otomatik ? 'none' : 'auto'}
                       onMouseEnter={() => {

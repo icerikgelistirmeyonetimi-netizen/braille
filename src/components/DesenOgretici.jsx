@@ -24,6 +24,7 @@ export default function DesenOgretici({
   bittiMesaji,
   rtl,
   ogeSesiCal,
+  ogeSesiDurdur,
   ogeSesiGecikmeMs = 2600,
   ogeSesiOnceCal = false,
   ogeSesiHerZaman = false,
@@ -99,6 +100,8 @@ export default function DesenOgretici({
 
   const tumSesleriDurdur = () => {
     konusmayiDurdur();
+    // Çalmakta olan ses kaydını da durdur (navigasyonda kayıt + TTS çakışmasın).
+    ogeSesiDurdur?.();
 
     if (ogeSesiTimerRef.current) {
       clearTimeout(ogeSesiTimerRef.current);
@@ -329,10 +332,11 @@ export default function DesenOgretici({
             ogeSesiGecikmeMs={ogeSesiGecikmeMs}
             okumaModuOgeSesiGecikmeMs={900}
             okumaModuOgeSesiAktif={typeof ogeSesiCal === 'function'}
+            okumaModundaSadeceOgeSesi={okumaModundaSadeceOgeSesi}
           />
         </div>
         <div className="controls">
-          <button type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+          <button className="btn" type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
         </div>
       </div>
     );
@@ -351,8 +355,8 @@ export default function DesenOgretici({
         </div>
         <div className="controls">
           {kayitlilarModu
-            ? <button type="button" onClick={() => modDegistir(false)}>Tüm Listeye Dön</button>
-            : <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
+            ? <button className="btn" type="button" onClick={() => modDegistir(false)}>Tüm Listeye Dön</button>
+            : <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
         </div>
       </div>
     );
@@ -406,7 +410,7 @@ export default function DesenOgretici({
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 ogeSesiCal(aktifOge);
@@ -429,7 +433,7 @@ export default function DesenOgretici({
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setOgeSesiAktif(true);
@@ -444,7 +448,7 @@ export default function DesenOgretici({
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setOgeSesiAktif(true);
@@ -484,8 +488,8 @@ export default function DesenOgretici({
         )}
         {kayitliSayisi > 0 && (
           <div className="banner-grup-secim" style={{ margin: '4px 0 0' }}>
-            <button type="button" className={!kayitlilarModu ? 'aktif' : ''} aria-pressed={!kayitlilarModu} onClick={() => modDegistir(false)}>Tümü</button>
-            <button type="button" className={kayitlilarModu ? 'aktif' : ''} aria-pressed={kayitlilarModu} onClick={() => modDegistir(true)}>Kayıtlılar ({kayitliSayisi})</button>
+            <button type="button" className={`btn ${!kayitlilarModu ? 'aktif' : ''}`} aria-pressed={!kayitlilarModu} onClick={() => modDegistir(false)}>Tümü</button>
+            <button type="button" className={`btn ${kayitlilarModu ? 'aktif' : ''}`} aria-pressed={kayitlilarModu} onClick={() => modDegistir(true)}>Kayıtlılar ({kayitliSayisi})</button>
           </div>
         )}
       </div>
@@ -495,7 +499,7 @@ export default function DesenOgretici({
           <OkumaModuButonu onClick={okumaModunaGec} />
           <button
             type="button"
-            className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktifOge?.ad) ? ' kaydedildi' : ''}`}
+            className={`btn sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktifOge?.ad) ? ' kaydedildi' : ''}`}
             onClick={kaydetSonra}
             aria-label="Daha sonra öğren listesine kaydet"
             title="Daha sonra öğren"
@@ -554,7 +558,7 @@ export default function DesenOgretici({
 
       <div className="controls">
         <button
-          type="button"
+className="btn"           type="button"
           onClick={() => {
             tumSesleriDurdur();
 
@@ -591,7 +595,7 @@ export default function DesenOgretici({
           <span className="btn-etiket">Tekrar</span>
         </button>
         <button
-          type="button"
+className="btn"           type="button"
           aria-label="Sıfırla"
           onClick={() => {
             tumSesleriDurdur();
@@ -604,7 +608,7 @@ export default function DesenOgretici({
           <span className="btn-etiket">Sıfırla</span>
         </button>
         <button
-          type="button"
+className="btn"           type="button"
           onClick={() => {
             tumSesleriDurdur();
             setIndeks((i) => Math.min(i + 1, aktifListe.length));

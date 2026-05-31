@@ -431,7 +431,7 @@ export default function BrfOku() {
               <span className="belge-dosya-karakter">{okunanMetin.length.toLocaleString('tr')} karakter</span>
               <button
                 type="button"
-                className="belge-dosya-kaldir"
+                className="btn belge-dosya-kaldir"
                 onClick={temizle}
                 aria-label="Dosyayı kaldır"
                 title="Kaldır"
@@ -448,7 +448,7 @@ export default function BrfOku() {
               <div className="belge-tab-bar">
                 <button
                   type="button"
-                  className={'belge-tab' + (aktifTab === 'metin' ? ' aktif' : '')}
+                  className={`btn ${'belge-tab' + (aktifTab === 'metin' ? ' aktif' : '')}`}
                   onClick={() => setAktifTab('metin')}
                   aria-pressed={aktifTab === 'metin'}
                 >
@@ -460,7 +460,7 @@ export default function BrfOku() {
                 </button>
                 <button
                   type="button"
-                  className={'belge-tab' + (aktifTab === 'braille' ? ' aktif' : '')}
+                  className={`btn ${'belge-tab' + (aktifTab === 'braille' ? ' aktif' : '')}`}
                   onClick={brailleTabAc}
                   aria-pressed={aktifTab === 'braille'}
                 >
@@ -486,7 +486,7 @@ export default function BrfOku() {
                   />
                   <button
                     type="button"
-                    className={'araclar-seslendir-btn' + (konusuyor === 'metin' ? ' aktif' : '')}
+                    className={`btn ${'araclar-seslendir-btn' + (konusuyor === 'metin' ? ' aktif' : '')}`}
                     style={{ position: 'absolute', top: 8, right: 8 }}
                     onClick={metniSeslendir}
                     disabled={!okunanMetin.trim()}
@@ -672,7 +672,7 @@ export default function BrfOku() {
                         </div>
                         <button
                           type="button"
-                          className="bhp-kapat"
+                          className="btn bhp-kapat"
                           onClick={() => setSeciliHucre(null)}
                           aria-label="Kapat"
                         >X</button>
@@ -689,7 +689,7 @@ export default function BrfOku() {
                       <div className="belge-braille-sayfalama">
                         <button
                           type="button"
-                          className="belge-sayfa-btn"
+                          className="btn belge-sayfa-btn"
                           onClick={() => setBrailleSayfa((p) => Math.max(0, p - 1))}
                           disabled={brailleSayfa === 0}
                           aria-label="Önceki sayfa"
@@ -726,7 +726,7 @@ export default function BrfOku() {
                         </form>
                         <button
                           type="button"
-                          className="belge-sayfa-btn"
+                          className="btn belge-sayfa-btn"
                           onClick={() => setBrailleSayfa((p) => Math.min(toplamSayfa - 1, p + 1))}
                           disabled={brailleSayfa === toplamSayfa - 1}
                           aria-label="Sonraki sayfa"
@@ -741,7 +741,7 @@ export default function BrfOku() {
                     <div className="belge-altbar-sag">
                       <button
                         type="button"
-                        className={'belge-genislet-btn' + (genisletAktif ? ' aktif' : '')}
+                        className={`btn ${'belge-genislet-btn' + (genisletAktif ? ' aktif' : '')}`}
                         onClick={() => setGenisletAktif((v) => !v)}
                         aria-pressed={genisletAktif}
                         aria-label={genisletAktif ? 'Etiketleri gizle (Daralt)' : 'Hücre altlarına etiket göster (Genişlet)'}
@@ -767,7 +767,7 @@ export default function BrfOku() {
                       </button>
                       <button
                         type="button"
-                        className="belge-genislet-btn belge-jpg-btn"
+                        className="btn belge-genislet-btn belge-jpg-btn"
                         onClick={jpgIndir}
                         aria-label="Sayfayı JPG olarak indir"
                         title="JPG indir"
@@ -783,7 +783,7 @@ export default function BrfOku() {
                   </div>
                   <button
                     type="button"
-                    className={'araclar-seslendir-btn araclar-seslendir-nokta' + (konusuyor === 'nokta' ? ' aktif' : '')}
+                    className={`btn ${'araclar-seslendir-btn araclar-seslendir-nokta' + (konusuyor === 'nokta' ? ' aktif' : '')}`}
                     onClick={noktalariSeslendir}
                     aria-label={konusuyor === 'nokta' ? 'Durdur' : 'Braille Noktaları Oku'}
                     title={konusuyor === 'nokta' ? 'Durdur' : 'Braille Noktaları Oku'}
@@ -795,7 +795,7 @@ export default function BrfOku() {
                   </button>
                   <button
                     type="button"
-                    className={'araclar-seslendir-btn araclar-erisilebilir-btn' + (erisilebilirMod ? ' aktif' : '')}
+                    className={`btn ${'araclar-seslendir-btn araclar-erisilebilir-btn' + (erisilebilirMod ? ' aktif' : '')}`}
                     onClick={() => setErisilebilirMod((v) => !v)}
                     aria-pressed={erisilebilirMod}
                     aria-label={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir braille metin görünümüne geç (Unicode braille glifleri)'}
@@ -815,7 +815,7 @@ export default function BrfOku() {
                   {erisilebilirMod && (
                     <button
                       type="button"
-                      className={'araclar-seslendir-btn araclar-kopyala-btn' + (kopyalandi ? ' aktif' : '')}
+                      className={`btn ${'araclar-seslendir-btn araclar-kopyala-btn' + (kopyalandi ? ' aktif' : '')}`}
                       onClick={async () => {
                         const metin = sayfaHucreler.map(noktalardanUnicode).join('');
                         if (!metin) return;
@@ -874,7 +874,7 @@ export default function BrfOku() {
               </h2>
               <button
                 type="button"
-                className="araclar-brf-onizle-kapat"
+                className="btn araclar-brf-onizle-kapat"
                 onClick={() => setBrfOnizlemeAcik(false)}
                 aria-label="Kapat"
               >
@@ -980,7 +980,7 @@ export default function BrfOku() {
                 type="button"
                 onClick={() => navigator.clipboard?.writeText(okunanMetin).catch(() => {})}
                 aria-label="Panoya Kopyala"
-                className="araclar-brf-grup-ilk"
+                className="btn araclar-brf-grup-ilk"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
                   <rect x="9" y="9" width="13" height="13" rx="2"/>
@@ -1000,7 +1000,7 @@ export default function BrfOku() {
                   URL.revokeObjectURL(url);
                 }}
                 aria-label="TXT olarak indir"
-                className="araclar-brf-grup-orta"
+                className="btn araclar-brf-grup-orta"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
                   <path d="M12 3v13M7 11l5 5 5-5"/>
@@ -1012,7 +1012,7 @@ export default function BrfOku() {
                 type="button"
                 disabled={!okunanMetin.trim()}
                 onClick={() => setBrfOnizlemeAcik(true)}
-                className="araclar-brf-grup-son araclar-brf-grup-onizle"
+                className="btn araclar-brf-grup-son araclar-brf-grup-onizle"
                 aria-label="Kabartmalı çıktı için BRF ön izlemesi"
                 title="Ön izle ö kağıda göre sıra ve satır (form feed)"
               >
@@ -1026,7 +1026,7 @@ export default function BrfOku() {
             <button
               type="button"
               disabled={!okunanMetin}
-              className={'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (tabletModuAktif ? ' aktif' : '')}
+              className={`btn ${'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (tabletModuAktif ? ' aktif' : '')}`}
               onClick={() => {
                 const eskiBoyut = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
                 const yeniTablet = !tabletModuAktif;
@@ -1048,7 +1048,7 @@ export default function BrfOku() {
             <div className="kisaltma-btn-grup" ref={sistemPaneliRef}>
               <button
                 type="button"
-                className={'araclar-perkins-btn' + (kisaltmaAktif ? ' aktif' : '')}
+                className={`btn ${'araclar-perkins-btn' + (kisaltmaAktif ? ' aktif' : '')}`}
                 onClick={() => setKisaltmaAktif((v) => !v)}
                 aria-pressed={kisaltmaAktif}
                 aria-label={'Kısaltma ' + (kisaltmaAktif ? 'Aktif' : 'Kapalı')}
@@ -1061,7 +1061,7 @@ export default function BrfOku() {
               </button>
               <button
                 type="button"
-                className={'kisaltma-sistem-acilis-btn araclar-perkins-btn' + (kisaltmaAktif && sistemPaneli ? ' aktif' : '') + (kisaltmaAktif ? '' : ' disabled')}
+                className={`btn ${'kisaltma-sistem-acilis-btn araclar-perkins-btn' + (kisaltmaAktif && sistemPaneli ? ' aktif' : '') + (kisaltmaAktif ? '' : ' disabled')}`}
                 onClick={() => kisaltmaAktif && setSistemPaneli((v) => !v)}
                 aria-expanded={sistemPaneli}
                 aria-label="Kısaltma sistemleri"

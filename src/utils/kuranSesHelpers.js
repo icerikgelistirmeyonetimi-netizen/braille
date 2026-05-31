@@ -128,6 +128,30 @@ export function kuranKelimeOkuma1SesUrlAl(oge) {
 
 const kuranAudioCache = new Map();
 
+// Aynı anda yalnızca tek Kur'an sesi çalsın. Yeni ses başlarken çalmakta olan
+// önceki ses durdurulur (mouse hızlı gezinince sesler üst üste binmesin).
+let aktifKuranAudio = null;
+
+function aktifKuranSesiDurdur(haricAudio = null) {
+  if (aktifKuranAudio && aktifKuranAudio !== haricAudio) {
+    try {
+      aktifKuranAudio.pause();
+      aktifKuranAudio.currentTime = 0;
+    } catch { /* ignore */ }
+    // Önceki sesin bitiş dinleyicisini kaldır ki yanlış onEnded tetiklenmesin.
+    if (aktifKuranAudio._kuranEndedHandler) {
+      aktifKuranAudio.removeEventListener('ended', aktifKuranAudio._kuranEndedHandler);
+      aktifKuranAudio._kuranEndedHandler = null;
+    }
+  }
+}
+
+// Çalmakta olan Kur'an ses kaydını durdurur (TTS ile üst üste binmesin diye
+// kullanıcı etkileşiminde / öğe değişiminde çağrılır).
+export function kuranSesiniDurdur() {
+  aktifKuranSesiDurdur(null);
+}
+
 export function kuranSesNesnesiAl(url) {
   if (!url) return null;
 
@@ -142,18 +166,47 @@ export function kuranSesNesnesiAl(url) {
   return audio;
 }
 
-export function kuranSesCal(url, { volume = 0.95 } = {}) {
+export function kuranSesCal(url, { volume = 0.95, onEnded } = {}) {
   if (!url) return Promise.resolve(false);
 
   try {
     const audio = kuranSesNesnesiAl(url);
     if (!audio) return Promise.resolve(false);
 
+    // Çalmakta olan başka bir Kur'an sesi varsa durdur, sonra bunu çal.
+    aktifKuranSesiDurdur(audio);
+    aktifKuranAudio = audio;
+
     audio.pause();
     audio.currentTime = 0;
     audio.volume = Math.max(0, Math.min(1, Number(volume) || 0.95));
 
+    // Bitiş callback'i: önceki dinleyiciyi kaldır, yenisini bir kez bağla.
+    if (audio._kuranEndedHandler) {
+      audio.removeEventListener('ended', audio._kuranEndedHandler);
+      audio._kuranEndedHandler = null;
+    }
+    if (typeof onEnded === 'function') {
+      const handler = () => {
+        audio.removeEventListener('ended', handler);
+        if (audio._kuranEndedHandler === handler) audio._kuranEndedHandler = null;
+        onEnded();
+      };
+      audio._kuranEndedHandler = handler;
+      audio.addEventListener('ended', handler, { once: true });
+    }
+
     console.log('KURAN SES CALINIYOR:', url);
+
+    // Çalma başarısız olursa 'ended' tetiklenmez; onEnded'i elle çağır ki
+    // çağıran taraf (ör. ses bitince yönerge oku) beklemede kalmasın.
+    const basarisizdaOnEnded = () => {
+      if (audio._kuranEndedHandler) {
+        audio.removeEventListener('ended', audio._kuranEndedHandler);
+        audio._kuranEndedHandler = null;
+      }
+      if (typeof onEnded === 'function') onEnded();
+    };
 
     const result = audio.play();
 
@@ -162,6 +215,7 @@ export function kuranSesCal(url, { volume = 0.95 } = {}) {
         .then(() => true)
         .catch((err) => {
           console.warn('Kur’an sesi çalınamadı:', url, err);
+          basarisizdaOnEnded();
           return false;
         });
     }
@@ -169,6 +223,7 @@ export function kuranSesCal(url, { volume = 0.95 } = {}) {
     return Promise.resolve(true);
   } catch (err) {
     console.warn('Kur’an sesi başlatılamadı:', url, err);
+    if (typeof onEnded === 'function') onEnded();
     return Promise.resolve(false);
   }
 }

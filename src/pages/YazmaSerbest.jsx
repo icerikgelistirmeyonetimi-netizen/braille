@@ -289,7 +289,7 @@ export default function YazmaSerbest() {
               type="button"
               role="tab"
               aria-selected={aktifGorunum === 'metin'}
-              className={'belge-tab' + (aktifGorunum === 'metin' ? ' aktif' : '')}
+              className={`btn ${'belge-tab' + (aktifGorunum === 'metin' ? ' aktif' : '')}`}
               onClick={() => setAktifGorunum('metin')}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -302,7 +302,7 @@ export default function YazmaSerbest() {
               type="button"
               role="tab"
               aria-selected={aktifGorunum === 'braille'}
-              className={'belge-tab' + (aktifGorunum === 'braille' ? ' aktif' : '')}
+              className={`btn ${'belge-tab' + (aktifGorunum === 'braille' ? ' aktif' : '')}`}
               onClick={() => setAktifGorunum('braille')}
             >
               <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="15" height="15" aria-hidden="true">
@@ -363,19 +363,19 @@ export default function YazmaSerbest() {
 
       <div className="yazma-bolum yazma-bolum-alt">
         <div className="controls">
-          <button type="button" onClick={tumunuOku}>Tümünü Oku</button>
-          <button type="button" onClick={temizle}>Temizle</button>
+          <button className="btn" type="button" onClick={tumunuOku}>Tümünü Oku</button>
+          <button className="btn" type="button" onClick={temizle}>Temizle</button>
           <div className="kisaltma-btn-grup" ref={sistemPaneliRef}>
             <button
               type="button"
-              className={kisaltmaModu ? 'aktif' : ''}
+              className={`btn ${kisaltmaModu ? 'aktif' : ''}`}
               aria-pressed={kisaltmaModu}
               onClick={kisaltmaModuToggle}
               title="Kısaltmaları tanı ve kısaltma kullanarak yaz"
             >Kısaltma</button>
             <button
               type="button"
-              className={'kisaltma-sistem-acilis-btn' + (kisaltmaModu && sistemPaneli ? ' aktif' : '') + (kisaltmaModu ? '' : ' disabled')}
+              className={`btn ${'kisaltma-sistem-acilis-btn' + (kisaltmaModu && sistemPaneli ? ' aktif' : '') + (kisaltmaModu ? '' : ' disabled')}`}
               onClick={() => kisaltmaModu && setSistemPaneli((v) => !v)}
               title="Hangi kısaltma sistemleri aktif?"
               aria-expanded={sistemPaneli}

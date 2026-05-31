@@ -6,6 +6,7 @@ import {
   kuranHarfSesIdAl,
   kuranHarfSesUrlAl,
   kuranSesCal,
+  kuranSesiniDurdur,
   kuranSesleriPreloadEt,
 } from '../utils/kuranSesHelpers.js';
 
@@ -23,7 +24,7 @@ export default function KuranHarfEgitimi() {
     tamYonergeMetni: `${h.noktalar.join(', ')} numaralı noktalardan oluşur. Lütfen numaralara sırayla dokunun.`,
   }));
 
-  const harfSesiCal = useCallback((oge) => {
+  const harfSesiCal = useCallback((oge, opts = {}) => {
     const url = kuranHarfSesUrlAl(oge);
 
     console.log('KURAN HARF SES ISTEK', {
@@ -31,17 +32,22 @@ export default function KuranHarfEgitimi() {
       url,
     });
 
-    if (!url) return;
-    kuranSesCal(url, { volume: 0.95 });
+    if (!url) {
+      // Ses yoksa bitiş callback'ini yine de tetikle (Braille okuması beklemede kalmasın)
+      if (typeof opts.onEnded === 'function') opts.onEnded();
+      return;
+    }
+    kuranSesCal(url, { volume: 0.95, onEnded: opts.onEnded });
   }, []);
 
   if (!sesIzniVar) {
     return (
       <SesIzinEkrani
-        baslik="Kur'an Harf Eğitimi"
+        baslik="Kur'an-ı Kerim Harf Eğitimi"
         aciklama="Bu etkinlikte harf ses kayıtları kullanılacak. Etkinliğe başlamadan önce sesi başlatmanız gerekir."
         butonMetni="Sesi Başlat ve Harf Eğitimine Geç"
         ilkSesUrl={kuranHarfSesUrlAl(ogeler[0])}
+        sessizBaslat
         onIzinVerildi={({ ilkSesCalindi: calindi } = {}) => {
           setIlkSesCalindi(Boolean(calindi));
           setSesIzniVar(true);
@@ -52,13 +58,14 @@ export default function KuranHarfEgitimi() {
 
   return (
     <DesenOgretici
-      baslik="Kur'an: Harf Eğitimi"
+      baslik="Kur'an-ı Kerim: Harf Eğitimi"
       ogeler={ogeler}
       kategoriAdi="Arap harfi"
       bolumAnahtari="kuran-harfler"
-      bittiMesaji="Tebrikler! Kur'an braillesi harflerini tamamladınız."
+      bittiMesaji="Tebrikler! Kur'an-ı Kerim braillesi harflerini tamamladınız."
       rtl
       ogeSesiCal={harfSesiCal}
+      ogeSesiDurdur={kuranSesiniDurdur}
       ogeSesiOnceCal
       ogeSesiHerZaman
       ogeSesiSonrasiKonusmaGecikmeMs={1200}

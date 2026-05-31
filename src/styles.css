@@ -231,7 +231,7 @@ h1, h2, h3 { color: var(--fg); }
     display: flex;
     flex-direction: column;
     gap: 6px;
-    /* padding: 14px 24px 14px 10px; */
+    padding: 14px 24px 14px 10px;
     background: linear-gradient(
       180deg,
       color-mix(in srgb, var(--accent) 8%, var(--panel)) 0%,
@@ -419,6 +419,102 @@ h1, h2, h3 { color: var(--fg); }
   margin-top: 8px;
   clear: both;
 }
+
+/* Skor cizim scroll'u VE sayfa (sag kenar) scroll'u — modul menusu (.modul-yan)
+   scrollbar tasarimiyla ayni: ince, yuvarlak, aksan tonlu tutamak; ray seffaf.
+   --accent kullandigi icin normal/az-goren temalarinda otomatik uyum saglar.
+   .muzik-brf-sayfa sadece bu sayfaya ozel oldugundan diger sayfalar etkilenmez. */
+.muzik-skor-scroll,
+.muzik-brf-sayfa {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 35%, transparent) transparent;
+}
+.muzik-skor-scroll::-webkit-scrollbar,
+.muzik-brf-sayfa::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.muzik-skor-scroll::-webkit-scrollbar-track,
+.muzik-brf-sayfa::-webkit-scrollbar-track {
+  background: transparent;
+}
+.muzik-skor-scroll::-webkit-scrollbar-thumb,
+.muzik-brf-sayfa::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+.muzik-skor-scroll::-webkit-scrollbar-thumb:hover,
+.muzik-brf-sayfa::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  background-clip: padding-box;
+}
+.muzik-skor-scroll::-webkit-scrollbar-corner,
+.muzik-brf-sayfa::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Araç çubuğu — mobilde: TEK SIRA; butonlar esit bölüsüp satira sigar, 44px
+   dokunma yuksekligi korunur (WCAG 2.5.5). */
+@media (max-width: 640px) {
+  .muzik-arac-cubugu {
+    height: auto;
+    flex-wrap: nowrap;
+    gap: 3px;
+    padding: 6px 4px;
+    overflow-x: visible;
+  }
+  .muzik-arac-cubugu > button,
+  .muzik-arac-cubugu > .muzik-diger-sarmal {
+    height: 44px;
+    min-width: 0;
+    flex: 1 1 0;            /* esit bölüsüm, tek sira */
+    margin-left: 0 !important; /* "Tekrar" butonunun ml-auto'sunu sifirla */
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+  .muzik-arac-cubugu > .muzik-diger-sarmal > button {
+    width: 100%;
+    height: 44px;
+  }
+  /* Mobilde "Diğer" yazi etiketi gizli — yalnizca ikon (yer kazanir) */
+  .muzik-arac-cubugu .muzik-diger-etiket {
+    display: none;
+  }
+  .muzik-arac-cubugu > button > span[aria-hidden="true"] {
+    font-size: 1.15rem;
+  }
+
+  /* Mobil drill-down: bir araç aktifken ana araç çubuğunu gizle,
+     geri butonunu göster (alt seçenekler MuzikToolOptions ile zaten görünür). */
+  .muzik-toolbar-kok.mobil-arac-acik .muzik-arac-cubugu {
+    display: none;
+  }
+  .muzik-toolbar-kok.mobil-arac-acik .mobil-arac-geri {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: none;
+    border-bottom: 1px solid var(--panel-border, #e4e4e7);
+    background: transparent;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.98rem;
+    cursor: pointer;
+    text-align: left;
+  }
+  .muzik-toolbar-kok.mobil-arac-acik .mobil-arac-geri > span[aria-hidden="true"] {
+    font-size: 1.5em;
+    line-height: 1;
+  }
+}
+
+/* Geri butonu masaüstünde / araç kapaliyken gizli */
+.mobil-arac-geri { display: none; }
 
 .muzik-braille-lejant-item {
   display: inline-flex;
@@ -5152,4 +5248,373 @@ g:hover .muzik-note-hover-rect,
 .tablet-satir-numarasi { display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #94a3b8; font-weight: 600; padding: 2px 4px; background-color: #f1f5f9; border-radius: 4px; margin-right: 4px; }
 [data-theme="dark"] .tablet-satir-numarasi { background-color: #1e293b; color: #64748b; } 
 .araclar-tablet-grid { display: grid; grid-template-columns: min-content repeat(28, minmax(0, 1fr)); direction: rtl; column-gap: var(--tablet-col-gap, 1px); row-gap: 4px; align-items: center; justify-items: stretch; width: 100%; min-width: 0; box-sizing: border-box; } 
-.tablet-kolon-numarasi { text-align: center; font-size: 0.65rem; color: #94a3b8; font-weight: 600; min-width: 0; overflow: hidden; align-self: stretch; display: flex; align-items: center; justify-content: center; background-color: #f1f5f9; border-radius: 4px; margin: 0 1px; } 
+.tablet-kolon-numarasi { text-align: center; font-size: 0.65rem; color: #94a3b8; font-weight: 600; min-width: 0; overflow: hidden; align-self: stretch; display: flex; align-items: center; justify-content: center; background-color: #f1f5f9; border-radius: 4px; margin: 0 1px; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Müzik BRF Yazım — Az görenler (yüksek kontrast) modu
+   Sayfa Tailwind sabit renkleri kullandığından, lowVision temasında bunları
+   yüksek kontrast tema değişkenleriyle (--bg/--fg/--accent/--panel) ezeriz.
+   Tümü .muzik-brf-sayfa kapsamındadır; başka sayfa etkilenmez.
+   Geri almak için bu blok tamamen silinebilir.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Açık zeminler -> koyu panel (#111) */
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-white,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-white\/95,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-slate-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-slate-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-zinc-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-zinc-50\/80,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-zinc-100 {
+  background-color: var(--panel) !important;
+  color: var(--fg);
+}
+
+/* Renk tintleri (50/100) ve gri 200 -> koyu yukseltilmis zemin */
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-amber-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-amber-50\/30,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-amber-50\/40,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-amber-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-sky-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-sky-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-blue-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-blue-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-emerald-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-emerald-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-fuchsia-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-fuchsia-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-indigo-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-indigo-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-orange-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-orange-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-purple-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-purple-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-rose-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-rose-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-teal-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-teal-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-violet-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-violet-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-red-50,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-red-100,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-slate-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-zinc-200 {
+  background-color: #1c1c1c !important;
+  color: var(--fg);
+}
+
+/* Dolu vurgu zeminleri (500/600/800/900) -> sari aksan + siyah metin */
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-amber-400,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-amber-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-sky-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-sky-600,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-emerald-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-emerald-600,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-slate-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-slate-900 {
+  background-color: var(--accent) !important;
+  color: var(--accent-fg) !important;
+  border-color: var(--accent) !important;
+}
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-amber-500 *,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-sky-500 *,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-sky-600 *,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-emerald-500 *,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-emerald-600 *,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-slate-800 *,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-slate-900 * {
+  color: var(--accent-fg) !important;
+}
+
+/* Yikici (kirmizi) butonlar -> kirmizi kalir, beyaz metin */
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-red-600,
+[data-theme="lowVision"] .muzik-brf-sayfa .bg-red-700 {
+  background-color: #e60000 !important;
+  color: #fff !important;
+  border-color: #ff6666 !important;
+}
+
+/* Koyu metinler -> beyaz (#fff) */
+[data-theme="lowVision"] .muzik-brf-sayfa .text-slate-600,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-slate-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-slate-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-slate-900,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-zinc-600,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-zinc-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-zinc-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-zinc-900,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-zinc-950,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-amber-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-amber-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-amber-900,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-blue-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-blue-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-blue-900,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-emerald-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-emerald-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-emerald-950,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-fuchsia-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-fuchsia-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-indigo-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-indigo-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-orange-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-orange-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-purple-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-purple-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-sky-600,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-sky-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-sky-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-teal-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-teal-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-violet-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-violet-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-violet-900 {
+  color: var(--fg) !important;
+}
+
+/* Soluk metinler -> acik gri (#ccc) */
+[data-theme="lowVision"] .muzik-brf-sayfa .text-slate-400,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-slate-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-zinc-400,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-zinc-500 {
+  color: var(--muted) !important;
+}
+
+/* Hata/uyari metni -> parlak kirmizimsi (okunur, anlamli) */
+[data-theme="lowVision"] .muzik-brf-sayfa .text-red-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-red-600,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-rose-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-rose-600,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-rose-700,
+[data-theme="lowVision"] .muzik-brf-sayfa .text-rose-800 {
+  color: #ff8080 !important;
+}
+
+/* Normal kenarliklar -> gorunur gri */
+[data-theme="lowVision"] .muzik-brf-sayfa .border-slate-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-slate-300,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-slate-400,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-zinc-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-zinc-300,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-amber-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-amber-300,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-blue-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-emerald-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-emerald-300,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-fuchsia-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-indigo-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-orange-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-purple-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-red-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-red-300,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-rose-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-rose-300,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-sky-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-sky-300,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-teal-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-violet-200,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-violet-300 {
+  border-color: var(--panel-border) !important;
+}
+
+/* Vurgu kenarliklari (aktif durum) -> sari aksan */
+[data-theme="lowVision"] .muzik-brf-sayfa .border-amber-400,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-amber-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-blue-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-emerald-400,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-emerald-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-red-400,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-sky-500,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-slate-800,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-slate-900,
+[data-theme="lowVision"] .muzik-brf-sayfa .border-violet-500 {
+  border-color: var(--accent) !important;
+}
+
+/* ── Skor cizimi az goren modu: SİYAH zemin + BEYAZ notalar (yuksek kontrast)
+   Font'a gecmek yerine mevcut vektor cizim korunur ve renkler ters cevrilir:
+   zemin siyah, porte ve notalar beyaz/kalin. Sayfanin geri kalan koyu temasiyla
+   tutarli. */
+
+/* Skor tuvali -> saf siyah zemin; currentColor (olcu cizgileri) -> sari aksan */
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg {
+  background: #000000 !important;
+  border-radius: 8px;
+  color: var(--accent) !important;
+}
+
+/* Olcu cizgileri (class'siz line, stroke=currentColor) -> sari aksan */
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg line:not([class]) {
+  stroke: var(--accent) !important;
+}
+
+/* Porte ve ek (ledger) cizgileri -> SOLUK sari, ince (notalar one ciksin diye geride kalir) */
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .stroke-zinc-400,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .stroke-zinc-300,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg line.stroke-zinc-400 {
+  stroke: rgba(255, 212, 0, 0.42) !important;
+  stroke-width: 1px !important;
+}
+
+/* Nota saplari, bayraklar, nota basi konturlari -> sari aksan (dogal kalinlik korunur) */
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .stroke-zinc-900 {
+  stroke: var(--accent) !important;
+}
+
+/* Dolu nota basi / kuyruk / kiriş / nokta dolgulari -> sari aksan */
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .fill-zinc-900 {
+  fill: var(--accent) !important;
+}
+
+/* Bos (acik) nota basi -> merkez siyah (zemin rengi) kalir, sari konturla acik gorunur */
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .fill-white {
+  fill: #000000 !important;
+}
+
+/* Anahtar, zaman imzasi, nuans/dinamik/susleme glifleri -> sari aksan */
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .muzik-clef,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .muzik-time-sig,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .muzik-time-sig-digit,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .muzik-nuans-glyph,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .muzik-ornament-glyph,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .muzik-dynamic,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg .muzik-grace-note,
+[data-theme="lowVision"] .muzik-brf-sayfa .araclar-muzik-skor-svg text.fill-zinc-900 {
+  fill: var(--accent) !important;
+}
+
+/* Anahtar altindaki "B" (eser bilgileri & header braille) butonu -> koyu zemin + sari */
+[data-theme="lowVision"] .muzik-brf-sayfa .muzik-header-braille-btn rect {
+  fill: #1c1c1c !important;
+  stroke: var(--accent) !important;
+}
+[data-theme="lowVision"] .muzik-brf-sayfa .muzik-header-braille-btn text {
+  fill: var(--accent) !important;
+}
+/* Hover: sari zemin + siyah harf */
+[data-theme="lowVision"] .muzik-brf-sayfa .muzik-header-braille-btn:hover rect {
+  fill: var(--accent) !important;
+}
+[data-theme="lowVision"] .muzik-brf-sayfa .muzik-header-braille-btn:hover text {
+  fill: var(--accent-fg) !important;
+}
+
+/* Odak halkasi -> yuksek kontrast cam gobegi cerceve */
+[data-theme="lowVision"] .muzik-brf-sayfa :focus-visible {
+  outline: 3px solid var(--accent-2) !important;
+  outline-offset: 2px !important;
+}
+
+/* Hucre alti nota adi etiketleri (do/mi/re...) -> acik renk (siyah zeminde okunur) */
+[data-theme="lowVision"] .muzik-brf-sayfa .muzik-braille-hucre-etiket {
+  color: #ffffff !important;
+}
+
+/* Hucre kutusundaki inline-renkli etiketler (oktav no, ozel hucre etiketleri "4" vb.)
+   inline style ile koyu geldiginden !important ile acik renge cekilir */
+[data-theme="lowVision"] .muzik-brf-sayfa .muzik-olcu-braille-hucreler [style*="color"] {
+  color: #ffffff !important;
+}
+
+/* "Tum hucreleri goster" (...) butonu -> koyu zemin + sari metin/kenarlik */
+[data-theme="lowVision"] .muzik-tum-hucre-btn {
+  background: #1c1c1c !important;
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* "Tum hucreleri goster" popup'i -> koyu panel, acik metin */
+[data-theme="lowVision"] .muzik-tum-hucre-modal {
+  background: var(--panel) !important;
+  border: 2px solid var(--panel-border) !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="lowVision"] .muzik-tum-hucre-modal-baslik {
+  color: var(--fg) !important;
+}
+[data-theme="lowVision"] .muzik-tum-hucre-kapat {
+  background: #1c1c1c !important;
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* Legend (lejant) pill'leri -> koyu zemin + acik metin; renkli nokta korunur */
+[data-theme="lowVision"] .muzik-brf-sayfa .muzik-braille-lejant-item {
+  background: #1c1c1c !important;
+  border-color: var(--panel-border) !important;
+}
+[data-theme="lowVision"] .muzik-brf-sayfa .muzik-braille-lejant-metin {
+  color: var(--fg) !important;
+}
+
+/* Yazi boyutu: en kucuk metinler okunur seviyeye cikar */
+[data-theme="lowVision"] .muzik-brf-sayfa .text-xs { font-size: 0.92rem !important; }
+[data-theme="lowVision"] .muzik-brf-sayfa .text-sm { font-size: 1.02rem !important; }
+[data-theme="lowVision"] .muzik-brf-sayfa .text-\[10px\] { font-size: 0.82rem !important; }
+[data-theme="lowVision"] .muzik-brf-sayfa .text-\[11px\] { font-size: 0.85rem !important; }
+
+/* Native checkbox / radio -> sari aksan (koyu zeminde gorunur, temayla uyumlu) */
+[data-theme="lowVision"] .muzik-brf-sayfa input[type="checkbox"],
+[data-theme="lowVision"] .muzik-brf-sayfa input[type="radio"] {
+  accent-color: var(--accent) !important;
+  width: 15px;
+  height: 15px;
+}
+
+/* Hover zeminleri: acik/beyaz hover -> sari aksan + siyah ikon (beyaz-beyaz sorununu coz) */
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-white\/95:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-zinc-50:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-zinc-100:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-slate-50:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-slate-100:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-50:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-50\/30:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-50\/40:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-100:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-200:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-400:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-emerald-50:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-emerald-100:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-emerald-600:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-rose-50:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-sky-50:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-sky-500:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-violet-50:hover {
+  background-color: var(--accent) !important;
+  color: var(--accent-fg) !important;
+  border-color: var(--accent) !important;
+}
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-white\/95:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-zinc-50:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-zinc-100:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-slate-50:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-slate-100:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-50:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-100:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-200:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-amber-400:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-emerald-50:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-emerald-100:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-emerald-600:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-rose-50:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-sky-50:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-sky-500:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-violet-50:hover * {
+  color: var(--accent-fg) !important;
+  fill: var(--accent-fg) !important;
+}
+
+/* Yikici (kirmizi) hover -> parlak kirmizi + beyaz (anlami korunur) */
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-red-50:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-red-100:hover,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-red-700:hover {
+  background-color: #e60000 !important;
+  color: #fff !important;
+  border-color: #ff6666 !important;
+}
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-red-50:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-red-100:hover *,
+[data-theme="lowVision"] .muzik-brf-sayfa .hover\:bg-red-700:hover * {
+  color: #fff !important;
+  fill: #fff !important;
+}

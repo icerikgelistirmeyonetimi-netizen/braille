@@ -12,6 +12,20 @@ const DIYEZ_SIRASI = ['fa', 'do', 'sol', 're', 'la', 'mi', 'si'];
 const BEMOL_SIRASI = ['si', 'mi', 'la', 're', 'sol', 'do', 'fa'];
 const METRONOM_CLICK_URL = '/audio/metronom.mp3';
 
+// İlk hücrenin noktalarını içeren dokunma yönergesi.
+// Çok hücrelilerde "1. hücre:" ön eki; tek hücrelide doğrudan noktalar.
+// (Hücre-noktası effect'i ilk hücreyi atladığından, ilk hücre burada okunur.)
+function ilkHucreTapMesajiAl(oge) {
+  const hucreler = Array.isArray(oge?.hucreler) ? oge.hucreler : [];
+  if (hucreler.length === 0) return '';
+  const ilk = Array.isArray(hucreler[0]) ? hucreler[0] : (hucreler[0] != null ? [hucreler[0]] : []);
+  if (!ilk.length) return ' Lütfen noktalarına dokunun.';
+  const cokHucre = hucreler.length > 1;
+  return cokHucre
+    ? ` 1. hücre: ${ilk.join(', ')} numaralı noktalara dokunun.`
+    : ` ${ilk.join(', ')} numaralı noktalara dokunun.`;
+}
+
 // MEB Türkçe Braille Yazı Kılavuzu (2014) – Noktalama ve özel işaret sayfası.
 // Listedeki her madde için: hücre(ler), açıklama, kullanım kuralları ve örnekleri sıralı olarak gösterir.
 export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matematikHucreGorunumu = false, seslendirmeDili = 'tr' }) {
@@ -1975,7 +1989,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
               ? 'it'
               : null;
     if (!yabanciKod) {
-      const tapMesaj = oge.hucreler.length > 0 ? ' Lütfen noktalarına dokunun.' : '';
+      const tapMesaj = ilkHucreTapMesajiAl(oge);
       let m = `${oge.ad}. ${oge.aciklama || ''}${tapMesaj}`.trim();
       if (kurallariDahilEt && oge.kurallar?.length > 0) m += ` ${oge.kurallar.join(' ')}`;
       konus(m, { kesintiyle });
@@ -1987,7 +2001,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
       konus(m, { dil: 'tr', kesintiyle });
       return;
     }
-    const tapMesaj = 'Lütfen noktalarına dokunun.';
+    const tapMesaj = ilkHucreTapMesajiAl(oge).trim() || 'Lütfen noktalarına dokunun.';
     const aciklama = (oge.aciklama || '').trim();
     const kuralParca =
       kurallariDahilEt && oge.kurallar?.length > 0 ? oge.kurallar.join(' ') : '';
@@ -2541,7 +2555,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
           />
         </div>
         <div className="controls">
-          <button type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+          <button className="btn" type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
         </div>
       </div>
     );
@@ -2561,8 +2575,8 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
         </div>
         <div className="controls">
           {kayitlilarModu
-            ? <button type="button" onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tüm Listeye Dön</button>
-            : <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
+            ? <button className="btn" type="button" onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tüm Listeye Dön</button>
+            : <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
         </div>
       </div>
     );
@@ -2636,8 +2650,8 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
         </div>
         {kayitliSayisi > 0 && (
           <div className="banner-grup-secim" style={{ margin: '4px 0 0' }}>
-            <button type="button" className={!kayitlilarModu ? 'aktif' : ''} aria-pressed={!kayitlilarModu} onClick={() => modDegistir(false)}>Tümü</button>
-            <button type="button" className={kayitlilarModu ? 'aktif' : ''} aria-pressed={kayitlilarModu} onClick={() => modDegistir(true)}>Kayıtlılar ({kayitliSayisi})</button>
+            <button type="button" className={`btn ${!kayitlilarModu ? 'aktif' : ''}`} aria-pressed={!kayitlilarModu} onClick={() => modDegistir(false)}>Tümü</button>
+            <button type="button" className={`btn ${kayitlilarModu ? 'aktif' : ''}`} aria-pressed={kayitlilarModu} onClick={() => modDegistir(true)}>Kayıtlılar ({kayitliSayisi})</button>
           </div>
         )}
 
@@ -2652,7 +2666,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2665,7 +2679,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 konusVeNotaCal(
                   `${k.ad}. ${k.aciklama || ''}`,
@@ -2692,7 +2706,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2705,7 +2719,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 const metin = `${k.ad}. ${k.aciklama || ''}`;
@@ -2733,7 +2747,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2746,7 +2760,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -2773,7 +2787,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2788,7 +2802,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -2815,7 +2829,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2828,7 +2842,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -2856,7 +2870,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2869,7 +2883,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -2896,7 +2910,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2909,7 +2923,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -2936,7 +2950,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2949,7 +2963,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -2976,7 +2990,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -2989,7 +3003,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -3016,7 +3030,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -3029,7 +3043,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -3056,7 +3070,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -3069,7 +3083,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -3096,7 +3110,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -3109,7 +3123,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -3136,7 +3150,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 setNotaSesiAktif(true);
@@ -3149,7 +3163,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
             </button>
 
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 konus(`${k.ad}. ${k.aciklama || ''}`, { kesintiyle: true });
@@ -3183,7 +3197,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
           <OkumaModuButonu onClick={okumaModunaGec} />
           <button
             type="button"
-            className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(k?.ad) ? ' kaydedildi' : ''}`}
+            className={`btn sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(k?.ad) ? ' kaydedildi' : ''}`}
             onClick={kaydetSonra}
             aria-label="Daha sonra öğren listesine kaydet"
             title="Daha sonra öğren"
@@ -3238,7 +3252,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
                       type="button"
                       role="tab"
                       aria-selected={i === guvenliHucreIndeksi}
-                      className={`hucre-onizleme-oge ${i === guvenliHucreIndeksi ? 'aktif' : ''}`}
+                      className={`btn hucre-onizleme-oge ${i === guvenliHucreIndeksi ? 'aktif' : ''}`}
                       onClick={() => setHucreIndeksi(i)}
                       aria-label={`${i + 1}. hücreye git`}
                     >
@@ -3305,7 +3319,7 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
 
       <div className="controls">
         <button
-          type="button"
+className="btn"           type="button"
           aria-label="Tekrar dinle"
           onClick={() => {
             tumSesleriDurdur();
@@ -3409,12 +3423,12 @@ export default function IsaretSayfasi({ baslik, isaretler, bolumAnahtari, matema
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           <span className="btn-etiket">Tekrar</span>
         </button>
-        <button type="button" aria-label="Önceki" disabled={indeks === 0} onClick={() => { tumSesleriDurdur(); setIndeks((i) => Math.max(0, i - 1)); }}>
+        <button className="btn" type="button" aria-label="Önceki" disabled={indeks === 0} onClick={() => { tumSesleriDurdur(); setIndeks((i) => Math.max(0, i - 1)); }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
           <span className="btn-etiket">Önceki</span>
         </button>
         <button
-          type="button"
+className="btn"           type="button"
           aria-label={k.hucreler.length > 0 ? 'Atla, sonraki' : 'Anladım, sonraki'}
           onClick={() => {
             tumSesleriDurdur();

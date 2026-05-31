@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import MuzikToolOptions from './MuzikToolOptions.jsx';
 import { MUSIC_EDITOR_TOOLBAR, SURE_KISA, SURE_KARTLARI } from '../../utils/music-brf/musicConstants.js';
+
+// "Diğer" açılır menüsüne taşınan araçlar — araç çubuğu kalabalık olmasın.
+const DIGER_ARAC_IDLERI = ['nuans-once', 'nuans-sonra', 'dinamikler', 'expression', 'suslemeler', 'duzensiz-gruplar'];
 
 export default function MuzikScoreToolbar({
   aktifArac,
@@ -17,6 +20,7 @@ export default function MuzikScoreToolbar({
   aracEkleHandler,
   tupletTamamla,
   aracTikla,
+  setAktifArac,
   slurTamamla,
   slurCancel,
   modifierCancel,
@@ -28,10 +32,58 @@ export default function MuzikScoreToolbar({
   voltaEkleModIptal,
   voltaMeasureEkle,
 }) {
+  // Mobil drill-down: bir araç aktifken (ör. "Süre") ana araç çubuğu gizlenir,
+  // o aracın alt seçenekleri + geri butonu görünür. Geri ile ana araçlara dönülür.
+  const aktifAracEtiketi =
+    (MUSIC_EDITOR_TOOLBAR.find((t) => t.id === aktifArac) || {}).label || '';
+  const mobilGeriDon = () => {
+    setBekleyenBag?.(null);
+    modifierCancel?.();
+    tupletCancel?.();
+    setAktifArac?.(null);
+  };
+
+  // "Diğer" açılır menüsü
+  const [digerAcik, setDigerAcik] = useState(false);
+  const digerRef = useRef(null);
+  const digerAraclar = MUSIC_EDITOR_TOOLBAR.filter((t) => DIGER_ARAC_IDLERI.includes(t.id));
+  const digerAktifMi = DIGER_ARAC_IDLERI.includes(aktifArac);
+
+  // Dışarı tıklayınca / Esc ile menüyü kapat
+  useEffect(() => {
+    if (!digerAcik) return undefined;
+    const disariTikla = (e) => {
+      if (digerRef.current && !digerRef.current.contains(e.target)) setDigerAcik(false);
+    };
+    const escKapat = (e) => { if (e.key === 'Escape') setDigerAcik(false); };
+    document.addEventListener('mousedown', disariTikla);
+    document.addEventListener('keydown', escKapat);
+    return () => {
+      document.removeEventListener('mousedown', disariTikla);
+      document.removeEventListener('keydown', escKapat);
+    };
+  }, [digerAcik]);
+
+  const digerAracSec = (id) => {
+    aracTikla(id);
+    setDigerAcik(false);
+  };
+
   return (
-    <div className="w-full min-w-0 max-w-full rounded-t-xl border border-zinc-200 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-      <div className="flex h-11 items-center gap-1 overflow-x-auto px-1.5" role="toolbar" aria-label="Müzik araç çubuğu">
-        {MUSIC_EDITOR_TOOLBAR.filter((tool) => tool.id !== 'tekrar').map((tool) => {
+    <div className={'muzik-toolbar-kok w-full min-w-0 max-w-full rounded-t-xl border border-zinc-200 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]' + (aktifArac ? ' mobil-arac-acik' : '')}>
+      {/* Mobil drill-down geri butonu — yalnızca mobilde bir araç aktifken görünür */}
+      <button
+        type="button"
+        className="mobil-arac-geri"
+        onClick={mobilGeriDon}
+        aria-label="Araçlara geri dön"
+      >
+        <span aria-hidden="true">‹</span> Araçlar{aktifAracEtiketi ? ` · ${aktifAracEtiketi}` : ''}
+      </button>
+      <div className="muzik-arac-cubugu flex h-11 items-center gap-1 overflow-x-visible px-1.5" role="toolbar" aria-label="Müzik araç çubuğu">
+        {MUSIC_EDITOR_TOOLBAR
+          .filter((tool) => tool.id !== 'tekrar' && !DIGER_ARAC_IDLERI.includes(tool.id))
+          .map((tool) => {
           const aktif = aktifArac === tool.id
             || (tool.id === 'bag-slur' && bekleyenBag?.tipModu === 'slur')
             || (tool.id === 'bag-tie' && bekleyenBag?.tipModu === 'tie');
@@ -41,6 +93,7 @@ export default function MuzikScoreToolbar({
               type="button"
               onClick={() => aracTikla(tool.id)}
               aria-pressed={aktif}
+              aria-label={tool.label}
               title={tool.label}
               className={['group relative inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-lg border px-2 text-sm transition-all',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1',
@@ -49,13 +102,62 @@ export default function MuzikScoreToolbar({
                   : 'border-transparent bg-transparent text-zinc-600 hover:border-zinc-200 hover:bg-zinc-100 hover:text-zinc-950',
               ].join(' ')}
             >
-              <span className={(tool.italic ? 'italic ' : '') + 'leading-none ' + (aktif ? 'font-black' : 'font-semibold')}>{tool.icon}</span>
+              <span aria-hidden="true" className={(tool.italic ? 'italic ' : '') + 'leading-none ' + (aktif ? 'font-black' : 'font-semibold')}>{tool.icon}</span>
               {aktif && (
                 <span className="absolute -bottom-[5px] left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-amber-500" />
               )}
             </button>
           );
         })}
+
+        {/* ── "Diğer" açılır menüsü: Nüans, Dinamik, İfade, Süsleme, Tuplet ── */}
+        <div className="muzik-diger-sarmal relative" ref={digerRef}>
+          <button
+            type="button"
+            onClick={() => setDigerAcik((a) => !a)}
+            aria-haspopup="menu"
+            aria-expanded={digerAcik}
+            aria-label="Diğer araçlar"
+            title="Diğer araçlar"
+            className={['group relative inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-lg border px-2 text-sm transition-all',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1',
+              (digerAktifMi || digerAcik)
+                ? 'border-amber-500 bg-amber-100 text-zinc-950 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.35)]'
+                : 'border-transparent bg-transparent text-zinc-600 hover:border-zinc-200 hover:bg-zinc-100 hover:text-zinc-950',
+            ].join(' ')}
+          >
+            <span aria-hidden="true" className="leading-none font-semibold">⋯</span>
+            <span className="muzik-diger-etiket text-xs font-semibold whitespace-nowrap">Diğer</span>
+            <span aria-hidden="true" className="text-[10px] leading-none">▾</span>
+          </button>
+
+          {digerAcik && (
+            <div
+              className="muzik-diger-menu absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-xl border border-zinc-200 bg-white py-1 shadow-lg"
+              role="menu"
+              aria-label="Diğer araçlar"
+            >
+              {digerAraclar.map((tool) => {
+                const aktif = aktifArac === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => digerAracSec(tool.id)}
+                    aria-pressed={aktif}
+                    className={['flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors',
+                      aktif ? 'bg-amber-100 text-zinc-950 font-bold' : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950',
+                    ].join(' ')}
+                  >
+                    <span aria-hidden="true" className={(tool.italic ? 'italic ' : '') + 'inline-flex w-5 justify-center leading-none text-base font-semibold'}>{tool.icon}</span>
+                    <span className="whitespace-nowrap">{tool.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Tekrar (braille kısaltmaları) — en sağ köşede, braille ikonlu.
             Etiket yalnızca geniş ekranda görünür; mobilde sadece ikon. */}
@@ -69,6 +171,7 @@ export default function MuzikScoreToolbar({
               type="button"
               onClick={() => aracTikla(tool.id)}
               aria-pressed={aktif}
+              aria-label={tool.label}
               title={tool.label}
               className={['group relative ml-auto shrink-0 inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-lg border px-2 text-sm transition-all',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1',

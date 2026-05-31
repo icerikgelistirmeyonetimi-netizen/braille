@@ -55,7 +55,7 @@ export default function MuzikBrailleOutput({
   }
 
   return (
-    <div className="w-full min-w-0 flex flex-col gap-3" role="tabpanel" aria-label="Braille çıktısı">
+    <div className="w-full min-w-0 flex flex-col gap-3" role="tabpanel" id="muzik-panel-braille" aria-labelledby="muzik-tab-braille" tabIndex={0} aria-label="Braille çıktısı">
       <div className="text-sm font-semibold text-slate-700">
         Braille çıktısı — <span className="text-slate-900 font-bold">{hucreler.length}</span> hücre
       </div>

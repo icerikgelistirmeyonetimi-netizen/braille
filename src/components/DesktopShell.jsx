@@ -138,7 +138,7 @@ export default function DesktopShell({ children }) {
             <button
               key={m.id}
               type="button"
-              className={'modul-sekme' + (m.id === aktifModul ? ' aktif' : '')}
+              className={`btn ${'modul-sekme' + (m.id === aktifModul ? ' aktif' : '')}`}
               onClick={() => {
                 try { sessionStorage.setItem('aktifModul', m.id); } catch { /* ignore */ }
                 navigate('/');
@@ -158,7 +158,7 @@ export default function DesktopShell({ children }) {
           ))}
           <button
             type="button"
-            className={'modul-sekme modul-ayarlar' + (ayarlardaMi ? ' aktif' : '')}
+            className={`btn ${'modul-sekme modul-ayarlar' + (ayarlardaMi ? ' aktif' : '')}`}
             onClick={() => navigate('/ayarlar')}
             aria-label="Ayarlar"
           >

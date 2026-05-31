@@ -300,6 +300,12 @@ export function konus(metin, opt = {}) {
 }
 
 export function konusmayiDurdur() {
+  // Bekleyen (60 ms gecikmeli) konuşmayı da iptal et; aksi hâlde durdurduktan
+  // sonra tetiklenip ses kaydının üstüne biner.
+  if (_pendingSpeakTimer) {
+    clearTimeout(_pendingSpeakTimer);
+    _pendingSpeakTimer = null;
+  }
   if (nativePlatform && nativeTTS) {
     try { nativeTTS.stop(); } catch (_) { /* */ }
     return;

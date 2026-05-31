@@ -192,9 +192,9 @@ export default function YazmaEgitimi() {
 
       <div className="controls">
         {(adim === 0 || adim === 4) && (
-          <button type="button" onClick={ileri}>Devam Et</button>
+          <button className="btn" type="button" onClick={ileri}>Devam Et</button>
         )}
-        <button type="button" onClick={yenidenBasla}>Baştan Başla</button>
+        <button className="btn" type="button" onClick={yenidenBasla}>Baştan Başla</button>
       </div>
     </div>
   );

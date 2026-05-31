@@ -6,6 +6,7 @@ import {
   kuranHeceSesUrlAl,
   kuranKelimeOkuma1SesUrlAl,
   kuranSesCal,
+  kuranSesiniDurdur,
   kuranSesleriPreloadEt,
 } from '../utils/kuranSesHelpers.js';
 
@@ -73,29 +74,34 @@ export default function KuranKelimeOkuma({ kaynakAnahtari = 'hece', baslik }) {
     kuranSesleriPreloadEt(urls);
   }, [ogeler, kaynakAnahtari, sesliSayfa]);
 
-  const kelimeSesiCal = useCallback((oge) => {
+  const kelimeSesiCal = useCallback((oge, opts = {}) => {
+    let url = '';
     if (kaynakAnahtari === 'hece') {
-      const url = kuranHeceSesUrlAl(oge);
-      if (url) kuranSesCal(url, { volume: 0.95 });
-      return;
+      url = kuranHeceSesUrlAl(oge);
+    } else if (kaynakAnahtari === 'kelime-temel') {
+      url = kuranKelimeOkuma1SesUrlAl(oge);
     }
 
-    if (kaynakAnahtari === 'kelime-temel') {
-      const url = kuranKelimeOkuma1SesUrlAl(oge);
-      if (url) kuranSesCal(url, { volume: 0.95 });
-      return;
+    if (url) {
+      kuranSesCal(url, { volume: 0.95, onEnded: opts.onEnded });
+    } else if (typeof opts.onEnded === 'function') {
+      // Ses yoksa bitiş callback'ini yine de tetikle (okuma modunda Braille beklemede kalmasın).
+      opts.onEnded();
     }
   }, [kaynakAnahtari]);
 
   if (sesliSayfa && !sesIzniVar) {
     return (
       <SesIzinEkrani
-        baslik={kaynakAnahtari === 'hece' ? 'Kur’an Hece Okuma' : 'Kur’an Kelime Okuma 1'}
+        baslik={kaynakAnahtari === 'hece' ? 'Kur’an-ı Kerim Hece Okuma' : 'Kur’an-ı Kerim Kelime Okuma 1'}
         aciklama="Bu etkinlikte ses kayıtları kullanılacak. Etkinliğe başlamadan önce sesi başlatmanız gerekir."
         butonMetni="Sesi Başlat ve Etkinliğe Geç"
         ilkSesUrl={ilkSesUrl}
-        onIzinVerildi={({ ilkSesCalindi: calindi } = {}) => {
-          setIlkSesCalindi(Boolean(calindi));
+        sessizBaslat
+        onIzinVerildi={() => {
+          // Başlat sessiz: ilk kayıt çalınmadı → ders ilk öğenin kaydını
+          // normal akışında çalsın (kayıt bitince yönerge — eş zamanlı olmaz).
+          setIlkSesCalindi(false);
           setSesIzniVar(true);
         }}
       />
@@ -110,6 +116,7 @@ export default function KuranKelimeOkuma({ kaynakAnahtari = 'hece', baslik }) {
       rtl
       bolumAnahtari={`kuran-kelime-${kaynakAnahtari}`}
       ogeSesiCal={sesliSayfa ? kelimeSesiCal : undefined}
+      ogeSesiDurdur={sesliSayfa ? kuranSesiniDurdur : undefined}
       ogeSesiOnceCal={sesliSayfa}
       ogeSesiHerZaman={sesliSayfa}
       ogeSesiSonrasiKonusmaGecikmeMs={1200}

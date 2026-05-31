@@ -128,7 +128,7 @@ export default function Test() {
         <nav className="menu" aria-label="Test kategorileri" style={{ margin: 0, gap: 10 }}>
           {Object.entries(KAYNAKLAR).map(([k, v]) => (
             <button
-              key={k}
+className="btn"               key={k}
               type="button"
               onClick={() => basla(k)}
               aria-label={`${v.etiket} testini başlat`}
@@ -156,10 +156,10 @@ export default function Test() {
           </div>
         </div>
         <div className="controls">
-          <button type="button" onClick={() => basla(Object.keys(KAYNAKLAR).find((k) => KAYNAKLAR[k] === kaynak))}>
+          <button className="btn" type="button" onClick={() => basla(Object.keys(KAYNAKLAR).find((k) => KAYNAKLAR[k] === kaynak))}>
             Tekrar Dene
           </button>
-          <button type="button" onClick={() => setKaynak(null)}>
+          <button className="btn" type="button" onClick={() => setKaynak(null)}>
             Kategori Değiştir
           </button>
         </div>
@@ -200,7 +200,7 @@ export default function Test() {
 
       <div className="controls">
         <button
-          type="button"
+className="btn"           type="button"
           onClick={() =>
             konus(
               `${aktif.ariaAd || aktif.ad} ${kaynak.kategori}ini oluşturan noktalara dokunun.`
@@ -209,10 +209,10 @@ export default function Test() {
         >
           Soruyu Tekrarla
         </button>
-        <button type="button" onClick={cevapSoyle} disabled={aciklandi}>
+        <button className="btn" type="button" onClick={cevapSoyle} disabled={aciklandi}>
           Cevabı Söyle
         </button>
-        <button type="button" onClick={sonrakiSoruyaGec}>
+        <button className="btn" type="button" onClick={sonrakiSoruyaGec}>
           Atla →
         </button>
       </div>

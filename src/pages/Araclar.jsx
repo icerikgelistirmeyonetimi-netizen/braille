@@ -5264,13 +5264,13 @@ export default function Araclar() {
                       {muzikHeader.keySignature ? (
                         <span title={muzikHeader.keySignature.ad}>
                           Donanım: <strong>{muzikHeader.keySignature.gorunum || muzikHeader.keySignature.ad}</strong>
-                          <button type="button" className="araclar-muzik-header-temizle" onClick={() => setMuzikHeader((h) => ({ ...h, keySignature: null }))} aria-label="Donanımı kaldır">×</button>
+                          <button type="button" className="btn araclar-muzik-header-temizle" onClick={() => setMuzikHeader((h) => ({ ...h, keySignature: null }))} aria-label="Donanımı kaldır">×</button>
                         </span>
                       ) : <span className="araclar-muzik-header-bos">Donanım yok</span>}
                       {muzikHeader.timeSignature ? (
                         <span title={muzikHeader.timeSignature.ad}>
                           Ölçü: <strong>{muzikHeader.timeSignature.gorunum || muzikHeader.timeSignature.ad}</strong>
-                          <button type="button" className="araclar-muzik-header-temizle" onClick={() => setMuzikHeader((h) => ({ ...h, timeSignature: null }))} aria-label="Zaman imzasını kaldır">×</button>
+                          <button type="button" className="btn araclar-muzik-header-temizle" onClick={() => setMuzikHeader((h) => ({ ...h, timeSignature: null }))} aria-label="Zaman imzasını kaldır">×</button>
                         </span>
                       ) : <span className="araclar-muzik-header-bos">Zaman imzası yok</span>}
                     </div>
@@ -5293,7 +5293,7 @@ export default function Araclar() {
                     />
                     <button
                       type="button"
-                      className="araclar-muzik-ifade-ekle-btn"
+                      className="btn araclar-muzik-ifade-ekle-btn"
                       onClick={() => { muzikIfadeEkle(muzikIfadeGirisi); setMuzikIfadeGirisi(''); }}
                       disabled={!muzikIfadeGirisi.trim()}
                       title="Word-sign + kontraksiyonsuz braille olarak ekle"
@@ -5305,14 +5305,14 @@ export default function Araclar() {
                       {bekleyenBag?.tipModu === 'slur' && (bekleyenBag.notaIdler?.length || 0) >= 2 && (
                         <button
                           type="button"
-                          className="araclar-muzik-bag-durum-iptal"
+                          className="btn araclar-muzik-bag-durum-iptal"
                           style={{ color: '#16a34a', borderColor: '#16a34a' }}
                           onClick={() => muzikSlurZinciriTamamla()}
                           title="Slur zincirini tamamla"
                           aria-label="Slur zincirini tamamla"
                         >✓ Tamamla</button>
                       )}
-                      <button type="button" className="araclar-muzik-bag-durum-iptal" onClick={() => setBekleyenBag(null)} aria-label="Bağ seçimini iptal et">×</button>
+                      <button type="button" className="btn araclar-muzik-bag-durum-iptal" onClick={() => setBekleyenBag(null)} aria-label="Bağ seçimini iptal et">×</button>
                     </div>
                   )}
                   {bekleyenTupletBilgisi && (
@@ -5321,20 +5321,20 @@ export default function Araclar() {
                       {(bekleyenTuplet?.notaIdler?.length || 0) >= 2 && (
                         <button
                           type="button"
-                          className="araclar-muzik-bag-durum-iptal"
+                          className="btn araclar-muzik-bag-durum-iptal"
                           style={{ color: '#16a34a', borderColor: '#16a34a' }}
                           onClick={() => muzikTupletTamamla()}
                           title="Tuplet zincirini tamamla"
                           aria-label="Tuplet tamamla"
                         >✓ Tamamla</button>
                       )}
-                      <button type="button" className="araclar-muzik-bag-durum-iptal" onClick={() => setBekleyenTuplet(null)} aria-label="Tuplet seçimini iptal et">×</button>
+                      <button type="button" className="btn araclar-muzik-bag-durum-iptal" onClick={() => setBekleyenTuplet(null)} aria-label="Tuplet seçimini iptal et">×</button>
                     </div>
                   )}
                   {bekleyenModifierBilgisi && (
                     <div className="araclar-muzik-bag-durum araclar-muzik-modifier-durum" role="status" aria-live="polite">
                       <span className="araclar-muzik-bag-durum-metin">{bekleyenModifierBilgisi}</span>
-                      <button type="button" className="araclar-muzik-bag-durum-iptal" onClick={() => setBekleyenModifier(null)} aria-label="Modifier seçimini iptal et">×</button>
+                      <button type="button" className="btn araclar-muzik-bag-durum-iptal" onClick={() => setBekleyenModifier(null)} aria-label="Modifier seçimini iptal et">×</button>
                     </div>
                   )}
                   <div className="araclar-muzik-ck-toolbar" role="toolbar" aria-label="Müzik araç çubuğu">
@@ -5348,7 +5348,7 @@ export default function Araclar() {
                         <button
                           key={grup.slug}
                           type="button"
-                          className={'araclar-muzik-kategori-btn' + (muzikPaletSekmesi === grup.slug ? ' aktif' : '') + (ikon.italic ? ' italik' : '')}
+                          className={`btn ${'araclar-muzik-kategori-btn' + (muzikPaletSekmesi === grup.slug ? ' aktif' : '') + (ikon.italic ? ' italik' : '')}`}
                           onClick={() => setMuzikPaletSekmesi((o) => (o === grup.slug ? null : grup.slug))}
                           aria-pressed={muzikPaletSekmesi === grup.slug}
                           aria-expanded={muzikPaletSekmesi === grup.slug}
@@ -5370,7 +5370,7 @@ export default function Araclar() {
                               <button
                                 key={sure.ad}
                                 type="button"
-                                className={'araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-sure-btn' + (muzikSureIndeksi === idx ? ' aktif' : '')}
+                                className={`btn ${'araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-sure-btn' + (muzikSureIndeksi === idx ? ' aktif' : '')}`}
                                 onClick={() => { setMuzikSureIndeksi(idx); setNotalarAdimSureMi(false); }}
                                 aria-pressed={muzikSureIndeksi === idx}
                                 title={muzikSureKisaAdi(sure)}
@@ -5384,7 +5384,7 @@ export default function Araclar() {
                           <div className="araclar-muzik-palet-ikon-grid araclar-muzik-tek-satir" role="group" aria-label="Eklenecek notayı seçin">
                             <button
                               type="button"
-                              className="araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-geri-btn"
+                              className="btn araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-geri-btn"
                               onClick={() => setNotalarAdimSureMi(true)}
                               title={`Süre: ${muzikSureKisaAdi(MUZIK_SURE_GOSTERGELERI[muzikSureIndeksi])} — değiştirmek için tıkla`}
                               aria-label="Süre seçimine dön"
@@ -5395,7 +5395,7 @@ export default function Araclar() {
                               <button
                                 key={nota.ad}
                                 type="button"
-                                className="araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-palet-nota"
+                                className="btn araclar-muzik-palet-ogesi araclar-muzik-palet-ikon araclar-muzik-palet-nota"
                                 onClick={() => muzikNotaEkle(nota.ad, muzikSureIndeksi)}
                                 title={`${nota.ad} (${muzikSureKisaAdi(MUZIK_SURE_GOSTERGELERI[muzikSureIndeksi])})`}
                                 aria-label={`${nota.ad} ekle`}
@@ -5450,7 +5450,7 @@ export default function Araclar() {
                             <button
                               key={`${aktifMuzikPaletGrubu.slug}-${oge.ad}`}
                               type="button"
-                              className={`araclar-muzik-palet-ogesi araclar-muzik-palet-ikon tip-${ogeGorselTip}`}
+                              className={`btn araclar-muzik-palet-ogesi araclar-muzik-palet-ikon tip-${ogeGorselTip}`}
                               onClick={onClickHandler}
                               disabled={devreDisi}
                               title={devreDisi ? `${oge.ad} — önce bir nota ekleyin` : ipucu}
@@ -5784,7 +5784,7 @@ export default function Araclar() {
                       >
                         <div className="araclar-muzik-ck-baslik">
                           {seciliMuzikOge.tip === 'nota' ? 'Notayı düzenle' : seciliMuzikOge.ad}
-                          <button type="button" className="araclar-muzik-ck-kapat" onClick={() => setMuzikDuzenPopupAcik(false)} aria-label="Kapat">×</button>
+                          <button type="button" className="btn araclar-muzik-ck-kapat" onClick={() => setMuzikDuzenPopupAcik(false)} aria-label="Kapat">×</button>
                         </div>
                         {seciliMuzikOge.tip === 'nota' ? (
                           <>
@@ -5793,7 +5793,7 @@ export default function Araclar() {
                                 <button
                                   key={sure.ad}
                                   type="button"
-                                  className={'araclar-muzik-sure-btn' + (seciliMuzikOge.sureIndeksi === idx ? ' aktif' : '')}
+                                  className={`btn ${'araclar-muzik-sure-btn' + (seciliMuzikOge.sureIndeksi === idx ? ' aktif' : '')}`}
                                   onClick={() => muzikSeciliNotayiGuncelle({ sureIndeksi: idx })}
                                   title={`${muzikSureKisaAdi(sure)} — ${sure.aciklama || ''}`}
                                   aria-label={muzikSureKisaAdi(sure)}
@@ -5807,7 +5807,7 @@ export default function Araclar() {
                                 <button
                                   key={nota.ad}
                                   type="button"
-                                  className={'araclar-muzik-nota-btn araclar-muzik-palet-nota' + (seciliMuzikOge.notaAd === nota.ad ? ' aktif' : '')}
+                                  className={`btn ${'araclar-muzik-nota-btn araclar-muzik-palet-nota' + (seciliMuzikOge.notaAd === nota.ad ? ' aktif' : '')}`}
                                   onClick={() => muzikSeciliNotayiGuncelle({ notaAd: nota.ad })}
                                   title={nota.ad}
                                   aria-label={nota.ad}
@@ -5820,7 +5820,7 @@ export default function Araclar() {
                                 <button
                                   key={`okt-${o}`}
                                   type="button"
-                                  className={'araclar-muzik-sure-btn' + ((seciliMuzikOge.oktav ?? 4) === o ? ' aktif' : '')}
+                                  className={`btn ${'araclar-muzik-sure-btn' + ((seciliMuzikOge.oktav ?? 4) === o ? ' aktif' : '')}`}
                                   onClick={() => muzikSeciliNotayiGuncelle({ oktav: o })}
                                   title={`${o}. oktav`}
                                   aria-label={`${o}. oktav`}
@@ -5840,7 +5840,7 @@ export default function Araclar() {
                                 <button
                                   key={`acc-${acc.id || 'none'}`}
                                   type="button"
-                                  className={'araclar-muzik-sure-btn' + ((seciliMuzikOge.accidental ?? null) === acc.id ? ' aktif' : '')}
+                                  className={`btn ${'araclar-muzik-sure-btn' + ((seciliMuzikOge.accidental ?? null) === acc.id ? ' aktif' : '')}`}
                                   onClick={() => muzikSeciliNotayiGuncelle({ accidental: acc.id })}
                                   title={acc.title}
                                   aria-label={acc.title}
@@ -5851,7 +5851,7 @@ export default function Araclar() {
                               <span className="araclar-muzik-ck-etiket">Nokta</span>
                               <button
                                 type="button"
-                                className={'araclar-muzik-sure-btn' + (seciliMuzikOge.dotted ? ' aktif' : '')}
+                                className={`btn ${'araclar-muzik-sure-btn' + (seciliMuzikOge.dotted ? ' aktif' : '')}`}
                                 onClick={() => muzikSeciliNotayiGuncelle({ dotted: !seciliMuzikOge.dotted })}
                                 title="Noktalı nota (değeri 1,5×)"
                                 aria-label="Noktalı nota"
@@ -5866,7 +5866,7 @@ export default function Araclar() {
                                 <button
                                   key={`sus-${sure.ad}`}
                                   type="button"
-                                  className={'araclar-muzik-sure-btn' + (seciliMuzikOge.sureIndeksi === idx ? ' aktif' : '')}
+                                  className={`btn ${'araclar-muzik-sure-btn' + (seciliMuzikOge.sureIndeksi === idx ? ' aktif' : '')}`}
                                   onClick={() => muzikSeciliSusuGuncelle({ sureIndeksi: idx })}
                                   title={`${muzikSureKisaAdi(sure)} sus — ${sure.aciklama || ''}`}
                                   aria-label={`${muzikSureKisaAdi(sure)} sus`}
@@ -5879,7 +5879,7 @@ export default function Araclar() {
                               <span className="araclar-muzik-ck-etiket">Nokta</span>
                               <button
                                 type="button"
-                                className={'araclar-muzik-sure-btn' + (seciliMuzikOge.dotted ? ' aktif' : '')}
+                                className={`btn ${'araclar-muzik-sure-btn' + (seciliMuzikOge.dotted ? ' aktif' : '')}`}
                                 onClick={() => muzikSeciliSusuGuncelle({ dotted: !seciliMuzikOge.dotted })}
                                 title="Noktalı sus (değeri 1,5×)"
                                 aria-label="Noktalı sus"
@@ -5891,9 +5891,9 @@ export default function Araclar() {
                           <div className="araclar-muzik-ck-aciklama">{seciliMuzikOge.aciklama || 'Modül 8 işareti.'}</div>
                         )}
                         <div className="araclar-muzik-ck-aksiyonlar">
-                          <button type="button" onClick={() => muzikOgeTasi(-1)}>←</button>
-                          <button type="button" onClick={() => muzikOgeTasi(1)}>→</button>
-                          <button type="button" className="tehlike" onClick={() => muzikOgeSil()}>Sil</button>
+                          <button className="btn" type="button" onClick={() => muzikOgeTasi(-1)}>←</button>
+                          <button className="btn" type="button" onClick={() => muzikOgeTasi(1)}>→</button>
+                          <button type="button" className="btn tehlike" onClick={() => muzikOgeSil()}>Sil</button>
                         </div>
                       </div>
                       </div>
@@ -5951,7 +5951,7 @@ export default function Araclar() {
               )}
               <button
                 type="button"
-                className={'araclar-seslendir-btn' + (konusuyor === 'metin' ? ' aktif' : '')}
+                className={`btn ${'araclar-seslendir-btn' + (konusuyor === 'metin' ? ' aktif' : '')}`}
                 onClick={metniSeslendir}
                 disabled={!etkinGirdiVar}
                 aria-label={konusuyor === 'metin' ? 'Durdur' : 'Metni Seslendir'}
@@ -5966,7 +5966,7 @@ export default function Araclar() {
               <div className="araclar-matematik-sarici" ref={matematikPaletRef}>
                 <button
                   type="button"
-                  className={'araclar-seslendir-btn araclar-matematik-btn' + (matematikPaletiAcik ? ' aktif' : '')}
+                  className={`btn ${'araclar-seslendir-btn araclar-matematik-btn' + (matematikPaletiAcik ? ' aktif' : '')}`}
                   onClick={() => setMatematikPaletiAcik((v) => !v)}
                   disabled={muzikModuAktif}
                   aria-label="Matematik / özel işaretler"
@@ -5991,7 +5991,7 @@ export default function Araclar() {
                             <button
                               key={s.sembol + s.etiket}
                               type="button"
-                              className="araclar-matematik-sembol"
+                              className="btn araclar-matematik-sembol"
                               onClick={() => {
                                 insertAtCursor(s.sembol);
                                 textareaRef.current?.focus();
@@ -6189,7 +6189,7 @@ export default function Araclar() {
                         {seciliHucreYorumAyariBilgisi?.secenekler?.length ? (
                           <button
                             type="button"
-                            className={'bhp-ayar' + (hucreAyarPaneliAcik ? ' aktif' : '')}
+                            className={`btn ${'bhp-ayar' + (hucreAyarPaneliAcik ? ' aktif' : '')}`}
                             onClick={() => setHucreAyarPaneliAcik((onceki) => !onceki)}
                             aria-label="Yorum ayarları"
                             aria-expanded={hucreAyarPaneliAcik}
@@ -6200,7 +6200,7 @@ export default function Araclar() {
                         ) : null}
                         <button
                           type="button"
-                          className="bhp-kapat"
+                          className="btn bhp-kapat"
                           onClick={() => setSeciliHucre(null)}
                           aria-label="Kapat"
                         >×</button>
@@ -6241,7 +6241,7 @@ export default function Araclar() {
                         {seciliHucreYorumAyariBilgisi.ozelTercihVarMi ? (
                           <button
                             type="button"
-                            className="bhp-ayarlari-sifirla"
+                            className="btn bhp-ayarlari-sifirla"
                             onClick={hucreAyarlariniSifirla}
                           >
                             {seciliHucreYorumAyariBilgisi.tur === 'eksi' || seciliHucreYorumAyariBilgisi.tur === 'ondalikVirgul'
@@ -6260,7 +6260,7 @@ export default function Araclar() {
                     <div className="belge-braille-sayfalama">
                       <button
                         type="button"
-                        className="belge-sayfa-btn"
+                        className="btn belge-sayfa-btn"
                         onClick={() => setBrailleSayfa((p) => Math.max(0, p - 1))}
                         disabled={brailleSayfa === 0}
                         aria-label="Önceki sayfa"
@@ -6297,7 +6297,7 @@ export default function Araclar() {
                       </form>
                       <button
                         type="button"
-                        className="belge-sayfa-btn"
+                        className="btn belge-sayfa-btn"
                         onClick={() => setBrailleSayfa((p) => Math.min(toplamSayfa - 1, p + 1))}
                         disabled={brailleSayfa === toplamSayfa - 1}
                         aria-label="Sonraki sayfa"
@@ -6312,7 +6312,7 @@ export default function Araclar() {
                   <div className="belge-altbar-sag">
                     <button
                       type="button"
-                      className={'belge-genislet-btn' + (genisletAktif ? ' aktif' : '')}
+                      className={`btn ${'belge-genislet-btn' + (genisletAktif ? ' aktif' : '')}`}
                       onClick={() => setGenisletAktif((v) => !v)}
                       aria-pressed={genisletAktif}
                       aria-label={genisletAktif ? 'Etiketleri gizle (Daralt)' : 'Hücre altlarına etiket göster (Genişlet)'}
@@ -6338,7 +6338,7 @@ export default function Araclar() {
                     </button>
                     <button
                       type="button"
-                      className="belge-genislet-btn belge-jpg-btn"
+                      className="btn belge-genislet-btn belge-jpg-btn"
                       onClick={jpgIndir}
                       aria-label="Sayfayı JPG olarak indir"
                       title="JPG indir"
@@ -6355,7 +6355,7 @@ export default function Araclar() {
 
                 <button
                   type="button"
-                  className={'araclar-seslendir-btn araclar-seslendir-nokta' + (konusuyor === 'nokta' ? ' aktif' : '')}
+                  className={`btn ${'araclar-seslendir-btn araclar-seslendir-nokta' + (konusuyor === 'nokta' ? ' aktif' : '')}`}
                   onClick={noktalarıSeslendir}
                   aria-label={konusuyor === 'nokta' ? 'Durdur' : 'Braille Noktaları Oku'}
                   title={konusuyor === 'nokta' ? 'Durdur' : 'Braille Noktaları Oku'}
@@ -6367,7 +6367,7 @@ export default function Araclar() {
                 </button>
                 <button
                   type="button"
-                  className={'araclar-seslendir-btn araclar-erisilebilir-btn' + (erisilebilirMod ? ' aktif' : '')}
+                  className={`btn ${'araclar-seslendir-btn araclar-erisilebilir-btn' + (erisilebilirMod ? ' aktif' : '')}`}
                   onClick={() => setErisilebilirMod((v) => !v)}
                   aria-pressed={erisilebilirMod}
                   aria-label={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir braille metin görünümüne geç (Unicode braille glifleri)'}
@@ -6387,7 +6387,7 @@ export default function Araclar() {
                 {erisilebilirMod && (
                   <button
                     type="button"
-                    className={'araclar-seslendir-btn araclar-kopyala-btn' + (kopyalandi ? ' aktif' : '')}
+                    className={`btn ${'araclar-seslendir-btn araclar-kopyala-btn' + (kopyalandi ? ' aktif' : '')}`}
                     onClick={async () => {
                       const metin = tabletModuAktif
                         ? tabletSayfasiUnicodeKopyaMetni(sayfaHucreler)
@@ -6435,7 +6435,7 @@ export default function Araclar() {
                 type="button"
                 disabled={!etkinGirdiVar}
                 onClick={brfIndir}
-                className="araclar-brf-grup-ilk"
+                className="btn araclar-brf-grup-ilk"
                 aria-label="BRF İndir"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
@@ -6445,7 +6445,7 @@ export default function Araclar() {
                 type="button"
                 disabled={!etkinGirdiVar}
                 onClick={() => setBrfOnizlemeAcik(true)}
-                className="araclar-brf-grup-son araclar-brf-grup-onizle"
+                className="btn araclar-brf-grup-son araclar-brf-grup-onizle"
                 aria-label="Kabartmalı çıktı için BRF ön izlemesi"
                 title="Ön izle — kağıda göre sıra ve satır (form feed)"
               >
@@ -6459,7 +6459,7 @@ export default function Araclar() {
               type="button"
               onClick={temizle}
               disabled={!etkinGirdiVar}
-              className="araclar-controls-temizle"
+              className="btn araclar-controls-temizle"
               aria-label="Temizle"
               title="Metni temizle"
             >
@@ -6469,7 +6469,7 @@ export default function Araclar() {
             <button
               type="button"
               disabled={!etkinGirdiVar}
-              className={'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (tabletModuAktif ? ' aktif' : '')}
+              className={`btn ${'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (tabletModuAktif ? ' aktif' : '')}`}
               onClick={() => {
                 const eskiBoyut = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
                 const yeniTablet = !tabletModuAktif;
@@ -6489,7 +6489,7 @@ export default function Araclar() {
             </button>
             <button
               type="button"
-              className={'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (perkinsAktif ? ' aktif' : '')}
+              className={`btn ${'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (perkinsAktif ? ' aktif' : '')}`}
               onClick={() => setPerkinsAktif((v) => !v)}
               aria-pressed={perkinsAktif}
               aria-label={'Perkins klavye ' + (perkinsAktif ? 'açık' : 'kapalı')}
@@ -6500,7 +6500,7 @@ export default function Araclar() {
             <div className="kisaltma-btn-grup" ref={sistemPaneliRef}>
               <button
                 type="button"
-                className={'araclar-perkins-btn' + (kisaltmaAktif ? ' aktif' : '')}
+                className={`btn ${'araclar-perkins-btn' + (kisaltmaAktif ? ' aktif' : '')}`}
                 onClick={() => setKisaltmaAktif((v) => !v)}
                 aria-pressed={kisaltmaAktif}
                 aria-label={'Kısaltma ' + (kisaltmaAktif ? 'Aktif' : 'Kapalı')}
@@ -6511,7 +6511,7 @@ export default function Araclar() {
               </button>
               <button
                 type="button"
-                className={'kisaltma-sistem-acilis-btn araclar-perkins-btn' + (kisaltmaAktif && sistemPaneli ? ' aktif' : '') + (kisaltmaAktif ? '' : ' disabled')}
+                className={`btn ${'kisaltma-sistem-acilis-btn araclar-perkins-btn' + (kisaltmaAktif && sistemPaneli ? ' aktif' : '') + (kisaltmaAktif ? '' : ' disabled')}`}
                 onClick={() => kisaltmaAktif && setSistemPaneli((v) => !v)}
                 aria-expanded={sistemPaneli}
                 aria-label="Kısaltma sistemleri"
@@ -6562,7 +6562,7 @@ export default function Araclar() {
               </h2>
               <button
                 type="button"
-                className="araclar-brf-onizle-kapat"
+                className="btn araclar-brf-onizle-kapat"
                 onClick={() => setBrfOnizlemeAcik(false)}
                 aria-label="Kapat"
               >

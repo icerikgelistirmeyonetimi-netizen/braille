@@ -20,6 +20,7 @@ export default function CokHucreOkuyucu({
   bolumAnahtari,
   ikiHucreYanYana = false,
   ogeSesiCal,
+  ogeSesiDurdur,
   ogeSesiGecikmeMs = 2600,
   ogeSesiOnceCal = false,
   ogeSesiHerZaman = false,
@@ -41,6 +42,7 @@ export default function CokHucreOkuyucu({
   const toastTimerRef = useRef(null);
   const ogeSesiTimerRef = useRef(null);
   const tekrarSesiTimerRef = useRef(null);
+  const sonHucreOgeRef = useRef(0); // hücre-noktası effect'inde öğe değişimini tespit için
   const [ogeSesiAktif, setOgeSesiAktif] = useState(Boolean(ogeSesiHerZaman));
   const [okumaModu, setOkumaModu] = useState(false);
 
@@ -59,14 +61,23 @@ export default function CokHucreOkuyucu({
   const kelimeYonergeMetniAl = useCallback((oge) => {
     if (!oge) return '';
 
-    const hucreYonergesi =
-      `${oge.hucreler?.length || 0} braille hücresinden oluşur. Lütfen noktalarına dokunun.`;
+    const hucreler = Array.isArray(oge.hucreler) ? oge.hucreler : [];
+    const cokHucre = hucreler.length > 1;
+    const ilkHucre = Array.isArray(hucreler[0]) ? hucreler[0] : (hucreler[0] != null ? [hucreler[0]] : []);
+    const ilkHucreNoktalar = ilkHucre.length ? `${ilkHucre.join(', ')} numaralı noktalara` : 'boş hücre';
+
+    // İlk hücrenin noktaları da okunur (önceden yalnızca "noktalarına dokunun" deniyordu;
+    // çok hücrelilerde ilk hücre hiç okunmuyordu).
+    const hucreYonergesi = cokHucre
+      ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${ilkHucreNoktalar} dokunun.`
+      : `${ilkHucreNoktalar} dokunun.`;
 
     if (sadeceHucreYonergesiOku) {
       return hucreYonergesi;
     }
 
-    return `${oge.yazi}, okunuşu: ${oge.okunus}. ${oge.anlam || ''} ${hucreYonergesi}`;
+    const okunusKismi = oge.okunus ? `, okunuşu: ${oge.okunus}` : '';
+    return `${oge.yazi}${okunusKismi}. ${oge.anlam || ''} ${hucreYonergesi}`;
   }, [sadeceHucreYonergesiOku]);
 
   // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
@@ -82,6 +93,8 @@ export default function CokHucreOkuyucu({
 
   const tumSesleriDurdur = () => {
     konusmayiDurdur();
+    // Çalmakta olan ses kaydını da durdur (navigasyonda kayıt + TTS çakışmasın).
+    ogeSesiDurdur?.();
 
     if (ogeSesiTimerRef.current) {
       clearTimeout(ogeSesiTimerRef.current);
@@ -128,6 +141,10 @@ export default function CokHucreOkuyucu({
 
   // Yeni kelime tanıtımı (kelime adı + okunuş + hücre sayısı)
   useEffect(() => {
+    // Öğe değişiminde önceki TTS ve ses kaydını durdur (üst üste binmesin).
+    konusmayiDurdur();
+    ogeSesiDurdur?.();
+
     if (bitti) {
       konus(bittiMesaji);
       return;
@@ -154,15 +171,25 @@ export default function CokHucreOkuyucu({
     const ilkSesZatenCalindi = ilkOgeMi && ilkOgeSesiHariciCalindi;
 
     if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function') {
+      // Ses ile yönergenin EŞ ZAMANLI olmaması için: yönerge, kayıt BİTİNCE
+      // (onEnded) okunur; sabit gecikme yerine kaydın gerçek süresi beklenir.
+      let konustu = false;
+      const yonergeyiOku = () => {
+        if (konustu) return;
+        konustu = true;
+        konus(metin);
+      };
+
       if (!ilkSesZatenCalindi) {
         ogeSesiTimerRef.current = window.setTimeout(() => {
-          ogeSesiCal(k);
+          ogeSesiCal(k, { onEnded: yonergeyiOku });
+          // Güvenlik: onEnded gelmezse (ör. ses çalınamazsa) en geç ~5 sn sonra oku.
+          konusmaTimer = window.setTimeout(yonergeyiOku, 5000);
         }, gecikme);
+      } else {
+        // İlk öğe sesi haricen çalındı: yönergeyi kısa gecikmeyle oku.
+        konusmaTimer = window.setTimeout(yonergeyiOku, gecikme + ogeSesiSonrasiKonusmaGecikmeMs);
       }
-
-      konusmaTimer = window.setTimeout(() => {
-        konus(metin);
-      }, gecikme + ogeSesiSonrasiKonusmaGecikmeMs);
     } else {
       konusmaTimer = window.setTimeout(() => {
         konus(metin);
@@ -183,11 +210,15 @@ export default function CokHucreOkuyucu({
       }
 
       if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function') {
-        ogeSesiCal(k);
-        tekrarSesiTimerRef.current = window.setTimeout(() => {
+        let tekrarKonustu = false;
+        const tekrarOku = () => {
+          if (tekrarKonustu) return;
+          tekrarKonustu = true;
           konus(metin, { kesintiyle: true });
-          tekrarSesiTimerRef.current = null;
-        }, ogeSesiSonrasiKonusmaGecikmeMs);
+        };
+        ogeSesiCal(k, { onEnded: tekrarOku });
+        // Güvenlik: onEnded gelmezse en geç ~5 sn sonra oku.
+        tekrarSesiTimerRef.current = window.setTimeout(tekrarOku, 5000);
         return;
       }
 
@@ -227,16 +258,27 @@ export default function CokHucreOkuyucu({
     ogeSesiSonrasiKonusmaGecikmeMs,
     ilkOgeSesiHariciCalindi,
     kelimeYonergeMetniAl,
+    ogeSesiDurdur,
   ]);
 
   // Hücre değişince o hücrenin noktalarını seslendir (ilk hücre hariç)
   useEffect(() => {
+    // ÖĞE (hece) değiştiyse bu effect, hucreIndeksi henüz sıfırlanmadan eski
+    // değerle (ör. 1) çalışabilir → yeni hecenin kaydıyla çakışan "2. hücre"
+    // seslendirmesi tetiklenirdi. Öğe değişiminde hiç konuşma: ana effect
+    // (kayıt + yönerge) yeni öğeyi zaten tanıtıyor.
+    const ogeDegisti = sonHucreOgeRef.current !== indeks;
+    sonHucreOgeRef.current = indeks;
+    if (ogeDegisti) return;
+
     if (bitti || !aktif || hucreIndeksi === 0) return;
+    // Çalan ses kaydını durdur ki hücre noktası seslendirmesiyle üst üste binmesin.
+    ogeSesiDurdur?.();
     const noktalar = aktif.hucreler[hucreIndeksi];
     if (!noktalar) return; // kelime değişmiş, indeks henüz sıfırlanmamış olabilir
     konus(`${hucreIndeksi + 1}. hücre: ${noktalar.join(', ')} numaralı noktalara dokunun.`,
           { kesintiyle: true });
-  }, [hucreIndeksi, indeks, aktif, bitti]);
+  }, [hucreIndeksi, indeks, aktif, bitti, ogeSesiDurdur]);
 
   useEffect(() => () => konusmayiDurdur(), []);
 
@@ -267,7 +309,7 @@ export default function CokHucreOkuyucu({
           />
         </div>
         <div className="controls">
-          <button type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+          <button className="btn" type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
         </div>
       </div>
     );
@@ -287,8 +329,8 @@ export default function CokHucreOkuyucu({
         </div>
         <div className="controls">
           {kayitlilarModu
-            ? <button type="button" onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tüm Listeye Dön</button>
-            : <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
+            ? <button className="btn" type="button" onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tüm Listeye Dön</button>
+            : <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
         </div>
       </div>
     );
@@ -363,7 +405,7 @@ export default function CokHucreOkuyucu({
             }}
           >
             <button
-              type="button"
+className="btn"               type="button"
               onClick={() => {
                 tumSesleriDurdur();
                 ogeSesiCal(aktif);
@@ -377,8 +419,8 @@ export default function CokHucreOkuyucu({
         )}
         {kayitliSayisi > 0 && (
           <div className="banner-grup-secim" style={{ margin: '4px 0 0' }}>
-            <button type="button" className={!kayitlilarModu ? 'aktif' : ''} aria-pressed={!kayitlilarModu} onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tümü</button>
-            <button type="button" className={kayitlilarModu ? 'aktif' : ''} aria-pressed={kayitlilarModu} onClick={() => { setKayitlilarModu(true); setIndeks(0); }}>Kayıtlılar ({kayitliSayisi})</button>
+            <button type="button" className={`btn ${!kayitlilarModu ? 'aktif' : ''}`} aria-pressed={!kayitlilarModu} onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tümü</button>
+            <button type="button" className={`btn ${kayitlilarModu ? 'aktif' : ''}`} aria-pressed={kayitlilarModu} onClick={() => { setKayitlilarModu(true); setIndeks(0); }}>Kayıtlılar ({kayitliSayisi})</button>
           </div>
         )}
       </div>
@@ -389,7 +431,7 @@ export default function CokHucreOkuyucu({
             <OkumaModuButonu onClick={okumaModunaGec} />
             <button
               type="button"
-              className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktif?.yazi) ? ' kaydedildi' : ''}`}
+              className={`btn sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktif?.yazi) ? ' kaydedildi' : ''}`}
               onClick={kaydetSonra}
               aria-label="Daha sonra öğren listesine kaydet"
               title="Daha sonra öğren"
@@ -460,7 +502,7 @@ export default function CokHucreOkuyucu({
                 type="button"
                 role="tab"
                 aria-selected={i === guvenliHucreIndeksi}
-                className={`hucre-onizleme-oge ${i === guvenliHucreIndeksi ? 'aktif' : ''}`}
+                className={`btn hucre-onizleme-oge ${i === guvenliHucreIndeksi ? 'aktif' : ''}`}
                 onClick={() => setHucreIndeksi(i)}
                 aria-label={`${i + 1}. hücreye git`}
               >
@@ -479,10 +521,12 @@ export default function CokHucreOkuyucu({
         )}
 
         {/* Okunuş + anlam */}
-        <div role="status" aria-live="polite"
-             style={{ textAlign: 'center', fontSize: '1.15em', color: 'var(--accent)', fontWeight: 700 }}>
-          “{k.okunus}”
-        </div>
+        {k.okunus && (
+          <div role="status" aria-live="polite"
+               style={{ textAlign: 'center', fontSize: '1.15em', color: 'var(--accent)', fontWeight: 700 }}>
+            “{k.okunus}”
+          </div>
+        )}
         {k.anlam && (
           <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.9em', maxWidth: 560, margin: '0 auto' }}>
             {k.anlam}
@@ -492,7 +536,7 @@ export default function CokHucreOkuyucu({
 
       <div className="controls">
         <button
-          type="button"
+className="btn"           type="button"
           aria-label="Tekrar dinle"
           onClick={() => {
             tumSesleriDurdur();
@@ -534,24 +578,24 @@ export default function CokHucreOkuyucu({
         </button>
         {hucreSayisi > 1 ? (
           <>
-            <button type="button" aria-label="Önceki hücre" disabled={ilkKelime && hucreIndeksi === 0} onClick={oncekiHucre}>
+            <button className="btn" type="button" aria-label="Önceki hücre" disabled={ilkKelime && hucreIndeksi === 0} onClick={oncekiHucre}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
               <span className="btn-etiket">Önceki</span>
             </button>
-            <button type="button" aria-label={sonHucre ? 'Sıradaki kelimeyi atla' : 'Hücreyi atla'} onClick={sonrakiHucre}>
+            <button className="btn" type="button" aria-label={sonHucre ? 'Sıradaki kelimeyi atla' : 'Hücreyi atla'} onClick={sonrakiHucre}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="9 18 15 12 9 6"/></svg>
               <span className="btn-etiket">Atla</span>
             </button>
           </>
         ) : (
           <>
-            <button type="button" aria-label="Önceki" disabled={ilkKelime}
+            <button className="btn" type="button" aria-label="Önceki" disabled={ilkKelime}
                     onClick={() => setIndeks((i) => Math.max(0, i - 1))}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
               <span className="btn-etiket">Önceki</span>
             </button>
             <button
-              type="button"
+className="btn"               type="button"
               aria-label="Atla, sonraki"
               onClick={() => {
                 tumSesleriDurdur();

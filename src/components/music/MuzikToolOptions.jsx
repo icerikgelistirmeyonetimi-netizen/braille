@@ -45,6 +45,8 @@ export default function MuzikToolOptions({
   const chipAktif = 'border-amber-500 bg-amber-100 text-zinc-950 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.35)]';
   const Chip = ({ aktifMi, onClick, title, italik, children }) => (
     <button type="button" onClick={onClick} title={title}
+      aria-label={title || undefined}
+      aria-pressed={typeof aktifMi === 'boolean' ? aktifMi : undefined}
       className={'h-7 min-w-7 rounded-md border px-2 text-xs font-semibold transition-all ' + (aktifMi ? chipAktif : chipPasif) + (italik ? ' italic' : '')}
     >{children}</button>
   );

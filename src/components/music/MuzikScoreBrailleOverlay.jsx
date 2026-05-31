@@ -351,6 +351,7 @@ export default function MuzikScoreBrailleOverlay({
                   {tasiyor && (
                     <button
                       type="button"
+                      className="muzik-tum-hucre-btn"
                       title={`Tüm hücreleri göster (${tumNodes.length})`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -428,6 +429,7 @@ export default function MuzikScoreBrailleOverlay({
             role="dialog"
             aria-modal="true"
             aria-label="Ölçü braille hücreleri"
+            className="muzik-tum-hucre-modal"
             onClick={(e) => e.stopPropagation()}
             style={{
               background: '#ffffff',
@@ -448,11 +450,12 @@ export default function MuzikScoreBrailleOverlay({
                 gap: 12,
               }}
             >
-              <span style={{ fontWeight: 700, color: '#1f2937' }}>
+              <span className="muzik-tum-hucre-modal-baslik" style={{ fontWeight: 700, color: '#1f2937' }}>
                 Ölçü {acikOlcu.olcuIdx + 1} — tüm braille hücreleri
               </span>
               <button
                 type="button"
+                className="muzik-tum-hucre-kapat"
                 onClick={() => setAcikOlcu(null)}
                 style={{
                   border: '1px solid #cbd5e1',

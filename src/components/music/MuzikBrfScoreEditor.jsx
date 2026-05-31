@@ -200,7 +200,7 @@ export default function MuzikBrfScoreEditor({
   }, [playbackOgeId, svgCizilecekOgeler]);
 
   return (
-    <div className="w-full min-w-0 flex flex-col gap-3" role="tabpanel" aria-label="Skor (nota yazımı)">
+    <div className="w-full min-w-0 flex flex-col gap-3" role="tabpanel" id="muzik-panel-skor" aria-labelledby="muzik-tab-skor" tabIndex={0} aria-label="Skor (nota yazımı)">
       {/* ── Toolbar + Playbar sticky wrapper ─────────────────────────────── */}
       <div className="sticky top-0 z-30 flex flex-col gap-0 w-full min-w-0">
         <MuzikScoreToolbar
@@ -218,6 +218,7 @@ export default function MuzikBrfScoreEditor({
           aracEkleHandler={aracEkleHandler}
           tupletTamamla={tupletTamamla}
           aracTikla={aracTikla}
+          setAktifArac={setAktifArac}
           slurTamamla={() => { slurTamamla(); setAktifArac(null); }}
           slurCancel={slurCancel}
           modifierCancel={modifierCancel}
@@ -336,9 +337,15 @@ export default function MuzikBrfScoreEditor({
             onClick={() => setHeaderPopupAcik(false)}
             aria-hidden="true"
           />
-          <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-zinc-200 max-h-[90vh] overflow-y-auto flex flex-col">
+          <div
+            className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-zinc-200 max-h-[90vh] overflow-y-auto flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="muzik-eser-bilgileri-baslik"
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setHeaderPopupAcik(false); } }}
+          >
             <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-200">
-              <h2 className="text-sm font-semibold text-zinc-900">Eser Bilgileri</h2>
+              <h2 id="muzik-eser-bilgileri-baslik" className="text-sm font-semibold text-zinc-900">Eser Bilgileri</h2>
               <button
                 type="button"
                 onClick={() => setHeaderPopupAcik(false)}
@@ -380,9 +387,15 @@ export default function MuzikBrfScoreEditor({
             onClick={() => setHeaderBraillePopupAcik(false)}
             aria-hidden="true"
           />
-          <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-zinc-200 max-h-[90vh] overflow-y-auto flex flex-col">
+          <div
+            className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-zinc-200 max-h-[90vh] overflow-y-auto flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="muzik-header-braille-baslik"
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setHeaderBraillePopupAcik(false); } }}
+          >
             <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-200">
-              <h2 className="text-sm font-semibold text-zinc-900">Header Braille</h2>
+              <h2 id="muzik-header-braille-baslik" className="text-sm font-semibold text-zinc-900">Header Braille</h2>
               <button
                 type="button"
                 onClick={() => setHeaderBraillePopupAcik(false)}

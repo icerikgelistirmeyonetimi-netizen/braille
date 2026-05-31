@@ -27,7 +27,7 @@ export default function KarisikYazmaButonu() {
   return (
     <button
       type="button"
-      className="gorunum-btn karisik-yazma-btn"
+      className="btn gorunum-btn karisik-yazma-btn"
       onClick={tikla}
       aria-label="Bu derste karışık yazma etkinliği başlat"
       title="Karışık yazma etkinliği"

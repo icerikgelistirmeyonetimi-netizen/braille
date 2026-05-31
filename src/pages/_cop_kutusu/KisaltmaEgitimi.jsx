@@ -34,7 +34,7 @@ export default function KisaltmaEgitimi() {
           </div>
         </div>
         <div className="controls">
-          <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>
+          <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>
         </div>
       </div>
     );
@@ -64,13 +64,13 @@ export default function KisaltmaEgitimi() {
 
       <div className="controls">
         <button
-          type="button"
+className="btn"           type="button"
           onClick={() => konus(`${k.kisaltma}, ${k.acilim}.`)}
         >
           Tekrar Dinle
         </button>
         <button
-          type="button"
+className="btn"           type="button"
           onClick={() => {
             basariBildir('Anladım. Sıradaki kısaltma.');
             setTimeout(() => setIndeks((i) => i + 1), 800);

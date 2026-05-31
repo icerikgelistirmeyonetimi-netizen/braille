@@ -173,13 +173,19 @@ export default function MuzikBrfYazim() {
   // Aşama 1: Braille metin/anlam/lejant saf helper'ları utils/music-brf altına taşındı.
 
   return (
-    <div className="w-full mx-auto max-w-[1600px] px-4 py-4 min-w-0 overflow-x-hidden">
+    <div className="muzik-brf-sayfa w-full mx-auto max-w-[1600px] px-4 py-4 min-w-0 overflow-x-hidden">
       <PageHeader baslik="Müzik BRF Yazım" />
       <div className="space-y-4">
         <MuzikBrfViewTabs aktifSekme={aktifSekme} setAktifSekme={setAktifSekme} />
 
         {Array.isArray(muzikUyarilari) && muzikUyarilari.length > 0 && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <div
+            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            aria-label="Müzik uyarıları"
+          >
             {muzikUyarilari.slice(-12).map((uyari, idx) => (
               <div key={`muzik-uyari-${idx}`}>
                 {uyari.message || String(uyari)}
