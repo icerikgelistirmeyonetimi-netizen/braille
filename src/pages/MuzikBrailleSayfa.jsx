@@ -7,7 +7,8 @@ import { usePianoNotePreview } from '../hooks/music-brf/usePianoNotePreview.js';
 import { muzikNotaPiyanoSesUrlAl } from '../utils/music-brf/musicPianoAudioHelpers.js';
 
 const NOTA_ADLARI = ['do', 're', 'mi', 'fa', 'sol', 'la', 'si'];
-const METRONOM_URL = '/audio/metronom.mp3';
+const _appBase = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+const METRONOM_URL = `${_appBase}/audio/metronom.mp3`;
 let _metronomAudio = null;
 
 function metronomTikCal(volume = 0.85) {

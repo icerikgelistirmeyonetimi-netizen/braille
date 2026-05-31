@@ -1,4 +1,5 @@
-export const PIANO_AUDIO_FOLDER = '/piano%20ses';
+const _base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+export const PIANO_AUDIO_FOLDER = `${_base}/piano%20ses`;
 export const PIANO_AUDIO_EXTENSION = 'mp3';
 
 const NOTA_SEMITONE = {

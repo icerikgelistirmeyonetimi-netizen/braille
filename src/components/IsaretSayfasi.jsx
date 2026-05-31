@@ -10,7 +10,8 @@ import { muzikNotaPiyanoSesUrlAl } from '../utils/music-brf/musicPianoAudioHelpe
 
 const DIYEZ_SIRASI = ['fa', 'do', 'sol', 're', 'la', 'mi', 'si'];
 const BEMOL_SIRASI = ['si', 'mi', 'la', 're', 'sol', 'do', 'fa'];
-const METRONOM_CLICK_URL = '/audio/metronom.mp3';
+const _isaretBase = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+const METRONOM_CLICK_URL = `${_isaretBase}/audio/metronom.mp3`;
 
 // İlk hücrenin noktalarını içeren dokunma yönergesi.
 // Çok hücrelilerde "1. hücre:" ön eki; tek hücrelide doğrudan noktalar.
