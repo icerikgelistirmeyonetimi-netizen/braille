@@ -43,6 +43,7 @@ export default function OkumaModuListesi({
   baslik,
   ogeler,
   getEtiket,
+  getTtsEtiket, // opsiyonel: TTS için ayrı etiket (gösterim farklıysa)
   getAltEtiket,
   getHucreler,
   onSec,
@@ -134,9 +135,21 @@ export default function OkumaModuListesi({
       return;
     }
 
-    const etiket = typeof getEtiket === 'function' ? getEtiket(oge) : oge.ad;
+    const ttsGetEtiket = getTtsEtiket || getEtiket;
+    const etiket = typeof ttsGetEtiket === 'function' ? ttsGetEtiket(oge) : oge.ad;
     const altEtiket = typeof getAltEtiket === 'function' ? getAltEtiket(oge) : '';
-    const metin = [etiket, altEtiket].filter(Boolean).join('. ');
+    // Nokta bilgisini "X noktalarından oluşur" biçiminde ekle
+    const hucreler = typeof getHucreler === 'function' ? hucreleriNormalizeEt(getHucreler(oge)) : [];
+    let noktaBilgisi = '';
+    if (hucreler.length === 1 && hucreler[0].length > 0) {
+      noktaBilgisi = `${hucreler[0].join(', ')} noktalarından oluşur`;
+    } else if (hucreler.length > 1) {
+      noktaBilgisi = hucreler
+        .map((h, i) => `${i + 1}. hücre ${h.join(', ')}`)
+        .join(', ');
+      noktaBilgisi += ' noktalarından oluşur';
+    }
+    const metin = [etiket, altEtiket, noktaBilgisi].filter(Boolean).join('. ');
 
     const seslendirmeKapali =
       window.localStorage.getItem('seslendirmeKapali') === 'true' ||

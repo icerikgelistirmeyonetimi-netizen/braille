@@ -190,13 +190,13 @@ const KURAL_OLCU_NO_TEKRAR = [
 /* ─────────────────────────  1) NOTALAR (Pitch)  ────────────────────────── */
 // UEB Music: temel hücre = sekizlik (quaver). Süre eki için 3 ve/veya 6.
 export const MUZIK_NOTALAR = [
-  R('do (C)', ['1-4-5'], '(do) · temel hücre = sekizlik', KURAL_NOTA, undefined, 'C'),
-  R('re (D)', ['1-5'], '(re) · temel hücre = sekizlik', KURAL_NOTA, undefined, 'D'),
-  R('mi (E)', ['1-2-4'], '(mi) · temel hücre = sekizlik', KURAL_NOTA, undefined, 'E'),
-  R('fa (F)', ['1-2-4-5'], '(fa) · temel hücre = sekizlik', KURAL_NOTA, undefined, 'F'),
-  R('sol (G)', ['1-2-5'], '(sol) · temel hücre = sekizlik', KURAL_NOTA, undefined, 'G'),
-  R('la (A)', ['2-4'], '(la) · temel hücre = sekizlik', KURAL_NOTA, undefined, 'A'),
-  R('si (B)', ['2-4-5'], '(si) · temel hücre = sekizlik', KURAL_NOTA, undefined, 'B'),
+  R('do (C)', ['1-4-5'], '', KURAL_NOTA, undefined, 'C'),
+  R('re (D)', ['1-5'], '', KURAL_NOTA, undefined, 'D'),
+  R('mi (E)', ['1-2-4'], '', KURAL_NOTA, undefined, 'E'),
+  R('fa (F)', ['1-2-4-5'], '', KURAL_NOTA, undefined, 'F'),
+  R('sol (G)', ['1-2-5'], '', KURAL_NOTA, undefined, 'G'),
+  R('la (A)', ['2-4'], '', KURAL_NOTA, undefined, 'A'),
+  R('si (B)', ['2-4-5'], '', KURAL_NOTA, undefined, 'B'),
 ];
 
 /* ─────────  2) NOTA SÜRELERİ (Duration)  ──────────── */

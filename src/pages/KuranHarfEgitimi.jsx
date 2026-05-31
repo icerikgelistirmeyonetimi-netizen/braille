@@ -70,9 +70,7 @@ export default function KuranHarfEgitimi() {
       ogeSesiHerZaman
       ogeSesiSonrasiKonusmaGecikmeMs={1200}
       ilkOgeSesiHariciCalindi={ilkSesCalindi}
-      sesKaydiButonuGoster
-      sesKaydiButonEtiketi="Harf Sesini Dinle"
-      okumaModundaSadeceOgeSesi
+okumaModundaSadeceOgeSesi
     />
   );
 }

@@ -595,20 +595,36 @@ className="btn"           type="button"
           <span className="btn-etiket">Tekrar</span>
         </button>
         <button
-className="btn"           type="button"
-          aria-label="Sıfırla"
+          className="btn"
+          type="button"
+          aria-label="Sıfırla — en başa dön"
           onClick={() => {
             tumSesleriDurdur();
+            setIndeks(0);
             setBasilanlar([]);
             setYanlis([]);
-            konus('Tekrar deneyelim.');
+            konus('En başa dönüldü.');
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
           <span className="btn-etiket">Sıfırla</span>
         </button>
         <button
-className="btn"           type="button"
+          className="btn"
+          type="button"
+          aria-label="Önceki"
+          disabled={indeks === 0}
+          onClick={() => {
+            tumSesleriDurdur();
+            setIndeks((i) => Math.max(i - 1, 0));
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+          <span className="btn-etiket">Önceki</span>
+        </button>
+        <button
+          className="btn"
+          type="button"
           onClick={() => {
             tumSesleriDurdur();
             setIndeks((i) => Math.min(i + 1, aktifListe.length));

@@ -30,6 +30,7 @@ export default function CokHucreOkuyucu({
   ilkOgeSesiHariciCalindi = false,
   sesKaydiButonuGoster = false,
   sesKaydiButonEtiketi = 'Ses Kaydını Dinle',
+  yonergeFormati = 'standart', // 'standart' | 'sirayla'
 }) {
   const [indeks, setIndeks] = useState(() => {
     const k = indeksAl(bolumAnahtari);
@@ -64,21 +65,30 @@ export default function CokHucreOkuyucu({
     const hucreler = Array.isArray(oge.hucreler) ? oge.hucreler : [];
     const cokHucre = hucreler.length > 1;
     const ilkHucre = Array.isArray(hucreler[0]) ? hucreler[0] : (hucreler[0] != null ? [hucreler[0]] : []);
-    const ilkHucreNoktalar = ilkHucre.length ? `${ilkHucre.join(', ')} numaralı noktalara` : 'boş hücre';
-
-    // İlk hücrenin noktaları da okunur (önceden yalnızca "noktalarına dokunun" deniyordu;
-    // çok hücrelilerde ilk hücre hiç okunmuyordu).
-    const hucreYonergesi = cokHucre
-      ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${ilkHucreNoktalar} dokunun.`
-      : `${ilkHucreNoktalar} dokunun.`;
+    let hucreYonergesi;
+    if (yonergeFormati === 'sirayla') {
+      const noktalarStr = ilkHucre.length ? ilkHucre.join(' ') : '';
+      const dokunYonergesi = noktalarStr
+        ? `Lütfen sırayla ${noktalarStr} noktalarına dokununuz.`
+        : 'Lütfen noktalarına dokununuz.';
+      hucreYonergesi = cokHucre
+        ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${dokunYonergesi}`
+        : dokunYonergesi;
+    } else {
+      const ilkHucreNoktalar = ilkHucre.length ? `${ilkHucre.join(', ')} numaralı noktalara` : 'boş hücre';
+      hucreYonergesi = cokHucre
+        ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${ilkHucreNoktalar} dokunun.`
+        : `${ilkHucreNoktalar} dokunun.`;
+    }
 
     if (sadeceHucreYonergesiOku) {
       return hucreYonergesi;
     }
 
+    const ttsBaşlık = oge.ttsYazi || oge.yazi;
     const okunusKismi = oge.okunus ? `, okunuşu: ${oge.okunus}` : '';
-    return `${oge.yazi}${okunusKismi}. ${oge.anlam || ''} ${hucreYonergesi}`;
-  }, [sadeceHucreYonergesiOku]);
+    return `${ttsBaşlık}${okunusKismi}. ${oge.anlam || ''} ${hucreYonergesi}`;
+  }, [sadeceHucreYonergesiOku, yonergeFormati]);
 
   // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
   useEffect(() => {
@@ -297,6 +307,7 @@ export default function CokHucreOkuyucu({
             ogeler={ogeler}
             rtl={rtl}
             getEtiket={(oge) => oge.yazi}
+            getTtsEtiket={(oge) => oge.ttsYazi || oge.yazi}
             getAltEtiket={(oge) => oge.okunus || oge.anlam}
             getHucreler={(oge) => oge.hucreler || []}
             onSec={okumaOgesiSec}
@@ -576,6 +587,22 @@ className="btn"           type="button"
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           <span className="btn-etiket">Tekrar</span>
         </button>
+        <button
+          className="btn"
+          type="button"
+          aria-label="Sıfırla — en başa dön"
+          onClick={() => {
+            tumSesleriDurdur();
+            setIndeks(0);
+            setHucreIndeksi(0);
+            setBasilanlar([]);
+            setYanlis([]);
+            konus('En başa dönüldü.');
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+          <span className="btn-etiket">Sıfırla</span>
+        </button>
         {hucreSayisi > 1 ? (
           <>
             <button className="btn" type="button" aria-label="Önceki hücre" disabled={ilkKelime && hucreIndeksi === 0} onClick={oncekiHucre}>
@@ -590,12 +617,13 @@ className="btn"           type="button"
         ) : (
           <>
             <button className="btn" type="button" aria-label="Önceki" disabled={ilkKelime}
-                    onClick={() => setIndeks((i) => Math.max(0, i - 1))}>
+                    onClick={() => { tumSesleriDurdur(); setIndeks((i) => Math.max(0, i - 1)); }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
               <span className="btn-etiket">Önceki</span>
             </button>
             <button
-className="btn"               type="button"
+              className="btn"
+              type="button"
               aria-label="Atla, sonraki"
               onClick={() => {
                 tumSesleriDurdur();

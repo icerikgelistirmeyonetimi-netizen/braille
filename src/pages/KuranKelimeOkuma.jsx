@@ -121,9 +121,7 @@ export default function KuranKelimeOkuma({ kaynakAnahtari = 'hece', baslik }) {
       ogeSesiHerZaman={sesliSayfa}
       ogeSesiSonrasiKonusmaGecikmeMs={1200}
       ilkOgeSesiHariciCalindi={ilkSesCalindi}
-      sesKaydiButonuGoster={sesliSayfa}
-      sesKaydiButonEtiketi={kaynakAnahtari === 'hece' ? 'Hece Sesini Dinle' : 'Kelime Sesini Dinle'}
-      okumaModundaSadeceOgeSesi={sesliSayfa}
+okumaModundaSadeceOgeSesi={sesliSayfa}
       sadeceHucreYonergesiOku={sesliSayfa}
     />
   );
