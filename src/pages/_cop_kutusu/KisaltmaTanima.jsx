@@ -38,7 +38,7 @@ export default function KisaltmaTanima() {
           </div>
         </div>
         <div className="controls">
-          <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>
+          <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>
         </div>
       </div>
     );
@@ -72,20 +72,20 @@ export default function KisaltmaTanima() {
 
       <div className="controls">
         <button
-          type="button"
+className="btn"           type="button"
           onClick={() => konus(`${k.harf} harfi, ${k.kelime} kelimesi.`, { kesintiyle: true })}
         >
           Tekrar Dinle
         </button>
         <button
-          type="button"
+className="btn"           type="button"
           disabled={indeks === 0}
           onClick={() => setIndeks((i) => Math.max(0, i - 1))}
         >
           ← Önceki
         </button>
         <button
-          type="button"
+className="btn"           type="button"
           onClick={() => {
             basariBildir('Sıradaki kısaltma.');
             setTimeout(() => setIndeks((i) => i + 1), 600);

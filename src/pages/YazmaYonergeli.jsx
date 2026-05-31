@@ -208,9 +208,9 @@ export default function YazmaYonergeli() {
 
       <div className="yazma-bolum yazma-bolum-alt">
         <div className="controls">
-          <button type="button" onClick={yenidenBasla}>Bu Cümleyi Tekrar Yaz</button>
+          <button className="btn" type="button" onClick={yenidenBasla}>Bu Cümleyi Tekrar Yaz</button>
           {!beklenen && cumleIdx < CUMLELER.length - 1 && (
-            <button type="button" onClick={ileriCumle}>Sonraki Cümle</button>
+            <button className="btn" type="button" onClick={ileriCumle}>Sonraki Cümle</button>
           )}
         </div>
       </div>

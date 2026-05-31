@@ -12,10 +12,10 @@ export default function KuranHarekeEgitimi() {
 
   return (
     <DesenOgretici
-      baslik="Kur'an: Hareke Eğitimi"
+      baslik="Kur'an-ı Kerim: Hareke Eğitimi"
       ogeler={ogeler}
       kategoriAdi="harekesi"
       bolumAnahtari="kuran-harekeler"
-      bittiMesaji="Tebrikler! Kur'an braillesindeki harekeleri öğrendiniz."      rtl    />
+      bittiMesaji="Tebrikler! Kur'an-ı Kerim braillesindeki harekeleri öğrendiniz."      rtl    />
   );
 }

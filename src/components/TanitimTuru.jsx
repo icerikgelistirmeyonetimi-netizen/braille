@@ -101,7 +101,7 @@ export default function TanitimTuru({ zorunlu = true, onKapat }) {
 
         <div className="controls" style={{ justifyContent: 'space-between' }}>
           <button
-            type="button"
+className="btn"             type="button"
             onClick={kapat}
             style={{ background: 'transparent', color: 'var(--accent)', borderColor: 'var(--accent)' }}
             aria-label="Tanıtımı atla ve kapat"
@@ -111,17 +111,17 @@ export default function TanitimTuru({ zorunlu = true, onKapat }) {
 
           <div style={{ display: 'flex', gap: 8 }}>
             {adim > 0 && (
-              <button type="button" onClick={() => setAdim((i) => i - 1)}>
+              <button className="btn" type="button" onClick={() => setAdim((i) => i - 1)}>
                 ← Geri
               </button>
             )}
             {!sonAdim && (
-              <button type="button" onClick={() => setAdim((i) => i + 1)}>
+              <button className="btn" type="button" onClick={() => setAdim((i) => i + 1)}>
                 İleri →
               </button>
             )}
             {sonAdim && (
-              <button type="button" onClick={kapat}>
+              <button className="btn" type="button" onClick={kapat}>
                 Bitir
               </button>
             )}

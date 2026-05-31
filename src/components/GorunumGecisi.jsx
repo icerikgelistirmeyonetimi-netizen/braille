@@ -30,7 +30,7 @@ export default function GorunumGecisi() {
   return (
     <button
       type="button"
-      className="gorunum-btn"
+      className="btn gorunum-btn"
       onClick={tikla}
       aria-pressed={azGorenAktif}
       aria-label={

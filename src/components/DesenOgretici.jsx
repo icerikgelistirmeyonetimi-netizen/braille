@@ -16,7 +16,30 @@ import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
  *  - bolumAnahtari?: string
  *  - bittiMesaji?: string
  */
-export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahtari, bittiMesaji, rtl }) {
+export default function DesenOgretici({
+  baslik,
+  ogeler,
+  kategoriAdi,
+  bolumAnahtari,
+  bittiMesaji,
+  rtl,
+  ogeSesiCal,
+  ogeSesiDurdur,
+  ogeSesiGecikmeMs = 2600,
+  ogeSesiOnceCal = false,
+  ogeSesiHerZaman = false,
+  ogeSesiSonrasiKonusmaGecikmeMs = 900,
+  ilkOgeSesiHariciCalindi = false,
+  okumaModundaSadeceOgeSesi = false,
+  sesKaydiButonuGoster = false,
+  sesKaydiButonEtiketi = 'Ses Kaydını Dinle',
+  ustSesKontrolleriGoster = false,
+  ustSesButonEtiketi = 'Nota Sesi',
+  ustSesButonAriaLabel = 'Nota sesini çal',
+  otomatikOgeSesi = false,
+  ogeyiSeslendir,
+  yonergeyiTekrarla,
+}) {
   const [indeks, setIndeks] = useState(() => {
     const kaydedilen = indeksAl(bolumAnahtari);
     return kaydedilen < ogeler.length ? kaydedilen : 0;
@@ -25,7 +48,10 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
   const [yanlis, setYanlis] = useState([]);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const ogeSesiTimerRef = useRef(null);
+  const tekrarSesiTimerRef = useRef(null);
   const tebriklerAktif = useRef(false);
+  const [ogeSesiAktif, setOgeSesiAktif] = useState(Boolean(otomatikOgeSesi || ogeSesiHerZaman));
   const [okumaModu, setOkumaModu] = useState(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
@@ -72,6 +98,22 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
     toastTimerRef.current = setTimeout(() => setToast(null), 2000);
   };
 
+  const tumSesleriDurdur = () => {
+    konusmayiDurdur();
+    // Çalmakta olan ses kaydını da durdur (navigasyonda kayıt + TTS çakışmasın).
+    ogeSesiDurdur?.();
+
+    if (ogeSesiTimerRef.current) {
+      clearTimeout(ogeSesiTimerRef.current);
+      ogeSesiTimerRef.current = null;
+    }
+
+    if (tekrarSesiTimerRef.current) {
+      clearTimeout(tekrarSesiTimerRef.current);
+      tekrarSesiTimerRef.current = null;
+    }
+  };
+
   const modDegistir = (kayitlilar) => {
     setKayitlilarModu(kayitlilar);
     setIndeks(0);
@@ -94,7 +136,7 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
   };
 
   const okumaModunaGec = () => {
-    konusmayiDurdur();
+    tumSesleriDurdur();
     setOkumaModu(true);
   };
 
@@ -110,6 +152,10 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
     if (bitti) return bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!';
     const kalan = aktifAdimlar.filter((adim) => !basilanlar.includes(adim.key));
     if (kalan.length === aktifAdimlar.length) {
+      if (aktifOge.tamYonergeMetni) {
+        return aktifOge.tamYonergeMetni;
+      }
+
       const ad = aktifOge.ariaAd || aktifOge.ad;
       const ek = aktifOge.aciklama ? ` ${aktifOge.aciklama}` : '';
       const detay = aktifOge.yonergeDetay || `${(aktifOge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
@@ -121,6 +167,13 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
     return `Sıradaki nokta: ${adimMetni(kalan[0])}.`;
   }, [aktifAdimlar, aktifOge, basilanlar, bitti, bittiMesaji, kategoriAdi]);
 
+  console.log('DESEN OGRETICI PROPS', {
+    baslik,
+    bolumAnahtari,
+    kategoriAdi,
+    ogeSesiCalTipi: typeof ogeSesiCal,
+  });
+
   useEffect(() => {
     // Yeni öğeye geçişte intro'yu seslendir.
     if (bitti) {
@@ -128,29 +181,113 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
       return;
     }
     const oge = aktifListe[indeks];
+    if (!oge) return undefined;
+
     const ad = oge.ariaAd || oge.ad;
     const detay = oge.yonergeDetay || `${(oge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
     const ek = oge.aciklama ? ` ${oge.aciklama}` : '';
-    const giris = `${ad} ${kategoriAdi}, ${detay} Lütfen bu noktalara sırayla dokunun.${ek}`;
-    const gecikme = tebriklerAktif.current ? 1100 : 250;
-    const t = setTimeout(() => {
-      tebriklerAktif.current = false;
-      konus(giris, { kesintiyle: false });
-    }, gecikme);
 
-    // Telefon sallanınca yönergeyi tekrar oku
+    const giris = oge.tamYonergeMetni
+      ? oge.tamYonergeMetni
+      : `${ad} ${kategoriAdi}, ${detay} Lütfen bu noktalara sırayla dokunun.${ek}`;
+    const gecikme = tebriklerAktif.current ? 1100 : 250;
+    const sesAktifMi = ogeSesiHerZaman || ogeSesiAktif;
+
+    if (ogeSesiTimerRef.current) {
+      clearTimeout(ogeSesiTimerRef.current);
+      ogeSesiTimerRef.current = null;
+    }
+    if (tekrarSesiTimerRef.current) {
+      clearTimeout(tekrarSesiTimerRef.current);
+      tekrarSesiTimerRef.current = null;
+    }
+
+    let konusmaTimer = null;
+
+    const ilkOgeMi = indeks === 0 && !kayitlilarModu;
+    const ilkSesZatenCalindi = ilkOgeMi && ilkOgeSesiHariciCalindi;
+
+    if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function') {
+      if (!ilkSesZatenCalindi) {
+        ogeSesiTimerRef.current = window.setTimeout(() => {
+          ogeSesiCal(oge);
+        }, gecikme);
+      }
+
+      konusmaTimer = window.setTimeout(() => {
+        tebriklerAktif.current = false;
+        konus(giris, { kesintiyle: false });
+      }, gecikme + ogeSesiSonrasiKonusmaGecikmeMs);
+    } else {
+      konusmaTimer = window.setTimeout(() => {
+        tebriklerAktif.current = false;
+        konus(giris, { kesintiyle: false });
+      }, gecikme);
+
+      if (sesAktifMi && typeof ogeSesiCal === 'function') {
+        ogeSesiTimerRef.current = window.setTimeout(() => {
+          ogeSesiCal(oge);
+          ogeSesiTimerRef.current = null;
+        }, gecikme + ogeSesiGecikmeMs);
+      }
+    }
+
     const tekrar = () => {
       tebriklerAktif.current = false;
+
+      if (tekrarSesiTimerRef.current) {
+        clearTimeout(tekrarSesiTimerRef.current);
+        tekrarSesiTimerRef.current = null;
+      }
+
+      if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function') {
+        ogeSesiCal(oge);
+
+        tekrarSesiTimerRef.current = window.setTimeout(() => {
+          konus(giris, { kesintiyle: true });
+          tekrarSesiTimerRef.current = null;
+        }, ogeSesiSonrasiKonusmaGecikmeMs);
+        return;
+      }
+
       konus(giris, { kesintiyle: true });
+
+      if (sesAktifMi && typeof ogeSesiCal === 'function') {
+        tekrarSesiTimerRef.current = window.setTimeout(() => {
+          ogeSesiCal(oge);
+          tekrarSesiTimerRef.current = null;
+        }, ogeSesiGecikmeMs);
+      }
     };
+
     window.addEventListener('yonergeTekrar', tekrar);
 
     return () => {
-      clearTimeout(t);
+      if (konusmaTimer) clearTimeout(konusmaTimer);
+
+      if (ogeSesiTimerRef.current) {
+        clearTimeout(ogeSesiTimerRef.current);
+        ogeSesiTimerRef.current = null;
+      }
+      if (tekrarSesiTimerRef.current) {
+        clearTimeout(tekrarSesiTimerRef.current);
+        tekrarSesiTimerRef.current = null;
+      }
       window.removeEventListener('yonergeTekrar', tekrar);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indeks, kayitlilarModu]);
+  }, [
+    indeks,
+    kayitlilarModu,
+    bitti,
+    bittiMesaji,
+    aktifListe,
+    kategoriAdi,
+    ogeSesiCal,
+    ogeSesiAktif,
+    ogeSesiHerZaman,
+    ogeSesiOnceCal,
+    ogeSesiGecikmeMs,
+    ogeSesiSonrasiKonusmaGecikmeMs,    ilkOgeSesiHariciCalindi,  ]);
 
   // Yeni öğe geldiğinde durumu sıfırla
   useEffect(() => {
@@ -191,10 +328,15 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
             getHucreler={(oge) => (Array.isArray(oge.hucreler) && oge.hucreler.length > 0 ? oge.hucreler : (oge.noktalar || []))}
             onSec={okumaOgesiSec}
             onKapat={() => setOkumaModu(false)}
+            ogeSesiCal={ogeSesiCal}
+            ogeSesiGecikmeMs={ogeSesiGecikmeMs}
+            okumaModuOgeSesiGecikmeMs={900}
+            okumaModuOgeSesiAktif={typeof ogeSesiCal === 'function'}
+            okumaModundaSadeceOgeSesi={okumaModundaSadeceOgeSesi}
           />
         </div>
         <div className="controls">
-          <button type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+          <button className="btn" type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
         </div>
       </div>
     );
@@ -213,8 +355,8 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
         </div>
         <div className="controls">
           {kayitlilarModu
-            ? <button type="button" onClick={() => modDegistir(false)}>Tüm Listeye Dön</button>
-            : <button type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
+            ? <button className="btn" type="button" onClick={() => modDegistir(false)}>Tüm Listeye Dön</button>
+            : <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
         </div>
       </div>
     );
@@ -236,7 +378,7 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
     const tamamMi = yeni.length === aktifAdimlar.length;
     if (tamamMi) {
       if (bolumAnahtari) ogrenildiIsaretle(bolumAnahtari, aktifOge.ad);
-      konusmayiDurdur();
+      tumSesleriDurdur();
       tebriklerAktif.current = true;
       basariBildir('Tebrikler!');
       setTimeout(() => setIndeks((i) => i + 1), 800);
@@ -257,10 +399,97 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
         <div className="progress" aria-hidden="true">
           İlerleme: {indeks + 1} / {aktifListe.length}
         </div>
+        {sesKaydiButonuGoster && typeof ogeSesiCal === 'function' && aktifOge && (
+          <div
+            className="controls"
+            style={{
+              justifyContent: 'flex-start',
+              padding: 0,
+              marginTop: 8,
+              marginBottom: 8,
+            }}
+          >
+            <button
+className="btn"               type="button"
+              onClick={() => {
+                tumSesleriDurdur();
+                ogeSesiCal(aktifOge);
+              }}
+              aria-label={sesKaydiButonEtiketi}
+            >
+              🔊
+              <span className="btn-etiket">{sesKaydiButonEtiketi}</span>
+            </button>
+          </div>
+        )}
+        {ustSesKontrolleriGoster && typeof ogeSesiCal === 'function' && aktifOge && (
+          <div
+            className="controls"
+            style={{
+              justifyContent: 'flex-start',
+              padding: 0,
+              marginTop: 8,
+              marginBottom: 8,
+            }}
+          >
+            <button
+className="btn"               type="button"
+              onClick={() => {
+                tumSesleriDurdur();
+                setOgeSesiAktif(true);
+                if (aktifOge) {
+                  ogeSesiCal(aktifOge);
+                }
+              }}
+              aria-label={ustSesButonAriaLabel}
+            >
+              🔊
+              <span className="btn-etiket">{ustSesButonEtiketi}</span>
+            </button>
+
+            <button
+className="btn"               type="button"
+              onClick={() => {
+                tumSesleriDurdur();
+                setOgeSesiAktif(true);
+
+                if (typeof yonergeyiTekrarla === 'function') {
+                  yonergeyiTekrarla();
+
+                  if (tekrarSesiTimerRef.current) {
+                    clearTimeout(tekrarSesiTimerRef.current);
+                  }
+
+                  tekrarSesiTimerRef.current = window.setTimeout(() => {
+                    if (aktifOge) ogeSesiCal(aktifOge);
+                    tekrarSesiTimerRef.current = null;
+                  }, ogeSesiGecikmeMs);
+
+                  return;
+                }
+
+                if (typeof ogeyiSeslendir === 'function' && aktifOge) {
+                  ogeyiSeslendir(aktifOge, { kesintiyle: true });
+                  window.setTimeout(() => {
+                    if (aktifOge) ogeSesiCal(aktifOge);
+                  }, ogeSesiGecikmeMs);
+                  return;
+                }
+
+                if (aktifOge) {
+                  window.setTimeout(() => ogeSesiCal(aktifOge), ogeSesiGecikmeMs);
+                }
+              }}
+              aria-label="Bu öğeyi dinle"
+            >
+              Dinle
+            </button>
+          </div>
+        )}
         {kayitliSayisi > 0 && (
           <div className="banner-grup-secim" style={{ margin: '4px 0 0' }}>
-            <button type="button" className={!kayitlilarModu ? 'aktif' : ''} aria-pressed={!kayitlilarModu} onClick={() => modDegistir(false)}>Tümü</button>
-            <button type="button" className={kayitlilarModu ? 'aktif' : ''} aria-pressed={kayitlilarModu} onClick={() => modDegistir(true)}>Kayıtlılar ({kayitliSayisi})</button>
+            <button type="button" className={`btn ${!kayitlilarModu ? 'aktif' : ''}`} aria-pressed={!kayitlilarModu} onClick={() => modDegistir(false)}>Tümü</button>
+            <button type="button" className={`btn ${kayitlilarModu ? 'aktif' : ''}`} aria-pressed={kayitlilarModu} onClick={() => modDegistir(true)}>Kayıtlılar ({kayitliSayisi})</button>
           </div>
         )}
       </div>
@@ -270,7 +499,7 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
           <OkumaModuButonu onClick={okumaModunaGec} />
           <button
             type="button"
-            className={`sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktifOge?.ad) ? ' kaydedildi' : ''}`}
+            className={`btn sonra-kaydet-btn sayfa-ici${kayitliAdlar.includes(aktifOge?.ad) ? ' kaydedildi' : ''}`}
             onClick={kaydetSonra}
             aria-label="Daha sonra öğren listesine kaydet"
             title="Daha sonra öğren"
@@ -329,28 +558,77 @@ export default function DesenOgretici({ baslik, ogeler, kategoriAdi, bolumAnahta
 
       <div className="controls">
         <button
-          type="button"
-          onClick={() => konus(yonergeMetni)}
+className="btn"           type="button"
+          onClick={() => {
+            tumSesleriDurdur();
+
+            const sesAktifMi = ogeSesiHerZaman || ogeSesiAktif;
+
+            if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function' && aktifOge) {
+              ogeSesiCal(aktifOge);
+
+              if (tekrarSesiTimerRef.current) {
+                clearTimeout(tekrarSesiTimerRef.current);
+              }
+              tekrarSesiTimerRef.current = window.setTimeout(() => {
+                konus(yonergeMetni, { kesintiyle: true });
+                tekrarSesiTimerRef.current = null;
+              }, ogeSesiSonrasiKonusmaGecikmeMs);
+              return;
+            }
+
+            konus(yonergeMetni, { kesintiyle: true });
+
+            if (sesAktifMi && typeof ogeSesiCal === 'function' && aktifOge) {
+              if (tekrarSesiTimerRef.current) {
+                clearTimeout(tekrarSesiTimerRef.current);
+              }
+              tekrarSesiTimerRef.current = window.setTimeout(() => {
+                ogeSesiCal(aktifOge);
+                tekrarSesiTimerRef.current = null;
+              }, ogeSesiGecikmeMs);
+            }
+          }}
           aria-label="Yönergeyi tekrar dinle"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           <span className="btn-etiket">Tekrar</span>
         </button>
         <button
+          className="btn"
           type="button"
-          aria-label="Sıfırla"
+          aria-label="Sıfırla — en başa dön"
           onClick={() => {
+            tumSesleriDurdur();
+            setIndeks(0);
             setBasilanlar([]);
             setYanlis([]);
-            konus('Tekrar deneyelim.');
+            konus('En başa dönüldü.');
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
           <span className="btn-etiket">Sıfırla</span>
         </button>
         <button
+          className="btn"
           type="button"
-          onClick={() => setIndeks((i) => Math.min(i + 1, aktifListe.length))}
+          aria-label="Önceki"
+          disabled={indeks === 0}
+          onClick={() => {
+            tumSesleriDurdur();
+            setIndeks((i) => Math.max(i - 1, 0));
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+          <span className="btn-etiket">Önceki</span>
+        </button>
+        <button
+          className="btn"
+          type="button"
+          onClick={() => {
+            tumSesleriDurdur();
+            setIndeks((i) => Math.min(i + 1, aktifListe.length));
+          }}
           aria-label="Bu öğeyi atla"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>

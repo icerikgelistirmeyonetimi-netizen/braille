@@ -223,21 +223,16 @@ export function konus(metin, opt = {}) {
     return;
   }
   // Ses listesi bazen ilk çağrıda boş gelir (özellikle Chrome); kısa gecikmeyle yeniden dene
-  if (yabanciSes && !_sesRetry && tumSesleriAl().length === 0) {
+  if (!_sesRetry && tumSesleriAl().length === 0) {
     setTimeout(() => {
       sesleriYukle();
-      konus(metin, {
-        kesintiyle,
-        hiz,
-        onSon,
-        dil: dilRaw,
-        _sesRetry: true,
-      });
+      konus(metin, { kesintiyle, hiz, onSon, dil: dilRaw, _sesRetry: true });
     }, 200);
     return;
   }
 
-  if (yabanciSes) sesleriYukle();
+  // Her dil için sesler hazır değilse yeniden yükle
+  if (yabanciSes || !tercihEdilenSes) sesleriYukle();
 
   const u = new SpeechSynthesisUtterance(metin);
   u.rate = hiz ?? a.konusmaHizi;
@@ -271,8 +266,12 @@ export function konus(metin, opt = {}) {
       u.lang = 'fr-FR';
     }
   } else {
-    u.lang = ttsLang;
-    if (tercihEdilenSes) u.voice = tercihEdilenSes;
+    u.lang = 'tr-TR';
+    // Türkçe ses: her seferinde güncel referansı kullan
+    const trSes = tercihEdilenSes ||
+      tumSesleriAl().find((s) => s.lang === 'tr-TR') ||
+      tumSesleriAl().find((s) => s.lang?.startsWith('tr'));
+    if (trSes) u.voice = trSes;
   }
   if (typeof onSon === 'function') {
     let bittiCagrildi = false;
@@ -300,6 +299,12 @@ export function konus(metin, opt = {}) {
 }
 
 export function konusmayiDurdur() {
+  // Bekleyen (60 ms gecikmeli) konuşmayı da iptal et; aksi hâlde durdurduktan
+  // sonra tetiklenip ses kaydının üstüne biner.
+  if (_pendingSpeakTimer) {
+    clearTimeout(_pendingSpeakTimer);
+    _pendingSpeakTimer = null;
+  }
   if (nativePlatform && nativeTTS) {
     try { nativeTTS.stop(); } catch (_) { /* */ }
     return;

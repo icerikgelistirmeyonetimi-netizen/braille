@@ -15,7 +15,7 @@ export default function PageHeader({ baslik }) {
     <header className="header-bar">
       <button
         type="button"
-        className="back-btn"
+        className="btn back-btn"
         onClick={geriDon}
         aria-label="Önceki sayfaya dön"
         title="Önceki sayfaya dön"

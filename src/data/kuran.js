@@ -303,10 +303,7 @@ export const KURAN_KELIMELERI_TEMEL = [
   k('لَا', 'lâ', '(1) Üstün: inkâr / bağlaç olarak “hayır/değil”', 'ل a ا'),
   k('وَ', 've', '(1) Üstün: “ve”', 'و a'),
   k('هٰذَا', 'hâzâ', '(1) Üstün: “bu” (işaret)', 'ه a ذ a ا'),
-  k('عَلَىٰ', 'alâ', '(1) Üstün: “üzerine”, “-e doğru”', 'ع a ل a ى'),
   k('كَمَا', 'kemâ', '(1) Üstün: “tıpkı … gibi”', 'ك a م a ا'),
-  k('فَأَيْنَ', 'fe eyne', '(1) Üstün ile soru bağlamında “Öyle ise nerede?”', 'ف a ا a ي 0 ن a'),
-  k('بَلَٰ', 'bellâ', '(1) Üstün ile pekiştirme / “hayır aksine …” bağlamına örnek', 'ب a ل a ى'),
   // 2 — Esre ağırlıklı örnekler
   k('فِي', 'fî', '(2) Esre: “içinde / -de / -da”', 'ف i ي'),
   k('بِهِ', 'bihi', '(2) Esre: “onunla / onda”', 'ب i ه i'),
@@ -320,7 +317,6 @@ export const KURAN_KELIMELERI_TEMEL = [
   k('هُوَ', 'hüve', '(3) Ötre: zamir “o” — vav ile üstün birleşimi', 'ه u و a'),
   k('هُمُ', 'humü', '(3) Ötre: zamir (“onlar” çoğulu, kısıtlı bağlam için özet)', 'ه u م u'),
   k('هُمْ', 'hum', '(3) Ötre + cezım (sonraki bölümle bağ): “onlar …” yapısı', 'ه u م 0'),
-  k('ذُكر', 'zukır', '(3) Ötre tekrarı: zikir ile ses alışkanlığı için kısaltılmış örnekleştirilmiş biçem', 'ذ u ك u ر'),
   k('ظُلم', 'zulım', '(3) Ötre odaklı hece zinciri bağlamına örnekleştirilmiş', 'ظ u ل u م'),
   k('ظُلمٌ', 'zulımün', '(3) Ötre ile tenvin tanımanın girişi', 'ظ u ل u م U'),
   // 4 — Şedde (taşdid / çift okuma hücresi)
@@ -331,17 +327,12 @@ export const KURAN_KELIMELERI_TEMEL = [
   k('كُلٌّ', 'küllün', '(4) Şedde + ötre + tenvin kısa örnek', 'ك u ل ~ U'),
   k('إِنَّمَا', 'innemâ', '(4) Şedde + üstün ile “ancak / yalnız …”', 'ا i ن ~ a م a ا'),
   k('إِيَّاكَ', 'iyyâke', '(4) Şedde karmaşık örnekleştirilmiş “seni / sana doğrudan ”', 'ا i ي ~ a ا ك a'),
-  k('الَّذِينَ', 'ellezîne', '(4) Şedde + zamir zinciri için çok sık yapı şablonu', 'ا ل ~ a ذ i M ن a'),
   // 5 — Cezım ve sükûn (sessiz çıkış hücreleri ile)
   k('بِسْمِ', 'bismi', '(5) Cezım: lam üzerinde cezım — başlangıca hazırlık', 'ب i س 0 م i'),
   k('قُلْ', 'kul', '(5) Cezım: mim cezım — “De ki…”', 'ق u ل 0'),
   k('مِنْ', 'min', '(5) Cezım:', 'م i ن 0'),
   k('مَنْ', 'men', '(5) Cezım:', 'م a ن 0'),
   k('لَمْ', 'lem', '(5) Cezım: olumsuzlamaya giriş', 'ل a م 0'),
-  k('أَوْ', 'ev', '(5) Cezım: seçenek bildiren yapıların girişi', 'ا a و 0'),
-  k('يَكُنْ', 'yekün', '(5) Cezım ile fiil yapısı', 'ي a ك u ن 0'),
-  k('أَيْنَ', 'eyne', '(5) “Nerede?” sorusunun temel harf–cezım–ünlü sıralaması', 'ا a ي 0 ن a'),
-  k('يَلِدْ', 'yelid', '(5) Fiil yapısı + cezım', 'ي a ل i د 0'),
   k('وَلَدْ', 'veled', '(5) Cezım ile sıfat–fiil farkına hazırlık', 'و a ل a د 0')
 ];
 

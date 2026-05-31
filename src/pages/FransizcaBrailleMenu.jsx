@@ -28,7 +28,7 @@ export default function FransizcaBrailleMenu() {
               <button
                 key={yol}
                 type="button"
-                className="menu-card"
+                className="btn menu-card"
                 onClick={() => navigate(yol)}
                 aria-label={
                   b.pageBaslik +

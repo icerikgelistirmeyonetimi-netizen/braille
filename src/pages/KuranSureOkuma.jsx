@@ -53,7 +53,7 @@ export default function KuranSureOkuma() {
               key={s.no}
               type="button"
               role="listitem"
-              className="sure-karti"
+              className="btn sure-karti"
               onClick={() => {
                 konusmayiDurdur();
                 setSeciliSure(s);

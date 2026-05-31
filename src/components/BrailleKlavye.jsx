@@ -415,7 +415,7 @@ export default function BrailleKlavye({
             <button
               key={n}
               type="button"
-              className={noktaSinif(n)}
+              className={`btn ${noktaSinif(n)}`}
               data-klavye-nokta={n}
               aria-label={`${n} numaralı nokta${klavyeIpucu ? `, klavye ${tusEtiket} tuşu` : ''}`}
               aria-pressed={basili.has(n) || (siralikTiklama && tiklilar.has(n))}
@@ -440,16 +440,16 @@ export default function BrailleKlavye({
       </div>
 
       <div className="klv-aksiyonlar">
-        <button type="button" className="klv-aksiyon" onClick={silBasildi} aria-label="Sil (Backspace)">
+        <button type="button" className="btn klv-aksiyon" onClick={silBasildi} aria-label="Sil (Backspace)">
           <span aria-hidden="true">⌫ Sil</span>
           {klavyeIpucu && <span className="klv-aksiyon-tus" aria-hidden="true">Backspace</span>}
         </button>
-        <button type="button" className="klv-aksiyon klv-bosluk" onClick={boslukBasildi} aria-label="Boşluk (Space)">
+        <button type="button" className="btn klv-aksiyon klv-bosluk" onClick={boslukBasildi} aria-label="Boşluk (Space)">
           <span aria-hidden="true">␣ Boşluk</span>
           {klavyeIpucu && <span className="klv-aksiyon-tus" aria-hidden="true">Space</span>}
         </button>
         {onEnter && (
-          <button type="button" className="klv-aksiyon" onClick={enterBasildi} aria-label="Onayla (Enter)">
+          <button type="button" className="btn klv-aksiyon" onClick={enterBasildi} aria-label="Onayla (Enter)">
             <span aria-hidden="true">⏎ Onay</span>
             {klavyeIpucu && <span className="klv-aksiyon-tus" aria-hidden="true">Enter</span>}
           </button>

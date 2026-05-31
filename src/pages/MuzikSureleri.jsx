@@ -29,14 +29,14 @@ export default function MuzikSureleri() {
                 {s.noktalarEk.length > 0 && <BrailleCell aktifNoktalar={s.noktalarEk} baslikAriaLabel={`${s.ad} kuralı`} />}
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ fontWeight: 800, fontSize: '1.1em' }}>
-                    {s.ad} Süre Kuralı <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({s.sembol})</span>
+                    {s.ad}{s.esAd ? ` / ${s.esAd}` : ''} Süre Kuralı <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({s.sembol})</span>
                   </div>
                   <div style={{ color: 'var(--muted)', fontSize: '0.95em' }}>
                     {s.noktalarEk.length > 0 ? `Eklenecek noktalar: ${s.noktalarEk.join('-')}` : 'Temel hücre (nokta eklenmez)'}
                   </div>
                   <div style={{ fontSize: '0.9em' }}>{s.aciklama}</div>
                   <button
-                    type="button"
+className="btn"                     type="button"
                     style={{ marginTop: 6 }}
                     onClick={() => konus(`${s.ad} kuralı, ${s.aciklama}`, { kesintiyle: true })}
                   >
@@ -44,7 +44,7 @@ export default function MuzikSureleri() {
                   </button>
                 </div>
               </div>
-              
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
                 {NOTALAR.map(nota => {
                   const noktalar = [...new Set([...nota.noktalar, ...s.noktalarEk])].sort((a, b) => a - b);
@@ -54,7 +54,7 @@ export default function MuzikSureleri() {
                        <div style={{ marginTop: 4, fontWeight: 'bold' }}>{nota.ad}</div>
                        <div style={{ fontSize: '0.8em', color: 'var(--muted)' }}>{noktalar.join('-')}</div>
                        <button
-                         type="button"
+className="btn"                          type="button"
                          style={{ marginTop: 4, padding: '4px 8px', fontSize: '0.8em' }}
                          onClick={() => konus(`${s.ad} ${nota.ad}: ${noktalar.join(', ')}.`, { kesintiyle: true })}
                        >Dinle</button>

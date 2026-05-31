@@ -221,7 +221,7 @@ export default function TestKisaltma() {
         <nav className="menu" aria-label="Kısaltma test kategorileri" style={{ margin: 0, gap: 10 }}>
           {Object.entries(KAYNAKLAR).map(([k, v]) => (
             <button
-              key={k}
+className="btn"               key={k}
               type="button"
               onClick={() => basla(k)}
               aria-label={`${v.etiket} testini başlat`}
@@ -249,10 +249,10 @@ export default function TestKisaltma() {
           </div>
         </div>
         <div className="controls">
-          <button type="button" onClick={() => basla(kaynakAnahtar)}>
+          <button className="btn" type="button" onClick={() => basla(kaynakAnahtar)}>
             Tekrar Dene
           </button>
-          <button type="button" onClick={() => { setKaynak(null); setKaynakAnahtar(null); }}>
+          <button className="btn" type="button" onClick={() => { setKaynak(null); setKaynakAnahtar(null); }}>
             Kategori Değiştir
           </button>
         </div>
@@ -322,7 +322,7 @@ export default function TestKisaltma() {
 
       <div className="controls">
         <button
-          type="button"
+className="btn"           type="button"
           onClick={() => {
             const adi = aktif.ariaAd || aktif.ad;
             if (cokHucreli) {
@@ -335,10 +335,10 @@ export default function TestKisaltma() {
         >
           Soruyu Tekrarla
         </button>
-        <button type="button" onClick={cevapSoyle} disabled={aciklandi}>
+        <button className="btn" type="button" onClick={cevapSoyle} disabled={aciklandi}>
           Cevabı Söyle
         </button>
-        <button type="button" onClick={sonrakiSoruyaGec}>
+        <button className="btn" type="button" onClick={sonrakiSoruyaGec}>
           Atla →
         </button>
       </div>

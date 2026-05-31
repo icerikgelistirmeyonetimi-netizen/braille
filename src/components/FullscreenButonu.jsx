@@ -51,7 +51,7 @@ export default function FullscreenButonu() {
     <>
     <button
       type="button"
-      className={`gorunum-btn fs-btn${!destek ? ' fs-btn--sinirli' : ''}`}
+      className={`btn gorunum-btn fs-btn${!destek ? ' fs-btn--sinirli' : ''}`}
       onClick={tikla}
       aria-label={etiketDisa}
       aria-describedby={!destek ? 'fs-ios-aciklama' : undefined}

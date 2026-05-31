@@ -5,7 +5,7 @@ import {
   GEOMETRI_SEMBOLLERI,
   MATEMATIK_IFADELER
 } from './matematik.js';
-import { KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL } from './kuran.js';
+import { KURAN_HECELERI, KURAN_KELIMELERI_TEMEL } from './kuran.js';
 import { MUZIK_BOLUMLER } from './muzik.js';
 // İkonlar – sade çizgi tabanlı SVG'ler. currentColor kullanılır,
 // böylece tema rengine uyum sağlar.
@@ -435,8 +435,8 @@ export const MODULLER = [
   {
     id: 'modul5',
     baslik: 'Modül 5',
-    mobilEtiket: "Kur'an",
-    altBaslik: "Kur'an Eğitimi",
+    mobilEtiket: "Kur'an-ı Kerim",
+    altBaslik: "Kur'an-ı Kerim",
     ikon: Ikon.modul5,
     ogeler: [
       { yol: '/kuran-harfler',   baslik: 'Arap Harfleri',      ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',   toplam: 31 },
@@ -450,14 +450,8 @@ export const MODULLER = [
         anahtar: 'kuran-kelime-kelime-temel',
         toplam: KURAN_KELIMELERI_TEMEL.length
       },
-      {
-        yol: '/kuran-kelimeler',
-        baslik: 'Kelime Okuma 2',
-        ikon: Ikon.kuranKelime,
-        anahtar: 'kuran-kelime-kelime',
-        toplam: KURAN_KELIMELERI.length
-      },
-      { yol: '/kuran-sureler',   baslik: 'Kısa Sureler',        ikon: Ikon.kuranKelime },
+      // "Kelime Okuma 2" (/kuran-kelimeler) ve "Kısa Sureler" (/kuran-sureler)
+      // menüden gizlendi. Rotalar App.jsx'te durabilir; sadece listede görünmezler.
       { yol: '/test-kuran',      baslik: 'Test / Sınav',        ikon: Ikon.test }
     ]
   },
@@ -528,9 +522,10 @@ export const MODULLER = [
     altBaslik: 'BRF Dönüştürücü',
     ikon: Ikon.araclar,
     ogeler: [
-      { yol: '/araclar',    baslik: 'Metin → BRF',   ikon: Ikon.araclar },
-      { yol: '/belge-brf',  baslik: 'Belge → BRF',   ikon: Ikon.belgeBrf },
-      { yol: '/brf-oku',    baslik: 'BRF → Metin',   ikon: Ikon.brfOku },
+      { yol: '/araclar',         baslik: 'Metin → BRF',  ikon: Ikon.araclar },
+      { yol: '/belge-brf',       baslik: 'Belge → BRF',  ikon: Ikon.belgeBrf },
+      { yol: '/brf-oku',         baslik: 'BRF → Metin',  ikon: Ikon.brfOku },
+      { yol: '/muzik-brf-yazim', baslik: 'Müzik → BRF',  ikon: Ikon.muzikSembol },
     ]
   }
 ];

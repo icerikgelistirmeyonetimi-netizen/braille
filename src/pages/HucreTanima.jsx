@@ -95,10 +95,10 @@ export default function HucreTanima() {
       </div>
 
       <div className="controls">
-        <button type="button" onClick={yenidenBasla}>Baştan Başla</button>
+        <button className="btn" type="button" onClick={yenidenBasla}>Baştan Başla</button>
         {hedef <= 6 && (
           <button
-            type="button"
+className="btn"             type="button"
             onClick={() =>
               konus(`Şu anda ${hedef} numaralı noktayı arıyorsunuz.`)
             }

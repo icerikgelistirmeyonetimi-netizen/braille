@@ -19,6 +19,18 @@ export default function MuzikBrailleMenu() {
         }}
       >
         <nav className="menu-grid" style={{ width: '100%' }} aria-label="Müzik Braille dersleri">
+          {/* Müzik → BRF Yazım Editörü (ayrı sayfa) */}
+          <button
+            type="button"
+            className="menu-card"
+            onClick={() => navigate('/muzik-brf-yazim')}
+            aria-label="Müzik → BRF Yazım Editörü"
+            style={{ borderColor: 'var(--accent, #2563eb)' }}
+          >
+            <span className="menu-card-ikon" aria-hidden="true">📝</span>
+            <span className="menu-card-yazi">Müzik → BRF Yazım Editörü</span>
+            <span className="menu-card-ilerleme devam" aria-hidden="true">Skor + Braille (iki sekme)</span>
+          </button>
           {MUZIK_BOLUMLER.map((b) => {
             const yol = `/muzik/${b.slug}`;
             const ilerleme = indeksAl(b.ilerlemeAnahtari);

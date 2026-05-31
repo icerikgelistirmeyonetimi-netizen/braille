@@ -171,7 +171,7 @@ export default function AnaMenu() {
               <button
                 key={m.id}
                 type="button"
-                className={'modul-sekme' + (m.id === gecerliAktif ? ' aktif' : '')}
+                className={`btn ${'modul-sekme' + (m.id === gecerliAktif ? ' aktif' : '')}`}
                 onClick={() => modulSec(m.id)}
                 aria-pressed={m.id === gecerliAktif}
                 aria-label={`${m.baslik}: ${m.altBaslik}`}
@@ -188,7 +188,7 @@ export default function AnaMenu() {
             ))}
             <button
               type="button"
-              className="modul-sekme modul-ayarlar"
+              className="btn modul-sekme modul-ayarlar"
               onClick={() => navigate('/ayarlar')}
               aria-label="Ayarlar"
             >
@@ -225,7 +225,7 @@ export default function AnaMenu() {
                   <button
                     key={m.yol}
                     type="button"
-                    className="menu-card"
+                    className="btn menu-card"
                     onClick={() => navigate(m.yol)}
                     aria-label={m.baslik + (tamamlandi ? ', tamamlandı' : m.toplam ? `, ${ilerleme} / ${m.toplam}` : '')}
                   >

@@ -42,7 +42,7 @@ export default function YazmaKarisik() {
         <PageHeader baslik="Karışık Yazma" />
         <div className="page-mid" style={{ padding: 16 }}>
           <p>Bu ders için karışık yazma etkinliği tanımlı değil.</p>
-          <button type="button" onClick={() => navigate('/')}>Ana Menü</button>
+          <button className="btn" type="button" onClick={() => navigate('/')}>Ana Menü</button>
         </div>
       </div>
     );
@@ -282,10 +282,10 @@ export default function YazmaKarisik() {
         <div className="yazma-bolum yazma-bolum-ust">
           <PageHeader baslik={kaynakNesne.baslik} />
           <div className="progress banner-grup-secim" role="group" aria-label="Soru sayısı">
-            <button type="button" onClick={() => yenidenBasla('tum')}>Tümü</button>
-            <button type="button" className="aktif" aria-pressed={true}>Kayıtlılar</button>
+            <button className="btn" type="button" onClick={() => yenidenBasla('tum')}>Tümü</button>
+            <button type="button" className="btn aktif" aria-pressed={true}>Kayıtlılar</button>
             {[2, 3, 4].map((n) => (
-              <button key={n} type="button" onClick={() => yenidenBasla(n)}>{n + "'li"}</button>
+              <button className="btn" key={n} type="button" onClick={() => yenidenBasla(n)}>{n + "'li"}</button>
             ))}
           </div>
         </div>
@@ -300,7 +300,7 @@ export default function YazmaKarisik() {
         </div>
         <div className="yazma-bolum yazma-bolum-alt">
           <div className="controls">
-            <button type="button" onClick={() => yenidenBasla('tum')}>Tüm Listeyi Çalış</button>
+            <button className="btn" type="button" onClick={() => yenidenBasla('tum')}>Tüm Listeyi Çalış</button>
           </div>
         </div>
       </div>
@@ -329,8 +329,8 @@ export default function YazmaKarisik() {
         </div>
         <div className="yazma-bolum yazma-bolum-alt">
           <div className="controls">
-            <button type="button" onClick={() => yenidenBasla()}>Tekrar Başla</button>
-            <button type="button" onClick={() => navigate(-1)}>Derse Dön</button>
+            <button className="btn" type="button" onClick={() => yenidenBasla()}>Tekrar Başla</button>
+            <button className="btn" type="button" onClick={() => navigate(-1)}>Derse Dön</button>
           </div>
         </div>
       </div>
@@ -344,14 +344,14 @@ export default function YazmaKarisik() {
         <div className="progress banner-grup-secim" role="group" aria-label="Soru sayısı">
           <button
             type="button"
-            className={grupBoyu === 'tum' ? 'aktif' : ''}
+            className={`btn ${grupBoyu === 'tum' ? 'aktif' : ''}`}
             aria-pressed={grupBoyu === 'tum'}
             onClick={() => yenidenBasla('tum')}
             title="Tüm derste karışık yazma"
           >Tümü</button>
           <button
             type="button"
-            className={grupBoyu === 'kayitlilar' ? 'aktif' : ''}
+            className={`btn ${grupBoyu === 'kayitlilar' ? 'aktif' : ''}`}
             aria-pressed={grupBoyu === 'kayitlilar'}
             onClick={() => yenidenBasla('kayitlilar')}
             title="Sonra öğren listesindeki öğeler"
@@ -360,7 +360,7 @@ export default function YazmaKarisik() {
             <button
               key={n}
               type="button"
-              className={grupBoyu === n ? 'aktif' : ''}
+              className={`btn ${grupBoyu === n ? 'aktif' : ''}`}
               aria-pressed={grupBoyu === n}
               onClick={() => yenidenBasla(n)}
               title={`Rastgele ${n} öğe ile karışık yazma`}
@@ -418,8 +418,8 @@ export default function YazmaKarisik() {
 
       <div className="yazma-bolum yazma-bolum-alt">
         <div className="controls">
-          <button type="button" onClick={() => yenidenBasla()}>Yeniden Karıştır</button>
-          <button type="button" onClick={() => {
+          <button className="btn" type="button" onClick={() => yenidenBasla()}>Yeniden Karıştır</button>
+          <button className="btn" type="button" onClick={() => {
             // Kullanıcı bu soruyu pas geçmek isterse: doğru cevabı seslendir,
             // ardından sıradaki soruya geç.
             if (kilitliRef.current) return;
@@ -427,7 +427,7 @@ export default function YazmaKarisik() {
           }}>Cevabı Söyle</button>
           <button
             type="button"
-            className={tabletModu ? 'aktif' : ''}
+            className={`btn ${tabletModu ? 'aktif' : ''}`}
             aria-pressed={tabletModu}
             onClick={tabletModuToggle}
             title="Tablette yazarken sol/sağ noktaları çevir"

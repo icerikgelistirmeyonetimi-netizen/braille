@@ -152,7 +152,7 @@ export default function Ayarlar() {
         style={{ display: 'flex', borderBottom: '1px solid var(--renk-kenar, #ddd)', marginBottom: 8, flexShrink: 0 }}
       >
         <button
-          role="tab"
+className="btn"           role="tab"
           id="tab-ayarlar"
           aria-selected={aktifSekme === 'ayarlar'}
           aria-controls="panel-ayarlar"
@@ -163,7 +163,7 @@ export default function Ayarlar() {
           Ayarlar
         </button>
         <button
-          role="tab"
+className="btn"           role="tab"
           id="tab-moduller"
           aria-selected={aktifSekme === 'moduller'}
           aria-controls="panel-moduller"
@@ -273,7 +273,7 @@ export default function Ayarlar() {
               <span>Yavaş</span><span>Hızlı</span>
             </div>
           </div>
-          <button type="button" onClick={() => konus('Bu, mevcut hızda örnek bir Türkçe konuşmadır.')} style={ikincilButonStil}>
+          <button className="btn" type="button" onClick={() => konus('Bu, mevcut hızda örnek bir Türkçe konuşmadır.')} style={ikincilButonStil}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Sesi Dene
           </button>
@@ -368,7 +368,7 @@ export default function Ayarlar() {
               </div>
             ))}
           </div>
-          <button type="button" style={{ ...ikincilButonStil, marginTop: 4, color: '#e53e3e', borderColor: '#e53e3e' }}
+          <button className="btn" type="button" style={{ ...ikincilButonStil, marginTop: 4, color: '#e53e3e', borderColor: '#e53e3e' }}
             onClick={() => { if (confirm('Tüm ilerleme silinsin mi?')) { tumIlerlemeyiSifirla(); setIlerleme({}); konus('İlerleme sıfırlandı.'); } }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
@@ -400,21 +400,21 @@ export default function Ayarlar() {
           {arduinoHata && <div role="alert" style={{ color: '#c0392b', fontSize: '0.88em', marginBottom: 10 }}>{arduinoHata}</div>}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {!arduino.bagli && webSerialDestekleniyorMu() && (
-              <button type="button" onClick={arduinoSeriBaglan} style={ikincilButonStil}>
+              <button className="btn" type="button" onClick={arduinoSeriBaglan} style={ikincilButonStil}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 USB ile Bağlan
               </button>
             )}
             {!arduino.bagli && webBluetoothDestekleniyorMu() && (
-              <button type="button" onClick={arduinoBleBaglan} style={ikincilButonStil}>
+              <button className="btn" type="button" onClick={arduinoBleBaglan} style={ikincilButonStil}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/></svg>
                 Bluetooth ile Bağlan
               </button>
             )}
             {arduino.bagli && (
               <>
-                <button type="button" onClick={arduinoTest} style={ikincilButonStil}>Test Et (1–6)</button>
-                <button type="button" onClick={arduinoBaglantiyiKes} style={{ ...ikincilButonStil, color: '#e53e3e', borderColor: '#e53e3e' }}>Bağlantıyı Kes</button>
+                <button className="btn" type="button" onClick={arduinoTest} style={ikincilButonStil}>Test Et (1–6)</button>
+                <button className="btn" type="button" onClick={arduinoBaglantiyiKes} style={{ ...ikincilButonStil, color: '#e53e3e', borderColor: '#e53e3e' }}>Bağlantıyı Kes</button>
               </>
             )}
             {!arduino.bagli && !webSerialDestekleniyorMu() && !webBluetoothDestekleniyorMu() && (
@@ -431,7 +431,7 @@ export default function Ayarlar() {
             </svg>
             Tanıtım Turu
           </div>
-          <button type="button" onClick={() => { turuSifirla(); setTurAcik(true); }} style={ikincilButonStil} aria-label="Tanıtım turunu yeniden göster">
+          <button className="btn" type="button" onClick={() => { turuSifirla(); setTurAcik(true); }} style={ikincilButonStil} aria-label="Tanıtım turunu yeniden göster">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
             Tanıtım Turunu Tekrar Göster
           </button>
@@ -439,7 +439,7 @@ export default function Ayarlar() {
 
         {/* ── Sıfırla ── */}
         <div style={{ padding: '0 4px 24px' }}>
-          <button type="button" style={{ ...ikincilButonStil, width: '100%', justifyContent: 'center', color: '#e53e3e', borderColor: '#e53e3e' }}
+          <button className="btn" type="button" style={{ ...ikincilButonStil, width: '100%', justifyContent: 'center', color: '#e53e3e', borderColor: '#e53e3e' }}
             onClick={() => { ayarlariSifirla(); setA(ayarlariAl()); konus('Ayarlar varsayılana döndü.'); }}>
             Ayarları Varsayılana Döndür
           </button>
