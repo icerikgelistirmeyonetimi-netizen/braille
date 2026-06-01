@@ -23,12 +23,14 @@ export function muzikTimeSignatureHucreleri(sig) {
   return [[3, 4, 5, 6], ...ust, ...alt];
 }
 
-// Modül 8 Bölüm 6 — Kontraksiyonsuz Grade 1 braille (büyük harf yok)
+// Modül 8 Bölüm 6 — Kontraksiyonsuz Grade 1 braille.
+// Büyük harfler MEB büyük harf işareti [6] ön ekiyle yazılır (round-trip için).
+const MUZIK_BUYUK_HARF_ISARETI = [6];
+
 export function muzikKontraksiyonsuzMetinHucreleri(metin) {
   const hucreler = [];
-  const m = String(metin || '').toLocaleLowerCase('tr');
 
-  for (const c of m) {
+  for (const c of String(metin || '')) {
     if (c === ' ') {
       hucreler.push([]);
       continue;
@@ -49,9 +51,21 @@ export function muzikKontraksiyonsuzMetinHucreleri(metin) {
       continue;
     }
 
-    if (MUZIK_HARF_NOKTALARI[c]) {
-      hucreler.push(MUZIK_HARF_NOKTALARI[c]);
+    // Harf: küçük hâlini bul; büyükse küçük hâli farklıdır → büyük harf işareti.
+    const kucuk = c.toLocaleLowerCase('tr');
+    const buyukMu = kucuk !== c;
+
+    let cell = MUZIK_HARF_NOKTALARI[kucuk];
+    if (!cell) {
+      // Aksanlı Latin harfleri (â, î, û …) taban harfe indir.
+      // Türkçe harfler (ç, ğ, ı, ö, ş, ü) zaten haritada olduğundan korunur.
+      const taban = kucuk.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      cell = MUZIK_HARF_NOKTALARI[taban];
     }
+    if (!cell) continue;
+
+    if (buyukMu) hucreler.push([...MUZIK_BUYUK_HARF_ISARETI]);
+    hucreler.push(cell);
   }
 
   return hucreler;

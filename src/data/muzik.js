@@ -406,6 +406,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
   {
     ad: 'Largo',
     sembol: 'largo',
+    bpmMin: 40, bpmMax: 60,
     dil: 'it',
     hucreler: tempoHucreleri('largo'),
     aciklama: 'Largo çok yavaş tempoyu belirtir. Metronom örneğinde yavaş vuruşlarla gösterilir.',
@@ -419,6 +420,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
   {
     ad: 'Adagio',
     sembol: 'adagio',
+    bpmMin: 60, bpmMax: 76,
     dil: 'it',
     hucreler: tempoHucreleri('adagio'),
     aciklama: 'Adagio yavaş tempoyu belirtir.',
@@ -431,6 +433,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
   {
     ad: 'Andante',
     sembol: 'andante',
+    bpmMin: 76, bpmMax: 108,
     dil: 'it',
     hucreler: tempoHucreleri('andante'),
     aciklama: 'Andante yürür gibi orta-yavaş tempoyu belirtir.',
@@ -443,6 +446,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
   {
     ad: 'Moderato',
     sembol: 'moderato',
+    bpmMin: 108, bpmMax: 120,
     dil: 'it',
     hucreler: tempoHucreleri('moderato'),
     aciklama: 'Moderato orta tempoyu belirtir.',
@@ -455,6 +459,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
   {
     ad: 'Allegro',
     sembol: 'allegro',
+    bpmMin: 120, bpmMax: 156,
     dil: 'it',
     hucreler: tempoHucreleri('allegro'),
     aciklama: 'Allegro hızlı ve canlı tempoyu belirtir.',
@@ -467,6 +472,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
   {
     ad: 'Vivace',
     sembol: 'vivace',
+    bpmMin: 156, bpmMax: 176,
     dil: 'it',
     hucreler: tempoHucreleri('vivace'),
     aciklama: 'Vivace canlı ve hızlı tempoyu belirtir.',
@@ -479,6 +485,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
   {
     ad: 'Presto',
     sembol: 'presto',
+    bpmMin: 176, bpmMax: 220,
     dil: 'it',
     hucreler: tempoHucreleri('presto'),
     aciklama: 'Presto çok hızlı tempoyu belirtir.',

@@ -247,7 +247,38 @@ export default function MuzikScoreSvg({
   seciliNotaModifierSil,
   seciliNotaModifierGuncelle,
   bekleyenModifier = null,
+  onHeaderPopupAc,
+  setMuzikHeader,
+  tempoListesi = [],
 }) {
+  const [tempoDropdownPos, setTempoDropdownPos] = useState(null); // {x, y} | null
+  // Satır içi düzenleme: title | composer | tempo
+  const [inlineEdit, setInlineEdit] = useState(null); // { alan, x, y, w, deger }
+  const inlineEditRef = useRef(null);
+
+  const inlineEditAc = (alan, e, mevcutDeger, svgFontSize, fontWeight, fontStyle) => {
+    e.stopPropagation();
+    const textEl = e.currentTarget;
+    const rect = textEl.getBoundingClientRect();
+    // SVG ölçeğinden tam font boyutunu hesapla
+    const svgEl = textEl.closest('svg');
+    const svgRect = svgEl?.getBoundingClientRect();
+    const vbParts = svgEl?.getAttribute('viewBox')?.split(' ').map(Number);
+    const scaleY = (svgRect && vbParts) ? svgRect.height / vbParts[3] : 1;
+    const fontSize = svgFontSize * scaleY;
+    setInlineEdit({ alan, rect, fontSize, fontWeight, fontStyle, deger: mevcutDeger || '' });
+    setTimeout(() => { inlineEditRef.current?.focus(); inlineEditRef.current?.select(); }, 20);
+  };
+
+  const inlineEditKaydet = () => {
+    if (!inlineEdit) return;
+    const { alan } = inlineEdit;
+    // Uncontrolled input: değeri ref'ten oku (controlled value re-render'ı
+    // ölü tuş / â,î kompozisyonunu bozuyordu).
+    const deger = (inlineEditRef.current?.value ?? inlineEdit.deger ?? '').trim();
+    setMuzikHeader?.((h) => ({ ...h, [alan]: deger }));
+    setInlineEdit(null);
+  };
   const [hoverBarlineId, setHoverBarlineId] = useState(null);
   const [hoverTupletId, setHoverTupletId] = useState(null);
   const [hoverBrailleCellKey, setHoverBrailleCellKey] = useState(null);
@@ -1210,6 +1241,84 @@ export default function MuzikScoreSvg({
 
         const aktifPlaybackSatiri = isPlaying && aktifPlaybackSatirIdx === satirIdx;
         return (
+          <div key={`skor-olcu-braille-satir-wrap-${satirIdx}`} style={{ display: 'flex', flexDirection: 'column' }}>
+          {/* İlk satır: başlık ve besteci HTML olarak, SVG'nin üstünde */}
+          {satirIdx === 0 && (
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', position: 'relative', paddingBottom: 2, minHeight: 32 }}>
+              {/* Başlık — ortada: editing modunda input, değilse span */}
+              {inlineEdit?.alan === 'title' ? (
+                <input
+                  ref={inlineEditRef}
+                  type="text"
+                  defaultValue={inlineEdit.deger}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); inlineEditKaydet(); }
+                    if (e.key === 'Escape') { e.preventDefault(); setInlineEdit(null); }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Başlık yazınız"
+                  style={{
+                    fontSize: 22, fontWeight: 700, fontFamily: 'system-ui, sans-serif',
+                    color: '#1e293b', textAlign: 'center',
+                    background: 'transparent', border: 'none',
+                    boxShadow: '0 1.5px 0 #3b82f6', outline: 'none',
+                    padding: 0, margin: 0, width: Math.max(inlineEdit.rect?.width || 200, 220),
+                    lineHeight: 'normal', position: 'relative', zIndex: 160,
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  aria-label="Eser başlığı — tıklayarak düzenle"
+                  onClick={(e) => inlineEditAc('title', e, muzikHeader?.title, 22, 700, 'normal')}
+                  style={{
+                    fontSize: 22, fontWeight: 700, fontFamily: 'system-ui, sans-serif',
+                    color: muzikHeader?.title ? '#1e293b' : '#cbd5e1',
+                    cursor: 'text', userSelect: 'none', textAlign: 'center',
+                  }}
+                >
+                  {muzikHeader?.title || 'Başlık yazınız'}
+                </span>
+              )}
+              {/* Besteci — sağda absolute: editing modunda input, değilse span */}
+              {inlineEdit?.alan === 'composer' ? (
+                <input
+                  ref={inlineEditRef}
+                  type="text"
+                  defaultValue={inlineEdit.deger}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); inlineEditKaydet(); }
+                    if (e.key === 'Escape') { e.preventDefault(); setInlineEdit(null); }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Besteci"
+                  style={{
+                    position: 'absolute', right: 0, bottom: 2,
+                    fontSize: 13, fontStyle: 'italic', fontFamily: 'system-ui, sans-serif',
+                    color: '#64748b', textAlign: 'right',
+                    background: 'transparent', border: 'none',
+                    boxShadow: '0 1.5px 0 #3b82f6', outline: 'none',
+                    padding: 0, margin: 0, width: Math.max(inlineEdit.rect?.width || 100, 130),
+                    lineHeight: 'normal', zIndex: 160,
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  aria-label="Besteci — tıklayarak düzenle"
+                  onClick={(e) => inlineEditAc('composer', e, muzikHeader?.composer, 13, 400, 'italic')}
+                  style={{
+                    position: 'absolute', right: 0, bottom: 2,
+                    fontSize: 13, fontStyle: 'italic', fontFamily: 'system-ui, sans-serif',
+                    color: muzikHeader?.composer ? '#64748b' : '#cbd5e1',
+                    cursor: 'text', userSelect: 'none',
+                  }}
+                >
+                  {muzikHeader?.composer || 'Besteci'}
+                </span>
+              )}
+            </div>
+          )}
           <div
             key={`skor-olcu-braille-satir-${satirIdx}`}
             ref={satirRefAta(satirIdx)}
@@ -1329,6 +1438,32 @@ export default function MuzikScoreSvg({
                   </text>
                   <title>Eser bilgileri & header braille</title>
                 </g>
+              )}
+              {/* Tempo — ilk dizenin sol başında, porte çizgilerinin üstünde */}
+              {satirIdx === 0 && (
+                <text
+                  x={72}
+                  y={SCORE_STAFF_TOP_Y - 8}
+                  textAnchor="start"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fill: muzikHeader?.tempo ? '#334155' : '#cbd5e1',
+                    fontFamily: 'system-ui, sans-serif',
+                    cursor: 'text',
+                    userSelect: 'none',
+                    fontStyle: 'italic',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTempoDropdownPos({ x: rect.left, y: rect.bottom + 4 });
+                  }}
+                  role="button"
+                  aria-label={`Tempo: ${muzikHeader?.tempo || 'yok'} — tıklayarak düzenle`}
+                >
+                  {muzikHeader?.tempo || 'Tempo yok'}
+                </text>
               )}
               {satirIdx === 0 && muzikOgeleri.length === 0 && (
                 <text x="120" y="94" className="muzik-bos-yardim">Önce bir nota seçin…</text>
@@ -2226,7 +2361,7 @@ export default function MuzikScoreSvg({
                     x={SVG_CLEF_X - 14}
                     y={SVG_ROW_VIEWBOX_Y + 18}
                     style={{
-                      fontSize: 11,
+                      fontSize: 18,
                       fill: '#64748b',
                       fontFamily: 'Georgia, serif',
                       fontWeight: 700,
@@ -2618,6 +2753,7 @@ export default function MuzikScoreSvg({
               onBrailleDetayGoster={setBrailleDetay}
             />
           </div>
+          </div>
         );
       })}
       </div>  {/* skor satırları wrapper (overflow-x-auto) sonu */}
@@ -2937,6 +3073,77 @@ export default function MuzikScoreSvg({
       )}
 
       {/* ── Header donanım (key signature) değiştirme popup ── */}
+
+      {/* Başlık/besteci düzenleme açıkken dışarı tıklayınca kaydet */}
+      {inlineEdit && (
+        <div className="fixed inset-0 z-[150]" style={{ pointerEvents: 'all' }} onClick={inlineEditKaydet} />
+      )}
+
+      {/* ── Tempo seçim dropdown'u ── */}
+      {tempoDropdownPos && (
+        <div
+          className="fixed inset-0 z-[210]"
+          role="presentation"
+          onClick={() => setTempoDropdownPos(null)}
+        >
+          <div
+            className="absolute min-w-[220px] rounded-xl border border-zinc-200 bg-white shadow-xl overflow-hidden"
+            style={{
+              left: Math.min(tempoDropdownPos.x, window.innerWidth - 240),
+              top: Math.min(tempoDropdownPos.y, window.innerHeight - 340),
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Elle giriş */}
+            <div className="px-3 pt-2.5 pb-1.5 border-b border-zinc-100">
+              <input
+                type="text"
+                placeholder="Tempo yaz…"
+                defaultValue={muzikHeader?.tempo || ''}
+                autoFocus
+                className="w-full text-xs rounded-lg border border-zinc-200 px-2.5 py-1.5 focus:outline-none focus:border-sky-400 italic"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setMuzikHeader?.((h) => ({ ...h, tempo: e.target.value.trim() }));
+                    setTempoDropdownPos(null);
+                  }
+                  if (e.key === 'Escape') setTempoDropdownPos(null);
+                }}
+              />
+            </div>
+            {/* Liste */}
+            <div className="py-1 max-h-56 overflow-y-auto">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-zinc-400 hover:bg-zinc-50"
+                onClick={() => { setMuzikHeader?.((h) => ({ ...h, tempo: '' })); setTempoDropdownPos(null); }}
+              >
+                Tempo yok
+              </button>
+              <div className="h-px bg-zinc-100 mx-3 my-0.5" />
+              {(tempoListesi || []).map((tempo) => (
+                <button
+                  key={tempo.ad}
+                  type="button"
+                  onClick={() => { setMuzikHeader?.((h) => ({ ...h, tempo: tempo.ad })); setTempoDropdownPos(null); }}
+                  className={[
+                    'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors hover:bg-zinc-50',
+                    muzikHeader?.tempo === tempo.ad ? 'bg-sky-50 text-sky-700 font-semibold' : 'text-zinc-700',
+                  ].join(' ')}
+                >
+                  <span className="font-semibold italic">{tempo.ad}</span>
+                  {(tempo.bpmMin || tempo.bpmMax) && (
+                    <span className="text-zinc-400 font-normal not-italic text-[10px]">
+                      ({tempo.bpmMin}–{tempo.bpmMax})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {headerKsMenuPos && (
         <div
           className="fixed inset-0 z-50"

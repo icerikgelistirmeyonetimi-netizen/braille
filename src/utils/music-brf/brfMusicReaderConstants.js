@@ -37,6 +37,13 @@ export const BRAILLE_LETTERS_TR = {
   '1346': 'x',
   '13456': 'y',
   '1356': 'z',
+  // Türkçe harfler (MEB Türkçe Braille alfabesi)
+  '16': 'ç',
+  '126': 'ğ',
+  '35': 'ı',
+  '246': 'ö',
+  '146': 'ş',
+  '1256': 'ü',
 };
 
 export function dotsToKey(dots = []) {

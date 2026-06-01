@@ -550,22 +550,36 @@ export function muzikPlaybackListesiOlustur(ogeler = []) {
   return result;
 }
 
-// ─── Dinamik ses seviyeleri ──────────────────────────────────────────────────
-// mf = 0.75 → hook'un varsayılan sesiyle birebir eşleşir; pp/fff arasında
-// duyulabilir ama abartısız bir kademeli fark oluşturur.
-const DINAMIK_VELOCITY = {
-  ppp: 0.22,
-  pp:  0.35,
-  p:   0.48,
-  mp:  0.62,
-  mf:  0.75,  // varsayılan — hook volume ile aynı
-  f:   0.85,
-  ff:  0.92,
-  fff: 0.97,
-  sf:  0.93,  // sforzando: anlık güçlü vuruş
-  sfz: 0.93,
-  fz:  0.93,
+// ─── Dinamik ses seviyeleri (standartlara dayalı) ───────────────────────────
+// 1) MIDI standart dinamik velocity değerleri (notation yazılımlarında de-facto
+//    standart; Wikipedia "Dynamics (music)", MuseScore/Finale): ppp=16 … fff=127.
+// 2) Velocity → genlik eşlemesi: Dannenberg (CMU, ICMC 2006, "The Interpretation
+//    of MIDI Velocity") gerçek sentezleyicileri ölçmüş; ilişki LOGARİTMİK DEĞİL,
+//    KARE yasasıdır: a = (m·v + b)² (velocity, RMS genliğin kareköküyle lineer).
+//    velocity doğrudan HTML audio.volume (lineer genlik) olarak uygulandığından
+//    bu eğri gerçekçi ve algısal olarak doğru dinamik kademeleri verir.
+// 3) Tek serbest parametre = dinamik aralık (vel 1→127, dB). Ölçülen gerçek
+//    sentezleyiciler 11–25 dB (donanım) … 44–89 dB (yazılım). Solo eğitim
+//    çalmasında p belirgin biçimde yumuşak ama jarjlamayan dengeli aralık → 14 dB.
+const DINAMIK_MIDI_VELOCITY = {
+  ppp: 16, pp: 32, p: 48, mp: 64, mf: 80, f: 96, ff: 112, fff: 127,
 };
+const DINAMIK_DB_ARALIK = 14;
+const _dinR = Math.pow(10, DINAMIK_DB_ARALIK / 20);
+const _dinB = 127 / (126 * Math.sqrt(_dinR)) - 1 / 126;
+const _dinM = (1 - _dinB) / 127;
+// Dannenberg kare yasası: vel → 0..1 lineer genlik (a(127)=1.0).
+function dinamikGainHesapla(velocity) {
+  const a = Math.pow(_dinM * velocity + _dinB, 2);
+  return Math.max(0.02, Math.min(1, a));
+}
+const DINAMIK_VELOCITY = Object.fromEntries(
+  Object.entries(DINAMIK_MIDI_VELOCITY).map(([ad, vel]) => [ad, Math.round(dinamikGainHesapla(vel) * 1000) / 1000]),
+);
+// Sforzando / fz: ani güçlü vuruş — ff ile fff arası (vel ~118).
+DINAMIK_VELOCITY.sf = Math.round(dinamikGainHesapla(118) * 1000) / 1000;
+DINAMIK_VELOCITY.sfz = DINAMIK_VELOCITY.sf;
+DINAMIK_VELOCITY.fz = DINAMIK_VELOCITY.sf;
 
 /**
  * Dinamik sembolden 0-1 arası ses seviyesi döndürür.

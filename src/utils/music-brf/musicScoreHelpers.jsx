@@ -30,19 +30,18 @@ export function finalBarlineCizimOlculeri(x) {
 }
 
 export const anahtarYAl = (anahtar) => {
-  // Bravura font'ta clef glyph'inin baseline'ı = font-size * 0 yerine glyph'in
-  // visual alt kenarına denk geliyor. Sol anahtarının alt tabanı porte alt
-  // çizgisine (E4 = 112) tam oturacak şekilde y=112 set ediyoruz; spiral
-  // doğal olarak 3. çizgi (B4) hizasına gelir.
-  //   Treble (G clef) → y = 112 (alt taban portenin alt çizgisinde)
-  //   Bass   (F clef) → y = 100 (iki nokta F3 satırını çevreler)
-  //   Alto/Tenor (C clef) → y = 100 (merkez)
+  // Porte çizgileri (üstten alta): F5=64, D5=76, B4=88, G4=100, E4=112.
+  // SMuFL/Bravura clef glifleri baseline'ları referans çizgilerine oturur:
+  //   Sol (G clef, U+1D11E) → baseline G4 çizgisinde → y = 100
+  //     (spiralin merkezi sol/G çizgisini sarar)
+  //   Fa (F clef)  → iki nokta F3 satırını çevreler → y = 100
+  //   Do (C clef)  → merkez → y = 100
   const ad = String(anahtar?.ad || '').toLowerCase();
 
   if (/fa|bass/i.test(ad)) return 100;
   if (/do|alto|tenor/i.test(ad)) return 100;
 
-  return 112;
+  return 100;
 };
 
 export const anahtarFontClassAl = (anahtar) => {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MuzikScoreToolbar from './MuzikScoreToolbar.jsx';
 import MuzikScoreSvg from './MuzikScoreSvg.jsx';
 import MuzikNotaEditModal from './MuzikNotaEditModal.jsx';
@@ -9,6 +9,7 @@ import { usePianoNotePreview } from '../../hooks/music-brf/usePianoNotePreview.j
 import { useMusicScorePlayback } from '../../hooks/music-brf/useMusicScorePlayback.js';
 import { keySignatureAccidentalsAl, muzikNotaPiyanoSesUrlAl } from '../../utils/music-brf/musicPianoAudioHelpers.js';
 import { SUS_KISA } from '../../utils/music-brf/musicConstants.js';
+import { MUZIK_TEMPO_ISARETLERI } from '../../data/muzik.js';
 
 const SUS_SURE_ADLARI = ['sekizlik', 'dörtlük', 'yarım', 'tam', "16'lık", "32'lik", "64'lük"];
 
@@ -124,6 +125,9 @@ export default function MuzikBrfScoreEditor({
   const [headerPopupBrailleGoster, setHeaderPopupBrailleGoster] = useState(false);
   // Sol anahtar altındaki "B" butonu → yalnızca header braille hücrelerini gösteren popup (form yok).
   const [headerBraillePopupAcik, setHeaderBraillePopupAcik] = useState(false);
+  // Tempo dropdown (skor üstü bölgesinde)
+  const [tempoDropdownAcik, setTempoDropdownAcik] = useState(false);
+  const tempoDropdownRef = useRef(null);
 
   useEffect(() => {
     if (!headerPopupAcik) return;
@@ -131,6 +135,20 @@ export default function MuzikBrfScoreEditor({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [headerPopupAcik]);
+
+  useEffect(() => {
+    if (!tempoDropdownAcik) return undefined;
+    const disariTikla = (e) => {
+      if (tempoDropdownRef.current && !tempoDropdownRef.current.contains(e.target)) setTempoDropdownAcik(false);
+    };
+    const escKapat = (e) => { if (e.key === 'Escape') setTempoDropdownAcik(false); };
+    document.addEventListener('mousedown', disariTikla);
+    document.addEventListener('keydown', escKapat);
+    return () => {
+      document.removeEventListener('mousedown', disariTikla);
+      document.removeEventListener('keydown', escKapat);
+    };
+  }, [tempoDropdownAcik]);
 
   const { playNote, preloadUrls } = usePianoNotePreview({ enabled: true, volume: 0.75, extension: 'mp3' });
 
@@ -229,32 +247,12 @@ export default function MuzikBrfScoreEditor({
           voltaEkleModuBaslat={voltaEkleModuBaslat}
           voltaEkleModIptal={voltaEkleModIptal}
           voltaMeasureEkle={voltaMeasureEkle}
+          muzikHeader={muzikHeader}
+          setMuzikHeader={setMuzikHeader}
         />
 
         {/* ── Play bar ─────────────────────────────────────────────────── */}
         <div className="w-full flex items-center gap-2 border border-t-0 border-slate-200 rounded-b-xl bg-white px-3 py-1">
-          {/* Sol: eser bilgisi butonu */}
-          <button
-            type="button"
-            onClick={() => { setHeaderPopupBrailleGoster(false); setHeaderPopupAcik(true); }}
-            className="flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-left hover:bg-slate-50 transition min-w-0"
-            title="Eser bilgilerini düzenle / Braille başlık"
-          >
-            {muzikHeader?.title
-              ? <span className="text-xs font-semibold text-slate-800 truncate max-w-[140px]">{muzikHeader.title}</span>
-              : <span className="text-xs text-slate-400">Eser bilgileri…</span>}
-            {muzikHeader?.tempo && <span className="text-[10px] text-slate-500 hidden sm:inline">{muzikHeader.tempo}</span>}
-            {muzikHeader?.timeSignature?.ad && (
-              <span className="text-[10px] font-mono text-slate-600 border border-slate-200 rounded px-1 leading-4">{muzikHeader.timeSignature.ad}</span>
-            )}
-            {muzikHeader?.keySignature?.gorunum && (
-              <span className="text-[11px] text-slate-600">{muzikHeader.keySignature.gorunum}</span>
-            )}
-            <svg viewBox="0 0 20 20" className="h-3 w-3 text-slate-400 flex-shrink-0" fill="currentColor" aria-hidden="true">
-              <path d="M5 8l5 5 5-5H5z" />
-            </svg>
-          </button>
-
           {/* Sus göstergesi */}
           {currentPlaybackOge?.tip === 'sus' && (() => {
             const idx = currentPlaybackOge.sureIndeksi ?? 0;
@@ -328,6 +326,7 @@ export default function MuzikBrfScoreEditor({
         </div>
       </div>
       {/* end sticky wrapper */}
+
 
       {/* ── Eser bilgileri popup ──────────────────────────────────────── */}
       {headerPopupAcik && (
@@ -422,6 +421,9 @@ export default function MuzikBrfScoreEditor({
 
       <MuzikScoreSvg
         onHeaderBrailleAc={() => setHeaderBraillePopupAcik(true)}
+        onHeaderPopupAc={() => { setHeaderPopupBrailleGoster(false); setHeaderPopupAcik(true); }}
+        setMuzikHeader={setMuzikHeader}
+        tempoListesi={MUZIK_TEMPO_ISARETLERI}
         muzikSatirlar={muzikSatirlar}
         olcuBrailleSonuclari={olcuBrailleSonuclari}
         skorUstuHeaderSatirlari={skorUstuHeaderSatirlari}
@@ -517,6 +519,8 @@ export default function MuzikBrfScoreEditor({
         setAnahtarPopupAcik={setAnahtarPopupAcik}
         muzikOgeleri={muzikOgeleri}
         anahtariDegistir={anahtariDegistir}
+        donanimiDegistir={donanimiDegistir}
+        mevcutDonanimAd={muzikHeader?.keySignature?.ad || ''}
       />
     </div>
   );

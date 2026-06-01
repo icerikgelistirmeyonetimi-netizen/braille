@@ -11,7 +11,7 @@ export function varsayilanMuzikHeaderOlustur() {
   return {
     title: '',
     composer: '',
-    tempo: 'Allegro',
+    tempo: '',
     bpm: 120,
     keySignature: null,
     autoCompleteMeasures: true,

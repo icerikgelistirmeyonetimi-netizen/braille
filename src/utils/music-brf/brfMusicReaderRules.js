@@ -1464,9 +1464,32 @@ export function detectHeaderLineType(tokens = []) {
     }
   }
 
-  const letterCount = braille.filter((t) => BRAILLE_LETTERS_TR[dotsToKey(t.dots)]).length;
-  if (braille.length >= 3 && letterCount >= Math.ceil(braille.length * 0.7)) {
-    const text = braille.map((t) => BRAILLE_LETTERS_TR[dotsToKey(t.dots)] || '').join('').trim();
+  // Büyük harf işareti [6] de "metin hücresi" sayılır (oranı düşürmesin).
+  const harfVeyaIsaret = (t) => {
+    const k = dotsToKey(t.dots);
+    return Boolean(BRAILLE_LETTERS_TR[k]) || k === '6';
+  };
+  const letterCount = braille.filter(harfVeyaIsaret).length;
+  // Kısa başlık/besteci (örn. "cc" = 2 hücre) de tanınsın: tüm hücreler harfse
+  // bu satır metindir (müzik satırları octave/sayı işaretiyle başlar, harf değil).
+  // Uzun satırlarda %70 harf oranı yeterli (araya gelebilecek aksan vb. için).
+  const tumHarf = braille.length >= 1 && letterCount === braille.length;
+  const cogunlukHarf = braille.length >= 3 && letterCount >= Math.ceil(braille.length * 0.7);
+  if (tumHarf || cogunlukHarf) {
+    // Boşlukları koru; büyük harf işaretinden ([6]) sonraki harfi büyüt.
+    let text = '';
+    let buyukBekliyor = false;
+    for (const t of tokens) {
+      if (t.type === 'space') { text += ' '; buyukBekliyor = false; continue; }
+      const k = dotsToKey(t.dots);
+      if (k === '6') { buyukBekliyor = true; continue; }
+      const harf = BRAILLE_LETTERS_TR[k] || '';
+      if (harf) {
+        text += buyukBekliyor ? harf.toLocaleUpperCase('tr') : harf;
+      }
+      buyukBekliyor = false;
+    }
+    text = text.replace(/\s+/g, ' ').trim();
     return { type: 'title', value: text };
   }
 

@@ -43,14 +43,16 @@ export function buildReadableSummary(result = {}) {
   const lines = [];
   lines.push(`Başlık: ${header.title || '—'}`);
 
+  if (header.composer) lines.push(`Besteci: ${header.composer}`);
+
+  const tempo = header?.tempo || header?.bpm;
+  if (tempo) lines.push(`Tempo: ${tempo}`);
+
   const ts = header?.timeSignature?.gorunum || header?.timeSignature?.ad || header?.timeSignature || '—';
   lines.push(`Zaman imzası: ${ts}`);
 
   const key = header?.keySignature?.ad || header?.keySignature?.label || header?.keySignature;
   if (key) lines.push(`Donanım: ${key}`);
-
-  const tempo = header?.tempo || header?.bpm;
-  if (tempo) lines.push(`Tempo: ${tempo}`);
 
   measures.forEach((measure, idx) => {
     const metin = (measure.items || [])

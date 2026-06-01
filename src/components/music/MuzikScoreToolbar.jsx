@@ -31,6 +31,8 @@ export default function MuzikScoreToolbar({
   voltaEkleModuBaslat,
   voltaEkleModIptal,
   voltaMeasureEkle,
+  muzikHeader,
+  setMuzikHeader,
 }) {
   // Mobil drill-down: bir araç aktifken (ör. "Süre") ana araç çubuğu gizlenir,
   // o aracın alt seçenekleri + geri butonu görünür. Geri ile ana araçlara dönülür.
@@ -46,6 +48,25 @@ export default function MuzikScoreToolbar({
   // "Diğer" açılır menüsü
   const [digerAcik, setDigerAcik] = useState(false);
   const digerRef = useRef(null);
+
+  // "Ayarlar" açılır menüsü
+  const [ayarlarAcik, setAyarlarAcik] = useState(false);
+  const ayarlarRef = useRef(null);
+
+  // Ayarlar menüsü dışarı tıklama / Esc ile kapat
+  useEffect(() => {
+    if (!ayarlarAcik) return undefined;
+    const disariTikla = (e) => {
+      if (ayarlarRef.current && !ayarlarRef.current.contains(e.target)) setAyarlarAcik(false);
+    };
+    const escKapat = (e) => { if (e.key === 'Escape') setAyarlarAcik(false); };
+    document.addEventListener('mousedown', disariTikla);
+    document.addEventListener('keydown', escKapat);
+    return () => {
+      document.removeEventListener('mousedown', disariTikla);
+      document.removeEventListener('keydown', escKapat);
+    };
+  }, [ayarlarAcik]);
   const digerAraclar = MUSIC_EDITOR_TOOLBAR.filter((t) => DIGER_ARAC_IDLERI.includes(t.id));
   const digerAktifMi = DIGER_ARAC_IDLERI.includes(aktifArac);
 
@@ -155,6 +176,66 @@ export default function MuzikScoreToolbar({
                   </button>
                 );
               })}
+            </div>
+          )}
+        </div>
+
+        {/* ── "Ayarlar" açılır menüsü ── */}
+        <div className="relative" ref={ayarlarRef}>
+          <button
+            type="button"
+            onClick={() => setAyarlarAcik((a) => !a)}
+            aria-haspopup="menu"
+            aria-expanded={ayarlarAcik}
+            aria-label="Ayarlar"
+            title="Ayarlar"
+            className={['group relative inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-lg border px-2 text-sm transition-all',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1',
+              ayarlarAcik
+                ? 'border-amber-500 bg-amber-100 text-zinc-950 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.35)]'
+                : 'border-transparent bg-transparent text-zinc-600 hover:border-zinc-200 hover:bg-zinc-100 hover:text-zinc-950',
+            ].join(' ')}
+          >
+            <span aria-hidden="true" className="leading-none font-semibold text-base">⚙</span>
+            <span className="muzik-diger-etiket text-xs font-semibold whitespace-nowrap hidden sm:inline">Ayarlar</span>
+          </button>
+
+          {ayarlarAcik && muzikHeader && setMuzikHeader && (
+            <div
+              className="absolute right-0 top-full mt-1 z-50 min-w-[220px] rounded-xl border border-zinc-200 bg-white py-2 px-3 shadow-lg"
+              role="menu"
+              aria-label="Ayarlar"
+            >
+              <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Skor Ayarları</div>
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Ölçüyü otomatik tamamla">
+                  <input
+                    type="checkbox"
+                    checked={muzikHeader.autoCompleteMeasures !== false}
+                    onChange={(e) => setMuzikHeader((h) => ({ ...h, autoCompleteMeasures: e.target.checked }))}
+                    className="accent-amber-500"
+                  />
+                  Otomatik ölçü tamamla
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Gruplama / pitch-only braille okuma">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(muzikHeader.useBrailleGrouping)}
+                    onChange={(e) => setMuzikHeader((h) => ({ ...h, useBrailleGrouping: e.target.checked }))}
+                    className="accent-amber-500"
+                  />
+                  Braille gruplama
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="İlk ölçü pickup (anacrusis)">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(muzikHeader.pickupMeasure)}
+                    onChange={(e) => setMuzikHeader((h) => ({ ...h, pickupMeasure: e.target.checked }))}
+                    className="accent-amber-500"
+                  />
+                  Pickup ölçü (anacrusis)
+                </label>
+              </div>
             </div>
           )}
         </div>

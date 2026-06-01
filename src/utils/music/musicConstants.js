@@ -54,6 +54,8 @@ export const MUZIK_HARF_NOKTALARI = {
   n: [1, 3, 4, 5], o: [1, 3, 5], p: [1, 2, 3, 4], q: [1, 2, 3, 4, 5], r: [1, 2, 3, 5],
   s: [2, 3, 4], t: [2, 3, 4, 5], u: [1, 3, 6], v: [1, 2, 3, 6], w: [2, 4, 5, 6],
   x: [1, 3, 4, 6], y: [1, 3, 4, 5, 6], z: [1, 3, 5, 6],
+  // Türkçe harfler (MEB Türkçe Braille alfabesi)
+  'ç': [1, 6], 'ğ': [1, 2, 6], 'ı': [3, 5], 'ö': [2, 4, 6], 'ş': [1, 4, 6], 'ü': [1, 2, 5, 6],
 };
 
 // Görsel skor satırı kapasitesi (SVG için; BRF satırı ayrı)

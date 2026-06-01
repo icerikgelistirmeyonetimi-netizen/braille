@@ -2521,16 +2521,16 @@ export function useMuzikBrfEditor() {
 
   const gorselKaynakReaderMi = canonicalReaderSkorOgeleri.length > 0;
 
-  const brfDosyasiYukle = async (file) => {
-    if (!file) return;
+  // BRF metnini doğrudan (string) yükler — dosya ya da hazır parça farketmez.
+  const brfMetniYukle = async (rawBrfText, ad = '') => {
+    if (!rawBrfText) return;
 
-    const rawBrfText = await file.text();
     setBrfHamMetin(rawBrfText || '');
     setBrfImportKirli(false);
 
     try {
       const readerResult = brfMuzikOku(rawBrfText);
-      const header = brfReaderHeaderOlustur(readerResult.header || {}, file.name || '');
+      const header = brfReaderHeaderOlustur(readerResult.header || {}, ad);
       const skorOgeleri = brfReaderSonucundanSkorOgeleriAl(readerResult);
       const importedOgeler = onceAnahtarGarantiEt(skorOgeleri);
       const skorIdSet = new Set(importedOgeler.map((o) => o.id));
@@ -2592,6 +2592,12 @@ export function useMuzikBrfEditor() {
         },
       ]);
     }
+  };
+
+  const brfDosyasiYukle = async (file) => {
+    if (!file) return;
+    const rawBrfText = await file.text();
+    await brfMetniYukle(rawBrfText, file.name || '');
   };
 
   const setTimeSignature = (deger) => {
@@ -2824,6 +2830,7 @@ export function useMuzikBrfEditor() {
     sonOgeyiSil,
     temizle,
     brfDosyasiYukle,
+    brfMetniYukle,
     includeBarNumbers,
     setIncludeBarNumbers,
     setTimeSignature,

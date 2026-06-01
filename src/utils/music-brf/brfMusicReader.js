@@ -27,8 +27,20 @@ export function brfMuzikOku(brfText, options = {}) {
 
     if (!context.items.length) {
       const headerType = detectHeaderLineType(cells);
-      if ((headerType.type === 'title' || headerType.type === 'title+time-signature') && !context.header.title) {
-        context.header.title = headerType.value || '';
+      // BRF header sırası: 1) başlık  2) besteci  3) tempo (+ donanım/zaman aynı satırda).
+      // Metin satırları sırayla title → composer → tempo alanlarına atanır;
+      // aksi halde besteci ve tempo header'a hiç yazılmıyordu.
+      if (headerType.type === 'title' || headerType.type === 'title+time-signature') {
+        const metin = headerType.value || '';
+        if (metin) {
+          if (!context.header.title) {
+            context.header.title = metin;
+          } else if (!context.header.composer && headerType.type === 'title') {
+            context.header.composer = metin;
+          } else if (!context.header.tempo) {
+            context.header.tempo = metin;
+          }
+        }
       }
       if (headerType.type === 'time-signature' && !context.header.timeSignature) {
         setReaderTimeSignature(context, headerType.value);
