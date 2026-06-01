@@ -28,7 +28,9 @@ import {
 // ─── BRF → nokta dizisi ────────────────────────────────────────────────────
 // Standart North American Braille ASCII tablosundan (tek doğruluk kaynağı).
 // Eski "code - 0x20" eşlemesi yanlıştı; dışa aktarımla tutarsızdı.
-export { brfNoktalaradon } from './brailleAscii.js';
+// Hem local kullanım (aşağıda) hem dışa aktarım için: import + re-export.
+import { brfNoktalaradon } from './brailleAscii.js';
+export { brfNoktalaradon };
 
 // ─── Ters arama tabloları ──────────────────────────────────────────────────
 const _KISALTMA_TEK = new Map(
