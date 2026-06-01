@@ -3618,7 +3618,7 @@ g:hover .muzik-note-hover-rect,
   font-weight: 400;
 }
 .muzik-dynamic {
-  fill: #111827;
+  fill: #2563eb;  /* blue-600 — notalardan (siyah) ayrışsın; lejant dinamik rengiyle aynı */
   font-family: 'Bravura Text', 'Cambria Math', Georgia, 'Times New Roman', serif;
   font-style: italic;
   font-size: 16px;
