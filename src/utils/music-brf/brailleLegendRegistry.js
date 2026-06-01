@@ -464,6 +464,13 @@ export function brailleKisaCellLabelAl(anlam = {}) {
     return '·';
   }
 
+  // Dinamik → standart işaret ("p (piano)" → "p", "cresc. (crescendo)" → "cresc.")
+  if (kategori === 'dynamic') {
+    const ham = String(a.etiket || a.ad || '').trim();
+    const oncesi = ham.split('(')[0].trim();
+    return oncesi || ham;
+  }
+
   return '';
 }
 

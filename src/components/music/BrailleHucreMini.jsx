@@ -38,11 +38,12 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
   const oktavMi = kategori === 'oktav';
   const accidentalMi = kategori === 'accidental';
   const dotMu = (anlam?.kaynak === 'dot');
+  const dinamikMi = kategori === 'dynamic';
   const notaEtiketi = notaMi ? brailleNotaEtiketiAl(anlam) : '';
   const bagEtiketi = bagMi ? brailleBagKisaEtiketiAl(anlam) : '';
   const susEtiketi = susMu ? getBrailleItemLabel(anlam) : '';
-  // Oktav, aksidental ve nokta için KISA etiket (5 / ♯ / · vb.)
-  const kisaEtiketi = (oktavMi || accidentalMi || dotMu)
+  // Oktav, aksidental, nokta ve dinamik için KISA etiket (5 / ♯ / · / p / f vb.)
+  const kisaEtiketi = (oktavMi || accidentalMi || dotMu || dinamikMi)
     ? brailleKisaCellLabelAl(anlam)
     : '';
   const stil = notaMi ? BRAILLE_NOTA_STILI : (renkStil || brailleRenkAl(anlam));
