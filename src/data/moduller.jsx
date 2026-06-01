@@ -439,13 +439,13 @@ export const MODULLER = [
     altBaslik: "Kur'an-ı Kerim",
     ikon: Ikon.modul5,
     ogeler: [
-      { yol: '/kuran-harfler',   baslik: 'Arap Harfleri',      ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',   toplam: 31 },
+      { yol: '/kuran-harfler',   baslik: "Kur'an-ı Kerim Harfleri", ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',   toplam: 31 },
       { yol: '/kuran-harekeler', baslik: 'Harekeler',           ikon: Ikon.harake,    anahtar: 'kuran-harekeler', toplam: 8 },
       { yol: '/kuran-tecvid',    baslik: 'Tecvid İşaretleri',  ikon: Ikon.tecvid,    anahtar: 'kuran-tecvid',    toplam: 7 },
       { yol: '/kuran-heceler',   baslik: 'Hece Okuma',          ikon: Ikon.hece, anahtar: 'kuran-kelime-hece', toplam: KURAN_HECELERI.length },
       {
         yol: '/kuran-kelimeler-temel',
-        baslik: 'Kelime Okuma 1',
+        baslik: 'Kelime Okuma',
         ikon: Ikon.kuranKelime,
         anahtar: 'kuran-kelime-kelime-temel',
         toplam: KURAN_KELIMELERI_TEMEL.length

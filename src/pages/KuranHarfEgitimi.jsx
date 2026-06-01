@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import DesenOgretici from '../components/DesenOgretici.jsx';
 import SesIzinEkrani from '../components/SesIzinEkrani.jsx';
-import { KURAN_HARFLERI } from '../data/kuran.js';
+import { KURAN_TEMEL_HARFLERI } from '../data/kuran.js';
 import {
   kuranHarfSesIdAl,
   kuranHarfSesUrlAl,
@@ -14,11 +14,11 @@ export default function KuranHarfEgitimi() {
   const [sesIzniVar, setSesIzniVar] = useState(false);
   const [ilkSesCalindi, setIlkSesCalindi] = useState(false);
 
-  const ogeler = KURAN_HARFLERI.map((h) => ({
+  const ogeler = KURAN_TEMEL_HARFLERI.map((h) => ({
     ad: h.harf,
     ariaAd: `${h.ad} harfi`,
     harfAdi: h.ad,
-    sesId: kuranHarfSesIdAl(h.ad),
+    sesId: h.sesId ?? kuranHarfSesIdAl(h.ad),
     noktalar: h.noktalar,
     aciklama: '',
     tamYonergeMetni: `${h.noktalar.join(', ')} numaralı noktalardan oluşur. Lütfen numaralara sırayla dokunun.`,
@@ -60,7 +60,7 @@ export default function KuranHarfEgitimi() {
     <DesenOgretici
       baslik="Kur'an-ı Kerim: Harf Eğitimi"
       ogeler={ogeler}
-      kategoriAdi="Arap harfi"
+      kategoriAdi="Kur'an harfi"
       bolumAnahtari="kuran-harfler"
       bittiMesaji="Tebrikler! Kur'an-ı Kerim braillesi harflerini tamamladınız."
       rtl

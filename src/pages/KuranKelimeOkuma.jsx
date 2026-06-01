@@ -93,7 +93,7 @@ export default function KuranKelimeOkuma({ kaynakAnahtari = 'hece', baslik }) {
   if (sesliSayfa && !sesIzniVar) {
     return (
       <SesIzinEkrani
-        baslik={kaynakAnahtari === 'hece' ? 'Kur’an-ı Kerim Hece Okuma' : 'Kur’an-ı Kerim Kelime Okuma 1'}
+        baslik={kaynakAnahtari === 'hece' ? 'Kur’an-ı Kerim Hece Okuma' : 'Kur’an-ı Kerim Kelime Okuma'}
         aciklama="Bu etkinlikte ses kayıtları kullanılacak. Etkinliğe başlamadan önce sesi başlatmanız gerekir."
         butonMetni="Sesi Başlat ve Etkinliğe Geç"
         ilkSesUrl={ilkSesUrl}

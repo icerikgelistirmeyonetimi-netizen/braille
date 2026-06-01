@@ -27,6 +27,8 @@ const karistir = (arr) => {
 
 const NOKTA_TUS = { 1: 'F', 2: 'D', 3: 'S', 4: 'J', 5: 'K', 6: 'L' };
 const HUCRE_ETIKET = ['1.', '2.', '3.', '4.', '5.', '6.'];
+// Sesli yönergede "5." gibi nokta-sıralı ifadeler yerine sözcük kullan.
+const HUCRE_SIRA_SOZ = ['birinci', 'ikinci', 'üçüncü', 'dördüncü', 'beşinci', 'altıncı'];
 
 const SORU_SAYISI_VARSAYILAN = 10;
 
@@ -101,7 +103,17 @@ export default function YazmaKarisik() {
   });
   // Doğru cevap seslendirmesi sırasında girişleri kilitle
   const kilitliRef = useRef(false);
+  // Klavyeye yansıtmak için kilit durumunu state olarak da tut
+  const [kilitli, setKilitli] = useState(false);
+  const kilitle = (deger) => {
+    kilitliRef.current = deger;
+    setKilitli(deger);
+  };
   const sonDotRef = useRef(null);
+  // Klavyedeki "tıklı" görseli, bir sonraki soruya/hücreye geçince temizlenir.
+  // Bu anahtar her geçişte artırılır.
+  const [sifirlaAnahtari, setSifirlaAnahtari] = useState(0);
+  const sonrakineGec = () => setSifirlaAnahtari((s) => s + 1);
 
   const aktif = sorular[indeks];
   const beklenenHucre = aktif ? aktif.hucreler[hucreIndeksi] : null;
@@ -112,7 +124,7 @@ export default function YazmaKarisik() {
     const nk = beklenenHucre.join(', ');
     const tuslar = beklenenHucre.map((n) => NOKTA_TUS[n]).join(' ve ');
     const sira = cokHucreli
-      ? `${HUCRE_ETIKET[hucreIndeksi] || (hucreIndeksi + 1) + '.'} hücre için `
+      ? `${HUCRE_SIRA_SOZ[hucreIndeksi] || (hucreIndeksi + 1) + '.'} hücre için `
       : '';
     return `${sira}${nk} numaralı noktalara, klavyede ${tuslar} tuşlarına ` +
            `aynı anda parmaklarınızla basıp birlikte bırakın.`;
@@ -120,19 +132,20 @@ export default function YazmaKarisik() {
 
   const yonergeMetin = () => {
     if (!aktif) return '';
-    const baslangic = `Soru ${indeks + 1} / ${sorular.length}. ${aktif.ariaAd} yazın.`;
+    const baslangic = `Soru ${indeks + 1}, ${aktif.ariaAd} yazın.`;
     if (cokHucreli) {
-      const sira = HUCRE_ETIKET[hucreIndeksi] || (hucreIndeksi + 1) + '.';
+      const sira = HUCRE_SIRA_SOZ[hucreIndeksi] || `${hucreIndeksi + 1}.`;
       return `${baslangic} ${sira} hücreyle başlayın.`;
     }
     return baslangic;
   };
 
-  // Sayfa yüklendiğinde / soru değiştiğinde yönerge oku
+  // Sayfa yüklendiğinde / soru değiştiğinde yönerge oku.
+  // Yönerge okunup bitene kadar giriş kilidini açma.
   useEffect(() => {
     if (bittimi) return;
-    konus(yonergeMetin());
-    const tekrar = () => konus(yonergeMetin(), { kesintiyle: true });
+    konus(yonergeMetin(), { onSon: () => kilitle(false) });
+    const tekrar = () => konus(yonergeMetin(), { kesintiyle: true, onSon: () => kilitle(false) });
     window.addEventListener('yonergeTekrar', tekrar);
     return () => {
       window.removeEventListener('yonergeTekrar', tekrar);
@@ -149,6 +162,8 @@ export default function YazmaKarisik() {
   }, [indeks]);
 
   const sonrakiSoruyaGec = () => {
+    // Tıklı görseli temizle (yeni soruya geçiş)
+    sonrakineGec();
     // Tamamen rastgele bir öğe seç (aynı öğe tekrar gelebilir)
     const yeni = Math.floor(Math.random() * sorular.length);
     if (yeni === indeks) {
@@ -156,7 +171,8 @@ export default function YazmaKarisik() {
       setHucreIndeksi(0);
       setSoruDeneme(0);
       setIpucuGoster(false);
-      konus(yonergeMetin(), { kesintiyle: true });
+      // Yönerge okunana kadar kilit açılmaz
+      konus(yonergeMetin(), { kesintiyle: true, onSon: () => kilitle(false) });
     } else {
       setIndeks(yeni);
       setHucreIndeksi(0);
@@ -164,17 +180,16 @@ export default function YazmaKarisik() {
   };
 
   const dogruCevabiAcikla = () => {
-    kilitliRef.current = true;
+    kilitle(true);
     const noktaMetin = aktif.hucreler
       .map((h, i) =>
         (aktif.hucreler.length > 1
-          ? `${HUCRE_ETIKET[i] || (i + 1) + '.'} hücre `
+          ? `${HUCRE_SIRA_SOZ[i] || (i + 1) + '.'} hücre `
           : '') + h.join(', '))
       .join('; ');
     konus(`Doğru cevap: ${aktif.ariaAd}. Noktalar: ${noktaMetin}.`, {
       kesintiyle: true,
       onSon: () => setTimeout(() => {
-        kilitliRef.current = false;
         sonrakiSoruyaGec();
       }, 700)
     });
@@ -199,18 +214,18 @@ export default function YazmaKarisik() {
   const onHucre = (noktalar) => {
     if (kilitliRef.current || bittimi || !aktif) return;
     if (noktaEsit(noktalar, beklenenHucre)) {
-      kilitliRef.current = true;
+      kilitle(true);
       const lastDot = sonDotRef.current;
       sonDotRef.current = null;
       const onayMetin = lastDot != null ? `${lastDot} doğru` : noktalar.join(', ');
       if (hucreIndeksi + 1 >= aktif.hucreler.length) {
-        // Soru tamamlandı — onSon ile geç, fallback güvencesi ekle
+        // Soru tamamlandı — onSon ile geç, fallback güvencesi ekle.
+        // Kilit, yeni sorunun yönergesi okunana kadar açılmaz.
         setPuan((p) => p + 1);
         let gecildi = false;
         const gecis = () => {
           if (gecildi) return;
           gecildi = true;
-          kilitliRef.current = false;
           sonrakiSoruyaGec();
         };
         konus(`${onayMetin}. ${aktif.ariaAd} doğru.`, {
@@ -219,13 +234,14 @@ export default function YazmaKarisik() {
         });
         setTimeout(gecis, 4000); // fallback
       } else {
-        // Sonraki hücreye geç — önce ses, sonra state değiştir
+        // Sonraki hücreye geç — önce ses, sonra state değiştir.
+        // Tıklı görsel, yeni hücreye geçince temizlenir; kilit yönergeyle açılır.
         let gecildi = false;
         const gecis = () => {
           if (gecildi) return;
           gecildi = true;
+          sonrakineGec();
           setHucreIndeksi((h) => h + 1);
-          setTimeout(() => { kilitliRef.current = false; }, 100);
         };
         konus(onayMetin, {
           kesintiyle: true,
@@ -239,9 +255,8 @@ export default function YazmaKarisik() {
     const yeniDeneme = soruDeneme + 1;
     setHataSayisi((h) => h + 1);
     setSoruDeneme(yeniDeneme);
-    hataBildir(
-      `Yanlış. Bastığınız noktalar ${noktalar.join(', ') || 'yok'}.`
-    );
+    const yanlisMetin = `Yanlış. Bastığınız noktalar ${noktalar.join(', ') || 'yok'}.`;
+    hataBildir(yanlisMetin);
   };
 
   const onBosluk = () => {
@@ -262,7 +277,8 @@ export default function YazmaKarisik() {
 
   const yenidenBasla = (yeniBoyut) => {
     konusmayiDurdur();
-    kilitliRef.current = false;
+    kilitle(false);
+    sonrakineGec();
     const boyut = yeniBoyut || grupBoyu;
     if (yeniBoyut) setGrupBoyu(yeniBoyut);
     setSorular(sorulariUret(boyut));
@@ -397,9 +413,6 @@ export default function YazmaKarisik() {
             <b>Yardım:</b> {yardimMetni()}
           </div>
         )}
-        <div role="status" aria-live="polite" className="sr-only">
-          {yonergeMetin()}
-        </div>
         {/* Dikeyde inline klavye */}
         <div className="klavye-inline">
           <BrailleKlavye
@@ -412,6 +425,9 @@ export default function YazmaKarisik() {
             siralikTiklama
             onTikla={onTiklaDogrula}
             beklenenSayi={beklenenHucre?.length || 0}
+            kilitli={kilitli}
+            tikliyiKoru
+            sifirlaAnahtari={sifirlaAnahtari}
           />
         </div>
       </div>
@@ -447,6 +463,8 @@ export default function YazmaKarisik() {
           anindaDokunma
           onTikla={onTiklaDogrula}
           beklenenSayi={beklenenHucre?.length || 0}
+          kilitli={kilitli}
+          sifirlaAnahtari={sifirlaAnahtari}
         />
       </div>
     </div>

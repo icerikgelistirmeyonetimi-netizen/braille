@@ -13,7 +13,7 @@ import {
   NOKTALAMA_ISARETLERI, OZEL_ISARETLER
 } from '../data/braille.js';
 import {
-  KURAN_HARFLERI, KURAN_HAREKELERI, KURAN_TECVID,
+  KURAN_TEMEL_HARFLERI, KURAN_HAREKELERI, KURAN_TECVID,
   KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL
 } from '../data/kuran.js';
 import { KURAN_SURELERI } from '../data/kuranSureler.js';
@@ -75,7 +75,7 @@ const KAYNAKLAR = {
     etiketTuru: 'kısaltma',
     items: KELIME_KISALTMALARI.map((k) => ({
       etiket: k.harf,
-      ariaAd: `${k.harf} kısaltması, ${k.kelime}`,
+      ariaAd: `${k.kelime} kelimesi kısaltması ${k.harf}`,
       hucreler: tek(k.noktalar)
     }))
   },
@@ -85,7 +85,7 @@ const KAYNAKLAR = {
     etiketTuru: 'kısaltma',
     items: IKI_HARFLI_KISALTMALAR.map((k) => ({
       etiket: k.harf,
-      ariaAd: `${k.harf} kısaltması, ${k.kelime}`,
+      ariaAd: `${k.kelime} kelimesi kısaltması ${k.harf}`,
       hucreler: [k.sol, k.sag]
     }))
   },
@@ -105,7 +105,7 @@ const KAYNAKLAR = {
     etiketTuru: 'kısaltma',
     items: KELIME_KOKU_KISALTMALARI.map((k) => ({
       etiket: k.etiket,
-      ariaAd: `${k.etiket} kısaltması, ${k.kelime}`,
+      ariaAd: `${k.kelime} kelimesi kısaltması ${k.etiket}`,
       // Kelime kökü her zaman 5. nokta + sembol harfi/hecesi
       hucreler: [[5], k.sag]
     }))
@@ -144,9 +144,9 @@ const KAYNAKLAR = {
   // --- Modül 5: Kur'an ---
   '/kuran-harfler': {
     yol: '/kuran-harfler',
-    baslik: 'Arap Harfleri',
+    baslik: "Kur'an-ı Kerim Harfleri",
     etiketTuru: 'harf',
-    items: KURAN_HARFLERI.map((h) => ({
+    items: KURAN_TEMEL_HARFLERI.map((h) => ({
       etiket: h.harf,
       ariaAd: `${h.ad} harfi`,
       hucreler: tek(h.noktalar)

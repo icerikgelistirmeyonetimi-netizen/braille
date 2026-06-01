@@ -6,6 +6,7 @@ const VARSAYILAN = {
   konusmaHizi: 0.95,   // 0.5 - 1.5
   yaziBoyutu: 17,      // px (16 - 32)
   sesAcik: true,
+  sesEfektiAcik: true, // tıklama / doğru / yanlış ses efektleri
   titresimAcik: true,
   tema: 'normal',      // 'normal' | 'lowVision'
   gizliModuller: []    // gizlenen modüllerin id listesi

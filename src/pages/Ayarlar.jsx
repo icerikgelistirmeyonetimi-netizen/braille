@@ -8,17 +8,7 @@ import {
   ayarlariSifirla
 } from '../utils/ayarlar.js';
 import { tumIlerlemeyiAl, tumIlerlemeyiSifirla } from '../utils/ilerleme.js';
-import { konus } from '../utils/ses.js';
-import {
-  durumuAl as arduinoDurumuAl,
-  durumuDinle as arduinoDurumuDinle,
-  seriBaglan,
-  bleBaglan,
-  baglantiyiKes as arduinoKes,
-  deseniGonder,
-  webSerialDestekleniyorMu,
-  webBluetoothDestekleniyorMu
-} from '../utils/arduino.js';
+import { konus, tiklamaSesi, dogruSesi, yanlisSesi } from '../utils/ses.js';
 import { MODULLER } from '../data/moduller.jsx';
 import { titresimBuOrtamdaBeklenmezMi, IOS_TITRESIM_IPUCU } from '../utils/titresimDestek.js';
 
@@ -26,53 +16,16 @@ export default function Ayarlar() {
   const [a, setA] = useState(ayarlariAl());
   const [ilerleme, setIlerleme] = useState(tumIlerlemeyiAl());
   const [turAcik, setTurAcik] = useState(false);
-  const [arduino, setArduino] = useState(arduinoDurumuAl());
-  const [arduinoHata, setArduinoHata] = useState('');
   const [aktifSekme, setAktifSekme] = useState('ayarlar');
 
   useEffect(() => {
     konus('Ayarlar sayfası.');
     const tekrar = () => konus('Ayarlar sayfası.', { kesintiyle: true });
     window.addEventListener('yonergeTekrar', tekrar);
-    const cikis = arduinoDurumuDinle(setArduino);
     return () => {
       window.removeEventListener('yonergeTekrar', tekrar);
-      cikis();
     };
   }, []);
-
-  const arduinoSeriBaglan = async () => {
-    setArduinoHata('');
-    try {
-      await seriBaglan();
-      konus('Arduino bağlandı.');
-    } catch (e) {
-      setArduinoHata(e && e.message ? e.message : 'Bağlantı başarısız.');
-    }
-  };
-  const arduinoBleBaglan = async () => {
-    setArduinoHata('');
-    try {
-      await bleBaglan();
-      konus('Arduino Bluetooth ile bağlandı.');
-    } catch (e) {
-      setArduinoHata(e && e.message ? e.message : 'Bağlantı başarısız.');
-    }
-  };
-  const arduinoBaglantiyiKes = async () => {
-    await arduinoKes();
-    konus('Arduino bağlantısı kesildi.');
-  };
-  const arduinoTest = async () => {
-    // 1, 2, 3, 4, 5, 6 noktalarını sırayla kaldır
-    for (let n = 1; n <= 6; n++) {
-      await deseniGonder([n]);
-      await new Promise((r) => setTimeout(r, 500));
-    }
-    await deseniGonder([1, 2, 3, 4, 5, 6]);
-    await new Promise((r) => setTimeout(r, 600));
-    await deseniGonder([]);
-  };
 
   const guncelle = (yama) => {
     ayarGuncelle(yama);
@@ -110,7 +63,7 @@ export default function Ayarlar() {
     display: 'flex', alignItems: 'center',
     justifyContent: 'space-between', gap: 12,
   };
-  const aciklamaStil = { fontSize: '0.82em', color: '#888', marginTop: 2 };
+  const aciklamaStil = { fontSize: '0.82em', color: 'var(--muted)', marginTop: 2 };
   const rozetStil = {
     background: 'var(--renk-vurgu-acik, #eef2ff)',
     color: 'var(--renk-vurgu, #5465ff)',
@@ -184,7 +137,7 @@ className="btn"           role="tab"
               </svg>
               Modül Görünürlüğü
             </div>
-            <p style={{ margin: 0, fontSize: '0.88em', color: '#777', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: '0.88em', color: 'var(--muted)', lineHeight: 1.5 }}>
               Ana menüde gösterilmesini istediğiniz modülleri seçin.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -210,8 +163,8 @@ className="btn"           role="tab"
                         {m.ikon}
                       </span>
                       <span>
-                        <span style={{ fontWeight: 700, display: 'block', color: gizli ? '#aaa' : 'inherit' }}>{m.baslik}</span>
-                        <span style={{ fontSize: '0.82em', color: gizli ? '#bbb' : '#777' }}>{m.altBaslik}</span>
+                        <span style={{ fontWeight: 700, display: 'block', color: gizli ? 'var(--muted)' : 'inherit' }}>{m.baslik}</span>
+                        <span style={{ fontSize: '0.82em', color: 'var(--muted)' }}>{m.altBaslik}</span>
                       </span>
                     </div>
                     <input
@@ -261,6 +214,25 @@ className="btn"           role="tab"
               </span>
             </label>
           </div>
+          <div style={satirStil}>
+            <div>
+              <div style={{ fontWeight: 600 }}>Ses efektleri</div>
+              <div style={aciklamaStil}>Tıklama, doğru ve yanlış ses efektleri</div>
+            </div>
+            <label style={toggleKapStil}>
+              <input type="checkbox" checked={a.sesEfektiAcik} onChange={(e) => guncelle({ sesEfektiAcik: e.target.checked })} aria-label={`Ses efektleri ${a.sesEfektiAcik ? 'açık' : 'kapalı'}`} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+              <span style={{ ...toggleTrackStil, background: a.sesEfektiAcik ? 'var(--renk-vurgu, #5465ff)' : '#ccc' }}>
+                <span style={{ ...toggleThumbStil, transform: a.sesEfektiAcik ? 'translateX(22px)' : 'translateX(2px)' }} />
+              </span>
+            </label>
+          </div>
+          {a.sesEfektiAcik && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn" type="button" onClick={() => tiklamaSesi()} style={ikincilButonStil}>Tıklama</button>
+              <button className="btn" type="button" onClick={() => dogruSesi()} style={ikincilButonStil}>Doğru</button>
+              <button className="btn" type="button" onClick={() => yanlisSesi()} style={ikincilButonStil}>Yanlış</button>
+            </div>
+          )}
           <div style={{ ...satirStil, flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 600 }}>Konuşma hızı</span>
@@ -269,7 +241,7 @@ className="btn"           role="tab"
             <input type="range" min="0.5" max="1.5" step="0.05" value={a.konusmaHizi}
               onChange={(e) => guncelle({ konusmaHizi: parseFloat(e.target.value) })}
               style={{ width: '100%', accentColor: 'var(--renk-vurgu, #5465ff)' }} aria-label="Konuşma hızı" />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78em', color: '#999' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78em', color: 'var(--muted)' }}>
               <span>Yavaş</span><span>Hızlı</span>
             </div>
           </div>
@@ -299,7 +271,7 @@ className="btn"           role="tab"
                 }}>
                   <input type="radio" name="tema" value={val} checked={a.tema === val} onChange={() => guncelle({ tema: val })} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
                   <span style={{ fontWeight: 700, color: a.tema === val ? 'var(--renk-vurgu, #5465ff)' : 'inherit' }}>{label}</span>
-                  <span style={{ fontSize: '0.78em', color: '#777' }}>{aciklama}</span>
+                  <span style={{ fontSize: '0.78em', color: 'var(--muted)' }}>{aciklama}</span>
                 </label>
               ))}
             </div>
@@ -312,7 +284,7 @@ className="btn"           role="tab"
             <input type="range" min="16" max="32" step="1" value={a.yaziBoyutu}
               onChange={(e) => guncelle({ yaziBoyutu: parseInt(e.target.value, 10) })}
               style={{ width: '100%', accentColor: 'var(--renk-vurgu, #5465ff)' }} aria-label="Yazı boyutu" />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78em', color: '#999' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78em', color: 'var(--muted)' }}>
               <span>16px</span><span>32px</span>
             </div>
           </div>
@@ -361,7 +333,7 @@ className="btn"           role="tab"
             ].map(({ baslik, deger, toplam }) => (
               <div key={baslik} style={{ flex: 1, minWidth: 90, background: 'var(--renk-kart-bg, #f8f9ff)', borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
                 <div style={{ fontSize: '1.5em', fontWeight: 800, color: 'var(--renk-vurgu, #5465ff)' }}>{deger}</div>
-                <div style={{ fontSize: '0.75em', color: '#888', marginTop: 2 }}>{baslik}</div>
+                <div style={{ fontSize: '0.75em', color: 'var(--muted)', marginTop: 2 }}>{baslik}</div>
                 <div role="progressbar" aria-valuenow={deger} aria-valuemin={0} aria-valuemax={toplam} aria-label={`${baslik}: ${deger} / ${toplam}`} style={{ marginTop: 6, height: 4, borderRadius: 2, background: '#e0e0e0', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${Math.min(100, deger / toplam * 100)}%`, background: 'var(--renk-vurgu, #5465ff)', borderRadius: 2 }} />
                 </div>
@@ -375,52 +347,6 @@ className="btn"           role="tab"
             </svg>
             İlerlemeyi Sıfırla
           </button>
-        </div>
-
-        {/* ── Kart: Arduino ── */}
-        <div style={kartStil}>
-          <div style={kartBaslikStil}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="15" y1="11" x2="15" y2="13"/>
-            </svg>
-            Arduino (Fiziksel Hücre)
-          </div>
-          <p style={{ margin: '0 0 10px', fontSize: '0.9em', color: '#666', lineHeight: 1.5 }}>
-            Cihaz bağlıyken ekrandaki braille deseni Arduino üzerindeki 6 noktayı da kaldırır.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{
-              display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
-              background: arduino.bagli ? '#38a169' : '#cbd5e0', flexShrink: 0
-            }} />
-            <span role="status" aria-live="polite" style={{ fontWeight: 600, fontSize: '0.9em' }}>
-              {arduino.bagli ? `Bağlı — ${arduino.tasiyici === 'serial' ? 'USB' : 'Bluetooth'}` : 'Bağlı değil'}
-            </span>
-          </div>
-          {arduinoHata && <div role="alert" style={{ color: '#c0392b', fontSize: '0.88em', marginBottom: 10 }}>{arduinoHata}</div>}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {!arduino.bagli && webSerialDestekleniyorMu() && (
-              <button className="btn" type="button" onClick={arduinoSeriBaglan} style={ikincilButonStil}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                USB ile Bağlan
-              </button>
-            )}
-            {!arduino.bagli && webBluetoothDestekleniyorMu() && (
-              <button className="btn" type="button" onClick={arduinoBleBaglan} style={ikincilButonStil}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/></svg>
-                Bluetooth ile Bağlan
-              </button>
-            )}
-            {arduino.bagli && (
-              <>
-                <button className="btn" type="button" onClick={arduinoTest} style={ikincilButonStil}>Test Et (1–6)</button>
-                <button className="btn" type="button" onClick={arduinoBaglantiyiKes} style={{ ...ikincilButonStil, color: '#e53e3e', borderColor: '#e53e3e' }}>Bağlantıyı Kes</button>
-              </>
-            )}
-            {!arduino.bagli && !webSerialDestekleniyorMu() && !webBluetoothDestekleniyorMu() && (
-              <div style={{ fontSize: '0.85em', color: '#888' }}>Bu tarayıcı/cihaz desteklemiyor. Chrome/Edge kullanın.</div>
-            )}
-          </div>
         </div>
 
         {/* ── Kart: Tanıtım Turu ── */}

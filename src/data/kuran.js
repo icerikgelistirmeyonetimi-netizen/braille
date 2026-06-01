@@ -9,7 +9,7 @@
 // =============================================================================
 
 // ----------------------------------------------------------------------------
-// 28 Arap harfi + sık kullanılan ek harfler (hemze, te marbuta, elif maksure)
+// 28 Arap harfi + lam-elif ve sık kullanılan ek harfler (hemze, te marbuta, elif maksure)
 // ----------------------------------------------------------------------------
 export const KURAN_HARFLERI = [
   { harf: 'ا', ad: 'elif',         okunus: 'a',    noktalar: [1] },
@@ -26,7 +26,7 @@ export const KURAN_HARFLERI = [
   { harf: 'س', ad: 'sin',          okunus: 'sin',  noktalar: [2, 3, 4] },
   { harf: 'ش', ad: 'şın',          okunus: 'şın',  noktalar: [1, 4, 6] },
   { harf: 'ص', ad: 'sad',          okunus: 'sad',  noktalar: [1, 2, 3, 4, 6] },
-  { harf: 'ض', ad: 'dad',          okunus: 'dad',  noktalar: [1, 2, 4, 5] },
+  { harf: 'ض', ad: 'dad',          okunus: 'dad',  noktalar: [1, 2, 4, 6] },
   { harf: 'ط', ad: 'tı',           okunus: 'tı',   noktalar: [2, 3, 4, 5, 6] },
   { harf: 'ظ', ad: 'zı',           okunus: 'zı',   noktalar: [1, 2, 3, 4, 5, 6] },
   { harf: 'ع', ad: 'ayn',          okunus: 'ayn',  noktalar: [1, 2, 3, 5, 6] },
@@ -37,14 +37,21 @@ export const KURAN_HARFLERI = [
   { harf: 'ل', ad: 'lam',          okunus: 'lam',  noktalar: [1, 2, 3] },
   { harf: 'م', ad: 'mim',          okunus: 'mim',  noktalar: [1, 3, 4] },
   { harf: 'ن', ad: 'nun',          okunus: 'nun',  noktalar: [1, 3, 4, 5] },
-  { harf: 'ه', ad: 'he',           okunus: 'he',   noktalar: [1, 2, 5] },
   { harf: 'و', ad: 'vav',          okunus: 'vav',  noktalar: [2, 4, 5, 6] },
+  { harf: 'ه', ad: 'he',           okunus: 'he',   noktalar: [1, 2, 5] },
+  { harf: 'لا', ad: 'lam-elif',    okunus: 'lam-elif', noktalar: [1, 2, 3, 6], sesId: '' },
   { harf: 'ي', ad: 'ye',           okunus: 'ye',   noktalar: [2, 4] },
   // Ek/özel harfler
   { harf: 'ء', ad: 'hemze',        okunus: 'hemze',     noktalar: [3] },
   { harf: 'ة', ad: 'te marbuta',   okunus: 'te marbuta', noktalar: [1, 6] },
-  { harf: 'ى', ad: 'elif maksure', okunus: 'elif maksure', noktalar: [3, 4, 6] }
+  { harf: 'ى', ad: 'elif maksure', okunus: 'elif maksure', noktalar: [1, 3, 5] }
 ];
+
+const KURAN_HARF_EGITIMI_DISINDAKI_EK_HARFLER = new Set(['hemze', 'te marbuta', 'elif maksure']);
+
+export const KURAN_TEMEL_HARFLERI = KURAN_HARFLERI.filter(
+  (harf) => !KURAN_HARF_EGITIMI_DISINDAKI_EK_HARFLER.has(harf.ad)
+);
 
 // ----------------------------------------------------------------------------
 // Harekeler — Kur'an braillesi'nde harekeler ilgili harften SONRA ayrı bir
@@ -245,7 +252,7 @@ const KELIME_TOKEN = {
   'س': [2, 3, 4],
   'ش': [1, 4, 6],
   'ص': [1, 2, 3, 4, 6],
-  'ض': [1, 2, 4, 5],
+  'ض': [1, 2, 4, 6],
   'ط': [2, 3, 4, 5, 6],
   'ظ': [1, 2, 3, 4, 5, 6],
   'ع': [1, 2, 3, 5, 6],
@@ -256,12 +263,14 @@ const KELIME_TOKEN = {
   'ل': [1, 2, 3],
   'م': [1, 3, 4],
   'ن': [1, 3, 4, 5],
-  'ه': [1, 2, 5],
   'و': [2, 4, 5, 6],
+  'ه': [1, 2, 5],
+  'لا': [1, 2, 3, 6],
+  'ﻻ': [1, 2, 3, 6],
   'ي': [2, 4],
   'ء': [3],
   'ة': [1, 6],
-  'ى': [3, 4, 6],
+  'ى': [1, 3, 5],
   // Harekeler ve özel işaretler
   a: [3, 5],
   i: [2, 6],

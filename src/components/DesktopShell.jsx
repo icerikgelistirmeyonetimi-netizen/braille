@@ -124,6 +124,15 @@ export default function DesktopShell({ children }) {
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            className="btn ayarlar-btn hayalet"
+            onClick={() => navigate('/ayarlar')}
+            aria-label="Ayarlar — ilk ayarlarınızı yapın"
+            title="Ayarlar"
+          >
+            <span aria-hidden="true" className="ayarlar-ikon">{Ikon.ayarlar}</span>
+          </button>
           <KarisikYazmaButonu />
           <FullscreenButonu />
           <GorunumGecisi />
@@ -188,6 +197,16 @@ export default function DesktopShell({ children }) {
       {/* ── Sayfa içeriği ── */}
       <div className="ds-content">
         {children}
+        {/* Hayalet: her sayfanın en altında "önceki sayfaya dön" — görünmez ama erişilebilir */}
+        <button
+          type="button"
+          className="hayalet-btn"
+          onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/'); }}
+          aria-label="Önceki sayfaya dön"
+          title="Önceki sayfaya dön"
+        >
+          Önceki sayfaya dön
+        </button>
       </div>
 
     </div>

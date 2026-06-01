@@ -178,6 +178,9 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 export function konus(metin, opt = {}) {
   const a = ayarlariAl();
   if (!a.sesAcik) {
+    // Ses kapalıyken bile uygulamanın seslendireceği her cümleyi (yönerge,
+    // açıklama, dönüt...) ekran okuyucunun okuyabilmesi için canlı bölgeye yaz.
+    if (metin) ekranOkuyucuBildir(metin);
     // Ses kapalıysa bile akış kırılmasın diye onSon yine tetiklensin
     if (opt && typeof opt.onSon === 'function') {
       setTimeout(() => { try { opt.onSon(); } catch (_) {} }, 0);
@@ -343,10 +346,141 @@ export function titret(desen = 80) {
   }
 }
 
+// ---------- Ses efektleri (Web Audio ile sentezlenir) ----------
+// Telifsiz: hiçbir dosya indirilmez, sesler tarayıcıda üretilir.
+let _audioCtx = null;
+
+function sesContextAl() {
+  if (typeof window === 'undefined') return null;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!_audioCtx) {
+    try { _audioCtx = new AC(); } catch (_) { return null; }
+  }
+  // Kullanıcı etkileşiminden sonra askıdaysa devam ettir
+  if (_audioCtx.state === 'suspended') {
+    try { _audioCtx.resume(); } catch (_) { /* yok say */ }
+  }
+  return _audioCtx;
+}
+
+/**
+ * Tek bir ton çalar.
+ * @param {{frekans:number, sure:number, tip?:OscillatorType, baslangic?:number, kazanc?:number}} opt
+ */
+function tonCal({ frekans, sure, tip = 'sine', baslangic = 0, kazanc = 0.18 }) {
+  const ctx = sesContextAl();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + baslangic;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = tip;
+  osc.frequency.setValueAtTime(frekans, t0);
+  // Yumuşak zarf (tık/çıt sesi olmaması için)
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(kazanc, t0 + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + sure);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + sure + 0.02);
+}
+
+function sesEfektiAcikMi() {
+  const a = ayarlariAl();
+  // Geriye dönük uyum: ayar tanımlı değilse açık kabul et
+  return a.sesEfektiAcik !== false && a.sesAcik !== false;
+}
+
+// Dosya tabanlı efektler. public/audio/efekt/ içine konan dosyalar
+// (tiklama / dogru / yanlis) otomatik kullanılır; yoksa sentez devreye girer.
+// Kullanıcı kendi lisanslı seslerini aynı isimle koyduğunda hiçbir kod
+// değişikliği gerekmeden onlar çalınır.
+const _EFEKT_TABAN =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) || '/';
+const _efektYok = Object.create(null); // dosya bulunamayanları işaretle
+
+/**
+ * Önce dosyayı çalmayı dener; dosya yoksa/oynatılamazsa sentez fonksiyonuna düşer.
+ * @param {string} ad  Dosya adı (uzantısız), ör. 'tiklama'
+ * @param {() => void} sentezle  Yedek sentez fonksiyonu
+ */
+function efektCal(ad, sentezle) {
+  if (typeof Audio === 'undefined' || _efektYok[ad]) { sentezle(); return; }
+  try {
+    const a = new Audio(`${_EFEKT_TABAN}audio/efekt/${ad}.wav`);
+    a.volume = 0.7;
+    const p = a.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => { _efektYok[ad] = true; sentezle(); });
+    }
+  } catch (_) {
+    _efektYok[ad] = true;
+    sentezle();
+  }
+}
+
+/** Tuşa/öğeye dokunma sesi — kısa, nötr tık. */
+export function tiklamaSesi() {
+  if (!sesEfektiAcikMi()) return;
+  efektCal('tiklama', () => {
+    tonCal({ frekans: 440, sure: 0.06, tip: 'triangle', kazanc: 0.12 });
+  });
+}
+
+/** Doğru cevap sesi — yükselen iki nota (olumlu). */
+export function dogruSesi() {
+  if (!sesEfektiAcikMi()) return;
+  efektCal('dogru', () => {
+    tonCal({ frekans: 660, sure: 0.12, tip: 'sine', baslangic: 0, kazanc: 0.16 });
+    tonCal({ frekans: 880, sure: 0.16, tip: 'sine', baslangic: 0.11, kazanc: 0.16 });
+  });
+}
+
+/** Yanlış cevap sesi — alçalan iki nota (olumsuz ama yumuşak). */
+export function yanlisSesi() {
+  if (!sesEfektiAcikMi()) return;
+  efektCal('yanlis', () => {
+    tonCal({ frekans: 320, sure: 0.14, tip: 'sawtooth', baslangic: 0, kazanc: 0.1 });
+    tonCal({ frekans: 200, sure: 0.2, tip: 'sawtooth', baslangic: 0.12, kazanc: 0.1 });
+  });
+}
+
+// --- Ekran okuyucu canlı bölgesi (sesAcik kapalı olsa bile dönütü duyurur) ---
+// Tek bir global aria-live bölgesi; tüm öğrenme sayfalarındaki doğru/yanlış
+// dönütleri NVDA/JAWS/VoiceOver tarafından okunsun diye buraya yazılır.
+let _srBolge = null;
+let _srSay = 0;
+function _srBolgeAl() {
+  if (typeof document === 'undefined') return null;
+  if (_srBolge && document.body.contains(_srBolge)) return _srBolge;
+  _srBolge = document.createElement('div');
+  _srBolge.setAttribute('role', 'alert');
+  _srBolge.setAttribute('aria-live', 'assertive');
+  _srBolge.setAttribute('aria-atomic', 'true');
+  // Görsel olarak gizli ama ekran okuyucuya açık
+  _srBolge.style.cssText =
+    'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;';
+  document.body.appendChild(_srBolge);
+  return _srBolge;
+}
+
+// Ekran okuyucuya bir dönüt duyurur (ses ayarından bağımsız).
+export function ekranOkuyucuBildir(metin) {
+  const bolge = _srBolgeAl();
+  if (!bolge) return;
+  // Aynı metin peş peşe gelirse ekran okuyucu tekrar okumayabilir; sona
+  // değişken sayıda görünmez boşluk ekleyerek düğümü her seferinde değiştiriyoruz.
+  _srSay += 1;
+  bolge.textContent = String(metin) + '\u00a0'.repeat(_srSay % 2);
+}
+
 export function basariBildir(metin = 'Tebrikler, doğru!') {
+  dogruSesi();
   konus(metin);
 }
 
 export function hataBildir(metin = 'Yanlış, tekrar deneyin.') {
+  yanlisSesi();
   konus(metin);
 }

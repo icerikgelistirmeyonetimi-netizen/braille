@@ -57,6 +57,13 @@
   --btn-border: 2px;
 
   --braille-noktalama-fill: #16a34a;
+
+  /* Ayarlar sayfası renk eşlemeleri (erişilebilir, temaya duyarlı) */
+  --renk-vurgu: var(--accent);
+  --renk-vurgu-acik: #e6edff;
+  --renk-kart-bg: var(--panel);
+  --renk-kenar: var(--panel-border);
+  --renk-metin: var(--fg);
 }
 
 [data-theme="lowVision"] {
@@ -88,6 +95,13 @@
   --btn-border: 3px;
 
   --braille-noktalama-fill: #ff9100;
+
+  /* Ayarlar sayfası renk eşlemeleri (yüksek kontrast tema) */
+  --renk-vurgu: var(--accent);
+  --renk-vurgu-acik: #2a2a00;
+  --renk-kart-bg: var(--panel);
+  --renk-kenar: var(--panel-border);
+  --renk-metin: var(--fg);
 }
 
 * { box-sizing: border-box; }
@@ -809,6 +823,13 @@ h1, h2, h3 { color: var(--fg); }
     min-width: 36px;
     min-height: 36px;
   }
+  .header-bar .ayarlar-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .header-bar .ayarlar-ikon { width: 18px; height: 18px; }
   .header-bar .gorunum-ikon,
   .header-bar .back-ikon { width: 18px; height: 18px; }
 }
@@ -864,6 +885,63 @@ h1, h2, h3 { color: var(--fg); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+.ayarlar-btn {
+  background: transparent;
+  color: var(--accent);
+  border-color: transparent;
+  box-shadow: none;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+/* Hayalet ayarlar butonu: görünmez ama tıklanabilir ve ekran okuyucuya açık */
+.ayarlar-btn.hayalet {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: transparent;
+  opacity: 0;
+}
+.ayarlar-btn.hayalet:focus-visible {
+  /* Klavye ile gezenler için görünür odak halkası (WCAG 2.4.7) */
+  opacity: 1;
+  color: var(--accent);
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.ayarlar-ikon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+}
+.ayarlar-ikon svg { width: 100%; height: 100%; pointer-events: none; }
+
+/* Hayalet metin butonu: görünmez ama tıklanabilir ve ekran okuyucuya açık */
+.hayalet-btn {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: 2px solid transparent;
+  box-shadow: none;
+  color: transparent;
+  opacity: 0;
+  min-height: 44px;
+}
+.hayalet-btn:focus-visible {
+  /* Klavye ile gezenler için görünür odak (WCAG 2.4.7) */
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 .sonra-kaydet-btn {
   background: transparent;
@@ -973,9 +1051,16 @@ h1, h2, h3 { color: var(--fg); }
   overflow-y: auto;
   padding: 2px 2px 12px;
 }
-.okuma-modu-kutu {
+.okuma-modu-kutu-sarmal {
   flex: 0 0 clamp(96px, 18vw, 132px);
   width: clamp(96px, 18vw, 132px);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+.okuma-modu-kutu {
+  flex: 1 1 auto;
+  width: 100%;
   aspect-ratio: 1 / 1;
   min-width: 0;
   min-height: 0;
@@ -1021,6 +1106,7 @@ h1, h2, h3 { color: var(--fg); }
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 4;
+  line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

@@ -238,39 +238,39 @@ export default function OkumaModuListesi({
           const etiket = getEtiket(oge, index);
           const altEtiket = getAltEtiket?.(oge, index);
           return (
-            <button
-              key={`${etiket}-${index}`}
-              type="button"
-              role="listitem"
-              className="btn okuma-modu-kutu"
-              onPointerEnter={() => okumaOgesiniSeslendirVeCal(oge)}
-              onFocus={() => okumaOgesiniSeslendirVeCal(oge)}
-              onPointerLeave={() => {
-                sonOkunanRef.current = null;
-                aktifIstekRef.current += 1; // bekleyen "ses bitince Braille oku" callback'ini iptal et
-                okumaOgeSesiTemizle();
-              }}
-              onBlur={() => {
-                sonOkunanRef.current = null;
-                aktifIstekRef.current += 1;
-                okumaOgeSesiTemizle();
-              }}
-              onClick={() => onSec(index)}
-              aria-label={`${etiket}. Braille noktaları: ${hucreNoktaMetni(hucreler)}. Öğrenme modunda aç.`}
-            >
-              <span className="okuma-modu-etiket" dir={rtl ? 'rtl' : undefined} lang={rtl ? 'ar' : undefined}>{etiket}</span>
-              {altEtiket && altEtiket !== etiket && <span className="okuma-modu-alt">{altEtiket}</span>}
-              <span className="okuma-modu-mini-hucreler" aria-hidden="true">
-                {hucreler.slice(0, 4).map((hucre, hucreIndex) => (
-                  <span key={hucreIndex} className="okuma-modu-mini-hucre">
-                    {HUCRE_SIRASI.map((nokta) => (
-                      <span key={nokta} className={`okuma-modu-mini-nokta ${hucre.includes(nokta) ? 'on' : ''}`} />
-                    ))}
-                  </span>
-                ))}
-                {hucreler.length > 4 && <span className="okuma-modu-mini-arti">+{hucreler.length - 4}</span>}
-              </span>
-            </button>
+            <div key={`${etiket}-${index}`} role="listitem" className="okuma-modu-kutu-sarmal">
+              <button
+                type="button"
+                className="btn okuma-modu-kutu"
+                onPointerEnter={() => okumaOgesiniSeslendirVeCal(oge)}
+                onFocus={() => okumaOgesiniSeslendirVeCal(oge)}
+                onPointerLeave={() => {
+                  sonOkunanRef.current = null;
+                  aktifIstekRef.current += 1; // bekleyen "ses bitince Braille oku" callback'ini iptal et
+                  okumaOgeSesiTemizle();
+                }}
+                onBlur={() => {
+                  sonOkunanRef.current = null;
+                  aktifIstekRef.current += 1;
+                  okumaOgeSesiTemizle();
+                }}
+                onClick={() => onSec(index)}
+                aria-label={`${etiket}. Braille noktaları: ${hucreNoktaMetni(hucreler)}. Öğrenme modunda aç.`}
+              >
+                <span className="okuma-modu-etiket" dir={rtl ? 'rtl' : undefined} lang={rtl ? 'ar' : undefined}>{etiket}</span>
+                {altEtiket && altEtiket !== etiket && <span className="okuma-modu-alt">{altEtiket}</span>}
+                <span className="okuma-modu-mini-hucreler" aria-hidden="true">
+                  {hucreler.slice(0, 4).map((hucre, hucreIndex) => (
+                    <span key={hucreIndex} className="okuma-modu-mini-hucre">
+                      {HUCRE_SIRASI.map((nokta) => (
+                        <span key={nokta} className={`okuma-modu-mini-nokta ${hucre.includes(nokta) ? 'on' : ''}`} />
+                      ))}
+                    </span>
+                  ))}
+                  {hucreler.length > 4 && <span className="okuma-modu-mini-arti">+{hucreler.length - 4}</span>}
+                </span>
+              </button>
+            </div>
           );
         })}
       </div>

@@ -29,6 +29,7 @@ const KURAN_HARF_SES_ID = {
   nun: 'nun',
   he: 'he',
   vav: 'vav',
+  'lam-elif': '',
   ye: 'ye',
   hemze: 'hemze',
   'te marbuta': 'te-marbuta',
@@ -63,6 +64,8 @@ const KURAN_HARF_KARAKTER_AD = {
   'ن': 'nun',
   'ه': 'he',
   'و': 'vav',
+  'لا': '',
+  'ﻻ': '',
   'ي': 'ye',
   'ء': 'hemze',
   'ة': 'te-marbuta',
@@ -91,11 +94,15 @@ export function kuranSesSlug(value = '') {
 
 export function kuranHarfSesIdAl(ad = '') {
   const temizAd = String(ad).toLocaleLowerCase('tr').trim();
-  return KURAN_HARF_SES_ID[temizAd] || kuranSesSlug(temizAd);
+  return Object.prototype.hasOwnProperty.call(KURAN_HARF_SES_ID, temizAd)
+    ? KURAN_HARF_SES_ID[temizAd]
+    : kuranSesSlug(temizAd);
 }
 
 export function kuranHarfKarakterindenSesIdAl(harf = '') {
-  return KURAN_HARF_KARAKTER_AD[harf] || kuranSesSlug(harf);
+  return Object.prototype.hasOwnProperty.call(KURAN_HARF_KARAKTER_AD, harf)
+    ? KURAN_HARF_KARAKTER_AD[harf]
+    : kuranSesSlug(harf);
 }
 
 const _base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');

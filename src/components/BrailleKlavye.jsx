@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { titret } from '../utils/ses.js';
+import { titret, tiklamaSesi } from '../utils/ses.js';
 import {
   hucreyiKarakteryap,
   hucreyiRakamayap,
@@ -68,6 +68,9 @@ export default function BrailleKlavye({
   perkinsModu = false,
   aksiyonOncesiTiklamayiCommitEt = false,
   anindaDokunma = false,
+  kilitli = false,
+  tikliyiKoru = false,
+  sifirlaAnahtari = null,
 }) {
   // O an basılı tutulan noktalar (henüz commit edilmemiş)
   const [basili, setBasili] = useState(new Set());
@@ -92,7 +95,18 @@ export default function BrailleKlavye({
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  // Yeni soru/hücreye geçince (sifirlaAnahtari değişir) tıklı görseli temizle
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    tiklilarRef.current = new Set();
+    setTiklilar(new Set());
+    setSonHucre([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sifirlaAnahtari]);
+
   const tiklaToggle = (n) => {
+    // Kilitliyken (doğru cevap sonrası yönerge okunana kadar) tıklama yok sayılır
+    if (kilitli) return;
     // Sıralı modda aynı noktaya tekrar tıklama yok sayılır
     if (tiklilarRef.current.has(n)) return;
 
@@ -104,18 +118,27 @@ export default function BrailleKlavye({
     yeni.add(n);
     tiklilarRef.current = yeni;
     setTiklilar(new Set(yeni));
+    tiklamaSesi();
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     // Beklenen sayıya ulaşıldıysa anında commit et
     if (beklenenSayi > 0 && yeni.size >= beklenenSayi) {
-      tiklilarRef.current = new Set();
-      setTiklilar(new Set());
+      // tikliyiKoru: tıklı görsel ekranda kalsın; yeni soru/hücrede
+      // (sifirlaAnahtari değişince) temizlenir.
+      if (!tikliyiKoru) {
+        tiklilarRef.current = new Set();
+        setTiklilar(new Set());
+      }
       commitHucre(yeni);
       return;
     }
 
-    // Fallback: 3 saniye sonra otomatik commit
+    // Beklenen nokta sayısı bilindiğinde süreli otomatik gönderme yapma;
+    // kullanıcı acele etmeden tüm noktaları seçene kadar bekle.
+    if (beklenenSayi > 0) return;
+
+    // Serbest modda (beklenen sayı yok) fallback: bir süre sonra otomatik commit
     debounceRef.current = setTimeout(() => {
       const current = tiklilarRef.current;
       if (current.size > 0) {
@@ -194,6 +217,7 @@ export default function BrailleKlavye({
 
   const anlikNoktaBasildi = (event, nokta) => {
     if (!anindaDokunma) return;
+    if (kilitli) return;
     event.preventDefault();
     try {
       if (event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId);
@@ -211,6 +235,7 @@ export default function BrailleKlavye({
       return yeni;
     });
     titret(15);
+    tiklamaSesi();
   };
 
   const anlikNoktaBirakildi = (event) => {
@@ -265,10 +290,12 @@ export default function BrailleKlavye({
       }
       if (e.code in TUS_NOKTA) {
         e.preventDefault();
+        if (kilitli) return;
         const n = TUS_NOKTA[e.code];
         aktifNoktalar.add(n);
         aktifTuslar.current.add(e.code);
         basiliyiAyarla(aktifNoktalar);
+        tiklamaSesi();
         return;
       }
       if (e.code === 'Space') {
@@ -317,7 +344,7 @@ export default function BrailleKlavye({
       window.removeEventListener('keyup', keyup);
       window.removeEventListener('blur', blur);
     };
-  }, [klavyeAcik, commitHucre, basiliyiAyarla, boslukBasildi, silBasildi, enterBasildi]);
+  }, [klavyeAcik, commitHucre, basiliyiAyarla, boslukBasildi, silBasildi, enterBasildi, kilitli]);
 
   // ---------- Dokunma olayları ----------
   const noktayaDokunBaslat = (n, parmakId) => {
@@ -330,6 +357,7 @@ export default function BrailleKlavye({
   };
 
   const onTouchStart = (e) => {
+    if (kilitli) return;
     e.preventDefault();
     for (const t of e.changedTouches) {
       aktifParmaklar.current.add(t.identifier);

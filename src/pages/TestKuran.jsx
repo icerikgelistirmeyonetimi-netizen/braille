@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import {
-  KURAN_HARFLERI,
+  KURAN_TEMEL_HARFLERI,
   KURAN_HAREKELERI,
   KURAN_TECVID,
   KURAN_HECELERI
@@ -18,9 +18,9 @@ const sadeceHucreliTecvid = KURAN_TECVID.filter(
 
 const KAYNAKLAR = {
   harfler: {
-    etiket: 'Arap Harfleri',
-    kategori: 'Arap harfi',
-    veri: KURAN_HARFLERI.map((h) => ({
+    etiket: "Kur'an-ı Kerim Harfleri",
+    kategori: "Kur'an harfi",
+    veri: KURAN_TEMEL_HARFLERI.map((h) => ({
       ad: h.harf,
       ariaAd: `${h.ad} harfi`,
       ipucu: `${h.ad} (okunuşu: ${h.okunus})`,

@@ -158,6 +158,15 @@ export default function AnaMenu() {
           </h1>
         </div>
         <div className="header-aksiyon">
+          <button
+            type="button"
+            className="btn ayarlar-btn hayalet"
+            onClick={() => navigate('/ayarlar')}
+            aria-label="Ayarlar — ilk ayarlarınızı yapın"
+            title="Ayarlar"
+          >
+            <span aria-hidden="true" className="ayarlar-ikon">{Ikon.ayarlar}</span>
+          </button>
           <FullscreenButonu />
           <GorunumGecisi />
         </div>

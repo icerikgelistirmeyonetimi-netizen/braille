@@ -109,6 +109,19 @@ export default function MuzikScoreBrailleOverlay({
     const bagAktif = bagId && (
       bagId === hoverBrailleBagId || bagId === seciliBagId
     );
+    // Dinamik birden çok hücredir (ör. "f" = söz işareti + f). Etiket SADECE
+    // grubun ilk hücresinde gösterilsin; sonraki hücrelerde tekrarlanmasın.
+    let dinamikEtiketGizle = false;
+    if (kategori === 'dynamic') {
+      const cells = olcuCellsAl(olcu);
+      const onceki = cells[i - 1];
+      // Önceki hücre de dinamikse, bu hücre aynı dinamik grubunun devamıdır
+      // → etiketi tekrarlama (yalnızca ilk hücrede göster).
+      if (onceki && brailleKategoriAl(onceki.anlam) === 'dynamic') {
+        dinamikEtiketGizle = true;
+      }
+    }
+
     const cellTipi = kategori === 'accidental' ? 'accidental'
       : (anlam?.kaynak === 'dot') ? 'dot'
       : kategori === 'dynamic' ? 'dinamik'
@@ -252,6 +265,7 @@ export default function MuzikScoreBrailleOverlay({
           yerlesim={null}
           hoverAktif={Boolean(aktif)}
           seciliAktif={Boolean(selectedByBag || selectedByOge)}
+          etiketGizle={dinamikEtiketGizle}
           index={i}
         />
       </span>
