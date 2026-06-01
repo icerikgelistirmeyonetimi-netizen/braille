@@ -3066,8 +3066,41 @@ h1, h2, h3 { color: var(--fg); }
 /* nokta buton: sabit konumlu (scroll ile kaymasın), alan sağüstde */
 .araclar-seslendir-nokta { position: absolute; top: 6px; right: 6px; }
 
-/* Matematik paleti butonu — ses butonunun solunda */
-.araclar-matematik-sarici { position: absolute; top: 6px; right: 82px; z-index: 4; }
+/* Dönüştürme dili seçici — metin kutusunun üstünde (Türkçe / İngilizce / Almanca / Fransızca) */
+.araclar-dil-secici {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.araclar-dil-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 7px;
+  background: var(--surface, #fff);
+  color: var(--text, #1f2937);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+.araclar-dil-bayrak { font-size: 15px; line-height: 1; }
+.araclar-dil-btn:hover:not(:disabled) { opacity: 1; background: var(--accent-light, #e8f0fe); color: var(--accent, #2563eb); }
+.araclar-dil-btn.aktif {
+  background: var(--accent, #2563eb);
+  color: var(--accent-fg, #fff);
+  border-color: var(--accent, #2563eb);
+  opacity: 1;
+  font-weight: 600;
+}
+.araclar-dil-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Matematik paleti butonu — ses butonunun hemen solunda */
+.araclar-matematik-sarici { position: absolute; top: 6px; right: 44px; z-index: 4; }
 .araclar-matematik-sarici .araclar-matematik-btn { position: static; }
 .araclar-muzik-sarici { position: absolute; top: 6px; right: 44px; z-index: 5; }
 .araclar-muzik-sarici .araclar-muzik-btn { position: static; }

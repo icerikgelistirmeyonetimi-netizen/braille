@@ -112,7 +112,7 @@ import {
   muzikSkorunuBrailleyeCevir as M_muzikSkorunuBrailleyeCevir,
   muzikHucreAnlamiKayittan as M_muzikHucreAnlamiKayittan,
 } from '../utils/music/index.js';
-import { metniLatinBrailleyeCevir, LATIN_DILLER } from '../utils/latinBrailleCevir.js';
+import { LATIN_DILLER } from '../utils/latinBrailleCevir.js';
 
 // ─── BRF kodlama / çözme ───────────────────────────────────────────────────
 // BRF (Braille Ready Format) standardı:
@@ -172,6 +172,7 @@ const CIFT_RAKAM_ISARETI_DETAY =
 function kisaEtiket(anlam) {
   if (!anlam || anlam.tip === 'bosluk') return '';
   if (anlam.tip === 'isaret') {
+    if (anlam.etiket) return anlam.etiket;
     if (anlam.baslik.includes('Tümü Büyük')) return '⇧⇧';
     if (anlam.baslik.includes('Büyük Harf')) return '⇧';
     if (anlam.baslik.includes('Çift Rakam İşareti')) return '#';
@@ -207,6 +208,81 @@ function kisaEtiket(anlam) {
     if (sm) return sm[1];
   }
   return anlam.baslik;
+}
+
+/**
+ * Gösterge (önek) hücresinin ROL KODUNA göre Türkçe anlam üretir.
+ * Rol, worker'da liblouis tablo opcode'ları (capsletter/begcapsword/numsign/
+ * letsign/nocontractsign) ve bağlam (sonraki karakterin rakam/harf oluşu) ile
+ * belirlenir; böylece aynı nokta deseni farklı dillerde doğru adlandırılır.
+ * Rol kodları: 'sayi' | 'buyuk' | 'buyukKelime' | 'harf' | 'ozel'.
+ */
+function liblouisIsaretAnlami(noktalar, rol) {
+  const noktaStr = (noktalar && noktalar.length) ? noktalar.join(' · ') : '—';
+  switch (rol) {
+    case 'sayi':
+      return { tip: 'isaret', baslik: 'Sayı işareti', etiket: '#', noktaStr, detay: 'Sonraki hücre(ler) rakamdır.' };
+    case 'buyuk':
+      return { tip: 'isaret', baslik: 'Büyük harf işareti', etiket: '⇧', noktaStr, detay: 'Sonraki harf büyük yazılır.' };
+    case 'buyukKelime':
+      return { tip: 'isaret', baslik: 'Büyük harf (kelime) işareti', etiket: '⇧⇧', noktaStr, detay: 'Sonraki kelime tümüyle büyük yazılır.' };
+    case 'harf':
+      return { tip: 'isaret', baslik: 'Harf işareti', etiket: '·', noktaStr, detay: 'Sonraki hücre tek başına bir harftir (kısaltma/sayı değil).' };
+    default:
+      return { tip: 'isaret', baslik: 'Özel işaret', etiket: '•', noktaStr, detay: 'Özel braille göstergesi.' };
+  }
+}
+
+// Gösterge (indikator) rol kodları kümesi: turler[i] bunlardan biriyse hücre göstergedir.
+const LIBLOUIS_ISARET_ROLLERI = new Set(['sayi', 'buyuk', 'buyukKelime', 'harf', 'ozel']);
+
+/**
+ * liblouis (Türkçe dışı diller) için tek hücre anlam nesnesi üretir.
+ * - etiket: bu hücrenin temsil ettiği kaynak harf/parça (tam; tıklama detayı için).
+ * - grupBasi: aynı kaynak parçasını paylaşan hücrelerden ilki mi? (alt-etiket yalnız ilkte).
+ * - tur: gösterge rol kodu ('sayi'/'buyuk'/...) ise büyük harf/sayı işareti gibi bir göstergedir.
+ * Türkçe yorum/kısaltma motoru bu hücreler için geçersiz olduğundan ayrı tutulur.
+ */
+function liblouisHucreAnlami(noktalar, etiket, grupBasi, tur, dil) {
+  if (!noktalar || noktalar.length === 0) {
+    return { tip: 'bosluk', baslik: 'Boşluk', etiket: '', noktaStr: '—', detay: '' };
+  }
+  if (tur && LIBLOUIS_ISARET_ROLLERI.has(tur)) {
+    return liblouisIsaretAnlami(noktalar, tur);
+  }
+  const noktaStr = noktalar.join(' · ');
+  const tamEtiket = (etiket || '').trim();
+  // Alt-etiket: yalnızca grup başındaki hücrede gösterilir.
+  const altEtiket = grupBasi === false ? '' : tamEtiket;
+  if (!tamEtiket) {
+    return { tip: 'harf', baslik: 'Harf', etiket: altEtiket, noktaStr, detay: '' };
+  }
+  const cokKarakterli = tamEtiket.replace(/\s+/g, '').length > 1;
+  if (cokKarakterli) {
+    return {
+      tip: 'kisaltma',
+      baslik: `Kısaltma: “${tamEtiket}”`,
+      etiket: altEtiket,
+      noktaStr,
+      detay: `“${tamEtiket}” için kısaltma (Grade 2).`,
+    };
+  }
+  if (/^[0-9]$/.test(tamEtiket)) {
+    return {
+      tip: 'rakam',
+      baslik: `Rakam: ${tamEtiket}`,
+      etiket: altEtiket,
+      noktaStr,
+      detay: '',
+    };
+  }
+  return {
+    tip: 'harf',
+    baslik: `Harf: ${tamEtiket}`,
+    etiket: altEtiket,
+    noktaStr,
+    detay: '',
+  };
 }
 
 const HUCRE_AYAR_SISTEMLERI = [
@@ -4332,6 +4408,9 @@ export default function Araclar() {
   const cevirWorkerRef = useRef(null);
   const cevirIstekRef = useRef(0);
   const cevirDebounceRef = useRef(null);
+  // liblouis (İngilizce/Almanca/Fransızca Grade 2) worker'ı — tüm varlıklar yerel.
+  const louisWorkerRef = useRef(null);
+  const louisKaynakRef = useRef('');
 
   useEffect(() => {
     const w = new Worker(new URL('../workers/araclarCevir.worker.js', import.meta.url), { type: 'module' });
@@ -4350,25 +4429,59 @@ export default function Araclar() {
     };
   }, []);
 
+  // liblouis worker'ı: public/liblouis/louis-worker.js (klasik worker, yerel tablolar).
+  useEffect(() => {
+    let w;
+    try {
+      w = new Worker('/liblouis/louis-worker.js');
+    } catch (err) {
+      console.error('liblouis worker başlatılamadı:', err);
+      return undefined;
+    }
+    louisWorkerRef.current = w;
+    w.onmessage = (ev) => {
+      const d = ev.data;
+      if (!d || d.type !== 'sonuc' || typeof d.requestId !== 'number') return;
+      if (d.requestId !== cevirIstekRef.current) return;
+      if (d.ok) {
+        setCevirSonuc({ hucreler: d.hucreler, esleme: d.esleme, etiketler: d.etiketler || null, grupBasi: d.grupBasi || null, turler: d.turler || null, kaynak: louisKaynakRef.current });
+      } else {
+        console.error('liblouis çeviri hatası:', d.hata);
+      }
+    };
+    return () => {
+      w.terminate();
+      louisWorkerRef.current = null;
+    };
+  }, []);
+
   useEffect(() => {
     if (cevirDebounceRef.current != null) {
       clearTimeout(cevirDebounceRef.current);
       cevirDebounceRef.current = null;
     }
-    // Türkçe dışı diller: ayrı Latin motoru (Türkçe pipeline'a hiç dokunulmaz).
+    // Türkçe dışı diller: liblouis Grade 2 worker'ı (yerel tablolar; Türkçe pipeline'a dokunulmaz).
     if (dil !== 'tr') {
       cevirIstekRef.current += 1;
+      const requestId = cevirIstekRef.current;
       if (!girisMetni) {
         setCevirSonuc({ hucreler: [], esleme: [], kaynak: '' });
-        return;
+        return undefined;
       }
-      try {
-        const r = metniLatinBrailleyeCevir(girisMetni, { dil, kisaltma: kisaltmaAktif });
-        setCevirSonuc({ hucreler: r.hucreler, esleme: r.esleme, kaynak: girisMetni });
-      } catch (err) {
-        console.error('Latin braille çeviri hatası:', err);
-      }
-      return;
+      const w = louisWorkerRef.current;
+      if (!w) return undefined;
+      cevirDebounceRef.current = setTimeout(() => {
+        cevirDebounceRef.current = null;
+        if (louisWorkerRef.current !== w) return;
+        louisKaynakRef.current = girisMetni;
+        w.postMessage({ type: 'cevir', requestId, text: girisMetni, dil, kisaltma: kisaltmaAktif });
+      }, ARACLAR_CEVIR_WORKER_DEBOUNCE_MS);
+      return () => {
+        if (cevirDebounceRef.current != null) {
+          clearTimeout(cevirDebounceRef.current);
+          cevirDebounceRef.current = null;
+        }
+      };
     }
     if (muzikModuAktif) {
       cevirIstekRef.current += 1;
@@ -4494,6 +4607,16 @@ export default function Araclar() {
     if (seciliHucre.index < 0 || seciliHucre.index >= hucrelerCache.length) return null;
     const seciliSayfa = Math.floor(seciliHucre.index / brailleSayfaBoyutu);
     const seciliSayfaBaslangic = seciliSayfa * brailleSayfaBoyutu;
+    // Diğer diller (Türkçe dışı): liblouis etiketinden anlam üret; Türkçe motoru kullanma.
+    if (!muzikModuAktif && dil !== 'tr') {
+      const ham = cevirSonuc.etiketler ? cevirSonuc.etiketler[seciliHucre.index] : '';
+      const gb = cevirSonuc.grupBasi ? cevirSonuc.grupBasi[seciliHucre.index] : true;
+      const tur = cevirSonuc.turler ? cevirSonuc.turler[seciliHucre.index] : '';
+      return {
+        index: seciliHucre.index,
+        anlam: liblouisHucreAnlami(hucrelerCache[seciliHucre.index], ham, gb, tur, dil),
+      };
+    }
     return {
       index: seciliHucre.index,
       anlam: muzikModuAktif
@@ -4504,7 +4627,7 @@ export default function Araclar() {
           baslangicDurumu: sayfaBaslangicDurumlari[seciliSayfa],
         }),
     };
-  }, [seciliHucre, hucrelerCache, muzikOgeleri, muzikModuAktif, hucreYorumlariAktif, brailleSayfaBoyutu, hucreAnlamiOrtakOpts, sayfaBaslangicDurumlari]);
+  }, [seciliHucre, hucrelerCache, muzikOgeleri, muzikModuAktif, hucreYorumlariAktif, brailleSayfaBoyutu, hucreAnlamiOrtakOpts, sayfaBaslangicDurumlari, dil, cevirSonuc.etiketler, cevirSonuc.grupBasi, cevirSonuc.turler]);
 
   const seciliHucreKelimeBaglami = useMemo(
     () => (seciliHucreDetayi
@@ -4578,6 +4701,20 @@ export default function Araclar() {
     if (muzikModuAktif) return sayfaHucreler.map((noktalar, i) => (
       muzikHucreAnlamiKayittan(muzikOgeleri, sayfaBaslangic + i, cevirSonuc.hucreMeta) || muzikHucreAnlami(noktalar)
     ));
+    // Diğer diller (Türkçe dışı): liblouis geri-çeviri etiketleri kullanılır;
+    // Türkçe kısaltma/anlam motoru bu hücreler için geçersizdir.
+    if (dil !== 'tr') {
+      const etiketler = cevirSonuc.etiketler || null;
+      const grupBasiDizi = cevirSonuc.grupBasi || null;
+      const turlerDizi = cevirSonuc.turler || null;
+      return sayfaHucreler.map((noktalar, i) => {
+        const idx = sayfaBaslangic + i;
+        const ham = etiketler ? etiketler[idx] : '';
+        const gb = grupBasiDizi ? grupBasiDizi[idx] : true;
+        const tur = turlerDizi ? turlerDizi[idx] : '';
+        return liblouisHucreAnlami(noktalar, ham, gb, tur, dil);
+      });
+    }
     return sayfaAnlamlariniTopluHesapla(
       hucrelerCache,
       sayfaBaslangic,
@@ -4599,6 +4736,11 @@ export default function Araclar() {
     hucreAnlamiOrtakOpts,
     sayfaBaslangicDurumlari,
     muzikModuAktif,
+    dil,
+    cevirSonuc.etiketler,
+    cevirSonuc.grupBasi,
+    cevirSonuc.turler,
+    sayfaHucreler,
   ]);
 
   /** Erişilebilir + tablet: Unicode satırı render içinde tekrar hesaplanmasın. */
@@ -5240,27 +5382,29 @@ export default function Araclar() {
       {/* ── Üst: başlık ── */}
       <div className="yazma-bolum yazma-bolum-ust">
         <PageHeader baslik={muzikModuAktif ? 'Müzik → BRF' : 'Metin → BRF'} />
-        <div className="araclar-dil-secici" role="group" aria-label="Dönüştürme dili">
-          {LATIN_DILLER.map((d) => (
-            <button
-              key={d.kod}
-              type="button"
-              className={`araclar-dil-btn${dil === d.kod ? ' aktif' : ''}`}
-              aria-pressed={dil === d.kod}
-              disabled={muzikModuAktif && d.kod !== 'tr'}
-              onClick={() => dilDegistir(d.kod)}
-              title={`${d.etiket} braille`}
-            >
-              {d.etiket}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* ── Orta: içerik + klavye ── */}
       <div className="yazma-bolum yazma-bolum-orta">
 
         <>
+            {!muzikModuAktif && (
+              <div className="araclar-dil-secici" role="group" aria-label="Dönüştürme dili">
+                {LATIN_DILLER.map((d) => (
+                  <button
+                    key={d.kod}
+                    type="button"
+                    className={`araclar-dil-btn${dil === d.kod ? ' aktif' : ''}`}
+                    aria-pressed={dil === d.kod}
+                    onClick={() => dilDegistir(d.kod)}
+                    title={`${d.etiket} braille`}
+                  >
+                    <span className="araclar-dil-bayrak" aria-hidden="true">{d.bayrak}</span>
+                    {d.etiket}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="araclar-alan-sarici" ref={muzikPaletRef}>
               {muzikModuAktif ? (
                 <div className="araclar-muzik-editor" aria-label="Müzik skor editörü">
@@ -5997,10 +6141,10 @@ export default function Araclar() {
                   type="button"
                   className={`btn ${'araclar-seslendir-btn araclar-matematik-btn' + (matematikPaletiAcik ? ' aktif' : '')}`}
                   onClick={() => setMatematikPaletiAcik((v) => !v)}
-                  disabled={muzikModuAktif}
+                  disabled={muzikModuAktif || dil !== 'tr'}
                   aria-label="Matematik / özel işaretler"
                   aria-expanded={matematikPaletiAcik}
-                  title="Matematik / özel işaretler"
+                  title={dil !== 'tr' ? 'Matematik işaretleri yalnızca Türkçe için' : 'Matematik / özel işaretler'}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M4 6h7l-3 5 5 7H4" />
@@ -6010,7 +6154,7 @@ export default function Araclar() {
                     <path d="M20 14l-6 6" />
                   </svg>
                 </button>
-                {matematikPaletiAcik && (
+                {matematikPaletiAcik && dil === 'tr' && (
                   <div className="araclar-matematik-paneli" role="dialog" aria-label="Matematik ve özel işaretler">
                     {MATEMATIK_PALETI.map((grup) => (
                       <div key={grup.baslik} className="araclar-matematik-grup">
@@ -6533,11 +6677,12 @@ export default function Araclar() {
                 onClick={() => setKisaltmaAktif((v) => !v)}
                 aria-pressed={kisaltmaAktif}
                 aria-label={'Kısaltma ' + (kisaltmaAktif ? 'Aktif' : 'Kapalı')}
-                style={{ borderRadius: 'var(--radius) 0 0 var(--radius)' }}
+                style={{ borderRadius: dil === 'tr' ? 'var(--radius) 0 0 var(--radius)' : 'var(--radius)' }}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
                 <span className="btn-yazi">Kısaltma</span>
               </button>
+              {dil === 'tr' && (
               <button
                 type="button"
                 className={`btn ${'kisaltma-sistem-acilis-btn araclar-perkins-btn' + (kisaltmaAktif && sistemPaneli ? ' aktif' : '') + (kisaltmaAktif ? '' : ' disabled')}`}
@@ -6547,7 +6692,8 @@ export default function Araclar() {
                 title="Hangi kısaltma sistemleri aktif?"
                 style={{ borderRadius: '0 var(--radius) var(--radius) 0' }}
               >▾</button>
-              {kisaltmaAktif && sistemPaneli && (
+              )}
+              {dil === 'tr' && kisaltmaAktif && sistemPaneli && (
                 <div className="kisaltma-sistem-panel" role="menu">
                   <p className="kisaltma-sistem-panel-baslik">Kısaltma Sistemleri</p>
                   {[

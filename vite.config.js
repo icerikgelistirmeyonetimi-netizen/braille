@@ -15,7 +15,22 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'icon.svg'],
       workbox: {
         skipWaiting: true,
-        clientsClaim: true
+        clientsClaim: true,
+        // liblouis build/worker .js dosyaları precache edilsin; tablolar runtime'da.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            // Yerel liblouis tabloları (.ctb/.utb/.cti/.dis/.uti …) ilk kullanımda
+            // indirilir ve önbelleğe alınır → sonraki açılışlarda tam çevrimdışı.
+            urlPattern: ({ url }) => url.pathname.startsWith('/liblouis/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'liblouis-tablolar',
+              expiration: { maxEntries: 400 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          }
+        ]
       },
       manifest: {
         name: 'Braille Eğitim',
