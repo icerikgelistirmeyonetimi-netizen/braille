@@ -24,6 +24,7 @@ import {
   BRF_KAGIT_PRESET_DAR_A4_OZERI
 } from './Araclar.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
+import { noktalariBRF } from '../utils/brailleAscii.js';
 import {
   paraBirimiKaynakSonEkiAraliklari,
   hucreParaBirimiKaynakBaglamiMi,
@@ -43,13 +44,7 @@ export function noktalardanUnicode(noktalar) {
   return String.fromCharCode(0x2800 + val);
 }
 
-function noktalariBRF(noktalar) {
-  let bits = 0;
-  for (const d of noktalar) {
-    if (d >= 1 && d <= 6) bits |= 1 << (d - 1);
-  }
-  return String.fromCharCode(0x20 + bits);
-}
+// noktalariBRF artık utils/brailleAscii.js'ten (tek doğruluk kaynağı).
 
 // Hücre anlamından kısa etiket türet (genişlet modunda hücre altında gösterilir)
 export function kisaEtiket(anlam) {

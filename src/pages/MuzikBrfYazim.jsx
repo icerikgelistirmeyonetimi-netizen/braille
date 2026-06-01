@@ -9,6 +9,7 @@ import MuzikBrfViewTabs from '../components/music/MuzikBrfViewTabs.jsx';
 import MuzikBrfScoreEditor from '../components/music/MuzikBrfScoreEditor.jsx';
 import MuzikBrailleOutput from '../components/music/MuzikBrailleOutput.jsx';
 import { brailleMetniOlustur } from '../utils/music-brf/brailleText.js';
+import { unicodeBrailleToBrfAscii } from '../utils/brailleAscii.js';
 
 // Aşama 1: sabitler ve saf Braille helper fonksiyonları utils/music-brf altına taşındı.
 
@@ -360,7 +361,9 @@ export default function MuzikBrfYazim() {
             onClick={() => {
               const metin = indirilecekBrfMetni;
               if (!metin) return;
-              const blob = new Blob([metin], { type: 'text/plain;charset=utf-8' });
+              // Unicode braille → embosser-uyumlu Braille ASCII (.brf standardı)
+              const asciiMetin = unicodeBrailleToBrfAscii(metin);
+              const blob = new Blob([asciiMetin], { type: 'text/plain;charset=utf-8' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;

@@ -12,6 +12,7 @@ import BrailleCell from '../components/BrailleCell.jsx';
 import BrailleGrid from '../components/BrailleGrid.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
+import { noktalariBRF, brfNoktalaradon } from '../utils/brailleAscii.js';
 import { noktalardanUnicode } from './BelgeBrf.jsx';
 import {
   metniBrailleyeCevir,
@@ -111,6 +112,7 @@ import {
   muzikSkorunuBrailleyeCevir as M_muzikSkorunuBrailleyeCevir,
   muzikHucreAnlamiKayittan as M_muzikHucreAnlamiKayittan,
 } from '../utils/music/index.js';
+import { metniLatinBrailleyeCevir, LATIN_DILLER } from '../utils/latinBrailleCevir.js';
 
 // ─── BRF kodlama / çözme ───────────────────────────────────────────────────
 // BRF (Braille Ready Format) standardı:
@@ -257,54 +259,8 @@ function ilkKaynakHucreIndeksiniBul(esleme, kaynakBaslangici) {
 }
 
 
-// North American Braille ASCII (SimBraille) — BRF embosser'larının standart
-// tablosu. Her hücre deseni TEK bir ASCII karaktere eşlenir; embosser bu ASCII'yi
-// okuyup ilgili noktaları kabartır. ÖNEMLİ: basit "0x20 + bit" eşlemesi YANLIŞTIR
-// (ör. nokta-1 = 'a' harfi 'A' olmalı, '!' değil) → embosser abuk sabuk basar.
-// Kaynak: en.wikipedia.org/wiki/Braille_ASCII
-const BRAILLE_ASCII_HUCRELERI = {
-  ' ': [], 'A': [1], 'B': [1, 2], 'C': [1, 4], 'D': [1, 4, 5], 'E': [1, 5],
-  'F': [1, 2, 4], 'G': [1, 2, 4, 5], 'H': [1, 2, 5], 'I': [2, 4], 'J': [2, 4, 5],
-  'K': [1, 3], 'L': [1, 2, 3], 'M': [1, 3, 4], 'N': [1, 3, 4, 5], 'O': [1, 3, 5],
-  'P': [1, 2, 3, 4], 'Q': [1, 2, 3, 4, 5], 'R': [1, 2, 3, 5], 'S': [2, 3, 4],
-  'T': [2, 3, 4, 5], 'U': [1, 3, 6], 'V': [1, 2, 3, 6], 'W': [2, 4, 5, 6],
-  'X': [1, 3, 4, 6], 'Y': [1, 3, 4, 5, 6], 'Z': [1, 3, 5, 6],
-  '1': [2], '2': [2, 3], '3': [2, 5], '4': [2, 5, 6], '5': [2, 6],
-  '6': [2, 3, 5], '7': [2, 3, 5, 6], '8': [2, 3, 6], '9': [3, 5], '0': [3, 5, 6],
-  '&': [1, 2, 3, 4, 6], '=': [1, 2, 3, 4, 5, 6], '(': [1, 2, 3, 5, 6],
-  '!': [2, 3, 4, 6], ')': [2, 3, 4, 5, 6], '*': [1, 6], '<': [1, 2, 6],
-  '%': [1, 4, 6], '?': [1, 4, 5, 6], ':': [1, 5, 6], '$': [1, 2, 4, 6],
-  ']': [1, 2, 4, 5, 6], '\\': [1, 2, 5, 6], '[': [2, 4, 6],
-  '/': [3, 4], '+': [3, 4, 6], '#': [3, 4, 5, 6], '>': [3, 4, 5], "'": [3],
-  '-': [3, 6], '.': [4, 6], '^': [4, 5], '_': [4, 5, 6], '"': [5], ';': [5, 6],
-  ',': [6], '@': [4],
-};
-
-// 6-bit desen indeksi (nokta1=bit0 … nokta6=bit5) → Braille ASCII karakteri
-const NOKTA_BITI_BRAILLE_ASCII = (() => {
-  const arr = new Array(64).fill(' ');
-  for (const [ch, dots] of Object.entries(BRAILLE_ASCII_HUCRELERI)) {
-    let bits = 0;
-    for (const d of dots) bits |= 1 << (d - 1);
-    arr[bits] = ch;
-  }
-  return arr;
-})();
-
-function noktalariBRF(noktalar) {
-  let bits = 0;
-  for (const d of noktalar) {
-    if (d >= 1 && d <= 6) bits |= 1 << (d - 1);
-  }
-  return NOKTA_BITI_BRAILLE_ASCII[bits];
-}
-
-function brfNoktalaradon(ch) {
-  // Braille ASCII büyük harf tablosunu kullanır; küçük harf gelirse büyüt.
-  const up = String(ch || '').toUpperCase();
-  const dots = BRAILLE_ASCII_HUCRELERI[up] ?? BRAILLE_ASCII_HUCRELERI[ch];
-  return dots ? [...dots] : null;
-}
+// BRF ↔ nokta dönüşümü tek doğruluk kaynağından (utils/brailleAscii.js).
+// (noktalariBRF / brfNoktalaradon yukarıda import edildi.)
 
 /** Kabartmalı sıra/satır için makul üst-alt sınırlar (ön izleme + BRFe). */
 export function brfKagitBoyutunuDuzeltGirdi(kagitBoyutu) {
@@ -3733,6 +3689,19 @@ export default function Araclar() {
   }, [sistemPaneli]);
   const [konusuyor, setKonusuyor] = useState(false); // 'metin' | 'nokta' | false
   const [matematikPaletiAcik, setMatematikPaletiAcik] = useState(false);
+  // Dönüştürme dili: 'tr' (varsayılan, Türkçe pipeline — dokunulmadı) | 'en' | 'de' | 'fr'
+  const [dil, setDil] = useState(() => {
+    try {
+      const v = localStorage.getItem('araclarDil');
+      return v === 'en' || v === 'de' || v === 'fr' ? v : 'tr';
+    } catch {
+      return 'tr';
+    }
+  });
+  const dilDegistir = useCallback((yeni) => {
+    setDil(yeni);
+    try { localStorage.setItem('araclarDil', yeni); } catch { /* yoksay */ }
+  }, []);
   const matematikPaletRef = useRef(null);
   const [muzikModuAktif, setMuzikModuAktif] = useState(false);
   const [muzikPaletiAcik, setMuzikPaletiAcik] = useState(false);
@@ -4386,6 +4355,21 @@ export default function Araclar() {
       clearTimeout(cevirDebounceRef.current);
       cevirDebounceRef.current = null;
     }
+    // Türkçe dışı diller: ayrı Latin motoru (Türkçe pipeline'a hiç dokunulmaz).
+    if (dil !== 'tr') {
+      cevirIstekRef.current += 1;
+      if (!girisMetni) {
+        setCevirSonuc({ hucreler: [], esleme: [], kaynak: '' });
+        return;
+      }
+      try {
+        const r = metniLatinBrailleyeCevir(girisMetni, { dil, kisaltma: kisaltmaAktif });
+        setCevirSonuc({ hucreler: r.hucreler, esleme: r.esleme, kaynak: girisMetni });
+      } catch (err) {
+        console.error('Latin braille çeviri hatası:', err);
+      }
+      return;
+    }
     if (muzikModuAktif) {
       cevirIstekRef.current += 1;
       if (!muzikOgeleri.length) {
@@ -4447,7 +4431,7 @@ export default function Araclar() {
         cevirDebounceRef.current = null;
       }
     };
-  }, [girisMetni, muzikOgeleri, muzikBaglar, muzikHeader, muzikTupletler, muzikModuAktif, hucreYorumlariAktif, kisaltmaAktif, kisaltmaSistemler, kelimeBazliKisaltmaTercihleri, karakterYorumTercihleri]);
+  }, [girisMetni, muzikOgeleri, muzikBaglar, muzikHeader, muzikTupletler, muzikModuAktif, hucreYorumlariAktif, kisaltmaAktif, kisaltmaSistemler, kelimeBazliKisaltmaTercihleri, karakterYorumTercihleri, dil]);
 
   const hucrelerCache = cevirSonuc.hucreler;
   const eslemeCache = cevirSonuc.esleme;
@@ -5256,6 +5240,21 @@ export default function Araclar() {
       {/* ── Üst: başlık ── */}
       <div className="yazma-bolum yazma-bolum-ust">
         <PageHeader baslik={muzikModuAktif ? 'Müzik → BRF' : 'Metin → BRF'} />
+        <div className="araclar-dil-secici" role="group" aria-label="Dönüştürme dili">
+          {LATIN_DILLER.map((d) => (
+            <button
+              key={d.kod}
+              type="button"
+              className={`araclar-dil-btn${dil === d.kod ? ' aktif' : ''}`}
+              aria-pressed={dil === d.kod}
+              disabled={muzikModuAktif && d.kod !== 'tr'}
+              onClick={() => dilDegistir(d.kod)}
+              title={`${d.etiket} braille`}
+            >
+              {d.etiket}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Orta: içerik + klavye ── */}

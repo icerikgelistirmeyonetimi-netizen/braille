@@ -26,16 +26,9 @@ import {
 } from './brailleCevir.js';
 
 // ─── BRF → nokta dizisi ────────────────────────────────────────────────────
-export function brfNoktalaradon(ch) {
-  const code = ch.charCodeAt(0);
-  if (code < 0x20 || code > 0x5f) return null;
-  const bits = code - 0x20;
-  const noktalar = [];
-  for (let i = 0; i < 6; i++) {
-    if (bits & (1 << i)) noktalar.push(i + 1);
-  }
-  return noktalar;
-}
+// Standart North American Braille ASCII tablosundan (tek doğruluk kaynağı).
+// Eski "code - 0x20" eşlemesi yanlıştı; dışa aktarımla tutarsızdı.
+export { brfNoktalaradon } from './brailleAscii.js';
 
 // ─── Ters arama tabloları ──────────────────────────────────────────────────
 const _KISALTMA_TEK = new Map(
