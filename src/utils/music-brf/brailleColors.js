@@ -271,9 +271,9 @@ export const BRAILLE_CATEGORY_COLORS = {
     border: '#f43f5e', text: '#0f172a',
   },
   dynamic: {
-    fill: '#2563eb',                        // blue-600 — tüm dinamikler tek renk
-    soft: 'rgba(37, 99, 235, 0.13)',
-    border: '#2563eb', text: '#0f172a',
+    fill: '#ea580c',                        // orange-600 — nota mavisinden (blue-500) net ayrı
+    soft: 'rgba(234, 88, 12, 0.13)',
+    border: '#ea580c', text: '#0f172a',
   },
   sure: {
     fill: '#d97706',                        // amber-600 — koyu amber
