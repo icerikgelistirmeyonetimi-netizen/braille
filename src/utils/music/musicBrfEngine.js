@@ -591,6 +591,12 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       }
     }
     if (atlananIndeksler.has(idx)) continue;
+    // _repeatCopy notalar yalnızca görsel porte içindir (tekrar ölçüsünün
+    // notalarını ekranda göstermek için). Braille'de tekrar ölçüsü SADECE
+    // kısaltma/numara ile temsil edilir; kopya notalar asla yazılmaz.
+    // (Ölçü tamamlanmamışsa kısaltma ölçünün ilk öğesi olmayabilir; bu yüzden
+    // küresel olarak burada atlanır — yoksa notalar + numara birlikte yazılırdı.)
+    if (oge._repeatCopy) continue;
     if (brfImportArtikOgesiMi(oge)) continue;
 
     // brailleShorthand: sadece kısaltma hücrelerini yaz, _repeatCopy notaları atlanmış
