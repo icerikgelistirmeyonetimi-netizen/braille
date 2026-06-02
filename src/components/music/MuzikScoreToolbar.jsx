@@ -441,7 +441,7 @@ export default function MuzikScoreToolbar({
                   <span className="font-semibold">Kuyruk (release)</span>
                   <span className="text-amber-600 font-semibold">{Number(toneAyar.release).toFixed(1)} sn</span>
                 </span>
-                <input type="range" min={0.1} max={4} step={0.1}
+                <input type="range" min={0.1} max={6} step={0.1}
                   value={toneAyar.release}
                   onChange={(e) => toneAyarYama({ release: Number(e.target.value) })}
                   className="accent-amber-500" />
