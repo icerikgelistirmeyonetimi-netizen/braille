@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as Tone from 'tone';
 import PageHeader from '../components/PageHeader.jsx';
 import { MUZIK_HAZIR_PARCALAR } from '../data/muzikHazirParcalar.js';
@@ -29,7 +29,17 @@ export default function TonePianoTest() {
   // true = nota kuyruğu doğal sönene kadar çalsın (dolu/gerçekçi his),
   // false = nota kendi müzikal süresinde kesilsin (kuru).
   const [kuyrukBiraksin, setKuyrukBiraksin] = useState(true);
+  const [reverbAcik, setReverbAcik] = useState(true);
+  const [reverbWet, setReverbWet] = useState(0.25); // 0..0.6 ıslaklık (mekân miktarı)
   const samplerRef = useRef(null);
+  const reverbRef = useRef(null);
+
+  // Reverb ıslaklığını canlı uygula (slider/toggle değişince)
+  useEffect(() => {
+    if (reverbRef.current) {
+      reverbRef.current.wet.value = reverbAcik ? reverbWet : 0;
+    }
+  }, [reverbAcik, reverbWet]);
 
   // Yemen Türküsü BRF → nota/olay listesi
   const veri = useMemo(() => {
@@ -61,9 +71,15 @@ export default function TonePianoTest() {
       setDurum('ses bağlamı başlatılıyor…');
       await Tone.start(); // kullanıcı jesti: AudioContext resume
 
-      // Sampler'ı (varsa) yeniden kurma
+      // Sampler + reverb zincirini (varsa) yeniden kurma
       if (!samplerRef.current) {
         setDurum('örnekler yükleniyor…');
+        // Reverb (oda yankısı): sampler → reverb → çıkış
+        const reverb = new Tone.Reverb({ decay: 2.2, preDelay: 0.01 }).toDestination();
+        reverb.wet.value = reverbAcik ? reverbWet : 0;
+        await reverb.ready; // impuls yanıtı üretilene dek bekle
+        reverbRef.current = reverb;
+
         await new Promise((resolve, reject) => {
           const s = new Tone.Sampler({
             urls: samplerUrls,
@@ -71,7 +87,7 @@ export default function TonePianoTest() {
             curve: 'exponential',
             onload: resolve,
             onerror: reject,
-          }).toDestination();
+          }).connect(reverb);
           samplerRef.current = s;
         });
       }
@@ -151,6 +167,29 @@ export default function TonePianoTest() {
             onChange={(e) => setKuyrukBiraksin(e.target.checked)}
           />
           Kuyruk bıraksın (notalar doğal sönümle çalıp birbirine karışsın — daha dolu/gerçekçi)
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.95em' }}>
+          <input
+            type="checkbox"
+            checked={reverbAcik}
+            onChange={(e) => setReverbAcik(e.target.checked)}
+          />
+          Reverb (oda yankısı / mekân hissi)
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.9em', opacity: reverbAcik ? 1 : 0.4 }}>
+          Yankı miktarı: {Math.round(reverbWet * 100)}%
+          <input
+            type="range"
+            min={0}
+            max={0.6}
+            step={0.05}
+            value={reverbWet}
+            disabled={!reverbAcik}
+            onChange={(e) => setReverbWet(Number(e.target.value))}
+            style={{ width: 200 }}
+          />
         </label>
 
         <div role="status" aria-live="polite" style={{ fontWeight: 700, color: 'var(--accent)' }}>
