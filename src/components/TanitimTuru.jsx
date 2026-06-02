@@ -50,10 +50,20 @@ export default function TanitimTuru({ zorunlu = true, onKapat }) {
     try { localStorage.setItem(ANAHTAR, '1'); } catch { /* yoksay */ }
     konusmayiDurdur();
     setAcik(false);
-    // Odağı turu açan öğeye geri ver (ekran okuyucu kaybolmasın).
+    // Odağı turu açan öğeye geri ver; yoksa (ilk açılış otomatik tur) ekran
+    // okuyucu body'de kaybolmasın diye ilk anlamlı odaklanabilir öğeye taşı.
+    // Not: <main id="main"> display:contents olduğu için odak alamaz; bunun
+    // yerine "İçeriğe atla" skip-link'i veya ilk buton/bağlantı hedeflenir.
     const geri = oncekiOdakRef.current;
-    if (geri && typeof geri.focus === 'function') {
-      window.setTimeout(() => { try { geri.focus(); } catch { /* yoksay */ } }, 0);
+    let hedef = null;
+    if (geri && geri !== document.body && geri.isConnected && typeof geri.focus === 'function') {
+      hedef = geri;
+    } else if (typeof document !== 'undefined') {
+      hedef = document.querySelector('a.skip-link')
+        || document.querySelector('.app a[href], .app button, .app [tabindex]:not([tabindex="-1"])');
+    }
+    if (hedef) {
+      window.setTimeout(() => { try { hedef.focus(); } catch { /* yoksay */ } }, 0);
     }
     onKapat && onKapat();
   }, [onKapat]);
