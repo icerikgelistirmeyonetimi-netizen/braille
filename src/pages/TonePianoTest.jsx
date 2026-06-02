@@ -67,7 +67,7 @@ export default function TonePianoTest() {
         await new Promise((resolve, reject) => {
           const s = new Tone.Sampler({
             urls: samplerUrls,
-            release: 0.5,       // hafif kuyruk (saniye) — dolu his ama bulanık değil
+            release: 0.8,       // kuyruk (saniye) — dolu/gerçekçi his
             curve: 'exponential',
             onload: resolve,
             onerror: reject,
