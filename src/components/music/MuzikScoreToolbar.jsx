@@ -231,15 +231,6 @@ export default function MuzikScoreToolbar({
                   />
                   Otomatik ölçü tamamla
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Gruplama / pitch-only braille okuma">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(muzikHeader.useBrailleGrouping)}
-                    onChange={(e) => setMuzikHeader((h) => ({ ...h, useBrailleGrouping: e.target.checked }))}
-                    className="accent-amber-500"
-                  />
-                  Braille gruplama
-                </label>
                 <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="İlk ölçü pickup (anacrusis)">
                   <input
                     type="checkbox"
