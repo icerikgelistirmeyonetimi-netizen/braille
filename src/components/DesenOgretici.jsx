@@ -556,6 +556,16 @@ className="btn"               type="button"
             yanlisNoktalar={hucreNoktalari(yanlis, 0)}
           />
         )}
+        {aktifOge.altMetin && (
+          <div aria-hidden="true" style={{ textAlign: 'center', fontSize: '1.4em', color: 'var(--accent)', fontWeight: 700 }}>
+            {aktifOge.altMetin}
+          </div>
+        )}
+        {aktifOge.altMetinAciklama && (
+          <div aria-hidden="true" style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.95em', maxWidth: 520 }}>
+            {aktifOge.altMetinAciklama}
+          </div>
+        )}
       </div>
 
       <div className="controls">

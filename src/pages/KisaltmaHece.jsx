@@ -16,6 +16,9 @@ export default function KisaltmaHece() {
       tamYonergeMetni: kisitli
         ? `"${k.hece}" hecesi. Bu hece kelimenin sonunda kullanılamaz.`
         : `"${k.hece}" hecesi.`,
+      altMetinAciklama: kisitli
+        ? `Bu sembol "${k.hece}" hecesini ifade eder. Kelimenin sonunda kullanılamaz.`
+        : `Bu sembol "${k.hece}" hecesini ifade eder.`,
     };
   });
 

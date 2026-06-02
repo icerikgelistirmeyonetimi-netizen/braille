@@ -8,6 +8,8 @@ export default function KisaltmaBirHarfli() {
     ariaAd: `${k.harf} harfi, ${k.kelime} kelimesi`,
     noktalar: k.noktalar,
     tamYonergeMetni: `${k.harf} harfi tek başına yazıldığında "${k.kelime}" kelimesi okunur.`,
+    altMetin: `"${k.kelime}"`,
+    altMetinAciklama: `${k.harf} harfi tek başına yazıldığında veya bir kelimenin başında ek alarak kullanıldığında "${k.kelime}" okunur.`,
   }));
 
   return (

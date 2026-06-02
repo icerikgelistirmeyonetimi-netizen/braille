@@ -14,6 +14,8 @@ export default function KisaltmaKelimeParcasi() {
       hucreAriaEtiketleri: [`${onekEtiket} noktaları, ön ek`, `${sagEtiket} sembolü`],
       hucreAdlari: ['ön ek hücresi', 'sembol hücresi'],
       tamYonergeMetni: `${k.etiket} sembolü, "${k.ekler}" eklerini ifade eder.`,
+      altMetin: k.ekler,
+      altMetinAciklama: `Önce ${onekEtiket} noktaları, sonra "${sagEtiket}" sembolü yazılır. Bu kısaltma kelimenin kökünde, gövdesinde veya ek olarak kullanılır; kelimenin başında ya da yalnız başına kullanılamaz.`,
     };
   });
 

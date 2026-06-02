@@ -16,6 +16,8 @@ export default function KisaltmaIkiHarfli() {
       hucreAriaEtiketleri: [`${h0} harfi`, `${h1} harfi`],
       hucreAdlari: [`${h0} harfi hücresi`, `${h1} harfi hücresi`],
       tamYonergeMetni: `${harfBuyuk} kısaltması, "${k.kelime}" kelimesini ifade eder.`,
+      altMetin: `"${k.kelime}"`,
+      altMetinAciklama: `${harfBuyuk} harfleri yan yana yazıldığında "${k.kelime}" kelimesini ifade eder. Bu kısaltma yalnız başına veya kelimenin başında ek alarak kullanılır.`,
     };
   });
 
