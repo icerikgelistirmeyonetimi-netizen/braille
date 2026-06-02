@@ -5,7 +5,7 @@ import { HARFLER } from '../data/braille.js';
 export default function HarfEgitimi() {
   const ogeler = HARFLER.map((h) => ({
     ad: h.harf,
-    ariaAd: h.harf,
+    ariaAd: `${h.harf} harfi`,
     noktalar: h.noktalar
   }));
 
