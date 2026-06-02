@@ -24,8 +24,8 @@ var hazir = false;
 var hazirHata = null;
 
 try {
-  // Tablolar aynı origin'den, /liblouis/tables/ altından (senkron XHR — worker'da güvenli).
-  louis.enableOnDemandTableLoading('/liblouis/tables/');
+  // Tablolar worker'ın kendi URL'sinden göreli türetilir → base path değişse de doğru çalışır.
+  louis.enableOnDemandTableLoading(new URL('./tables/', self.location.href).href);
   hazir = true;
 } catch (e) {
   hazirHata = String(e && e.message ? e.message : e);

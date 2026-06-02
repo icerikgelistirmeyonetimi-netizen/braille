@@ -22,7 +22,7 @@ export default defineConfig({
           {
             // Yerel liblouis tabloları (.ctb/.utb/.cti/.dis/.uti …) ilk kullanımda
             // indirilir ve önbelleğe alınır → sonraki açılışlarda tam çevrimdışı.
-            urlPattern: ({ url }) => url.pathname.startsWith('/liblouis/'),
+            urlPattern: ({ url }) => url.pathname.includes('/liblouis/'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'liblouis-tablolar',
