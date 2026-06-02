@@ -82,6 +82,7 @@ export default function MuzikBrfScoreEditor({
   muzikOgeleri,
   notaTiklandi,
   notaSuresiniCiftTiklaDegistir,
+  notaSuresiniScrollDegistir,
   seciliOgeyiGuncelle,
   bagTipiTieMi,
   bagYonunuHesapla,
@@ -471,6 +472,7 @@ export default function MuzikBrfScoreEditor({
         muzikOgeleri={muzikOgeleri}
         notaTiklandi={notaTiklandi}
         notaSuresiniCiftTiklaDegistir={notaSuresiniCiftTiklaDegistir}
+        notaSuresiniScrollDegistir={notaSuresiniScrollDegistir}
         bagTipiTieMi={bagTipiTieMi}
         bagYonunuHesapla={bagYonunuHesapla}
         bagCizimNoktalari={bagCizimNoktalari}

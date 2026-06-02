@@ -113,6 +113,7 @@ export default function MuzikBrfYazim() {
     anahtariDegistir,
     slurTamamla,
     notaSuresiniCiftTiklaDegistir,
+    notaSuresiniScrollDegistir,
     slurCancel,
     modifierCancel,
     tupletCancel,
@@ -295,6 +296,7 @@ export default function MuzikBrfYazim() {
             muzikOgeleri={gorselOgeler}
             notaTiklandi={notaTiklandi}
             notaSuresiniCiftTiklaDegistir={notaSuresiniCiftTiklaDegistir}
+            notaSuresiniScrollDegistir={notaSuresiniScrollDegistir}
             bagTipiTieMi={bagTipiTieMi}
             bagYonunuHesapla={bagYonunuHesapla}
             bagCizimNoktalari={bagCizimNoktalari}

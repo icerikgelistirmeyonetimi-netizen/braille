@@ -2103,6 +2103,46 @@ export function useMuzikBrfEditor() {
     setSeciliSureIdx(sonrakiIdx);
   };
 
+  // Scroll ile süre değiştir: deltaY > 0 → ileri (sonraki), < 0 → geri (önceki).
+  const notaSuresiniScrollDegistir = (oge, event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
+    if (!oge?.id || oge.tip !== 'nota') return;
+
+    const mevcutIdx = Number.isInteger(oge.sureIndeksi) ? oge.sureIndeksi : 0;
+    const sureSayisi = Array.isArray(MUZIK_SURE_GOSTERGELERI)
+      ? MUZIK_SURE_GOSTERGELERI.length
+      : 0;
+
+    if (sureSayisi <= 0) return;
+
+    const yon = (event?.deltaY ?? 0) > 0 ? 1 : -1;
+    const sonrakiIdx = ((mevcutIdx + yon) + sureSayisi) % sureSayisi;
+
+    if (sonrakiIdx === mevcutIdx) return;
+
+    setMuzikOgeleri((onceki) => onceki.map((og) => {
+      if (og.id !== oge.id || og.tip !== 'nota') return og;
+      return muzikNotaSkorOgesi(og.id, og.notaAd, sonrakiIdx, {
+        oktav: guvenliOktavAl(og.oktav, varsayilanGuvenliOktavAl()),
+        accidental: og.accidental || null,
+        dotted: Boolean(og.dotted),
+        modifiers: og.modifiers,
+      });
+    }));
+    editorDegisti();
+
+    setSeciliOgeId(oge.id);
+    setPopupAcik(false);
+
+    if (Number.isFinite(Number(oge.oktav))) {
+      setSonKullanilanOktav(Number(oge.oktav));
+    }
+
+    setSeciliSureIdx(sonrakiIdx);
+  };
+
   const sonOgeyiSil = () => {
     setMuzikOgeleri((onceki) => onceki.slice(0, -1));
     setSeciliOgeId(null);
@@ -2870,5 +2910,6 @@ export function useMuzikBrfEditor() {
     sonKullanilanOktav,
     setSonKullanilanOktav,
     notaSuresiniCiftTiklaDegistir,
+    notaSuresiniScrollDegistir,
   };
 }
