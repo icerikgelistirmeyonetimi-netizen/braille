@@ -1837,11 +1837,6 @@ export default function MuzikScoreSvg({
                         setSeciliBagId?.(null);
                         notaSuresiniCiftTiklaDegistir?.(oge, e);
                       }}
-                      onWheel={oge._repeatCopy ? undefined : (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        notaSuresiniScrollDegistir?.(oge, e);
-                      }}
                       onKeyDown={oge._repeatCopy ? undefined : (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
