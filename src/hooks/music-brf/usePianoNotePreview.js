@@ -156,7 +156,7 @@ export function usePianoNotePreview({
       // İleri-zamanlama: zarfı tam currentTime'da kurmak, işlenene dek "şimdi"
       // geçmişte kalıp rampanın atlanmasına ve ani başlangıç klikine yol açar.
       // Küçük bir lookahead, attack rampasının tam uygulanmasını garanti eder.
-      const t0 = ctx.currentTime + 0.02;
+      const t0 = ctx.currentTime + 0.025;
 
       const source = ctx.createBufferSource();
       source.buffer = buffer;
@@ -169,8 +169,8 @@ export function usePianoNotePreview({
 
       // Attack: klik olmaması için gerçek bir rampa (örnek saatinde, t0'dan).
       const attackSec = cutOff
-        ? Math.max(0.006, Math.min(0.014, (durationMs / 1000) * 0.25))
-        : 0.014;
+        ? Math.max(0.008, Math.min(0.02, (durationMs / 1000) * 0.25))
+        : 0.022;
       gain.gain.linearRampToValueAtTime(effectiveVolume, t0 + attackSec);
 
       const voice = { source, gain };
@@ -199,7 +199,7 @@ export function usePianoNotePreview({
         // doğal bitişin son ~60ms'sinde yumuşak bir release uygula.
         const bufSec = buffer.duration || 0;
         if (bufSec > 0.12) {
-          const relSec = 0.06;
+          const relSec = 0.09;
           const stopAt = t0 + bufSec;
           try {
             gain.gain.setValueAtTime(effectiveVolume, stopAt - relSec);
@@ -213,7 +213,7 @@ export function usePianoNotePreview({
         const eskiSesler = Array.from(activeVoicesRef.current)
           .slice(0, activeVoicesRef.current.size - 12);
         eskiSesler.forEach((eski) => {
-          if (eski !== voice) sesiDurdur(eski, 0.025);
+          if (eski !== voice) sesiDurdur(eski, 0.045);
         });
       }
     };
