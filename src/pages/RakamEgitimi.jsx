@@ -13,9 +13,7 @@ export default function RakamEgitimi() {
     hucreBasliklari: ['sayı', r.rakam],
     hucreAriaEtiketleri: ['sayı işareti', `${r.rakam} rakam hücresi`],
     hucreAdlari: ['sayı işareti hücresi', 'rakam hücresi'],
-    yonergeDetay: `önce sayı işareti hücresindeki 3, 4, 5, 6; sonra rakam hücresindeki ${r.noktalar.join(', ')} numaralı noktalardan oluşur.`,
-    aciklama:
-      'Braille metinde rakam, sayı işareti ve ardından gelen rakam hücresiyle yazılır.'
+    yonergeDetay: `önce sayı işareti hücresindeki 3, 4, 5, 6; sonra rakam hücresindeki ${r.noktalar.join(', ')} numaralı noktalardan oluşur.`
   }));
 
   return (
