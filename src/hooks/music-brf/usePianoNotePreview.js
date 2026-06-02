@@ -203,14 +203,18 @@ export function usePianoNotePreview({
         } catch { /* yoksay */ }
       } else {
         // Normal notalar: örnek dosyası kırpık biterse son klikini önlemek için
-        // doğal bitişin son ~60ms'sinde yumuşak bir release uygula.
+        // doğal bitişte yumuşak bir release uygula. Düz (linear) ve kısa kesme,
+        // hâlâ sesli kuyrukta "duy/fwoop" zarf artefaktı üretir; bunun yerine
+        // gerçek piyano damperi gibi UZUN ve ÜSTEL (exponential) bir sönüm
+        // kullanılır → bitiş duyulmaz.
         const bufSec = buffer.duration || 0;
         if (bufSec > 0.12) {
-          const relSec = 0.06;
+          const relSec = Math.min(0.2, bufSec * 0.5);
           const stopAt = t0 + bufSec;
           try {
             gain.gain.setValueAtTime(effectiveVolume, stopAt - relSec);
-            gain.gain.linearRampToValueAtTime(0, stopAt);
+            gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+            gain.gain.setValueAtTime(0, stopAt);
           } catch { /* yoksay */ }
         }
       }
