@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 
 const ANAHTAR = 'braille-tur-tamam-v1';
@@ -43,31 +43,69 @@ export default function TanitimTuru({ zorunlu = true, onKapat }) {
 
   const [acik, setAcik] = useState(zorunlu ? !tamamMi() : true);
   const [adim, setAdim] = useState(0);
+  const panelRef = useRef(null);
+  const oncekiOdakRef = useRef(null);
 
+  const kapat = useCallback(() => {
+    try { localStorage.setItem(ANAHTAR, '1'); } catch { /* yoksay */ }
+    konusmayiDurdur();
+    setAcik(false);
+    // Odağı turu açan öğeye geri ver (ekran okuyucu kaybolmasın).
+    const geri = oncekiOdakRef.current;
+    if (geri && typeof geri.focus === 'function') {
+      window.setTimeout(() => { try { geri.focus(); } catch { /* yoksay */ } }, 0);
+    }
+    onKapat && onKapat();
+  }, [onKapat]);
+
+  // Açılışta önceki odağı hatırla.
   useEffect(() => {
     if (!acik) return;
+    oncekiOdakRef.current = document.activeElement;
+  }, [acik]);
+
+  // Her adımda: sesli oku + ekran okuyucu odağını panele taşı (başlık+açıklama duyurulur).
+  useEffect(() => {
+    if (!acik) return undefined;
     const a = ADIMLAR[adim];
     konus(`${a.baslik}. ${a.metin}`);
-    return () => konusmayiDurdur();
+    const t = window.setTimeout(() => {
+      try { panelRef.current?.focus(); } catch { /* yoksay */ }
+    }, 60);
+    return () => { window.clearTimeout(t); konusmayiDurdur(); };
   }, [acik, adim]);
+
+  // Esc ile kapat + odak tuzağı (Tab diyalog içinde dönsün).
+  useEffect(() => {
+    if (!acik) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); kapat(); return; }
+      if (e.key !== 'Tab') return;
+      const kapsayici = panelRef.current;
+      if (!kapsayici) return;
+      const odaklananlar = Array.from(
+        kapsayici.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+      ).filter((el) => !el.disabled && el.offsetParent !== null);
+      if (!odaklananlar.length) return;
+      const ilk = odaklananlar[0];
+      const son = odaklananlar[odaklananlar.length - 1];
+      if (e.shiftKey && document.activeElement === ilk) {
+        e.preventDefault(); son.focus();
+      } else if (!e.shiftKey && document.activeElement === son) {
+        e.preventDefault(); ilk.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [acik, adim, kapat]);
 
   if (!acik) return null;
 
   const a = ADIMLAR[adim];
   const sonAdim = adim === ADIMLAR.length - 1;
 
-  const kapat = () => {
-    try { localStorage.setItem(ANAHTAR, '1'); } catch {}
-    konusmayiDurdur();
-    setAcik(false);
-    onKapat && onKapat();
-  };
-
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="tur-baslik"
       style={{
         position: 'fixed',
         inset: 0,
@@ -80,6 +118,12 @@ export default function TanitimTuru({ zorunlu = true, onKapat }) {
       }}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tur-baslik"
+        aria-describedby="tur-metin"
+        tabIndex={-1}
         style={{
           background: 'var(--panel)',
           color: 'var(--fg)',
@@ -87,13 +131,14 @@ export default function TanitimTuru({ zorunlu = true, onKapat }) {
           borderRadius: 16,
           padding: 24,
           maxWidth: 560,
-          width: '100%'
+          width: '100%',
+          outline: 'none'
         }}
       >
         <h2 id="tur-baslik" style={{ marginTop: 0, color: 'var(--accent)' }}>
           {a.baslik}
         </h2>
-        <p style={{ fontSize: '1.1em', lineHeight: 1.6 }}>{a.metin}</p>
+        <p id="tur-metin" style={{ fontSize: '1.1em', lineHeight: 1.6 }}>{a.metin}</p>
 
         <div className="progress" aria-hidden="true">
           {adim + 1} / {ADIMLAR.length}
