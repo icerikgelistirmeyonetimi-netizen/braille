@@ -316,9 +316,27 @@ export default function MuzikScoreSvg({
   const [hoverEklemeKonumuId, setHoverEklemeKonumuId] = useState(null);
   const [dottedMiniToolbar, setDottedMiniToolbar] = useState(false);
   const clickTimerRef = useRef(null);
+  // seciliSureIdx'in güncel değerini event listener içinde okumak için ref
+  const seciliSureIdxRef = useRef(seciliSureIdx);
+  useEffect(() => { seciliSureIdxRef.current = seciliSureIdx; }, [seciliSureIdx]);
   const satirRefMap = useRef(new Map());
   const sonEklenenScrollIdRef = useRef(null);
   const sonPlaybackScrollSatirRef = useRef(null);
+  // Ekleme kutusu üzerindeyken scroll ile seciliSureIdx değiştir,
+  // sayfa kaymasını engelle. passive:false zorunlu — React onWheel yetmez.
+  useEffect(() => {
+    if (!hoverEklemeNotasi) return undefined;
+    const handler = (e) => {
+      e.preventDefault();
+      const sureSayisi = MUZIK_SURE_GOSTERGELERI.length;
+      const mevcutIdx = Number.isInteger(seciliSureIdxRef.current) ? seciliSureIdxRef.current : 1;
+      const yon = e.deltaY > 0 ? 1 : -1;
+      setSeciliSureIdx(((mevcutIdx + yon) + sureSayisi) % sureSayisi);
+    };
+    window.addEventListener('wheel', handler, { passive: false });
+    return () => window.removeEventListener('wheel', handler);
+  }, [hoverEklemeNotasi]);
+
   const satirRefAta = useCallback((satirIdx) => (node) => {
     if (node) {
       satirRefMap.current.set(satirIdx, node);
@@ -1055,14 +1073,6 @@ export default function MuzikScoreSvg({
                     onMouseLeave={() => setHoverEklemeNotasi((onceki) => (
                       onceki?.key === hoverKey ? null : onceki
                     ))}
-                    onWheel={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const sureSayisi = MUZIK_SURE_GOSTERGELERI.length;
-                      const mevcutIdx = Number.isInteger(seciliSureIdx) ? seciliSureIdx : 1;
-                      const yon = e.deltaY > 0 ? 1 : -1;
-                      setSeciliSureIdx(((mevcutIdx + yon) + sureSayisi) % sureSayisi);
-                    }}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
