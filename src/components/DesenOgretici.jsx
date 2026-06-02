@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import BrailleCell from './BrailleCell.jsx';
 import PageHeader from './PageHeader.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
 import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
+import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js';
 
 /**
  * Bir Braille deseni (örn. bir harf) öğretmek için ortak ekran.
@@ -40,6 +42,11 @@ export default function DesenOgretici({
   ogeyiSeslendir,
   yonergeyiTekrarla,
 }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // Bu dersin karışık yazma kaynağı (varsa) — bitiş ekranında yazma etkinliğine yönlendirmek için.
+  const yazmaKaynak = mevcutSayfaIcinKaynakAnahtar(pathname);
+
   const [indeks, setIndeks] = useState(() => {
     const kaydedilen = indeksAl(bolumAnahtari);
     return kaydedilen < ogeler.length ? kaydedilen : 0;
@@ -178,7 +185,11 @@ export default function DesenOgretici({
   useEffect(() => {
     // Yeni öğeye geçişte intro'yu seslendir.
     if (bitti) {
-      konus(bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!');
+      const tebrik = bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!';
+      const yazmaDavet = (yazmaKaynak && !(kayitlilarModu && aktifListe.length === 0))
+        ? ' Şimdi yazma zamanı! Öğrendiklerinizi karışık yazma etkinliğinde uygulayabilirsiniz.'
+        : '';
+      konus(tebrik + yazmaDavet);
       return;
     }
     const oge = aktifListe[indeks];
@@ -289,7 +300,7 @@ export default function DesenOgretici({
     ogeSesiHerZaman,
     ogeSesiOnceCal,
     ogeSesiGecikmeMs,
-    ogeSesiSonrasiKonusmaGecikmeMs,    ilkOgeSesiHariciCalindi,  ]);
+    ogeSesiSonrasiKonusmaGecikmeMs,    ilkOgeSesiHariciCalindi,    yazmaKaynak,  ]);
 
   // Yeni öğe geldiğinde durumu sıfırla
   useEffect(() => {
@@ -345,17 +356,39 @@ export default function DesenOgretici({
   }
 
   if (bitti) {
+    const bosKayitli = kayitlilarModu && aktifListe.length === 0;
+    const yazmayaYonlendir = yazmaKaynak && !bosKayitli;
     return (
       <div className="page">
         {baslik && <PageHeader baslik={baslik} />}
         <div className="page-mid">
           <div className="instruction success" role="status" aria-live="polite">
-            {kayitlilarModu && aktifListe.length === 0
+            {bosKayitli
               ? 'Bu bölümde henüz kaydedilmiş öğe yok.'
               : (bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!')}
           </div>
+          {yazmayaYonlendir && (
+            <div style={{ textAlign: 'center', color: 'var(--accent)', fontWeight: 700, fontSize: '1.1em', marginTop: 4 }}>
+              Şimdi yazma zamanı! Öğrendiklerinizi karışık yazma etkinliğinde uygulayın.
+            </div>
+          )}
         </div>
         <div className="controls">
+          {yazmayaYonlendir && (
+            <button
+              className="btn aktif"
+              type="button"
+              onClick={() => {
+                konusmayiDurdur();
+                konus('Karışık yazma etkinliği başlıyor.', { kesintiyle: true });
+                navigate('/yazma-karisik/' + yazmaKaynak);
+              }}
+              aria-label="Karışık yazma etkinliğine geç"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><path d="M3 21l3-1 11-11-2-2L4 18l-1 3z"/><path d="M14 6l4 4"/></svg>
+              <span className="btn-etiket">Karışık Yazma Etkinliği</span>
+            </button>
+          )}
           {kayitlilarModu
             ? <button className="btn" type="button" onClick={() => modDegistir(false)}>Tüm Listeye Dön</button>
             : <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
