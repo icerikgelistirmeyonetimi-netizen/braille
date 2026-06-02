@@ -97,7 +97,7 @@ export default function MuzikScoreBrailleOverlay({
     const key = brailleLejantKeyAl(anlam);
     const kategori = brailleKategoriAl(anlam);
 
-    if (kategori === 'barline') return null;
+    if (kategori === 'barline' || kategori === 'beginrepeat' || kategori === 'endrepeat') return null;
 
     const lejantItem = kategori === 'nota'
       ? null

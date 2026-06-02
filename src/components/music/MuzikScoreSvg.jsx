@@ -1793,7 +1793,7 @@ export default function MuzikScoreSvg({
                       style={{
                         pointerEvents: oge._repeatCopy ? 'none' : 'all',
                         cursor: oge._repeatCopy ? 'default' : 'pointer',
-                        opacity: oge._repeatCopy ? 0.32 : 1,
+                        opacity: 1,
                       }}
                       className={[
                         'muzik-skor-ogesi',
@@ -2131,7 +2131,7 @@ export default function MuzikScoreSvg({
                       onKeyDown={susEtkilesimli ? (e) => {
                         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); notaTiklandi(oge, e); }
                       } : undefined}
-                      opacity={oge._repeatCopy ? 0.32 : oge.autoRest || oge.otomatik ? 0.48 : 1}
+                      opacity={oge.autoRest || oge.otomatik ? 0.48 : 1}
                       pointerEvents={oge._repeatCopy || oge.autoRest || oge.otomatik ? 'none' : 'auto'}
                       onMouseEnter={() => {
                         if (!(oge.autoRest || oge.otomatik)) {
