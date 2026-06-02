@@ -240,6 +240,7 @@ export default function OkumaModuListesi({
           const hucreler = hucreleriNormalizeEt(getHucreler(oge, index));
           const etiket = getEtiket(oge, index);
           const altEtiket = getAltEtiket?.(oge, index);
+          const ariaEtiket = (altEtiket && altEtiket.trim() !== etiket.trim()) ? altEtiket : etiket;
           return (
             <div key={`${etiket}-${index}`} role="listitem" className="okuma-modu-kutu-sarmal">
               <button
@@ -258,7 +259,7 @@ export default function OkumaModuListesi({
                   okumaOgeSesiTemizle();
                 }}
                 onClick={() => onSec(index)}
-                aria-label={`${etiket}. Braille noktaları: ${hucreNoktaMetni(hucreler)}. Öğrenme modunda aç.`}
+                aria-label={`${ariaEtiket}. Braille noktaları: ${hucreNoktaMetni(hucreler)}. Öğrenme modunda aç.`}
               >
                 <span className="okuma-modu-etiket" dir={rtl ? 'rtl' : undefined} lang={rtl ? 'ar' : undefined}>{etiket}</span>
                 {altEtiket && altEtiket !== etiket && <span className="okuma-modu-alt">{altEtiket}</span>}
