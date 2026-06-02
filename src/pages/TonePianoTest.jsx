@@ -83,7 +83,7 @@ export default function TonePianoTest() {
         await new Promise((resolve, reject) => {
           const s = new Tone.Sampler({
             urls: samplerUrls,
-            release: 2,         // kuyruk (saniye) — dolu/gerçekçi his
+            release: 4,         // kuyruk (saniye) — dolu/gerçekçi his
             curve: 'exponential',
             onload: resolve,
             onerror: reject,
