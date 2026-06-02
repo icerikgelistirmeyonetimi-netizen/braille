@@ -157,9 +157,10 @@ export default function DesenOgretici({
       }
 
       const ad = aktifOge.ariaAd || aktifOge.ad;
+      const adKategori = ad.trimEnd().endsWith(kategoriAdi) ? ad : `${ad} ${kategoriAdi}`;
       const ek = aktifOge.aciklama ? ` ${aktifOge.aciklama}` : '';
       const detay = aktifOge.yonergeDetay || `${(aktifOge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
-      return `${ad} ${kategoriAdi}, ${detay}${ek} Lütfen bu noktalara sırayla dokunun.`;
+      return `${adKategori}, ${detay}${ek} Lütfen bu noktalara sırayla dokunun.`;
     }
     if (kalan.length === 0) {
       return 'Tamamlandı. Bir sonraki öğeye geçiliyor.';
@@ -184,12 +185,13 @@ export default function DesenOgretici({
     if (!oge) return undefined;
 
     const ad = oge.ariaAd || oge.ad;
+    const adKategori = ad.trimEnd().endsWith(kategoriAdi) ? ad : `${ad} ${kategoriAdi}`;
     const detay = oge.yonergeDetay || `${(oge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
     const ek = oge.aciklama ? ` ${oge.aciklama}` : '';
 
     const giris = oge.tamYonergeMetni
       ? oge.tamYonergeMetni
-      : `${ad} ${kategoriAdi}, ${detay} Lütfen bu noktalara sırayla dokunun.${ek}`;
+      : `${adKategori}, ${detay} Lütfen bu noktalara sırayla dokunun.${ek}`;
     const gecikme = tebriklerAktif.current ? 1100 : 250;
     const sesAktifMi = ogeSesiHerZaman || ogeSesiAktif;
 

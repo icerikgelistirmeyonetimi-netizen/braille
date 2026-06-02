@@ -7,7 +7,7 @@ const SAYI_ISARETI = [3, 4, 5, 6];
 export default function RakamEgitimi() {
   const ogeler = RAKAMLAR.map((r) => ({
     ad: r.rakam,
-    ariaAd: `${r.rakam} `,
+    ariaAd: `${r.rakam} rakamı`,
     noktalar: r.noktalar,
     hucreler: [SAYI_ISARETI, r.noktalar],
     hucreBasliklari: ['sayı', r.rakam],

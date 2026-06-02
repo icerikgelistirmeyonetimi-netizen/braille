@@ -149,7 +149,10 @@ export default function OkumaModuListesi({
         .join(', ');
       noktaBilgisi += ' noktalarından oluşur';
     }
-    const metin = [etiket, altEtiket, noktaBilgisi].filter(Boolean).join('. ');
+    // altEtiket varsa ve etiket'ten farklıysa (ör. "1" → "1 rakamı", "," → "virgül")
+    // yalnızca altEtiket kullan; aksi hâlde etiket kullan.
+    const anaEtiket = (altEtiket && altEtiket.trim() !== etiket.trim()) ? altEtiket : etiket;
+    const metin = [anaEtiket, noktaBilgisi].filter(Boolean).join('. ');
 
     const seslendirmeKapali =
       window.localStorage.getItem('seslendirmeKapali') === 'true' ||
