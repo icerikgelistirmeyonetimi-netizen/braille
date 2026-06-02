@@ -58,6 +58,7 @@ import FransizcaBrailleSayfa from './pages/FransizcaBrailleSayfa.jsx';
 import Araclar from './pages/Araclar.jsx';
 import BelgeBrf from './pages/BelgeBrf.jsx';
 import BrfOku from './pages/BrfOku.jsx';
+import TonePianoTest from './pages/TonePianoTest.jsx';
 import { sallamayiBaslat } from './utils/sallama.js';
 import DesktopShell from './components/DesktopShell.jsx';
 import { tamEkranApiDestekleniyorMu } from './utils/tamEkran.js';
@@ -168,6 +169,7 @@ export default function App() {
           <Route path="/araclar" element={<Araclar />} />
           <Route path="/belge-brf" element={<BelgeBrf />} />
           <Route path="/brf-oku" element={<BrfOku />} />
+          <Route path="/tone-test" element={<TonePianoTest />} />
           <Route path="/ayarlar" element={<Ayarlar />} />
           </Routes>
         </DesktopShell>
