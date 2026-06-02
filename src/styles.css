@@ -472,6 +472,12 @@ h1, h2, h3 { color: var(--fg); }
 /* Araç çubuğu — mobilde: TEK SIRA; butonlar esit bölüsüp satira sigar, 44px
    dokunma yuksekligi korunur (WCAG 2.5.5). */
 @media (max-width: 640px) {
+  /* Müzik editörü alt eylem çubuğu: mobilde yalnızca ikonlar (metin gizli;
+     erişilebilirlik aria-label ile korunur). */
+  .muzik-alt-eylem .btn-yazi {
+    display: none;
+  }
+
   .muzik-arac-cubugu {
     height: auto;
     flex-wrap: nowrap;

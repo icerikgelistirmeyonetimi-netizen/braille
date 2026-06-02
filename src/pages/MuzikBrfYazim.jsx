@@ -355,7 +355,7 @@ export default function MuzikBrfYazim() {
         )}
 
         {/* ── Alt eylem çubuğu (Araclar deseni: .controls + .btn) ── */}
-        <div className="controls">
+        <div className="controls muzik-alt-eylem">
           {/* BRF İndir */}
           <button
             type="button"
