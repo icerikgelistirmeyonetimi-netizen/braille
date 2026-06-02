@@ -197,15 +197,15 @@ export default function DesktopShell({ children }) {
       {/* ── Sayfa içeriği ── */}
       <div className="ds-content">
         {children}
-        {/* Hayalet: her sayfanın en altında "önceki sayfaya dön" — görünmez ama erişilebilir */}
+        {/* Hayalet: her sayfanın en altında "ana sayfaya dön" — görünmez ama erişilebilir */}
         <button
           type="button"
           className="hayalet-btn"
-          onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/'); }}
-          aria-label="Önceki sayfaya dön"
-          title="Önceki sayfaya dön"
+          onClick={() => navigate('/')}
+          aria-label="Ana sayfaya dön"
+          title="Ana sayfaya dön"
         >
-          Önceki sayfaya dön
+          Ana sayfaya dön
         </button>
       </div>
 
