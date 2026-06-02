@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { muzikNotaPiyanoSesUrlAl } from '../../utils/music-brf/musicPianoAudioHelpers.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import * as Tone from 'tone';
+import {
+  muzikNotaPiyanoSesUrlAl,
+  muzikNotaMidiAl,
+  PIANO_AUDIO_FOLDER,
+} from '../../utils/music-brf/musicPianoAudioHelpers.js';
+import { ayarlariAl, ayarlariDinle } from '../../utils/ayarlar.js';
 
 const sureMsAl = (sureIndeksi) => {
   switch (Number(sureIndeksi)) {
@@ -52,7 +58,8 @@ const fadeIn = (audio, targetVolume, durationMs = 18) => {
   requestAnimationFrame(tick);
 };
 
-export function usePianoNotePreview({
+// ── HTML5 Audio motoru (varsayılan) ────────────────────────────────────────
+function useHtmlPiano({
   enabled = true,
   volume = 0.75,
   extension = 'mp3',
@@ -268,4 +275,117 @@ export function usePianoNotePreview({
   }, []);
 
   return { playNote, preloadUrls };
+}
+
+// ── Tone.js Sampler motoru (Ayarlar'dan açılır) ─────────────────────────────
+// Paylaşılan tek Sampler: örnekler bir kez yüklenir, tüm sayfalar paylaşır.
+// Örnekler talep üzerine eklenir (.add) → sadece kullanılan notalar yüklenir.
+let _toneSampler = null;
+const _toneLoaded = new Set();
+
+function _toneSamplerAl() {
+  if (!_toneSampler) {
+    _toneSampler = new Tone.Sampler({ release: 1, curve: 'exponential' }).toDestination();
+  }
+  return _toneSampler;
+}
+
+function _midiNota(midi) {
+  return Tone.Frequency(midi, 'midi').toNote();
+}
+
+function _toneNotaYukle(note, url) {
+  if (_toneLoaded.has(note)) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    try {
+      _toneSamplerAl().add(note, url, () => { _toneLoaded.add(note); resolve(true); });
+    } catch { resolve(false); }
+  });
+}
+
+// .../piano ses/<tuşNo>.mp3 → { note, url }  (tuşNo = midi - 20)
+function _urldenNota(url) {
+  const m = String(url || '').match(/(\d+)\.[a-z0-9]+(?:[?#].*)?$/i);
+  if (!m) return null;
+  const tusNo = Number(m[1]);
+  if (!Number.isFinite(tusNo) || tusNo < 1 || tusNo > 88) return null;
+  return { note: _midiNota(tusNo + 20), url };
+}
+
+function useTonePiano({
+  enabled = true,
+  volume = 0.75,
+  extension = 'mp3',
+} = {}) {
+  const sonRef = useRef({ key: null, time: 0 });
+
+  const preloadUrls = useCallback(async (urls = []) => {
+    const uniq = Array.from(new Set((urls || []).filter(Boolean)));
+    let loaded = 0; let failed = 0; let skipped = 0;
+    await Promise.allSettled(uniq.map(async (url) => {
+      const eslem = _urldenNota(url);
+      if (!eslem) { failed += 1; return; }
+      if (_toneLoaded.has(eslem.note)) { skipped += 1; return; }
+      const ok = await _toneNotaYukle(eslem.note, eslem.url);
+      if (ok) loaded += 1; else failed += 1;
+    }));
+    return { loaded, failed, skipped };
+  }, []);
+
+  const playNote = useCallback(async (oge, context = {}) => {
+    if (!enabled || !oge || oge.tip !== 'nota') return;
+
+    const url = muzikNotaPiyanoSesUrlAl(oge, { extension, context });
+    if (!url) return;
+
+    const now = Date.now();
+    if (sonRef.current.key === url && now - sonRef.current.time < 80) return;
+    sonRef.current = { key: url, time: now };
+
+    try { await Tone.start(); } catch { /* yoksay */ }
+
+    const midi = muzikNotaMidiAl(oge, { keySignatureAccidentals: context?.keySignatureAccidentals });
+    if (!Number.isFinite(midi)) return;
+
+    const note = _midiNota(midi);
+    const ok = await _toneNotaYukle(note, url);
+    if (!ok) return;
+
+    const baseVol = Number.isFinite(Number(context?.volume))
+      ? Math.max(0, Math.min(1, Number(context.volume)))
+      : volume;
+
+    const cutOff = context?.cutOff === true;
+    const durMs = cutOff
+      ? (Number(context?.durationMs) || sureMsAl(oge.sureIndeksi))
+      : sureMsAl(oge.sureIndeksi);
+    const holdSec = Math.max(0.1, durMs / 1000);
+
+    try {
+      _toneSamplerAl().triggerAttackRelease(note, holdSec, undefined, baseVol);
+    } catch { /* yoksay */ }
+  }, [enabled, volume, extension]);
+
+  const stopAll = useCallback(() => {
+    try { _toneSampler?.releaseAll(); } catch { /* yoksay */ }
+  }, []);
+
+  return { playNote, preloadUrls, stopAll };
+}
+
+// ── Seçici: Ayarlar'daki tonejsSes bayrağına göre motoru seçer ──────────────
+// İki motor da koşulsuz kurulur (kurallar gereği) ama ikisi de tembeldir;
+// kullanıcı çalana dek ne AudioContext ne de örnek yüklenir. Yalnız seçilen
+// motorun fonksiyonları döndürülür → 4 tüketici bileşen değişmeden çalışır.
+export function usePianoNotePreview(opts = {}) {
+  const html = useHtmlPiano(opts);
+  const tone = useTonePiano(opts);
+
+  const [toneAcik, setToneAcik] = useState(() => {
+    try { return !!ayarlariAl().tonejsSes; } catch { return false; }
+  });
+
+  useEffect(() => ayarlariDinle((a) => setToneAcik(!!a.tonejsSes)), []);
+
+  return toneAcik ? tone : html;
 }

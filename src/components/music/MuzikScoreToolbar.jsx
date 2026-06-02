@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import MuzikToolOptions from './MuzikToolOptions.jsx';
 import { MUSIC_EDITOR_TOOLBAR, SURE_KISA, SURE_KARTLARI } from '../../utils/music-brf/musicConstants.js';
+import { ayarlariAl, ayarGuncelle, ayarlariDinle } from '../../utils/ayarlar.js';
 
 // "Diğer" açılır menüsüne taşınan araçlar — araç çubuğu kalabalık olmasın.
 const DIGER_ARAC_IDLERI = ['nuans-once', 'nuans-sonra', 'dinamikler', 'expression', 'suslemeler', 'duzensiz-gruplar'];
@@ -52,6 +53,12 @@ export default function MuzikScoreToolbar({
   // "Ayarlar" açılır menüsü
   const [ayarlarAcik, setAyarlarAcik] = useState(false);
   const ayarlarRef = useRef(null);
+
+  // Tone.js piyano motoru (global ayar) — menüden açılıp kapanır.
+  const [toneSes, setToneSes] = useState(() => {
+    try { return !!ayarlariAl().tonejsSes; } catch { return false; }
+  });
+  useEffect(() => ayarlariDinle((a) => setToneSes(!!a.tonejsSes)), []);
 
   // Ayarlar menüsü dışarı tıklama / Esc ile kapat
   useEffect(() => {
@@ -236,6 +243,17 @@ export default function MuzikScoreToolbar({
                   Pickup ölçü (anacrusis)
                 </label>
               </div>
+
+              <div className="mt-2 mb-1.5 border-t border-zinc-100 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Ses</div>
+              <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Notaları Tone.js piyano motoruyla çal (deneysel)">
+                <input
+                  type="checkbox"
+                  checked={toneSes}
+                  onChange={(e) => ayarGuncelle({ tonejsSes: e.target.checked })}
+                  className="accent-amber-500"
+                />
+                Tone.js piyano motoru
+              </label>
             </div>
           )}
         </div>

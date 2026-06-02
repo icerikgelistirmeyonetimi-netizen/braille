@@ -9,6 +9,7 @@ const VARSAYILAN = {
   sesEfektiAcik: true, // tıklama / doğru / yanlış ses efektleri
   titresimAcik: true,
   tema: 'normal',      // 'normal' | 'lowVision'
+  tonejsSes: false,    // müzik piyano sesini Tone.js motoruyla çal
   gizliModuller: []    // gizlenen modüllerin id listesi
 };
 
