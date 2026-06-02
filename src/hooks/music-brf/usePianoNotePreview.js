@@ -173,7 +173,14 @@ export function usePianoNotePreview({
         : 0.014;
       gain.gain.linearRampToValueAtTime(effectiveVolume, t0 + attackSec);
 
-      const voice = { source, gain };
+      // Aynı nota (aynı url) hâlâ çalıyorsa: iki özdeş örnek üst üste binince
+      // tarak filtresi (metalik "tel/dııy" tınısı) oluşur. Piyano damperi gibi
+      // önceki kopyayı hızla sustur → faz çakışması ortadan kalkar.
+      activeVoicesRef.current.forEach((eski) => {
+        if (eski.url === url) sesiDurdur(eski, 0.03);
+      });
+
+      const voice = { source, gain, url };
       activeVoicesRef.current.add(voice);
 
       source.onended = () => { activeVoicesRef.current.delete(voice); };
