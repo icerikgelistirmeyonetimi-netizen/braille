@@ -88,6 +88,13 @@ export default function MuzikScoreBrailleOverlay({
       }))
   );
 
+  // Ölçüde bar-repeat işareti varsa o ölçünün nota/sus/oktav hücreleri gizlenir.
+  // (Tekrar işareti "önceki ölçüyle aynı" demek; nota hücrelerini tekrar göstermeye gerek yok.)
+  const olcuRepeatMi = (olcu) => {
+    const cells = olcuCellsAl(olcu);
+    return cells.some((item) => brailleKategoriAl(item.anlam) === 'bar-repeat');
+  };
+
   // Tek bir braille hücresini render eder (hem satır içi hem popup için ortak).
   // barline kategorisi gizli → null döner.
   const renderHucre = (item, i, olcu, olcuIdx) => {
@@ -97,7 +104,11 @@ export default function MuzikScoreBrailleOverlay({
     const key = brailleLejantKeyAl(anlam);
     const kategori = brailleKategoriAl(anlam);
 
-    if (kategori === 'barline' || kategori === 'nota' || kategori === 'sus' || kategori === 'oktav') return null;
+    const notaGizle = olcuRepeatMi(olcu);
+    if (
+      kategori === 'barline' ||
+      (notaGizle && (kategori === 'nota' || kategori === 'sus' || kategori === 'oktav'))
+    ) return null;
 
     const lejantItem = kategori === 'nota'
       ? null
