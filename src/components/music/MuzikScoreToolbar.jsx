@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import MuzikToolOptions from './MuzikToolOptions.jsx';
-import { MUSIC_EDITOR_TOOLBAR, SURE_KISA, SURE_KARTLARI } from '../../utils/music-brf/musicConstants.js';
+import { MUSIC_EDITOR_TOOLBAR } from '../../utils/music-brf/musicConstants.js';
 import { ayarlariAl, ayarGuncelle, ayarlariDinle } from '../../utils/ayarlar.js';
 import { toneSesAyarlariAl, toneSesAyariGuncelle, toneSesAyarlariDinle } from '../../utils/toneSesAyarlari.js';
 
@@ -395,17 +395,19 @@ export default function MuzikScoreToolbar({
         voltaMeasureEkle={voltaMeasureEkle}
       />
 
-      <div className="flex items-center gap-2 border-t border-zinc-200 px-3 py-1.5 text-[11px] text-zinc-600">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" aria-hidden="true" />
-        <span>
-          {bekleyenBag?.tipModu === 'slur' ? 'Slur — notaları seçin'
-            : bekleyenBag?.tipModu === 'tie' ? 'Tie — iki aynı notayı seçin'
-            : bekleyenModifier ? `${bekleyenModifier.kayit.ad} — ${bekleyenModifier.plasiyasyon === 'nota-arasi' ? 'önceki notayı' : bekleyenModifier.plasiyasyon === 'olcu-cizgisi' ? 'ölçü çizgisini' : 'notayı'} seçin`
-            : bekleyenTuplet ? `Tuplet — notaları seçin (${bekleyenTuplet.notaIdler.length})`
-            : aktifArac ? `${(MUSIC_EDITOR_TOOLBAR.find((t) => t.id === aktifArac) || {}).label} açık · seçili süre: ${SURE_KISA[seciliSureIdx] || '♩'}`
-            : `Seçili süre: ${SURE_KISA[seciliSureIdx] || '♩'} (${SURE_KARTLARI[seciliSureIdx]?.etiket || 'Dörtlük'})`}
-        </span>
-      </div>
+      {/* Slur/Tie/Modifier/Tuplet işlem ipuçları — yalnız o işlem aktifken göster.
+          (Varsayılan "Seçili süre: …" satırı gizlendi.) */}
+      {(bekleyenBag || bekleyenModifier || bekleyenTuplet) && (
+        <div className="flex items-center gap-2 border-t border-zinc-200 px-3 py-1.5 text-[11px] text-zinc-600">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" aria-hidden="true" />
+          <span>
+            {bekleyenBag?.tipModu === 'slur' ? 'Slur — notaları seçin'
+              : bekleyenBag?.tipModu === 'tie' ? 'Tie — iki aynı notayı seçin'
+              : bekleyenModifier ? `${bekleyenModifier.kayit.ad} — ${bekleyenModifier.plasiyasyon === 'nota-arasi' ? 'önceki notayı' : bekleyenModifier.plasiyasyon === 'olcu-cizgisi' ? 'ölçü çizgisini' : 'notayı'} seçin`
+              : `Tuplet — notaları seçin (${bekleyenTuplet.notaIdler.length})`}
+          </span>
+        </div>
+      )}
 
       {/* Tone.js Detay Ayarları popup'ı */}
       {detayAcik && (
