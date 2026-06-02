@@ -26,6 +26,9 @@ function midiNotaAdi(midi) {
 export default function TonePianoTest() {
   const [durum, setDurum] = useState('hazır');
   const [callogu, setCallogu] = useState([]);
+  // true = nota kuyruğu doğal sönene kadar çalsın (dolu/gerçekçi his),
+  // false = nota kendi müzikal süresinde kesilsin (kuru).
+  const [kuyrukBiraksin, setKuyrukBiraksin] = useState(true);
   const samplerRef = useRef(null);
 
   // Yemen Türküsü BRF → nota/olay listesi
@@ -90,9 +93,16 @@ export default function TonePianoTest() {
           const midi = muzikNotaMidiAl(item, { keySignatureAccidentals: veri.keySig });
           if (Number.isFinite(midi)) {
             const nota = midiNotaAdi(midi);
-            // Notayı kendi süresinin %95'i kadar tut → bağlı (legato) ama temiz.
-            const tutSec = Math.max(0.08, (durSec || 0.3) * 0.95);
-            sampler.triggerAttackRelease(nota, tutSec, cursor);
+            if (kuyrukBiraksin) {
+              // Kuyruk bıraksın: notayı tetikle, örnek doğal sönümüyle çalsın.
+              // Bir sonraki notaya kadar olan boşluktan çok daha uzun tutarak
+              // (release: 1 sn) ardışık notalar birbirine karışsın → dolu his.
+              sampler.triggerAttack(nota, cursor);
+            } else {
+              // Kuru: nota kendi müzikal süresinde kesilsin.
+              const tutSec = Math.max(0.08, (durSec || 0.3) * 0.95);
+              sampler.triggerAttackRelease(nota, tutSec, cursor);
+            }
             log.push(`${item.notaAd}${item.oktav} (${nota}) — ${durSec.toFixed(2)}s`);
           }
         }
@@ -132,6 +142,15 @@ export default function TonePianoTest() {
           <button className="btn" type="button" onClick={cal}>▶ Çal</button>
           <button className="btn" type="button" onClick={durdur}>■ Durdur</button>
         </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.95em' }}>
+          <input
+            type="checkbox"
+            checked={kuyrukBiraksin}
+            onChange={(e) => setKuyrukBiraksin(e.target.checked)}
+          />
+          Kuyruk bıraksın (notalar doğal sönümle çalıp birbirine karışsın — daha dolu/gerçekçi)
+        </label>
 
         <div role="status" aria-live="polite" style={{ fontWeight: 700, color: 'var(--accent)' }}>
           Durum: {durum}
