@@ -145,7 +145,9 @@ export default function MuzikScoreToolbar({
           );
         })}
 
-        {/* ── "Diğer" açılır menüsü: Nüans, Dinamik, İfade, Süsleme, Tuplet ── */}
+        {/* ── "Diğer" açılır menüsü: Nüans, Dinamik, İfade, Süsleme, Tuplet ──
+             Yalnızca geliştirmede; yayınlanan (production) derlemede gizli. */}
+        {!import.meta.env.PROD && (
         <div className="muzik-diger-sarmal relative" ref={digerRef}>
           <button
             type="button"
@@ -193,6 +195,7 @@ export default function MuzikScoreToolbar({
             </div>
           )}
         </div>
+        )}
 
         {/* ── "Ayarlar" açılır menüsü ── */}
         <div className="relative" ref={ayarlarRef}>
