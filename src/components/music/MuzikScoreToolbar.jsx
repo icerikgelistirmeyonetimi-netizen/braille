@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import MuzikToolOptions from './MuzikToolOptions.jsx';
 import { MUSIC_EDITOR_TOOLBAR, SURE_KISA, SURE_KARTLARI } from '../../utils/music-brf/musicConstants.js';
 import { ayarlariAl, ayarGuncelle, ayarlariDinle } from '../../utils/ayarlar.js';
+import { toneSesAyarlariAl, toneSesAyariGuncelle, toneSesAyarlariDinle } from '../../utils/toneSesAyarlari.js';
 
 // "Diğer" açılır menüsüne taşınan araçlar — araç çubuğu kalabalık olmasın.
 const DIGER_ARAC_IDLERI = ['nuans-once', 'nuans-sonra', 'dinamikler', 'expression', 'suslemeler', 'duzensiz-gruplar'];
@@ -59,6 +60,12 @@ export default function MuzikScoreToolbar({
     try { return !!ayarlariAl().tonejsSes; } catch { return false; }
   });
   useEffect(() => ayarlariDinle((a) => setToneSes(!!a.tonejsSes)), []);
+
+  // Tone.js detay ayarları (release/volume/reverb) + "Detay" popup'ı.
+  const [detayAcik, setDetayAcik] = useState(false);
+  const [toneAyar, setToneAyar] = useState(() => toneSesAyarlariAl());
+  useEffect(() => toneSesAyarlariDinle((s) => setToneAyar({ ...s })), []);
+  const toneAyarYama = (yama) => toneSesAyariGuncelle(yama);
 
   // Ayarlar menüsü dışarı tıklama / Esc ile kapat
   useEffect(() => {
@@ -245,15 +252,26 @@ export default function MuzikScoreToolbar({
               </div>
 
               <div className="mt-2 mb-1.5 border-t border-zinc-100 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Ses</div>
-              <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Notaları Tone.js piyano motoruyla çal (deneysel)">
-                <input
-                  type="checkbox"
-                  checked={toneSes}
-                  onChange={(e) => ayarGuncelle({ tonejsSes: e.target.checked })}
-                  className="accent-amber-500"
-                />
-                Tone.js piyano motoru
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Notaları Tone.js piyano motoruyla çal (deneysel)">
+                  <input
+                    type="checkbox"
+                    checked={toneSes}
+                    onChange={(e) => ayarGuncelle({ tonejsSes: e.target.checked })}
+                    className="accent-amber-500"
+                  />
+                  Tone.js piyano motoru
+                </label>
+                <button
+                  type="button"
+                  onClick={() => { setDetayAcik(true); setAyarlarAcik(false); }}
+                  disabled={!toneSes}
+                  className="shrink-0 rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Tone.js detay ayarları"
+                >
+                  Detay…
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -394,6 +412,80 @@ export default function MuzikScoreToolbar({
             : `Seçili süre: ${SURE_KISA[seciliSureIdx] || '♩'} (${SURE_KARTLARI[seciliSureIdx]?.etiket || 'Dörtlük'})`}
         </span>
       </div>
+
+      {/* Tone.js Detay Ayarları popup'ı */}
+      {detayAcik && (
+        <div
+          role="presentation"
+          onClick={() => setDetayAcik(false)}
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Tone.js detay ayarları"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-zinc-900">Tone.js Ses Ayarları</h2>
+              <button type="button" onClick={() => setDetayAcik(false)}
+                className="rounded-md border border-zinc-200 px-2 py-0.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-100">
+                Kapat
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <label className="flex flex-col gap-1 text-xs text-zinc-700">
+                <span className="flex justify-between">
+                  <span className="font-semibold">Kuyruk (release)</span>
+                  <span className="text-amber-600 font-semibold">{Number(toneAyar.release).toFixed(1)} sn</span>
+                </span>
+                <input type="range" min={0.1} max={4} step={0.1}
+                  value={toneAyar.release}
+                  onChange={(e) => toneAyarYama({ release: Number(e.target.value) })}
+                  className="accent-amber-500" />
+                <span className="text-[10px] text-zinc-400">Notanin bitiste ne kadar surede sonecegi</span>
+              </label>
+
+              <label className="flex flex-col gap-1 text-xs text-zinc-700">
+                <span className="flex justify-between">
+                  <span className="font-semibold">Ses seviyesi</span>
+                  <span className="text-amber-600 font-semibold">{Math.round(toneAyar.volume * 100)}%</span>
+                </span>
+                <input type="range" min={0} max={1} step={0.05}
+                  value={toneAyar.volume}
+                  onChange={(e) => toneAyarYama({ volume: Number(e.target.value) })}
+                  className="accent-amber-500" />
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-700">
+                <input type="checkbox"
+                  checked={toneAyar.reverbAcik}
+                  onChange={(e) => toneAyarYama({ reverbAcik: e.target.checked })}
+                  className="accent-amber-500" />
+                <span className="font-semibold">Reverb (oda yankisi)</span>
+              </label>
+
+              <label className="flex flex-col gap-1 text-xs text-zinc-700" style={{ opacity: toneAyar.reverbAcik ? 1 : 0.4 }}>
+                <span className="flex justify-between">
+                  <span className="font-semibold">Yanki miktari</span>
+                  <span className="text-amber-600 font-semibold">{Math.round(toneAyar.reverbWet * 100)}%</span>
+                </span>
+                <input type="range" min={0} max={0.6} step={0.05}
+                  value={toneAyar.reverbWet}
+                  disabled={!toneAyar.reverbAcik}
+                  onChange={(e) => toneAyarYama({ reverbWet: Number(e.target.value) })}
+                  className="accent-amber-500" />
+              </label>
+            </div>
+
+            <p className="mt-4 text-[10px] text-zinc-400">
+              Ayarlar otomatik kaydedilir ve aninda uygulanir.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

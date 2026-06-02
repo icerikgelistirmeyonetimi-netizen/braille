@@ -6,6 +6,7 @@ import {
   PIANO_AUDIO_FOLDER,
 } from '../../utils/music-brf/musicPianoAudioHelpers.js';
 import { ayarlariAl, ayarlariDinle } from '../../utils/ayarlar.js';
+import { toneSesAyarlariAl, toneSesAyarlariDinle } from '../../utils/toneSesAyarlari.js';
 
 const sureMsAl = (sureIndeksi) => {
   switch (Number(sureIndeksi)) {
@@ -280,12 +281,47 @@ function useHtmlPiano({
 // ── Tone.js Sampler motoru (Ayarlar'dan açılır) ─────────────────────────────
 // Paylaşılan tek Sampler: örnekler bir kez yüklenir, tüm sayfalar paylaşır.
 // Örnekler talep üzerine eklenir (.add) → sadece kullanılan notalar yüklenir.
+// Detay ayarları (release/volume/reverb) toneSesAyarlari'dan okunur ve canlı
+// uygulanır (Detay popup'ından değiştirildiğinde anında yansır).
 let _toneSampler = null;
+let _toneReverb = null;
+let _toneAboneKuruldu = false;
 const _toneLoaded = new Set();
+
+function _toneAyarUygula(s) {
+  if (_toneSampler) {
+    try { _toneSampler.release = Math.max(0.05, Number(s.release) || 1); } catch { /* yoksay */ }
+    try {
+      const v = Math.max(0.0001, Math.min(1, Number(s.volume) ?? 0.75));
+      _toneSampler.volume.value = Tone.gainToDb(v);
+    } catch { /* yoksay */ }
+  }
+  if (_toneReverb) {
+    try {
+      _toneReverb.wet.value = s.reverbAcik ? Math.max(0, Math.min(0.9, Number(s.reverbWet) || 0)) : 0;
+    } catch { /* yoksay */ }
+  }
+}
 
 function _toneSamplerAl() {
   if (!_toneSampler) {
-    _toneSampler = new Tone.Sampler({ release: 1, curve: 'exponential' }).toDestination();
+    const s = toneSesAyarlariAl();
+    // Oda yankısı: sampler → reverb → çıkış
+    _toneReverb = new Tone.Reverb({ decay: 2.2, preDelay: 0.01 }).toDestination();
+    _toneReverb.wet.value = s.reverbAcik ? Math.max(0, Math.min(0.9, Number(s.reverbWet) || 0)) : 0;
+    _toneSampler = new Tone.Sampler({
+      release: Math.max(0.05, Number(s.release) || 1),
+      curve: 'exponential',
+    }).connect(_toneReverb);
+    try {
+      const v = Math.max(0.0001, Math.min(1, Number(s.volume) ?? 0.75));
+      _toneSampler.volume.value = Tone.gainToDb(v);
+    } catch { /* yoksay */ }
+
+    if (!_toneAboneKuruldu) {
+      _toneAboneKuruldu = true;
+      toneSesAyarlariDinle(_toneAyarUygula); // detay değişince canlı uygula
+    }
   }
   return _toneSampler;
 }
@@ -351,9 +387,11 @@ function useTonePiano({
     const ok = await _toneNotaYukle(note, url);
     if (!ok) return;
 
-    const baseVol = Number.isFinite(Number(context?.volume))
+    // Master ses seviyesi sampler.volume'dan (detay ayar). Buradaki velocity
+    // yalnızca müzikal dinamikler için (varsayılan 1) — çift kısma olmasın.
+    const velocity = Number.isFinite(Number(context?.volume))
       ? Math.max(0, Math.min(1, Number(context.volume)))
-      : volume;
+      : 1;
 
     const cutOff = context?.cutOff === true;
     const durMs = cutOff
@@ -362,7 +400,7 @@ function useTonePiano({
     const holdSec = Math.max(0.1, durMs / 1000);
 
     try {
-      _toneSamplerAl().triggerAttackRelease(note, holdSec, undefined, baseVol);
+      _toneSamplerAl().triggerAttackRelease(note, holdSec, undefined, velocity);
     } catch { /* yoksay */ }
   }, [enabled, volume, extension]);
 
