@@ -1055,6 +1055,14 @@ export default function MuzikScoreSvg({
                     onMouseLeave={() => setHoverEklemeNotasi((onceki) => (
                       onceki?.key === hoverKey ? null : onceki
                     ))}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const sureSayisi = MUZIK_SURE_GOSTERGELERI.length;
+                      const mevcutIdx = Number.isInteger(seciliSureIdx) ? seciliSureIdx : 1;
+                      const yon = e.deltaY > 0 ? 1 : -1;
+                      setSeciliSureIdx(((mevcutIdx + yon) + sureSayisi) % sureSayisi);
+                    }}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();

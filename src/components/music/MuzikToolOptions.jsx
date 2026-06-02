@@ -444,20 +444,8 @@ export default function MuzikToolOptions({
     }
   }
 
-  const onWheelSure = (aktifArac === 'sure' || aktifArac === 'notalar')
-    ? (e) => {
-        e.preventDefault();
-        const sureSayisi = MUZIK_SURE_GOSTERGELERI.length;
-        const yon = e.deltaY > 0 ? 1 : -1;
-        sureSecildi(((seciliSureIdx + yon) + sureSayisi) % sureSayisi);
-      }
-    : undefined;
-
   return (
-    <div
-      className="border-t border-zinc-200 bg-zinc-50/80 px-2 py-1.5"
-      onWheel={onWheelSure}
-    >
+    <div className="border-t border-zinc-200 bg-zinc-50/80 px-2 py-1.5">
       <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{baslik}</div>
       <div className="flex flex-wrap items-center gap-1">{icerik}</div>
     </div>
