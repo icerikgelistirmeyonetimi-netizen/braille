@@ -153,21 +153,24 @@ export function usePianoNotePreview({
 
     const baslat = (buffer) => {
       if (!buffer) return;
-      const t0 = ctx.currentTime;
+      // İleri-zamanlama: zarfı tam currentTime'da kurmak, işlenene dek "şimdi"
+      // geçmişte kalıp rampanın atlanmasına ve ani başlangıç klikine yol açar.
+      // Küçük bir lookahead, attack rampasının tam uygulanmasını garanti eder.
+      const t0 = ctx.currentTime + 0.02;
 
       const source = ctx.createBufferSource();
       source.buffer = buffer;
 
       const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.setValueAtTime(0, t0);
 
       source.connect(gain);
       gain.connect(ctx.destination);
 
-      // Attack: klik olmaması için kısa ama gerçek bir rampa (örnek saatinde).
+      // Attack: klik olmaması için gerçek bir rampa (örnek saatinde, t0'dan).
       const attackSec = cutOff
-        ? Math.max(0.004, Math.min(0.012, (durationMs / 1000) * 0.25))
-        : 0.008;
+        ? Math.max(0.006, Math.min(0.014, (durationMs / 1000) * 0.25))
+        : 0.014;
       gain.gain.linearRampToValueAtTime(effectiveVolume, t0 + attackSec);
 
       const voice = { source, gain };
@@ -182,15 +185,27 @@ export function usePianoNotePreview({
         return;
       }
 
-      // Kısa notalar (staccato / süsleme): orantılı release ile kesilir.
       if (cutOff && durationMs !== null) {
+        // Kısa notalar (staccato / süsleme): orantılı release ile kesilir.
         const releaseSec = Math.max(0.02, Math.min(0.05, (durationMs / 1000) * 0.4));
         const stopAt = t0 + durationMs / 1000;
         try {
           gain.gain.setValueAtTime(effectiveVolume, Math.max(t0, stopAt - releaseSec));
-          gain.gain.linearRampToValueAtTime(0.0001, stopAt);
+          gain.gain.linearRampToValueAtTime(0, stopAt);
           source.stop(stopAt + 0.01);
         } catch { /* yoksay */ }
+      } else {
+        // Normal notalar: örnek dosyası kırpık biterse son klikini önlemek için
+        // doğal bitişin son ~60ms'sinde yumuşak bir release uygula.
+        const bufSec = buffer.duration || 0;
+        if (bufSec > 0.12) {
+          const relSec = 0.06;
+          const stopAt = t0 + bufSec;
+          try {
+            gain.gain.setValueAtTime(effectiveVolume, stopAt - relSec);
+            gain.gain.linearRampToValueAtTime(0, stopAt);
+          } catch { /* yoksay */ }
+        }
       }
 
       // Polifoni sınırı: 12'den fazla ses üst üste binerse en eskilerini pürüzsüz kapat.
