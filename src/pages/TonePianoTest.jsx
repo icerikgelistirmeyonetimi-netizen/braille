@@ -67,7 +67,7 @@ export default function TonePianoTest() {
         await new Promise((resolve, reject) => {
           const s = new Tone.Sampler({
             urls: samplerUrls,
-            release: 1,         // doğal piyano kuyruğu (saniye)
+            release: 0.5,       // hafif kuyruk (saniye) — dolu his ama bulanık değil
             curve: 'exponential',
             onload: resolve,
             onerror: reject,
@@ -94,12 +94,13 @@ export default function TonePianoTest() {
           if (Number.isFinite(midi)) {
             const nota = midiNotaAdi(midi);
             if (kuyrukBiraksin) {
-              // Kuyruk bıraksın: notayı tetikle, örnek doğal sönümüyle çalsın.
-              // Bir sonraki notaya kadar olan boşluktan çok daha uzun tutarak
-              // (release: 1 sn) ardışık notalar birbirine karışsın → dolu his.
-              sampler.triggerAttack(nota, cursor);
+              // Hafif kuyruk: nota kendi süresi kadar tutulur, sonra sampler'ın
+              // release'i (0.5 sn) kadar söner → bir sonraki notaya hafifçe taşar,
+              // dolu/gerçekçi his verir ama bulanıklaşmaz.
+              const tutSec = Math.max(0.12, durSec || 0.3);
+              sampler.triggerAttackRelease(nota, tutSec, cursor);
             } else {
-              // Kuru: nota kendi müzikal süresinde kesilsin.
+              // Kuru: nota kendi müzikal süresinde kesilsin (kısa release ile).
               const tutSec = Math.max(0.08, (durSec || 0.3) * 0.95);
               sampler.triggerAttackRelease(nota, tutSec, cursor);
             }
