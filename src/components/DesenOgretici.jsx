@@ -624,7 +624,7 @@ className="btn"           type="button"
         <button
           className="btn"
           type="button"
-          aria-label="Önceki"
+          aria-label="Önceki öğe"
           disabled={indeks === 0}
           onClick={() => {
             tumSesleriDurdur();
@@ -632,7 +632,7 @@ className="btn"           type="button"
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
-          <span className="btn-etiket">Önceki</span>
+          <span className="btn-etiket">Önceki öğe</span>
         </button>
         <button
           className="btn"
@@ -641,10 +641,10 @@ className="btn"           type="button"
             tumSesleriDurdur();
             setIndeks((i) => Math.min(i + 1, aktifListe.length));
           }}
-          aria-label="Bu öğeyi atla"
+          aria-label="Sonraki öğe"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
-          <span className="btn-etiket">Atla</span>
+          <span className="btn-etiket">Sonraki öğe</span>
         </button>
       </div>
     </div>
