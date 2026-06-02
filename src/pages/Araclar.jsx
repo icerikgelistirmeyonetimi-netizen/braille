@@ -4433,7 +4433,7 @@ export default function Araclar() {
   useEffect(() => {
     let w;
     try {
-      w = new Worker('/liblouis/louis-worker.js');
+      w = new Worker(`${import.meta.env.BASE_URL}liblouis/louis-worker.js`);
     } catch (err) {
       console.error('liblouis worker başlatılamadı:', err);
       return undefined;
