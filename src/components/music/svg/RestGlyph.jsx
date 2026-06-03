@@ -22,20 +22,22 @@ const glyphMap = {
 //   • Tam sus (1): 4. çizginin (y=76) altına asılır.
 //   • Yarım sus (2): orta çizginin (y=88) üstüne oturur.
 //   • Dörtlük ve kısa suslar: orta çizgiye ortalanır.
+// Alphabetic baseline (varsayılan): glif baseline'dan YUKARI çizilir.
+// y = baseline; sus glifinin gövdesi y'nin üstünde kalır. Tip-bazlı baseline:
 const REST_Y = {
-  1:  82,  // tam — 4. çizgi altı
-  2:  86,  // yarım — orta çizgi üstü
-  4:  88,  // dörtlük — orta
-  8:  88,
-  16: 88,
-  32: 88,
-  64: 88,
+  1:  84,  // tam — 4. çizgiden (76) asılı
+  2:  90,  // yarım — orta çizgi (88) üstüne oturur
+  4:  100, // dörtlük — porte ortasına dikey yayılır
+  8:  98,  // sekizlik
+  16: 100,
+  32: 102,
+  64: 104,
 };
 
 function RestGlyph({ item, x, onClick, autoRest }) {
   const real = item.realValue;
   const glyph = glyphMap[real] || '𝄽';
-  const y = REST_Y[real] ?? 88;
+  const y = REST_Y[real] ?? 100;
   const isAuto = Boolean(item.autoRest || item.otomatik || autoRest);
 
   return (
@@ -48,14 +50,13 @@ function RestGlyph({ item, x, onClick, autoRest }) {
         x={x}
         y={y}
         textAnchor="middle"
-        dominantBaseline="central"
         className="select-none fill-zinc-900 text-[36px]"
         style={{ fontFamily: "'Bravura Text', 'Cambria Math', 'Noto Music', serif" }}
       >
         {glyph}
       </text>
       {item.dotted && (
-        <circle cx={x + 16} cy={y - 8} r={2.4} className="fill-zinc-900" />
+        <circle cx={x + 16} cy={y - 12} r={2.4} className="fill-zinc-900" />
       )}
     </g>
   );
