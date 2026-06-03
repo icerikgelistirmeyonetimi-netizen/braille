@@ -16,9 +16,26 @@ const glyphMap = {
   64: String.fromCodePoint(0x1D141),
 };
 
+// Porte çizgileri y = [64, 76, 88, 100, 112] (orta çizgi = 88, aralık = 12).
+// Sus glifinin dikey konumu tipine göre değişir (dominantBaseline:central → y
+// glifin görsel merkezidir):
+//   • Tam sus (1): 4. çizginin (y=76) altına asılır.
+//   • Yarım sus (2): orta çizginin (y=88) üstüne oturur.
+//   • Dörtlük ve kısa suslar: orta çizgiye ortalanır.
+const REST_Y = {
+  1:  82,  // tam — 4. çizgi altı
+  2:  86,  // yarım — orta çizgi üstü
+  4:  88,  // dörtlük — orta
+  8:  88,
+  16: 88,
+  32: 88,
+  64: 88,
+};
+
 function RestGlyph({ item, x, onClick, autoRest }) {
   const real = item.realValue;
   const glyph = glyphMap[real] || '𝄽';
+  const y = REST_Y[real] ?? 88;
   const isAuto = Boolean(item.autoRest || item.otomatik || autoRest);
 
   return (
@@ -29,15 +46,16 @@ function RestGlyph({ item, x, onClick, autoRest }) {
     >
       <text
         x={x}
-        y={104}
+        y={y}
         textAnchor="middle"
+        dominantBaseline="central"
         className="select-none fill-zinc-900 text-[36px]"
         style={{ fontFamily: "'Bravura Text', 'Cambria Math', 'Noto Music', serif" }}
       >
         {glyph}
       </text>
       {item.dotted && (
-        <circle cx={x + 16} cy={96} r={2.4} className="fill-zinc-900" />
+        <circle cx={x + 16} cy={y - 8} r={2.4} className="fill-zinc-900" />
       )}
     </g>
   );
