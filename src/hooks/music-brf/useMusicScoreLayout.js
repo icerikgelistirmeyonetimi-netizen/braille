@@ -24,9 +24,9 @@ import {
   SVG_KEY_SIGNATURE_X,
 } from '../../utils/music-brf/musicConstants.js';
 
-const SCORE_LAYOUT_MIN_ITEM_GAP = 28;
-const SCORE_LAYOUT_MIN_DENSE_ITEM_GAP = 20;
-const SCORE_LAYOUT_MAX_ITEM_GAP = 68;
+const SCORE_LAYOUT_MIN_ITEM_GAP = 32;
+const SCORE_LAYOUT_MIN_DENSE_ITEM_GAP = 22;
+const SCORE_LAYOUT_MAX_ITEM_GAP = 76;
 const SCORE_LAYOUT_ROW_FILL_THRESHOLD = 0.72;
 const SCORE_LAYOUT_MEASURE_DISTRIBUTION_POWER = 1;
 
@@ -593,10 +593,6 @@ export function useMusicScoreLayout({
     const expandable = row.filter((m) => !m.layoutInfo?.sadeceOtomatikSuslardanMi);
     if (!expandable.length) return row;
 
-    // Dağıtım (justify): satırda 2+ ölçü varsa ölçüleri esnetip satırı TAM
-    // doldurur (varsayılan hedef: 2 ölçü dizeyi doldurur). Tek ölçü satırı ise
-    // yalnız zaten ≥%72 doluysa esnet — yoksa tek ölçü tüm dizeyi kaplamaz
-    // (kullanıcı: tek ölçü dizeyi doldurmasın, 2 ölçü doldursun).
     const rowFillRatio = currentTotal / Math.max(1, rowAvailable);
     const shouldDistribute = rowFillRatio >= SCORE_LAYOUT_ROW_FILL_THRESHOLD || row.length >= 2;
     if (!shouldDistribute) return row;
@@ -696,18 +692,15 @@ export function useMusicScoreLayout({
       });
     }
 
-    // Notaları eşit dağılıma (ölçü genişliğine yayma) doğru çekme miktarı.
-    // Ölçü ~yarım dize olduğundan, notalar ölçü alanını dengeli doldurmalı:
-    // orta seviye blend (sola yığılmaz, aşırı da yayılmaz).
     const freeRatio = Math.min(1, (available - minNeeded) / Math.max(1, available));
     const blend =
       sadeceOtomatikSuslardanMi ? 0.08 :
-      freeRatio > 0.55 ? 0.55 :
-      freeRatio > 0.35 ? 0.48 :
-      freeRatio > 0.18 ? 0.42 :
-      count >= 8 ? 0.42 :
-      count >= 5 ? 0.36 :
-      count >= 3 ? 0.30 : 0.24;
+      freeRatio > 0.55 ? 0.82 :
+      freeRatio > 0.35 ? 0.68 :
+      freeRatio > 0.18 ? 0.52 :
+      count >= 8 ? 0.46 :
+      count >= 5 ? 0.38 :
+      count >= 3 ? 0.26 : 0.18;
 
     const blended = adjusted.map((p, index) => {
       const t = index / (count - 1);
@@ -771,16 +764,7 @@ export function useMusicScoreLayout({
           measureEndX = rowRightX;
         }
 
-        // Son ölçüyü satır sağına kadar ESNETME — yalnızca satır gerçekten
-        // dağıtıldıysa (dolu satır justify) uygula. Aksi halde (düzenleme
-        // sırasında kısmi satır) ölçü doğal/sıkışık genişlikte kalır; notalar
-        // tüm satıra yayılmaz, sola dayalı ve yakın durur.
-        if (
-          satirSonOlcuMu &&
-          measure.layoutInfo?.distributedExtraWidth > 0 &&
-          measureEndX < rowRightX &&
-          measure.layoutWidth > 0
-        ) {
+        if (satirSonOlcuMu && measureEndX < rowRightX && measure.layoutWidth > 0) {
           const rowUsed = measureStartX + measure.layoutWidth;
           if (rowUsed <= rowRightX + 1) {
             measureEndX = rowRightX;
