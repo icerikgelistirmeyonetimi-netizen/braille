@@ -593,8 +593,12 @@ export function useMusicScoreLayout({
     const expandable = row.filter((m) => !m.layoutInfo?.sadeceOtomatikSuslardanMi);
     if (!expandable.length) return row;
 
+    // Dağıtım (justify): yalnızca satır gerçekten dolduğunda (≥%72) uygulanır.
+    // Eskiden "2+ ölçü varsa her zaman dağıt" kuralı, satır neredeyse boşken bile
+    // ölçüleri esnetip notaları dizeye yayıyordu. Artık düzenleme sırasında
+    // (kısmi satır) ölçüler doğal/sıkışık genişlikte, sola dayalı kalır.
     const rowFillRatio = currentTotal / Math.max(1, rowAvailable);
-    const shouldDistribute = rowFillRatio >= SCORE_LAYOUT_ROW_FILL_THRESHOLD || row.length >= 2;
+    const shouldDistribute = rowFillRatio >= SCORE_LAYOUT_ROW_FILL_THRESHOLD;
     if (!shouldDistribute) return row;
 
     const totalWeight = expandable.reduce((sum, m) => {
@@ -692,15 +696,19 @@ export function useMusicScoreLayout({
       });
     }
 
+    // Notaları eşit dağılıma (tüm ölçü genişliğine yayma) doğru çekme miktarı.
+    // Yüksek blend → notalar açılıp dizeye dağılır. Kullanıcı sıkışık görünüm
+    // istediğinden blend düşük tutulur: notalar minimum itemGap'e yakın kalır;
+    // yalnız okunabilirlik için hafif bir denge uygulanır.
     const freeRatio = Math.min(1, (available - minNeeded) / Math.max(1, available));
     const blend =
-      sadeceOtomatikSuslardanMi ? 0.08 :
-      freeRatio > 0.55 ? 0.82 :
-      freeRatio > 0.35 ? 0.68 :
-      freeRatio > 0.18 ? 0.52 :
-      count >= 8 ? 0.46 :
-      count >= 5 ? 0.38 :
-      count >= 3 ? 0.26 : 0.18;
+      sadeceOtomatikSuslardanMi ? 0.06 :
+      freeRatio > 0.55 ? 0.22 :
+      freeRatio > 0.35 ? 0.20 :
+      freeRatio > 0.18 ? 0.18 :
+      count >= 8 ? 0.30 :
+      count >= 5 ? 0.24 :
+      count >= 3 ? 0.18 : 0.14;
 
     const blended = adjusted.map((p, index) => {
       const t = index / (count - 1);
@@ -764,7 +772,16 @@ export function useMusicScoreLayout({
           measureEndX = rowRightX;
         }
 
-        if (satirSonOlcuMu && measureEndX < rowRightX && measure.layoutWidth > 0) {
+        // Son ölçüyü satır sağına kadar ESNETME — yalnızca satır gerçekten
+        // dağıtıldıysa (dolu satır justify) uygula. Aksi halde (düzenleme
+        // sırasında kısmi satır) ölçü doğal/sıkışık genişlikte kalır; notalar
+        // tüm satıra yayılmaz, sola dayalı ve yakın durur.
+        if (
+          satirSonOlcuMu &&
+          measure.layoutInfo?.distributedExtraWidth > 0 &&
+          measureEndX < rowRightX &&
+          measure.layoutWidth > 0
+        ) {
           const rowUsed = measureStartX + measure.layoutWidth;
           if (rowUsed <= rowRightX + 1) {
             measureEndX = rowRightX;
