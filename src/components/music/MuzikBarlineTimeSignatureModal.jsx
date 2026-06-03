@@ -59,7 +59,7 @@ export default function MuzikBarlineTimeSignatureModal({
         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
           <span className="text-sm font-bold text-slate-800">
             {barlineMenu.inlineType === 'timeSignatureChange'
-              ? 'Zaman imzası değişikliği'
+              ? 'Ölçü sayısı değişikliği'
               : barlineMenu.inlineType === 'keySignatureChange'
                 ? 'Donanım değişikliği'
                 : 'Ölçü çizgisi işlemleri'}
@@ -89,7 +89,7 @@ export default function MuzikBarlineTimeSignatureModal({
                 >
                   {barlineMenu.inlineType === 'keySignatureChange'
                     ? '🗑 Donanım değişikliğini sil'
-                    : '🗑 Zaman imzası değişikliğini sil'}
+                    : '🗑 Ölçü sayısı değişikliğini sil'}
                 </button>
                 <div className="my-1 h-px bg-slate-200" />
               </>
@@ -101,8 +101,8 @@ export default function MuzikBarlineTimeSignatureModal({
               onClick={() => setMode('time')}
             >
               {barlineMenu.inlineType === 'timeSignatureChange'
-                ? 'Zaman imzasını değiştir'
-                : 'Zaman imzası ekle'}
+                ? 'Ölçü sayısını değiştir'
+                : 'Ölçü sayısı ekle'}
             </button>
 
             <button
@@ -234,7 +234,7 @@ export default function MuzikBarlineTimeSignatureModal({
         {mode === 'time' && (
           <>
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Zaman imzası seç
+              Ölçü sayısı seç
             </div>
 
             <div className="grid grid-cols-2 gap-1.5">

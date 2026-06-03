@@ -143,9 +143,9 @@ function ZamanImzasiSecici({ value, onChange }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="h-8 inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-800 hover:border-amber-400 hover:bg-amber-50/40 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-        aria-label="Zaman imzası seçimi"
+        aria-label="Ölçü sayısı seçimi"
       >
-        <span className="text-zinc-400 text-[10px] uppercase tracking-wide">Zaman</span>
+        <span className="text-zinc-400 text-[10px] uppercase tracking-wide">Ölçü</span>
         <span
           className="text-zinc-900 font-semibold text-sm"
           style={{ fontFamily: "'Bravura Text', 'Cambria Math', serif" }}

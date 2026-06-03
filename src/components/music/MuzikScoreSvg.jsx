@@ -1570,7 +1570,7 @@ export default function MuzikScoreSvg({
                   <g
                     role="button"
                     tabIndex={0}
-                    aria-label={`Zaman imzası ${ts} — değiştirmek için tıkla`}
+                    aria-label={`Ölçü sayısı ${ts} — değiştirmek için tıkla`}
                     style={{ cursor: 'pointer' }}
                     onMouseEnter={() => setHoverHeaderTimeSig(true)}
                     onMouseLeave={() => setHoverHeaderTimeSig(false)}
@@ -3039,11 +3039,11 @@ export default function MuzikScoreSvg({
             }}
             role="dialog"
             aria-modal="true"
-            aria-label="Zaman imzasını değiştir"
+            aria-label="Ölçü sayısını değiştir"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <span className="text-sm font-bold text-slate-800">Zaman imzası</span>
+              <span className="text-sm font-bold text-slate-800">Ölçü sayısı</span>
               <button
                 type="button"
                 className="w-7 h-7 rounded-md text-slate-500 hover:bg-slate-100 text-base leading-none"

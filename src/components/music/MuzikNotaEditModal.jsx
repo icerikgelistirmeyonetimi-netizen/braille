@@ -21,7 +21,7 @@ export default function MuzikNotaEditModal({ popupAcik, seciliOge, seciliEditorO
     : susMu
       ? 'Susu düzenle'
       : seciliOge.tip === 'timeSignatureChange'
-        ? 'Zaman imzasını düzenle'
+        ? 'Ölçü sayısını düzenle'
         : seciliOge.tip === 'keySignatureChange'
           ? 'Anahtar imzasını düzenle'
           : ['barline', 'sectionalBarline', 'finalBarline', 'beginRepeat', 'endRepeat'].includes(seciliOge.tip)
