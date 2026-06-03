@@ -66,10 +66,10 @@ export const SVG_ROW_HEIGHT = 340;
 export const SVG_ROW_VIEWBOX_Y = -20;
 
 // Ölçü genişliği sınırları.
-// Tekli ölçüler kompakt; çok notalı ölçüler rahat. Max genişlik düşük tutulur
-// ki satıra daha çok ölçü sığsın (3+); aşırı geniş ölçü = boşa yer.
+// Hedef: VARSAYILAN 2 ölçü satırı tam doldurur (her ölçü ~yarım dize). 3. ölçü
+// gelince ölçüler belirli minimuma kadar daralarak 3 sığar. Max ~yarım dize.
 export const SVG_MEASURE_MIN_WIDTH = 86;
-export const SVG_MEASURE_MAX_WIDTH = 200;
+export const SVG_MEASURE_MAX_WIDTH = 340;
 
 // Yoğun ölçü: çok fazla nota/beam varsa tek satır alabilir.
 export const SVG_DENSE_VISIBLE_COUNT = 18;
@@ -79,8 +79,8 @@ export const SVG_DENSE_MEASURE_MAX_WIDTH = 650;
 // Ölçü içi aralıklar.
 // Standart: tekli olmayan ölçüler sıkışmasın.
 export const SVG_SINGLE_ITEM_GAP = 20;
-export const SVG_NORMAL_ITEM_GAP = 42;
-export const SVG_DENSE_ITEM_GAP = 38;
+export const SVG_NORMAL_ITEM_GAP = 50;
+export const SVG_DENSE_ITEM_GAP = 42;
 
 // Sadece otomatik sus ölçüleri dar tutulur.
 export const SVG_AUTO_REST_MEASURE_WIDTH = 48;

@@ -24,9 +24,9 @@ import {
   SVG_KEY_SIGNATURE_X,
 } from '../../utils/music-brf/musicConstants.js';
 
-const SCORE_LAYOUT_MIN_ITEM_GAP = 26;
-const SCORE_LAYOUT_MIN_DENSE_ITEM_GAP = 19;
-const SCORE_LAYOUT_MAX_ITEM_GAP = 60;
+const SCORE_LAYOUT_MIN_ITEM_GAP = 28;
+const SCORE_LAYOUT_MIN_DENSE_ITEM_GAP = 20;
+const SCORE_LAYOUT_MAX_ITEM_GAP = 68;
 const SCORE_LAYOUT_ROW_FILL_THRESHOLD = 0.72;
 const SCORE_LAYOUT_MEASURE_DISTRIBUTION_POWER = 1;
 
@@ -593,12 +593,12 @@ export function useMusicScoreLayout({
     const expandable = row.filter((m) => !m.layoutInfo?.sadeceOtomatikSuslardanMi);
     if (!expandable.length) return row;
 
-    // Dağıtım (justify): yalnızca satır gerçekten dolduğunda (≥%72) uygulanır.
-    // Eskiden "2+ ölçü varsa her zaman dağıt" kuralı, satır neredeyse boşken bile
-    // ölçüleri esnetip notaları dizeye yayıyordu. Artık düzenleme sırasında
-    // (kısmi satır) ölçüler doğal/sıkışık genişlikte, sola dayalı kalır.
+    // Dağıtım (justify): satırda 2+ ölçü varsa ölçüleri esnetip satırı TAM
+    // doldurur (varsayılan hedef: 2 ölçü dizeyi doldurur). Tek ölçü satırı ise
+    // yalnız zaten ≥%72 doluysa esnet — yoksa tek ölçü tüm dizeyi kaplamaz
+    // (kullanıcı: tek ölçü dizeyi doldurmasın, 2 ölçü doldursun).
     const rowFillRatio = currentTotal / Math.max(1, rowAvailable);
-    const shouldDistribute = rowFillRatio >= SCORE_LAYOUT_ROW_FILL_THRESHOLD;
+    const shouldDistribute = rowFillRatio >= SCORE_LAYOUT_ROW_FILL_THRESHOLD || row.length >= 2;
     if (!shouldDistribute) return row;
 
     const totalWeight = expandable.reduce((sum, m) => {
@@ -696,19 +696,18 @@ export function useMusicScoreLayout({
       });
     }
 
-    // Notaları eşit dağılıma (tüm ölçü genişliğine yayma) doğru çekme miktarı.
-    // Yüksek blend → notalar açılıp dizeye dağılır. Kullanıcı sıkışık görünüm
-    // istediğinden blend düşük tutulur: notalar minimum itemGap'e yakın kalır;
-    // yalnız okunabilirlik için hafif bir denge uygulanır.
+    // Notaları eşit dağılıma (ölçü genişliğine yayma) doğru çekme miktarı.
+    // Ölçü ~yarım dize olduğundan, notalar ölçü alanını dengeli doldurmalı:
+    // orta seviye blend (sola yığılmaz, aşırı da yayılmaz).
     const freeRatio = Math.min(1, (available - minNeeded) / Math.max(1, available));
     const blend =
-      sadeceOtomatikSuslardanMi ? 0.06 :
-      freeRatio > 0.55 ? 0.22 :
-      freeRatio > 0.35 ? 0.20 :
-      freeRatio > 0.18 ? 0.18 :
-      count >= 8 ? 0.30 :
-      count >= 5 ? 0.24 :
-      count >= 3 ? 0.18 : 0.14;
+      sadeceOtomatikSuslardanMi ? 0.08 :
+      freeRatio > 0.55 ? 0.55 :
+      freeRatio > 0.35 ? 0.48 :
+      freeRatio > 0.18 ? 0.42 :
+      count >= 8 ? 0.42 :
+      count >= 5 ? 0.36 :
+      count >= 3 ? 0.30 : 0.24;
 
     const blended = adjusted.map((p, index) => {
       const t = index / (count - 1);
