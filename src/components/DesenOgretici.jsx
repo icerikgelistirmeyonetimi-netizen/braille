@@ -3,17 +3,23 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import BrailleCell from './BrailleCell.jsx';
 import PageHeader from './PageHeader.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
-import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
+import { konus, konusmayiDurdur, basariBildir, hataBildir, ekranOkuyucuTemizle, dogruSesi } from '../utils/ses.js';
 import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
 import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js';
 
-/**
- * Bir öğenin braille nokta bileşimini sözel olarak betimler.
- *   Tek hücre : "1, 2 numaralı noktalardan oluşur."
- *   Çok hücre : "1. hücre 2, 4 numaralı noktalardan, 2. hücre 1, 3 numaralı
- *               noktalardan oluşur."
- */
+// [1]      + 'dan','dan' → "1. noktadan"
+// [1,2]    + 'dan','dan' → "1. ve 2. noktalardan"
+// [1,2,4]  + 'dan','dan' → "1., 2. ve 4. noktalardan"
+// tekEk: tek nokta eki ('dan','ya'); cogulEk: çoğul eki ('dan','a')
+function noktaListesi(nArr, tekEk, cogulEk) {
+  if (!nArr || nArr.length === 0) return '';
+  if (nArr.length === 1) return `${nArr[0]}. nokta${tekEk}`;
+  if (nArr.length === 2) return `${nArr[0]}. ve ${nArr[1]}. noktalar${cogulEk}`;
+  const bas = nArr.slice(0, -1).map((n) => `${n}.`).join(', ');
+  return `${bas} ve ${nArr[nArr.length - 1]}. noktalar${cogulEk}`;
+}
+
 function noktaKompozisyonMetni(oge) {
   const hucreler = Array.isArray(oge.hucreler) && oge.hucreler.length > 0
     ? oge.hucreler
@@ -21,9 +27,10 @@ function noktaKompozisyonMetni(oge) {
   const cok = hucreler.length > 1;
   const parcalar = hucreler
     .map((noktalar, i) => {
-      const liste = (noktalar || []).join(', ');
-      if (!liste) return '';
-      return cok ? `${i + 1}. hücre ${liste} numaralı noktalardan` : `${liste} numaralı noktalardan`;
+      const nArr = noktalar || [];
+      if (!nArr.length) return '';
+      const liste = noktaListesi(nArr, 'dan', 'dan');
+      return cok ? `${i + 1}. hücre ${liste}` : liste;
     })
     .filter(Boolean);
   return parcalar.length ? `${parcalar.join(', ')} oluşur.` : '';
@@ -64,11 +71,13 @@ export default function DesenOgretici({
   ogeyiSeslendir,
   yonergeyiTekrarla,
   noktalariSeslendir = false,
+  seslendirmeDili = 'tr',
 }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   // Bu dersin karışık yazma kaynağı (varsa) — bitiş ekranında yazma etkinliğine yönlendirmek için.
   const yazmaKaynak = mevcutSayfaIcinKaynakAnahtar(pathname);
+  const konusDil = useCallback((text, opts = {}) => konus(text, { dil: seslendirmeDili, ...opts }), [seslendirmeDili]);
 
   // Ders her açılışta baştan başlar (kaldığı yerden devam etmez).
   const [indeks, setIndeks] = useState(0);
@@ -88,6 +97,7 @@ export default function DesenOgretici({
   const uyariResumeTimerRef = useRef(null);
   const uyariRef = useRef(null);
   const uyariFocusIstek = useRef(false);
+  const dotSentinelRef = useRef(null);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -145,19 +155,16 @@ export default function DesenOgretici({
     return () => window.cancelAnimationFrame(id);
   }, [toast]);
 
-  // Yönerge bittiğinde odağı doğrudan ilk braille noktasına (1. nokta) taşı.
-  // Böylece kullanıcı üst düğmelere / okuma moduna takılmadan 1. noktadan başlar.
+
+  // Narrasyon bitince görünmez sentinel'e odaklan; Tab → ilk nokta.
   const oncekiYonergeOkunuyorRef = useRef(false);
   useEffect(() => {
     const onceki = oncekiYonergeOkunuyorRef.current;
     oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
-    // Yalnızca "okunuyordu → bitti" geçişinde, normal öğrenme ekranındayken.
     if (!(onceki && !yonergeOkunuyor)) return undefined;
     if (okumaModu || bitti) return undefined;
-    const id = window.requestAnimationFrame(() => {
-      const ilkNokta = document.querySelector('.page-mid .cell .dot');
-      if (ilkNokta && ilkNokta.tagName === 'BUTTON') ilkNokta.focus();
-    });
+    dogruSesi();
+    const id = window.requestAnimationFrame(() => dotSentinelRef.current?.focus());
     return () => window.cancelAnimationFrame(id);
   }, [yonergeOkunuyor, okumaModu, bitti]);
 
@@ -294,7 +301,8 @@ export default function DesenOgretici({
       const ad = aktifOge.ariaAd || aktifOge.ad;
       const adKategori = ad.trimEnd().endsWith(kategoriAdi) ? ad : `${ad} ${kategoriAdi}`;
       const ek = aktifOge.aciklama ? ` ${aktifOge.aciklama}` : '';
-      const detay = aktifOge.yonergeDetay || `${(aktifOge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
+      const _nArr = aktifOge.noktalar || [];
+      const detay = aktifOge.yonergeDetay || `${noktaListesi(_nArr, 'dan')} oluşur.`;
       return `${adKategori}, ${detay}${ek} Lütfen bu noktalara sırayla dokunun.`;
     }
     if (kalan.length === 0) {
@@ -315,11 +323,15 @@ export default function DesenOgretici({
     if (bitti) {
       yonergeNesilRef.current += 1; // bekleyen kilit açmalarını geçersiz kıl
       setYonergeOkunuyor(false);
+      // JSX'teki <div role="status" aria-live="polite"> tebrikler metnini NVDA'ya duyuruyor.
+      // _srBolge'yi temizle (basariBildir'in bıraktığı içerik) ve TTS için konuş ama
+      // tekrar _srBolge'ye yazma — aksi hâlde "Ana sayfaya dön" sonrasında çift okunur.
+      ekranOkuyucuTemizle();
       const tebrik = bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!';
       const yazmaDavet = (yazmaKaynak && !(kayitlilarModu && aktifListe.length === 0))
         ? ' Şimdi yazma zamanı! Öğrendiklerinizi karışık yazma etkinliğinde uygulayabilirsiniz.'
         : '';
-      konus(tebrik + yazmaDavet);
+      konus(tebrik + yazmaDavet, { srAtla: true });
       return;
     }
     const oge = aktifListe[indeks];
@@ -337,7 +349,8 @@ export default function DesenOgretici({
 
     const ad = oge.ariaAd || oge.ad;
     const adKategori = ad.trimEnd().endsWith(kategoriAdi) ? ad : `${ad} ${kategoriAdi}`;
-    const detay = oge.yonergeDetay || `${(oge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
+    const _nArr = oge.noktalar || [];
+    const detay = oge.yonergeDetay || `${noktaListesi(_nArr, 'dan')} oluşur.`;
     const ek = oge.aciklama ? ` ${oge.aciklama}` : '';
 
     const girisKomp = oge.tamYonergeMetni && noktalariSeslendir ? noktaKompozisyonMetni(oge) : '';
@@ -704,6 +717,7 @@ className="btn"               type="button"
         >
           {yonergeMetni}
         </div>
+        <span ref={dotSentinelRef} tabIndex={-1} aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', outline: 'none', pointerEvents: 'none' }} />
         {cokHucreli ? (
           <div className="cell-row fit" style={{ '--hucre-sayisi': aktifHucreler.length }}>
             {aktifHucreler.map((noktalar, hucreIndex) => (

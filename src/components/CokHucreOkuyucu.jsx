@@ -2,8 +2,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
-import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
+import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle, dogruSesi } from '../utils/ses.js';
 import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
+
+// [1]      + 'ya','a' → "1. noktaya"
+// [1,2]    + 'ya','a' → "1. ve 2. noktalara"
+// [1,2,4]  + 'ya','a' → "1., 2. ve 4. noktalara"
+function noktaListesi(nArr, tekEk, cogulEk) {
+  if (!nArr || nArr.length === 0) return '';
+  if (nArr.length === 1) return `${nArr[0]}. nokta${tekEk}`;
+  if (nArr.length === 2) return `${nArr[0]}. ve ${nArr[1]}. noktalar${cogulEk}`;
+  const bas = nArr.slice(0, -1).map((n) => `${n}.`).join(', ');
+  return `${bas} ve ${nArr[nArr.length - 1]}. noktalar${cogulEk}`;
+}
 
 // Genel amaçlı çok hücreli sıralı okuma bileşeni.
 // Her öge bir kelime/ifadedir; içindeki hücreler "hücre adımlama" modunda
@@ -51,6 +62,7 @@ export default function CokHucreOkuyucu({
   const uyariResumeTimerRef = useRef(null);
   const uyariRef = useRef(null);
   const uyariFocusIstek = useRef(false);
+  const dotSentinelRef = useRef(null);
   const oncekiYonergeOkunuyorRef = useRef(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
@@ -73,15 +85,14 @@ export default function CokHucreOkuyucu({
     const ilkHucre = Array.isArray(hucreler[0]) ? hucreler[0] : (hucreler[0] != null ? [hucreler[0]] : []);
     let hucreYonergesi;
     if (yonergeFormati === 'sirayla') {
-      const noktalarStr = ilkHucre.length ? ilkHucre.join(' ') : '';
-      const dokunYonergesi = noktalarStr
-        ? `Lütfen sırayla ${noktalarStr} noktalarına dokununuz.`
+      const dokunYonergesi = ilkHucre.length
+        ? `Lütfen sırayla ${noktaListesi(ilkHucre, 'ya', 'a')} dokununuz.`
         : 'Lütfen noktalarına dokununuz.';
       hucreYonergesi = cokHucre
         ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${dokunYonergesi}`
         : dokunYonergesi;
     } else {
-      const ilkHucreNoktalar = ilkHucre.length ? `${ilkHucre.join(', ')} numaralı noktalara` : 'boş hücre';
+      const ilkHucreNoktalar = ilkHucre.length ? noktaListesi(ilkHucre, 'ya', 'a') : 'boş hücre';
       hucreYonergesi = cokHucre
         ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${ilkHucreNoktalar} dokunun.`
         : `${ilkHucreNoktalar} dokunun.`;
@@ -207,7 +218,9 @@ export default function CokHucreOkuyucu({
     if (bitti) {
       yonergeNesilRef.current += 1; // bekleyen kilit açmalarını geçersiz kıl
       setYonergeOkunuyor(false);
-      konus(bittiMesaji);
+      // JSX'teki aria-live bölgesi tebrikler metnini duyuruyor; _srBolge'yi temizle.
+      ekranOkuyucuTemizle();
+      konus(bittiMesaji, { srAtla: true });
       return;
     }
     const k = ogeler[indeks];
@@ -348,7 +361,7 @@ export default function CokHucreOkuyucu({
     const noktalar = aktif.hucreler[hucreIndeksi];
     if (!noktalar) return; // kelime değişmiş, indeks henüz sıfırlanmamış olabilir
     yonergeyiKilitleyerekSeslendir(
-      `${hucreIndeksi + 1}. hücre: ${noktalar.join(', ')} numaralı noktalara dokunun.`,
+      `${hucreIndeksi + 1}. hücre: ${noktaListesi(noktalar, 'ya', 'a')} dokunun.`,
       { kesintiyle: true }
     );
   }, [hucreIndeksi, indeks, aktif, bitti, ogeSesiDurdur]);
@@ -370,17 +383,15 @@ export default function CokHucreOkuyucu({
     return () => window.cancelAnimationFrame(id);
   }, [toast]);
 
-  // Yönerge bittiğinde odağı doğrudan aktif hücrenin ilk noktasına (1. nokta)
-  // taşı. Böylece kullanıcı üst düğmelere / okuma moduna takılmadan başlar.
+
+  // Narrasyon bitince görünmez sentinel'e odaklan; Tab → ilk nokta.
   useEffect(() => {
     const onceki = oncekiYonergeOkunuyorRef.current;
     oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
     if (!(onceki && !yonergeOkunuyor)) return undefined;
     if (okumaModu || bitti) return undefined;
-    const id = window.requestAnimationFrame(() => {
-      const ilkNokta = document.querySelector('.page-mid button.dot');
-      if (ilkNokta) ilkNokta.focus();
-    });
+    dogruSesi();
+    const id = window.requestAnimationFrame(() => dotSentinelRef.current?.focus());
     return () => window.cancelAnimationFrame(id);
   }, [yonergeOkunuyor, okumaModu, bitti]);
 
@@ -585,6 +596,7 @@ className="btn"               type="button"
           {k.yazi}
         </div>
 
+        <span ref={dotSentinelRef} tabIndex={-1} aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', outline: 'none', pointerEvents: 'none' }} />
         {/* Aktif hücre gösterimi */}
         {ikiHucreTekSatir ? (
           <div className="cell-row fit" style={{ '--hucre-sayisi': 2 }}>

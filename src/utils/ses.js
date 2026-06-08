@@ -180,7 +180,8 @@ export function konus(metin, opt = {}) {
   if (!a.sesAcik) {
     // Ses kapalıyken bile uygulamanın seslendireceği her cümleyi (yönerge,
     // açıklama, dönüt...) ekran okuyucunun okuyabilmesi için canlı bölgeye yaz.
-    if (metin) ekranOkuyucuBildir(metin);
+    // srAtla=true ise JSX'teki aria-live bölgesi zaten duyuruyu yapıyor; _srBolge'ye yazma.
+    if (metin && !opt.srAtla) ekranOkuyucuBildir(metin);
     // Ses kapalıysa bile akış kırılmasın diye onSon yine tetiklensin
     if (opt && typeof opt.onSon === 'function') {
       setTimeout(() => { try { opt.onSon(); } catch (_) {} }, 0);
@@ -389,7 +390,7 @@ function tonCal({ frekans, sure, tip = 'sine', baslangic = 0, kazanc = 0.18 }) {
 function sesEfektiAcikMi() {
   const a = ayarlariAl();
   // Geriye dönük uyum: ayar tanımlı değilse açık kabul et
-  return a.sesEfektiAcik !== false && a.sesAcik !== false;
+  return a.sesEfektiAcik !== false;
 }
 
 // Dosya tabanlı efektler. public/audio/efekt/ içine konan dosyalar
@@ -465,6 +466,14 @@ function _srBolgeAl() {
   return _srBolge;
 }
 
+let _srTemizleTimer = null;
+
+// _srBolge içeriğini anında temizler (örn. bitti ekranına geçişte önceki mesaj kalmasın).
+export function ekranOkuyucuTemizle() {
+  if (_srTemizleTimer) { clearTimeout(_srTemizleTimer); _srTemizleTimer = null; }
+  if (_srBolge && _srBolge.isConnected) _srBolge.textContent = '';
+}
+
 // Ekran okuyucuya bir dönüt duyurur (ses ayarından bağımsız).
 export function ekranOkuyucuBildir(metin) {
   const bolge = _srBolgeAl();
@@ -473,6 +482,11 @@ export function ekranOkuyucuBildir(metin) {
   // değişken sayıda görünmez boşluk ekleyerek düğümü her seferinde değiştiriyoruz.
   _srSay += 1;
   bolge.textContent = String(metin) + '\u00a0'.repeat(_srSay % 2);
+  if (_srTemizleTimer) clearTimeout(_srTemizleTimer);
+  _srTemizleTimer = setTimeout(() => {
+    if (bolge.isConnected) bolge.textContent = '';
+    _srTemizleTimer = null;
+  }, 4000);
 }
 
 export function basariBildir(metin = 'Tebrikler, doğru!') {

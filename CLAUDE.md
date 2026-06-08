@@ -33,7 +33,7 @@ Single or multi-cell braille pattern teacher. User taps dots in order.
   kategoriAdi="harfi"         // used in instruction: "A harfi, 1,2 numaralı noktalardan..."
   bolumAnahtari="harfler"     // localStorage progress key
   bittiMesaji="Congrats!"
-  noktalariSeslendir          // kisaltma pages: appends "1,2 numaralı noktalardan oluşur."
+  noktalariSeslendir          // kisaltma pages: appends dot composition via noktaListesi()
   rtl                         // Arabic etc.
   ogeSesiCal={fn}             // audio recording playback (optional)
   ogeSesiOnceCal              // play audio before instruction
@@ -68,6 +68,17 @@ Multi-cell word reader. Steps through each cell one at a time.
 
 Both files implement **identical** lock logic. Change one → change the other.
 
+**Shared dot-list helper (defined in both files):**
+```js
+// noktaListesi(nArr, tekEk, cogulEk)
+// [1]     + 'dan','dan' → "1. noktadan"
+// [1,2]   + 'dan','dan' → "1. ve 2. noktalardan"
+// [1,2,4] + 'dan','dan' → "1., 2. ve 4. noktalardan"
+// For "dokunun": noktaListesi(arr, 'ya', 'a')  → "1. noktaya" / "1. ve 2. noktalara"
+```
+Pages that hardcode `yonergeDetay` (e.g. `RakamEgitimi`, `MatematikRakamEgitimi`) define
+a local `nl()` helper with the same logic — update them too when format changes.
+
 **Shared refs/state:**
 ```js
 const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
@@ -76,7 +87,6 @@ const yonergeKilitTimerRef = useRef(null);  // safety timeout ref
 const uyariResumeTimerRef = useRef(null);   // TTS pause/resume timer
 const uyariRef = useRef(null);              // ref to warning toast DOM element
 const uyariFocusIstek = useRef(false);      // "focus toast on next render" flag
-const oncekiYonergeOkunuyorRef = useRef(false);
 ```
 
 **Shared functions:**
@@ -92,16 +102,12 @@ yonergeBeklemeUyar()                        // show toast + set focus flag + TTS
 3. `yonergeBeklemeUyar` → `gosterToast(...)` + `uyariFocusIstek.current = true` + TTS pause/resume
 4. `useEffect([toast])` → after React commits DOM → `rAF → uyariRef.current?.focus()` (NVDA reads it)
 5. `onSon` fires → `yonergeKilidiAc(nesil)` → `setYonergeOkunuyor(false)`
-6. `useEffect([yonergeOkunuyor])` detects `true→false` → focus first dot
+6. Narration ends → `dogruSesi()` (positive audio cue: dots now tappable) → focus invisible `dotSentinelRef` sentinel (tabIndex={-1}, aria-hidden); Tab → first dot
 
 **Toast JSX (always this exact pattern):**
 ```jsx
 {toast && <div ref={uyariRef} className="toast" aria-live="assertive" tabIndex={-1}>{toast}</div>}
 ```
-
-**Focus first dot after narration:**
-- DesenOgretici: `document.querySelector('.page-mid .cell .dot')`
-- CokHucreOkuyucu: `document.querySelector('.page-mid button.dot')`
 
 ---
 
@@ -158,20 +164,36 @@ Manages NVDA focus on route change:
 
 ### `src/utils/ses.js`
 ```js
-konus(text, { kesintiyle?, hiz?, onSon?, dil? })
+konus(text, { kesintiyle?, hiz?, onSon?, dil?, srAtla? })
 // dil: 'tr' (default), 'en', 'de', 'fr'
+// srAtla: true → TTS speaks but does NOT write to _srBolge (use when JSX aria-live already announces)
 // onSon: called when utterance ends — used to unlock narration
 
-konusmayiDurdur()    // cancels pending timer + speechSynthesis.cancel()
-titret(pattern)      // haptic feedback
-basariBildir(text)   // dogruSesi() + konus()
-hataBildir(text)     // yanlisSesi() + konus()
-ekranOkuyucuBildir(text)  // writes to aria-live region (works even when TTS is off)
+konusmayiDurdur()          // cancels pending timer + speechSynthesis.cancel()
+titret(pattern)            // haptic feedback
+dogruSesi()                // rising two-note sound (positive); gated by sesEfektiAcik
+yanlisSesi()               // falling two-note sound (negative); gated by sesEfektiAcik
+tiklamaSesi()              // short neutral click; gated by sesEfektiAcik
+basariBildir(text)         // dogruSesi() + konus()
+hataBildir(text)           // yanlisSesi() + konus()
+ekranOkuyucuBildir(text)   // writes to aria-live region (works even when TTS is off)
+ekranOkuyucuTemizle()      // immediately clears _srBolge (cancel pending clear timer too)
 ```
+
+**Sound effects independence:** `sesEfektiAcikMi()` checks only `sesEfektiAcik`.
+Click/correct/wrong sounds play even when `sesAcik` (TTS narration) is off.
 
 **CRITICAL — Single TTS channel:** `konus()` cancels current utterance.
 You cannot speak a warning AND resume narration from the same point.
 For warnings during narration: `pause()` → NVDA focus (aria-live) → `resume()`. Never call `konus()` for the warning.
+
+**Completion screen pattern (bitti useEffect):**
+```js
+ekranOkuyucuTemizle();               // clear _srBolge left by basariBildir('Tebrikler!')
+konus(bittiMesaji, { srAtla: true }); // TTS only; JSX <div role="status" aria-live> handles NVDA
+```
+Without this pattern, the tebrikler text stays in `_srBolge` and NVDA reads it after the ghost
+"Ana sayfaya dön" button at the end of the virtual buffer (duplicate).
 
 ### `src/utils/ilerleme.js`
 ```js
@@ -203,8 +225,8 @@ ayarlariDinle(fn)   // subscribe to changes, returns unsubscribe fn
 | `.toast` | Brief (2s) notification. Must have `ref`, `tabIndex={-1}`, `aria-live="assertive"` |
 | `.modul-yan .modul-sekme.aktif` | Active module tab in sidebar — focus target on back-navigation |
 | `.banner-baslik` | Page heading — focus target on forward-navigation |
-| `.page-mid .cell .dot` | First dot in DesenOgretici — focus after narration ends |
-| `.page-mid button.dot` | First dot in CokHucreOkuyucu — focus after narration ends |
+| `.page-mid .cell .dot` | First dot in DesenOgretici — Tab from sentinel lands here |
+| `.page-mid button.dot` | First dot in CokHucreOkuyucu — Tab from sentinel lands here |
 
 ---
 
@@ -274,6 +296,11 @@ useEffect(() => {
 | `rAF → focus()` right after `setState` — ref may be null | `useEffect([toast])` then rAF |
 | StrictMode: boolean flag for first-load skip | Compare `oncekiYol.current === null` |
 | `kilitli`: only block onClick | Render as `<div>`, `aria-hidden`, remove all handlers |
+| Auto-focus first dot after narration ends | Focus `dotSentinelRef` sentinel → Tab goes to first dot |
+| Dot format: "1, 2 numaralı noktalardan" | `noktaListesi()`: "1. ve 2. noktalardan" |
+| Update `noktaListesi` format only in templates | Also update `nl()` in `RakamEgitimi` + `MatematikRakamEgitimi` |
+| `sesEfektiAcikMi()` gates on both `sesAcik` and `sesEfektiAcik` | Only gate on `sesEfektiAcik` |
+| `konus(bittiMesaji)` in bitti useEffect — writes to `_srBolge`, NVDA reads it after "Ana sayfaya dön" | `ekranOkuyucuTemizle()` then `konus(bittiMesaji, { srAtla: true })` |
 
 ---
 
