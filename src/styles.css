@@ -21,6 +21,18 @@
   font-style: normal;
   font-display: swap;
 }
+/* Standalone Bravura — porte notasyonu için DOĞRU font (glyph'ler staff baseline
+   konvansiyonuyla konumlanmış). bravura_metadata.json bu fontu tanımlar; nota
+   kafası ve bayraklar resmi SMuFL bbox/anchor değerleriyle bu fontu kullanır.
+   (Bravura Text metin akışı için glyph'leri kaydırır; metadata ona uymaz.) */
+@font-face {
+  font-family: 'Bravura';
+  src: url('/fonts/bravura/Bravura.woff2') format('woff2'),
+       url('/fonts/bravura/Bravura.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ============================================================
    İki tema:
@@ -931,21 +943,38 @@ h1, h2, h3 { color: var(--fg); }
 .ayarlar-ikon svg { width: 100%; height: 100%; pointer-events: none; }
 
 /* Hayalet metin butonu: görünmez ama tıklanabilir ve ekran okuyucuya açık */
+/* Hayalet butonlar: yalnızca ekran okuyucu/klavye kullanıcıları için.
+   Ekranda yer kaplamazlar (görsel olarak gizli) ama erişilebilirlik
+   ağacında kalır ve odaklanabilir. Klavye ile odaklanınca görünür
+   hale gelirler (WCAG 2.4.7). */
 .hayalet-btn {
-  display: block;
-  width: 100%;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
   background: transparent;
-  border: 2px solid transparent;
-  box-shadow: none;
   color: transparent;
-  opacity: 0;
-  min-height: 44px;
+  box-shadow: none;
 }
 .hayalet-btn:focus-visible {
-  /* Klavye ile gezenler için görünür odak (WCAG 2.4.7) */
-  opacity: 1;
+  /* Klavye ile gezenler için görünür hale getir (WCAG 2.4.7) */
+  position: static;
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  clip: auto;
+  overflow: visible;
+  white-space: normal;
   color: var(--accent);
-  border-color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
@@ -3564,7 +3593,7 @@ h1, h2, h3 { color: var(--fg); }
 .araclar-muzik-skor-svg {
   display: block;
   width: 100%;
-  min-width: 0;
+  min-width: 580px;   /* daraldıkça sıkışmaz; container yatay scroll yapar */
   max-width: 100%;
   height: 220px;
   overflow: visible;
@@ -3575,6 +3604,26 @@ h1, h2, h3 { color: var(--fg); }
    (4×12) olduğundan font-size 48 ile glyph staff'a tam oturur.
    Bravura'nın clef baseline'ı OnStaff anchor satırında (G4 = treble, F3 = bass). */
 .muzik-clef { font-size: 48px !important; }
+
+/* ── Glyph dikey karşı-ölçek ──────────────────────────────────────────────
+   SVG preserveAspectRatio="none" + sabit yükseklik tüm font glyph'lerini dikeyde
+   ezer. --glyph-unsquash (JS/ResizeObserver, = scaleX/scaleY) ile her glyph kendi
+   merkezinde dikeyde geri açılır → doğal en-boy oranı, her genişlikte.
+   Clef ve nota kafası kendi SVG transform'unu kullanır (çapaları merkez değil). */
+.araclar-muzik-skor-svg :is(
+  .muzik-time-sig-digit,
+  .muzik-time-sig-glyph,
+  .muzik-key-sig-glyph,
+  .muzik-nuans-glyph,
+  .muzik-ornament-glyph,
+  .muzik-dynamic,
+  .muzik-rest-glyph,
+  .muzik-accidental-glyph
+) {
+  transform: scaleY(var(--glyph-unsquash, 1));
+  transform-box: fill-box;
+  transform-origin: center;
+}
 
 /* Ölçü başı play butonu — düz, tek renk, gölgesiz sade ikon; hover'da belirir */
 .muzik-olcu-play-btn {
@@ -3603,26 +3652,24 @@ h1, h2, h3 { color: var(--fg); }
   stroke-width: 4;
   stroke-linecap: butt;
 }
-/* Zaman imzası — staff üstüne overlay */
+/* Zaman imzası — staff üstüne overlay. Standalone Bravura SMuFL (nota/bayrakla
+   aynı standart): rakamlar E080–E089, common/cut E08A/E08B. */
 .muzik-time-sig-num,
 .muzik-time-sig-glyph {
-  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-family: 'Bravura', 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
   font-size: 22px;
   font-weight: 800;
   fill: #111827;
 }
-.muzik-time-sig-glyph { font-size: 34px; }
-/* SMuFL zaman imzası rakamları (timeSig0–9, U+E080–E089). Bravura'da bu
-   glifler ~0.5em yükseklikte tasarlandığından dize başına 2 porte aralığını
-   doldurması için daha büyük font kullanılır. */
+.muzik-time-sig-glyph { font-size: 40px; }
 .muzik-time-sig-digit {
-  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
-  font-size: 48px;
+  font-family: 'Bravura', 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-size: 40px;
   fill: #111827;
 }
 .muzik-key-sig-glyph {
-  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
-  font-size: 20px;
+  font-family: 'Bravura', 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-size: 28px;
   font-weight: 700;
   fill: #111827;
 }
@@ -3631,7 +3678,8 @@ h1, h2, h3 { color: var(--fg); }
   stroke: #111827;
   stroke-width: 1.4;
 }
-.muzik-ledger { stroke-width: 1; }
+/* SMuFL legerLineThickness = 0.16 staff space × 12 = 1.92 */
+.muzik-ledger { stroke-width: 1.92; }
 .muzik-skor-ogesi { cursor: pointer; outline: none; }
 /* Standart seçim/hover kutusu — notalar, suslar, header ve ölçü-başı
    inline öğeleri aynı tasarımı kullanır: hover'da kesikli, seçimde dolu mavi. */
@@ -3744,9 +3792,9 @@ g:hover .muzik-note-hover-rect,
 }
 .muzik-dynamic {
   fill: #111827;
-  font-family: 'Bravura Text', 'Cambria Math', Georgia, 'Times New Roman', serif;
+  font-family: 'Bravura', 'Bravura Text', 'Cambria Math', Georgia, 'Times New Roman', serif;
   font-style: italic;
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 700;
 }
 .muzik-hairpin,
@@ -3773,7 +3821,7 @@ g:hover .muzik-note-hover-rect,
 .muzik-ornament { font-family: 'Bravura Text', 'Cambria Math', Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; font-weight: 700; }
 /* Süslemeler — SMuFL glyph'leri (çizim yerine yüklü müzik fontu). */
 .muzik-ornament-glyph {
-  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-family: 'Bravura', 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
   font-size: 22px;
   font-weight: 400;
   fill: #111827;
@@ -3782,7 +3830,7 @@ g:hover .muzik-note-hover-rect,
 }
 /* Nüans / artikülasyon glyph'leri — notahead'e yakın, biraz daha büyük. */
 .muzik-nuans-glyph {
-  font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
+  font-family: 'Bravura', 'Bravura Text', 'Cambria Math', 'Noto Music', serif;
   font-size: 30px;
   font-weight: 400;
   fill: #111827;

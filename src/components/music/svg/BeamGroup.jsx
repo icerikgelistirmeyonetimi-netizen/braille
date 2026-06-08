@@ -79,10 +79,10 @@ function getBeamSlope(notes, x1, x2) {
   return Math.abs(beamSlope) < SMALL_SLOPE_THRESHOLD ? 0 : beamSlope;
 }
 
-function getBeamGap(maxBeamCount) {
-  if (maxBeamCount >= 4) return 5.0;
-  if (maxBeamCount === 3) return 5.15;
-  return 5.35;
+// SMuFL: beamThickness 0.5 + beamSpacing 0.25 → komşu beam merkez-merkez 0.75
+// staff space (×12 = 9). Tek tip (standart), çakışma yok (6 kalınlık + 3 boşluk).
+function getBeamGap() {
+  return 9;
 }
 
 function beamYAtX(x, x1, y1, x2, y2) {
@@ -244,7 +244,7 @@ function BeamGroup({ notes = [] }) {
             x2={stemX}
             y2={stemEndY}
             className="stroke-zinc-900"
-            strokeWidth={1.35}
+            strokeWidth={1.44}
             strokeLinecap="square"
             shapeRendering="geometricPrecision"
           />

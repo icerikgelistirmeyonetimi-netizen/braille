@@ -1,12 +1,43 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MUZIK_EDITOR_ANAHTARLAR, DONANIM_LISTESI } from '../../utils/music-brf/musicConstants.js';
 
 export default function MuzikKeySignatureModal({ anahtarPopupAcik, setAnahtarPopupAcik, muzikOgeleri, anahtariDegistir, donanimiDegistir, mevcutDonanimAd }) {
+  const dialogRef = useRef(null);
+  const oncekiOdakRef = useRef(null);
+
+  // Açılınca pencereye odaklan (ekran okuyucu/TTS başlığı okur), kapanınca eski odağa dön.
+  useEffect(() => {
+    if (anahtarPopupAcik) {
+      oncekiOdakRef.current = document.activeElement;
+      const id = requestAnimationFrame(() => dialogRef.current?.focus());
+      return () => cancelAnimationFrame(id);
+    }
+    const el = oncekiOdakRef.current;
+    oncekiOdakRef.current = null;
+    if (el && typeof el.focus === 'function') {
+      const id = requestAnimationFrame(() => { try { el.focus(); } catch { /* */ } });
+      return () => cancelAnimationFrame(id);
+    }
+    return undefined;
+  }, [anahtarPopupAcik]);
+
   if (!anahtarPopupAcik) return null;
+
+  const onKeyDown = (e) => {
+    e.stopPropagation(); // global skor klavye handler'ına sızmasın
+    if (e.key === 'Escape') { e.preventDefault(); setAnahtarPopupAcik(false); return; }
+    if (e.key === 'Tab') {
+      const odak = dialogRef.current?.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+      if (!odak || !odak.length) return;
+      const ilk = odak[0]; const son = odak[odak.length - 1];
+      if (e.shiftKey && (document.activeElement === ilk || document.activeElement === dialogRef.current)) { e.preventDefault(); son.focus(); }
+      else if (!e.shiftKey && document.activeElement === son) { e.preventDefault(); ilk.focus(); }
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="presentation" onClick={() => setAnahtarPopupAcik(false)}>
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 p-5 flex flex-col gap-3 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-label="Anahtar ve donanım seç" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} tabIndex={-1} onKeyDown={onKeyDown} className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 p-5 flex flex-col gap-3 max-h-[90vh] overflow-y-auto outline-none" role="dialog" aria-modal="true" aria-label="Anahtar ve donanım seç" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
           <span className="text-base font-semibold text-slate-800">Anahtar ve Donanım</span>
           <button type="button" className="w-8 h-8 rounded-md text-slate-500 hover:bg-slate-100" onClick={() => setAnahtarPopupAcik(false)} aria-label="Kapat">×</button>

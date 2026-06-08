@@ -26,6 +26,7 @@ export default function KisaltmaKelimeParcasi() {
       kategoriAdi="sembolü"
       bolumAnahtari="kisaltma-kelime-parcasi"
       bittiMesaji="Tebrikler! Tüm kelime parçası kısaltmalarını öğrendiniz."
+      noktalariSeslendir
     />
   );
 }

@@ -4,12 +4,18 @@ import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js
 import { konus } from '../utils/ses.js';
 
 /**
- * Sayfa başlığında, "az görenler için" butonunun yanında gösterilir.
- * Mevcut sayfa için tanımlı bir kaynak varsa görünür; tıklayınca
- * /yazma-karisik/<kaynak> sayfasına yönlendirir ve karışık yazma
- * etkinliğini başlatır.
+ * Mevcut sayfa için tanımlı bir karışık yazma kaynağı varsa görünür;
+ * tıklayınca /yazma-karisik/<kaynak> sayfasına yönlendirir ve karışık
+ * yazma etkinliğini başlatır.
+ *
+ * İki görünüm:
+ *  - Varsayılan: sayfa başlığında, "az görenler için" butonunun yanında
+ *    gösterilen ikon buton.
+ *  - hayalet: sayfanın en altında, "ana sayfaya dön" hayalet butonundan
+ *    hemen önce gösterilen, normalde görünmeyen ama ekran okuyucu/klavye
+ *    ile erişilebilen tam genişlikte buton.
  */
-export default function KarisikYazmaButonu() {
+export default function KarisikYazmaButonu({ hayalet = false }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const kaynak = mevcutSayfaIcinKaynakAnahtar(pathname);
@@ -23,6 +29,21 @@ export default function KarisikYazmaButonu() {
     konus('Karışık yazma etkinliği başlıyor.', { kesintiyle: true });
     navigate('/yazma-karisik/' + kaynak);
   };
+
+  // Sayfa sonu (hayalet) görünümü: "ana sayfaya dön" butonuyla aynı desen.
+  if (hayalet) {
+    return (
+      <button
+        type="button"
+        className="hayalet-btn"
+        onClick={tikla}
+        aria-label="Bu derste karışık yazma etkinliği başlat"
+        title="Bu derste karışık yazma etkinliği başlat"
+      >
+        Bu derste karışık yazma etkinliği başlat
+      </button>
+    );
+  }
 
   return (
     <button

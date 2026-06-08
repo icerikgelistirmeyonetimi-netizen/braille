@@ -445,7 +445,7 @@ export default function BrailleKlavye({
               type="button"
               className={`btn ${noktaSinif(n)}`}
               data-klavye-nokta={n}
-              aria-label={`${n} numaralı nokta${klavyeIpucu ? `, klavye ${tusEtiket} tuşu` : ''}`}
+              aria-label={`${n}. nokta${klavyeIpucu ? `, klavye ${tusEtiket} tuşu` : ''}`}
               aria-pressed={basili.has(n) || (siralikTiklama && tiklilar.has(n))}
               style={yer}
               onContextMenu={(e) => e.preventDefault()}

@@ -28,6 +28,7 @@ export default function KisaltmaIkiHarfli() {
       kategoriAdi="kısaltması"
       bolumAnahtari="kisaltma-iki-harfli"
       bittiMesaji="Tebrikler! Tüm iki harfli kısaltmaları öğrendiniz."
+      noktalariSeslendir
     />
   );
 }

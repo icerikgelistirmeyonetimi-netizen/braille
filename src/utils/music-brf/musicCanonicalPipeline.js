@@ -223,8 +223,11 @@ function canonicalOlcuGruplariOlustur(hucreler = [], metaList = []) {
 }
 
 function canonicalOlculeriMetneCevir(olculer = []) {
+  // Ölçü çizgisi BRF'te boşlukla temsil edilir. Ölçü metni sondaki barline
+  // hücresi nedeniyle ⠀ ile bitiyor; join('⠀') de ayraç ekleyince ölçüler arası
+  // ÇİFT boşluk oluşuyordu. Sondaki boşluğu kırp → tek ⠀ yeterli (1 ölçü çizgisi).
   return olculer
-    .map((olcu) => brailleMetniOlustur(olcu.map((item) => item.hucre)))
+    .map((olcu) => brailleMetniOlustur(olcu.map((item) => item.hucre)).replace(/⠀+$/, ''))
     .filter(Boolean)
     .join('⠀');
 }

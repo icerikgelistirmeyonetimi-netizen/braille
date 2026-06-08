@@ -331,6 +331,38 @@ export function useMusicScorePlayback({
     timerRef.current = window.setTimeout(step, 0);
   }, [playbackListesi, temizleTimer, temizleVurgu, step]);
 
+  /**
+   * Belirli bir öğeden (nota/sus id) itibaren tüm parçayı çal.
+   * Klavye 'Space' kısayolu için: seçili notadan başlayıp devam eder.
+   * ogeId bulunamazsa mevcut konumdan (indexRef) çalar.
+   */
+  const playFromOge = useCallback(async (ogeId) => {
+    if (!playbackListesi.length) return;
+    // Ölçü-özel listeyi sıfırla → tüm parça akışını kullan.
+    customEventsRef.current = null;
+
+    let idx = -1;
+    if (ogeId) {
+      idx = playbackListesi.findIndex((ev) => {
+        const oge = ev?.oge || ev;
+        return oge?.id === ogeId || ev?.ogeId === ogeId;
+      });
+    }
+    if (idx < 0) idx = indexRef.current; // bulunamazsa mevcut konumdan devam et
+    if (idx < 0 || idx >= playbackListesi.length) idx = 0;
+
+    indexRef.current = idx;
+
+    const currentEvent = playbackListesi[idx] || playbackListesi[0];
+    const currentRow = Number(currentEvent?.rowIndex ?? 0);
+    await preloadRowUrls(currentRow);
+    preloadedRowsRef.current.add(currentRow);
+
+    setIsPlaying(true);
+    temizleTimer();
+    timerRef.current = window.setTimeout(step, 0);
+  }, [playbackListesi, step, temizleTimer, preloadRowUrls]);
+
   useEffect(() => {
     preloadedRowsRef.current.clear();
     preloadingRowsInFlightRef.current.clear();
@@ -348,6 +380,7 @@ export function useMusicScorePlayback({
     pause,
     stop,
     playMeasure,
+    playFromOge,
     stepForward,
     stepBackward,
   };

@@ -27,12 +27,16 @@ export const SVG_STAFF_RIGHT_X = 776;
 // Sağ güvenli sınır.
 export const SVG_SAG_SINIR_X = 735;
 
-// Anahtar ve başlık alanı.
+// Anahtar ve başlık alanı (staff space = 12px; Gould/SMuFL başlık boşlukları).
 export const SVG_CLEF_X = 40;
+// Anahtardan sonra ~1 staff space boşlukla donanım başlar.
 export const SVG_KEY_SIGNATURE_X = 70;
-export const SVG_KEY_ACCIDENTAL_GAP = 7;
-export const SVG_TIME_SIGNATURE_GAP = 0;
-export const SVG_AFTER_HEADER_GAP = 5;
+// Donanım accidental'ları arası merkez-merkez ~0.85 staff space.
+export const SVG_KEY_ACCIDENTAL_GAP = 10;
+// Donanım → zaman imzası ~1 staff space boşluk.
+export const SVG_TIME_SIGNATURE_GAP = 12;
+// Zaman imzası → ilk nota ~1.5 staff space boşluk.
+export const SVG_AFTER_HEADER_GAP = 18;
 
 export const MUZIK_CLEF_VISUAL_Y_OFFSETS = {
   treble: 0,

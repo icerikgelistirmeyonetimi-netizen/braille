@@ -197,6 +197,9 @@ export default function DesktopShell({ children }) {
       {/* ── Sayfa içeriği ── */}
       <div className="ds-content">
         {children}
+        {/* Hayalet: etkinlik sayfalarında "ana sayfaya dön"den hemen önce
+            "bu derste karışık yazma etkinliği başlat" — görünmez ama erişilebilir */}
+        <KarisikYazmaButonu hayalet />
         {/* Hayalet: her sayfanın en altında "ana sayfaya dön" — görünmez ama erişilebilir */}
         <button
           type="button"

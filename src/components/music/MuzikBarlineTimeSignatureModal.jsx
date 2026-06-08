@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DONANIM_LISTESI } from '../../utils/music-brf/musicConstants.js';
 
 const TIME_SIGNATURE_OPTIONS = [
@@ -24,12 +24,42 @@ export default function MuzikBarlineTimeSignatureModal({
   olcuCizgisiniSil,
 }) {
   const [mode, setMode] = useState('menu');
+  const dialogRef = useRef(null);
+  const oncekiOdakRef = useRef(null);
+
+  // Açılınca pencereye odaklan (ekran okuyucu/TTS okur), kapanınca eski odağa dön.
+  useEffect(() => {
+    if (barlineMenu) {
+      oncekiOdakRef.current = document.activeElement;
+      const id = requestAnimationFrame(() => dialogRef.current?.focus());
+      return () => cancelAnimationFrame(id);
+    }
+    const el = oncekiOdakRef.current;
+    oncekiOdakRef.current = null;
+    if (el && typeof el.focus === 'function') {
+      const id = requestAnimationFrame(() => { try { el.focus(); } catch { /* */ } });
+      return () => cancelAnimationFrame(id);
+    }
+    return undefined;
+  }, [barlineMenu]);
 
   if (!barlineMenu) return null;
 
   const close = () => {
     setMode('menu');
     setBarlineMenu(null);
+  };
+
+  const onKeyDown = (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key === 'Tab') {
+      const odak = dialogRef.current?.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+      if (!odak || !odak.length) return;
+      const ilk = odak[0]; const son = odak[odak.length - 1];
+      if (e.shiftKey && (document.activeElement === ilk || document.activeElement === dialogRef.current)) { e.preventDefault(); son.focus(); }
+      else if (!e.shiftKey && document.activeElement === son) { e.preventDefault(); ilk.focus(); }
+    }
   };
 
   const left = Math.min(
@@ -49,7 +79,10 @@ export default function MuzikBarlineTimeSignatureModal({
       onClick={close}
     >
       <div
-        className="absolute w-[260px] rounded-xl border border-slate-200 bg-white shadow-xl p-3 flex flex-col gap-2"
+        ref={dialogRef}
+        tabIndex={-1}
+        onKeyDown={onKeyDown}
+        className="absolute w-[260px] rounded-xl border border-slate-200 bg-white shadow-xl p-3 flex flex-col gap-2 outline-none"
         style={{ left, top }}
         role="dialog"
         aria-modal="true"

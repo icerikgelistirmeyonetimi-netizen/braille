@@ -27,6 +27,7 @@ export default function KisaltmaKelimeKoku() {
       kategoriAdi="sembolü"
       bolumAnahtari="kisaltma-kelime-koku"
       bittiMesaji="Tebrikler! Tüm kelime kökü kısaltmalarını öğrendiniz."
+      noktalariSeslendir
     />
   );
 }

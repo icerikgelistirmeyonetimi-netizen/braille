@@ -32,7 +32,7 @@ import {
   muzikTimeSignatureHucreleri,
   muzikKontraksiyonsuzMetinHucreleri,
 } from '../../utils/music/index.js';
-import { muzikOgeleriOlcuTamamla, normalOlcuCizgisiMi } from '../../utils/music-brf/musicMeasureHelpers.js';
+import { muzikOgeleriOlcuTamamla, normalOlcuCizgisiMi, bosOlculeriTemizle } from '../../utils/music-brf/musicMeasureHelpers.js';
 import { muzikOlcuyeBol } from '../../utils/music/musicMeasureEngine.js';
 import { varsayilanMuzikHeaderOlustur } from '../../utils/music-brf/musicHeaderHelpers.js';
 import { varsayilanOktavAnahtaraGoreAl } from '../../utils/music-brf/musicScoreHelpers.jsx';
@@ -289,6 +289,7 @@ export function useMuzikBrfEditor() {
     sureIdx,
     insertAfterId,
     dotted = false,
+    basaEkle = false,
   } = {}) => {
     const kullanilacakSure = Number.isInteger(sureIdx)
       ? sureIdx
@@ -306,6 +307,13 @@ export function useMuzikBrfEditor() {
 
     setMuzikOgeleri((onceki) => {
       const garantiListe = onceAnahtarGarantiEt(onceki);
+
+      // EN BAŞA ekle: ilk nota/susun ÖNÜNE (klef/zaman/donanım öğelerinden sonra).
+      if (basaEkle) {
+        let i = 0;
+        while (i < garantiListe.length && garantiListe[i]?.tip !== 'nota' && garantiListe[i]?.tip !== 'sus') i += 1;
+        return [...garantiListe.slice(0, i), oge, ...garantiListe.slice(i)];
+      }
 
       if (!insertAfterId) {
         return [...garantiListe, oge];
@@ -1163,6 +1171,85 @@ export function useMuzikBrfEditor() {
     }
   };
 
+  // ── Klavye çoklu-seçim bağ/grup araçları (t/y/u) ───────────────────────────
+  // Verilen id listesine (genelde cokluSecimIds) doğrudan slur/tie/üçleme uygular.
+  const slurUygulaSecim = (ids) => {
+    const notaIds = (ids || []).filter((id) => notaAl(id));
+    if (notaIds.length < 2) { uyariEkle('slur-error', 'Slur (hece bağı) için en az iki nota seçilmelidir.'); return false; }
+    slurZinciriniBitir(notaIds, slurKaydiAl('single'));
+    editorDegisti();
+    return true;
+  };
+
+  const tieUygulaSecim = (ids) => {
+    const notaIds = (ids || []).filter((id) => notaAl(id));
+    if (notaIds.length < 2) { uyariEkle('tie-error', 'Tie (uzatma bağı) için iki nota seçilmelidir.'); return false; }
+    const basId = notaIds[0];
+    const sonId = notaIds[1];
+    const bas = notaAl(basId);
+    const son = notaAl(sonId);
+    if (!ardisikNotaMi(basId, sonId)) { uyariEkle('tie-error', 'Tie yalnızca bitişik notalar arasında kurulabilir.'); return false; }
+    if (!ayniSesMi(bas, son)) { uyariEkle('tie-error', 'Tie yalnızca aynı ses (nota + oktav + aksidental) arasında kurulabilir.'); return false; }
+    const kayit = tieKaydiAl();
+    setMuzikBaglar((onceki) => [...onceki, {
+      id: `bag-${idRef.current++}`,
+      tip: 'tie',
+      mode: 'single',
+      basId,
+      sonId,
+      notaIdler: [basId, sonId],
+      kayit: { ...(kayit || {}), tip: 'tie', ad: kayit?.ad || 'Tie / uzatma bağı' },
+    }]);
+    editorDegisti();
+    return true;
+  };
+
+  const uclemeUygulaSecim = (ids) => {
+    const notaIds = (ids || []).filter((id) => notaAl(id));
+    if (notaIds.length < 2) { uyariEkle('tuplet-error', 'Üçleme için en az iki nota seçilmelidir.'); return false; }
+    const kayit = veriBolumAl('duzensiz-gruplar')
+      .find((o) => /üçleme|triplet/i.test(String(o.ad || '')))
+      || { ad: 'Üçleme (triplet)' };
+    setMuzikTupletler((onceki) => [...onceki, {
+      id: `tuplet-${idRef.current++}`,
+      ratio: tupletOranTahmin(kayit.ad),
+      kayit,
+      notaIdler: [...notaIds],
+    }]);
+    editorDegisti();
+    return true;
+  };
+
+  // Klavye dinamik (Shift+P/F/M): seçili notaya nüans/dinamik işareti ekler
+  // (modifiers.oncesi). İnteraktif 'dinamikler' aracıyla aynı kayit yapısını kurar.
+  const dinamikNotayaUygula = (sembol, notaId) => {
+    const hedefId = notaId || seciliEditorOgeId || seciliOgeId;
+    const nota = notaAl(hedefId);
+    if (!nota) { uyariEkle('dinamik-error', 'Dinamik için önce bir nota seçilmelidir.'); return false; }
+    const kayitlar = veriBolumAl('dinamikler');
+    const rec = kayitlar.find((d) => d.sembol === sembol)
+      || kayitlar.find((d) => new RegExp(`^${sembol}\\s*\\(`).test(String(d.ad || '')));
+    if (!rec) return false;
+    const kayit = {
+      ...rec,
+      tip: 'isaret',
+      gorunum: nuansSmuflGlyph(rec.ad) || rec.sembol || rec.ad,
+      gorselTip: 'dinamik',
+    };
+    setMuzikOgeleri((onceki) => onceki.map((og) => {
+      if (og.id !== hedefId || og.tip !== 'nota') return og;
+      // Mevcut dinamik(ler)i değiştir (yığma yok — bir notada tek dinamik olur).
+      const mevcut = (Array.isArray(og.modifiers?.oncesi) ? og.modifiers.oncesi : [])
+        .filter((m) => m?.kayit?.gorselTip !== 'dinamik');
+      return {
+        ...og,
+        modifiers: { ...(og.modifiers || {}), oncesi: [...mevcut, { id: `mod-${idRef.current++}`, kayit }] },
+      };
+    }));
+    editorDegisti();
+    return true;
+  };
+
   const ifadeEkle = () => {
     const t = String(ifadeGirisi || '').trim();
     if (!t) return;
@@ -1980,11 +2067,26 @@ export function useMuzikBrfEditor() {
   const seciliOgeyiSil = () => {
     const hedefId = seciliEditorOgeId || seciliOgeId;
     if (!hedefId) return;
-    setMuzikOgeleri((onceki) => onceki.filter((og) => og.id !== hedefId));
+    setMuzikOgeleri((onceki) => bosOlculeriTemizle(onceki.filter((og) => og.id !== hedefId)));
     setMuzikBaglar((onceki) => onceki.filter((b) => (
       b.basId !== hedefId &&
       b.sonId !== hedefId &&
       !(Array.isArray(b.notaIdler) && b.notaIdler.includes(hedefId))
+    )));
+    setSeciliOgeId(null);
+    setPopupAcik(false);
+    editorDegisti();
+  };
+
+  // Birden çok öğeyi tek seferde sil (klavye çoklu seçim — Shift+ok / Ctrl+A sonrası Delete).
+  const ogeleriSil = (ids) => {
+    const silSet = new Set((Array.isArray(ids) ? ids : [ids]).filter(Boolean));
+    if (!silSet.size) return;
+    setMuzikOgeleri((onceki) => bosOlculeriTemizle(onceki.filter((og) => !silSet.has(og.id))));
+    setMuzikBaglar((onceki) => onceki.filter((b) => (
+      !silSet.has(b.basId) &&
+      !silSet.has(b.sonId) &&
+      !(Array.isArray(b.notaIdler) && b.notaIdler.some((id) => silSet.has(id)))
     )));
     setSeciliOgeId(null);
     setPopupAcik(false);
@@ -2064,6 +2166,83 @@ export function useMuzikBrfEditor() {
     setSeciliOgeId(oge.id);
     setSonEklenenOgeId(oge.id);
     editorDegisti();
+  };
+
+  // Konuma duyarlı sus ekleme (klavye 'r' kısayolu): seçili ögenin hemen
+  // ardına ekler — notaEkleKonuma ile aynı mantık (zaman/donanım değişiminin
+  // önüne eklemez). insertAfterId yoksa sona ekler.
+  const susEkleKonuma = ({ sureIdx, insertAfterId, dotted = false, basaEkle = false } = {}) => {
+    const kullanilacakSure = Number.isInteger(sureIdx) ? sureIdx : seciliSureIdx;
+    const oge = muzikSusSkorOgesi(yeniId(), kullanilacakSure, { dotted: !!dotted });
+
+    setMuzikOgeleri((onceki) => {
+      const garantiListe = onceAnahtarGarantiEt(onceki);
+
+      // EN BAŞA ekle: ilk nota/susun ÖNÜNE (klef/zaman/donanım öğelerinden sonra).
+      if (basaEkle) {
+        let i = 0;
+        while (i < garantiListe.length && garantiListe[i]?.tip !== 'nota' && garantiListe[i]?.tip !== 'sus') i += 1;
+        return [...garantiListe.slice(0, i), oge, ...garantiListe.slice(i)];
+      }
+
+      if (!insertAfterId) {
+        return [...garantiListe, oge];
+      }
+
+      let insertIndex = garantiListe.findIndex((item) => item.id === insertAfterId);
+      if (insertIndex < 0) {
+        return [...garantiListe, oge];
+      }
+
+      while (
+        insertIndex + 1 < garantiListe.length &&
+        (garantiListe[insertIndex + 1]?.tip === 'timeSignatureChange' ||
+         garantiListe[insertIndex + 1]?.tip === 'keySignatureChange')
+      ) {
+        insertIndex += 1;
+      }
+
+      return [
+        ...garantiListe.slice(0, insertIndex + 1),
+        oge,
+        ...garantiListe.slice(insertIndex + 1),
+      ];
+    });
+
+    setSeciliOgeId(oge.id);
+    setSonEklenenOgeId(oge.id);
+    setAdimSure(true);
+    editorDegisti();
+
+    return oge;
+  };
+
+  // Klavye '|' kısayolu: seçili ögenin ardına MANUEL ölçü çizgisi ekler.
+  // (Tip değiştirme — çift/tekrar/final — barline'a gelip Enter ile popup'tan yapılır.)
+  const manuelOlcuCizgisiEkle = (insertAfterId) => {
+    const oge = {
+      id: yeniId(),
+      tip: 'barline',
+      kind: 'manual',
+      auto: false,
+      autoBarline: false,
+      otomatikOlcuCizgisi: false,
+      ad: 'Manuel ölçü çizgisi',
+      gorunum: '|',
+      hucreler: [[]],
+      aciklama: 'Manuel ölçü çizgisi',
+    };
+    setMuzikOgeleri((onceki) => {
+      const garantiListe = onceAnahtarGarantiEt(onceki);
+      if (!insertAfterId) return [...garantiListe, oge];
+      const idx = garantiListe.findIndex((it) => it.id === insertAfterId);
+      if (idx < 0) return [...garantiListe, oge];
+      return [...garantiListe.slice(0, idx + 1), oge, ...garantiListe.slice(idx + 1)];
+    });
+    setSeciliOgeId(oge.id);
+    setSonEklenenOgeId(oge.id);
+    editorDegisti();
+    return oge;
   };
 
   const notaSuresiniCiftTiklaDegistir = (oge, event) => {
@@ -2861,12 +3040,16 @@ export function useMuzikBrfEditor() {
     seciliNotayiGuncelle,
     seciliOgeyiGuncelle,
     seciliOgeyiSil,
+    ogeleriSil,
     seciliNotaModifierSil,
     seciliNotaModifierGuncelle,
     seciliBagiSil,
     seciliNotayiSusaCevir,
     seciliSusuNotayaCevir,
     susEkle,
+    susEkleKonuma,
+    manuelOlcuCizgisiEkle,
+    bagAraclari: { slur: slurUygulaSecim, tie: tieUygulaSecim, ucleme: uclemeUygulaSecim, dinamik: dinamikNotayaUygula },
     sonOgeyiSil,
     temizle,
     brfDosyasiYukle,

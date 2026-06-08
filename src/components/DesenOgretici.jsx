@@ -9,6 +9,27 @@ import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
 import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js';
 
 /**
+ * Bir öğenin braille nokta bileşimini sözel olarak betimler.
+ *   Tek hücre : "1, 2 numaralı noktalardan oluşur."
+ *   Çok hücre : "1. hücre 2, 4 numaralı noktalardan, 2. hücre 1, 3 numaralı
+ *               noktalardan oluşur."
+ */
+function noktaKompozisyonMetni(oge) {
+  const hucreler = Array.isArray(oge.hucreler) && oge.hucreler.length > 0
+    ? oge.hucreler
+    : [oge.noktalar || []];
+  const cok = hucreler.length > 1;
+  const parcalar = hucreler
+    .map((noktalar, i) => {
+      const liste = (noktalar || []).join(', ');
+      if (!liste) return '';
+      return cok ? `${i + 1}. hücre ${liste} numaralı noktalardan` : `${liste} numaralı noktalardan`;
+    })
+    .filter(Boolean);
+  return parcalar.length ? `${parcalar.join(', ')} oluşur.` : '';
+}
+
+/**
  * Bir Braille deseni (örn. bir harf) öğretmek için ortak ekran.
  *
  * Props:
@@ -17,6 +38,7 @@ import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js
  *  - kategoriAdi: string
  *  - bolumAnahtari?: string
  *  - bittiMesaji?: string
+ *  - noktalariSeslendir?: boolean  (tamYonergeMetni'ne nokta bileşimini ekler)
  */
 export default function DesenOgretici({
   baslik,
@@ -41,16 +63,15 @@ export default function DesenOgretici({
   otomatikOgeSesi = false,
   ogeyiSeslendir,
   yonergeyiTekrarla,
+  noktalariSeslendir = false,
 }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   // Bu dersin karışık yazma kaynağı (varsa) — bitiş ekranında yazma etkinliğine yönlendirmek için.
   const yazmaKaynak = mevcutSayfaIcinKaynakAnahtar(pathname);
 
-  const [indeks, setIndeks] = useState(() => {
-    const kaydedilen = indeksAl(bolumAnahtari);
-    return kaydedilen < ogeler.length ? kaydedilen : 0;
-  });
+  // Ders her açılışta baştan başlar (kaldığı yerden devam etmez).
+  const [indeks, setIndeks] = useState(0);
   const [basilanlar, setBasilanlar] = useState([]); // doğru basılmışlar
   const [yanlis, setYanlis] = useState([]);
   const [toast, setToast] = useState(null);
@@ -60,6 +81,11 @@ export default function DesenOgretici({
   const tebriklerAktif = useRef(false);
   const [ogeSesiAktif, setOgeSesiAktif] = useState(Boolean(otomatikOgeSesi || ogeSesiHerZaman));
   const [okumaModu, setOkumaModu] = useState(false);
+  // Yönerge seslendirilirken nokta etkileşimi kilitlenir (tıklama/hover/odak yok).
+  const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
+  const yonergeNesilRef = useRef(0);
+  const yonergeKilitTimerRef = useRef(null);
+  const uyariResumeTimerRef = useRef(null);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -94,15 +120,78 @@ export default function DesenOgretici({
       : `${adim.n} numara`;
   };
 
-  // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
+  // Menüdeki ilerleme göstergesi için yalnızca en uzak ulaşılan öğeyi kaydet
+  // (ders baştan başlasa da ilerleme kaybolmasın). Kayıtlılar modunda kaydetme.
   useEffect(() => {
-    if (bolumAnahtari && !kayitlilarModu) indeksKaydet(bolumAnahtari, indeks);
+    if (bolumAnahtari && !kayitlilarModu && indeks > indeksAl(bolumAnahtari)) {
+      indeksKaydet(bolumAnahtari, indeks);
+    }
   }, [indeks, bolumAnahtari, kayitlilarModu]);
+
+  // Bileşen kaldırılırken yönerge kilit/sürdürme zamanlayıcılarını temizle.
+  useEffect(() => () => {
+    if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
+    if (uyariResumeTimerRef.current) clearTimeout(uyariResumeTimerRef.current);
+  }, []);
+
+  // Yönerge bittiğinde odağı doğrudan ilk braille noktasına (1. nokta) taşı.
+  // Böylece kullanıcı üst düğmelere / okuma moduna takılmadan 1. noktadan başlar.
+  const oncekiYonergeOkunuyorRef = useRef(false);
+  useEffect(() => {
+    const onceki = oncekiYonergeOkunuyorRef.current;
+    oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
+    // Yalnızca "okunuyordu → bitti" geçişinde, normal öğrenme ekranındayken.
+    if (!(onceki && !yonergeOkunuyor)) return undefined;
+    if (okumaModu || bitti) return undefined;
+    const id = window.requestAnimationFrame(() => {
+      const ilkNokta = document.querySelector('.page-mid .cell .dot');
+      if (ilkNokta && ilkNokta.tagName === 'BUTTON') ilkNokta.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [yonergeOkunuyor, okumaModu, bitti]);
+
+  // Yönerge okunurken klavyeyle gezinme/etkileşim de kapalı: Tab, Shift+Tab,
+  // ok tuşları, Enter ve Space engellenir; denenirse "bekleyiniz" uyarısı verir.
+  useEffect(() => {
+    if (!yonergeOkunuyor) return undefined;
+    const engellenen = new Set([
+      'Tab', 'Enter', ' ', 'Spacebar',
+      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+      'Home', 'End', 'PageUp', 'PageDown'
+    ]);
+    const onKey = (e) => {
+      if (!engellenen.has(e.key)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      yonergeBeklemeUyar();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+    // yonergeBeklemeUyar her render'da yeniden oluşur ama yalnızca kararlı
+    // referanslar (setToast, speechSynthesis) kullandığından yakalanması güvenli.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yonergeOkunuyor]);
 
   const gosterToast = (mesaj) => {
     clearTimeout(toastTimerRef.current);
     setToast(mesaj);
     toastTimerRef.current = setTimeout(() => setToast(null), 2000);
+  };
+
+  // Yönerge okunurken kullanıcı bir noktaya dokunmaya çalışırsa: uyar ve
+  // yönergeyi kısa süre duraklatıp kaldığı yerden sürdür (üst üste binmesin).
+  const yonergeBeklemeUyar = () => {
+    gosterToast('Yönerge bitmesini bekleyiniz.');
+    try {
+      if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        if (uyariResumeTimerRef.current) clearTimeout(uyariResumeTimerRef.current);
+        uyariResumeTimerRef.current = setTimeout(() => {
+          try { window.speechSynthesis.resume(); } catch { /* yok say */ }
+          uyariResumeTimerRef.current = null;
+        }, 1800);
+      }
+    } catch { /* yok say */ }
   };
 
   const tumSesleriDurdur = () => {
@@ -119,6 +208,27 @@ export default function DesenOgretici({
       clearTimeout(tekrarSesiTimerRef.current);
       tekrarSesiTimerRef.current = null;
     }
+  };
+
+  // Yönergeyi seslendirirken noktaları kilitler; seslendirme bitince açar.
+  // onSon (utterance sonu) ana sinyaldir; güvenlik için bir zaman aşımı da var
+  // (ses kapalı/kesinti durumunda kilit takılı kalmasın).
+  const yonergeKilidiAc = (nesil) => {
+    if (yonergeNesilRef.current !== nesil) return;
+    if (yonergeKilitTimerRef.current) {
+      clearTimeout(yonergeKilitTimerRef.current);
+      yonergeKilitTimerRef.current = null;
+    }
+    setYonergeOkunuyor(false);
+  };
+
+  const yonergeyiKilitleyerekSeslendir = (metin, secenek = {}) => {
+    const nesil = ++yonergeNesilRef.current;
+    setYonergeOkunuyor(true);
+    if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
+    const maxMs = Math.min(20000, 1500 + (metin ? metin.length : 0) * 90);
+    yonergeKilitTimerRef.current = setTimeout(() => yonergeKilidiAc(nesil), maxMs);
+    konus(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
   };
 
   const modDegistir = (kayitlilar) => {
@@ -160,7 +270,10 @@ export default function DesenOgretici({
     const kalan = aktifAdimlar.filter((adim) => !basilanlar.includes(adim.key));
     if (kalan.length === aktifAdimlar.length) {
       if (aktifOge.tamYonergeMetni) {
-        return aktifOge.tamYonergeMetni;
+        const komp = noktalariSeslendir ? noktaKompozisyonMetni(aktifOge) : '';
+        return komp
+          ? `${aktifOge.tamYonergeMetni} ${komp} Lütfen bu noktalara sırayla dokunun.`
+          : aktifOge.tamYonergeMetni;
       }
 
       const ad = aktifOge.ariaAd || aktifOge.ad;
@@ -173,7 +286,7 @@ export default function DesenOgretici({
       return 'Tamamlandı. Bir sonraki öğeye geçiliyor.';
     }
     return `Sıradaki nokta: ${adimMetni(kalan[0])}.`;
-  }, [aktifAdimlar, aktifOge, basilanlar, bitti, bittiMesaji, kategoriAdi]);
+  }, [aktifAdimlar, aktifOge, basilanlar, bitti, bittiMesaji, kategoriAdi, noktalariSeslendir]);
 
   console.log('DESEN OGRETICI PROPS', {
     baslik,
@@ -185,6 +298,8 @@ export default function DesenOgretici({
   useEffect(() => {
     // Yeni öğeye geçişte intro'yu seslendir.
     if (bitti) {
+      yonergeNesilRef.current += 1; // bekleyen kilit açmalarını geçersiz kıl
+      setYonergeOkunuyor(false);
       const tebrik = bittiMesaji || 'Tebrikler, tüm öğeleri tamamladınız!';
       const yazmaDavet = (yazmaKaynak && !(kayitlilarModu && aktifListe.length === 0))
         ? ' Şimdi yazma zamanı! Öğrendiklerinizi karışık yazma etkinliğinde uygulayabilirsiniz.'
@@ -195,13 +310,26 @@ export default function DesenOgretici({
     const oge = aktifListe[indeks];
     if (!oge) return undefined;
 
+    // Yeni öğe yüklendi: yönerge okunana kadar noktalar kilitli.
+    // Nesli artır ki önceki öğenin bekleyen kilit-açma zamanlayıcıları
+    // yeni öğeyi yanlışlıkla açmasın.
+    yonergeNesilRef.current += 1;
+    if (yonergeKilitTimerRef.current) {
+      clearTimeout(yonergeKilitTimerRef.current);
+      yonergeKilitTimerRef.current = null;
+    }
+    setYonergeOkunuyor(true);
+
     const ad = oge.ariaAd || oge.ad;
     const adKategori = ad.trimEnd().endsWith(kategoriAdi) ? ad : `${ad} ${kategoriAdi}`;
     const detay = oge.yonergeDetay || `${(oge.noktalar || []).join(', ')} numaralı noktalardan oluşur.`;
     const ek = oge.aciklama ? ` ${oge.aciklama}` : '';
 
+    const girisKomp = oge.tamYonergeMetni && noktalariSeslendir ? noktaKompozisyonMetni(oge) : '';
     const giris = oge.tamYonergeMetni
-      ? oge.tamYonergeMetni
+      ? (girisKomp
+          ? `${oge.tamYonergeMetni} ${girisKomp} Lütfen bu noktalara sırayla dokunun.`
+          : oge.tamYonergeMetni)
       : `${adKategori}, ${detay} Lütfen bu noktalara sırayla dokunun.${ek}`;
     const gecikme = tebriklerAktif.current ? 1100 : 250;
     const sesAktifMi = ogeSesiHerZaman || ogeSesiAktif;
@@ -229,12 +357,12 @@ export default function DesenOgretici({
 
       konusmaTimer = window.setTimeout(() => {
         tebriklerAktif.current = false;
-        konus(giris, { kesintiyle: false });
+        yonergeyiKilitleyerekSeslendir(giris, { kesintiyle: false });
       }, gecikme + ogeSesiSonrasiKonusmaGecikmeMs);
     } else {
       konusmaTimer = window.setTimeout(() => {
         tebriklerAktif.current = false;
-        konus(giris, { kesintiyle: false });
+        yonergeyiKilitleyerekSeslendir(giris, { kesintiyle: false });
       }, gecikme);
 
       if (sesAktifMi && typeof ogeSesiCal === 'function') {
@@ -257,13 +385,13 @@ export default function DesenOgretici({
         ogeSesiCal(oge);
 
         tekrarSesiTimerRef.current = window.setTimeout(() => {
-          konus(giris, { kesintiyle: true });
+          yonergeyiKilitleyerekSeslendir(giris, { kesintiyle: true });
           tekrarSesiTimerRef.current = null;
         }, ogeSesiSonrasiKonusmaGecikmeMs);
         return;
       }
 
-      konus(giris, { kesintiyle: true });
+      yonergeyiKilitleyerekSeslendir(giris, { kesintiyle: true });
 
       if (sesAktifMi && typeof ogeSesiCal === 'function') {
         tekrarSesiTimerRef.current = window.setTimeout(() => {
@@ -300,7 +428,7 @@ export default function DesenOgretici({
     ogeSesiHerZaman,
     ogeSesiOnceCal,
     ogeSesiGecikmeMs,
-    ogeSesiSonrasiKonusmaGecikmeMs,    ilkOgeSesiHariciCalindi,    yazmaKaynak,  ]);
+    ogeSesiSonrasiKonusmaGecikmeMs,    ilkOgeSesiHariciCalindi,    yazmaKaynak,    noktalariSeslendir,  ]);
 
   // Yeni öğe geldiğinde durumu sıfırla
   useEffect(() => {
@@ -568,8 +696,11 @@ className="btn"               type="button"
                 key={hucreIndex}
                 baslik={aktifOge.hucreBasliklari?.[hucreIndex] || (hucreIndex + 1).toString()}
                 baslikAriaLabel={aktifOge.hucreAriaEtiketleri?.[hucreIndex] || hucreAdi(hucreIndex)}
+                hucreAdi={`${hucreIndex + 1}. hücre`}
                 baslikStyle={rtl ? { fontFamily: "'Amasya', serif", direction: 'rtl' } : undefined}
                 tiklanabilir
+                kilitli={yonergeOkunuyor}
+                onKilitliEtkilesim={yonergeBeklemeUyar}
                 onNoktaTikla={(n) => noktayaTikla(n, hucreIndex)}
                 hedefNoktalar={noktalar}
                 dogruNoktalar={hucreNoktalari(basilanlar, hucreIndex)}
@@ -583,6 +714,8 @@ className="btn"               type="button"
             baslikAriaLabel={aktifOge.ariaAd || aktifOge.ad}
             baslikStyle={rtl ? { fontFamily: "'Amasya', serif", direction: 'rtl' } : undefined}
             tiklanabilir
+            kilitli={yonergeOkunuyor}
+            onKilitliEtkilesim={yonergeBeklemeUyar}
             onNoktaTikla={(n) => noktayaTikla(n, 0)}
             hedefNoktalar={aktifHucreler[0] || []}
             dogruNoktalar={hucreNoktalari(basilanlar, 0)}
@@ -616,13 +749,13 @@ className="btn"           type="button"
                 clearTimeout(tekrarSesiTimerRef.current);
               }
               tekrarSesiTimerRef.current = window.setTimeout(() => {
-                konus(yonergeMetni, { kesintiyle: true });
+                yonergeyiKilitleyerekSeslendir(yonergeMetni, { kesintiyle: true });
                 tekrarSesiTimerRef.current = null;
               }, ogeSesiSonrasiKonusmaGecikmeMs);
               return;
             }
 
-            konus(yonergeMetni, { kesintiyle: true });
+            yonergeyiKilitleyerekSeslendir(yonergeMetni, { kesintiyle: true });
 
             if (sesAktifMi && typeof ogeSesiCal === 'function' && aktifOge) {
               if (tekrarSesiTimerRef.current) {

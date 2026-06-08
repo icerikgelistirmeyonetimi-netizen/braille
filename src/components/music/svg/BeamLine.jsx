@@ -2,11 +2,10 @@
 // Baskı notasına yakın beam şeridi.
 // Referans görseldeki gibi ana beam kalın, alt beamler hafif daha ince.
 
-function getBeamThickness(beamLevel) {
-  if (beamLevel >= 4) return 2.95;
-  if (beamLevel === 3) return 3.05;
-  if (beamLevel === 2) return 3.2;
-  return 3.35;
+// SMuFL engravingDefaults.beamThickness = 0.5 staff space (×12 = 6) — tüm beam'ler
+// tek tip kalınlıkta (standart). Aralık getBeamGap'te beamSpacing'e göre açıldı.
+function getBeamThickness() {
+  return 6;
 }
 
 function BeamLine({ x1, y1, x2, y2, beamLevel = 1 }) {

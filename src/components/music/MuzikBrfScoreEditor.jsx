@@ -97,11 +97,15 @@ export default function MuzikBrfScoreEditor({
   baslangicBrailleLejantMapi,
   seciliNotayiGuncelle,
   seciliOgeyiSil,
+  ogeleriSil,
   seciliNotaModifierSil,
   seciliNotaModifierGuncelle,
   seciliBagiSil,
   seciliNotayiSusaCevir,
   seciliSusuNotayaCevir,
+  susEkleKonuma,
+  manuelOlcuCizgisiEkle,
+  bagAraclari,
   seciliEditorOgeId,
   anahtariDegistir,
   setTimeSignature,
@@ -187,6 +191,7 @@ export default function MuzikBrfScoreEditor({
     pause,
     stop,
     playMeasure: playMeasureFromHook,
+    playFromOge,
   } = useMusicScorePlayback({
     muzikOgeleriOlcuTamamlanmis: svgCizilecekOgeler,
     muzikBaglar,
@@ -489,6 +494,8 @@ export default function MuzikBrfScoreEditor({
         muzikTupletler={muzikTupletler}
         tupletSil={tupletSil}
         playMeasure={playMeasureForSvg}
+        playFromOge={playFromOge}
+        pause={pause}
         playNote={playNote}
         isPlaying={isPlaying}
         playbackOgeId={playbackOgeId}
@@ -499,6 +506,12 @@ export default function MuzikBrfScoreEditor({
         voltaSil={voltaSil}
         voltaGuncelle={voltaGuncelle}
         seciliNotayiGuncelle={seciliNotayiGuncelle}
+        seciliOgeyiSil={seciliOgeyiSil}
+        ogeleriSil={ogeleriSil}
+        seciliSusuNotayaCevir={seciliSusuNotayaCevir}
+        susEkleKonuma={susEkleKonuma}
+        manuelOlcuCizgisiEkle={manuelOlcuCizgisiEkle}
+        bagAraclari={bagAraclari}
         seciliNotaModifierSil={seciliNotaModifierSil}
         seciliNotaModifierGuncelle={seciliNotaModifierGuncelle}
         bekleyenModifier={bekleyenModifier}

@@ -3,6 +3,7 @@ import MuzikToolOptions from './MuzikToolOptions.jsx';
 import { MUSIC_EDITOR_TOOLBAR } from '../../utils/music-brf/musicConstants.js';
 import { ayarlariAl, ayarGuncelle, ayarlariDinle } from '../../utils/ayarlar.js';
 import { toneSesAyarlariAl, toneSesAyariGuncelle, toneSesAyarlariDinle } from '../../utils/toneSesAyarlari.js';
+import MuzikKlavyeYardim from './MuzikKlavyeYardim.jsx';
 
 // "Diğer" açılır menüsüne taşınan araçlar — araç çubuğu kalabalık olmasın.
 const DIGER_ARAC_IDLERI = ['nuans-once', 'nuans-sonra', 'dinamikler', 'expression', 'suslemeler', 'duzensiz-gruplar'];
@@ -55,11 +56,36 @@ export default function MuzikScoreToolbar({
   const [ayarlarAcik, setAyarlarAcik] = useState(false);
   const ayarlarRef = useRef(null);
 
+  // Klavye kısayolları yardım penceresi — buton veya F1 (skor handler'ı window
+  // olayı yayar) ile açılır.
+  const [klavyeYardimAcik, setKlavyeYardimAcik] = useState(false);
+  useEffect(() => {
+    const ac = () => setKlavyeYardimAcik(true);
+    window.addEventListener('muzik-klavye-yardim-ac', ac);
+    return () => window.removeEventListener('muzik-klavye-yardim-ac', ac);
+  }, []);
+
   // Tone.js piyano motoru (global ayar) — menüden açılıp kapanır.
   const [toneSes, setToneSes] = useState(() => {
     try { return !!ayarlariAl().tonejsSes; } catch { return false; }
   });
   useEffect(() => ayarlariDinle((a) => setToneSes(!!a.tonejsSes)), []);
+
+  // Notaya odaklanınca/tıklayınca piyanodan çal (erişilebilirlik) — aç/kapa.
+  const [notaOdakPiyano, setNotaOdakPiyano] = useState(() => {
+    try { return ayarlariAl().notaOdakPiyano !== false; } catch { return true; }
+  });
+  useEffect(() => ayarlariDinle((a) => setNotaOdakPiyano(a.notaOdakPiyano !== false)), []);
+  // Nota tuş düzeni: 'alfabetik' (a=la,b=si,c=do…g=sol) | 'piyano' (a=do,s=re,d=mi…j=si).
+  const [notaTusDuzeni, setNotaTusDuzeni] = useState(() => {
+    try { return ayarlariAl().notaTusDuzeni === 'piyano' ? 'piyano' : 'alfabetik'; } catch { return 'alfabetik'; }
+  });
+  useEffect(() => ayarlariDinle((a) => setNotaTusDuzeni(a.notaTusDuzeni === 'piyano' ? 'piyano' : 'alfabetik')), []);
+  // Tarayıcı seslendirme (sesli yönerge / sesAcik) — aç/kapa. Kapalıyken ekran okuyucu okur.
+  const [sesliYonerge, setSesliYonerge] = useState(() => {
+    try { return ayarlariAl().sesAcik !== false; } catch { return true; }
+  });
+  useEffect(() => ayarlariDinle((a) => setSesliYonerge(a.sesAcik !== false)), []);
 
   // Tone.js detay ayarları (release/volume/reverb) + "Detay" popup'ı.
   const [detayAcik, setDetayAcik] = useState(false);
@@ -197,6 +223,22 @@ export default function MuzikScoreToolbar({
         </div>
         )}
 
+        {/* ── Klavye kısayolları (yardım penceresi) ── */}
+        <button
+          type="button"
+          onClick={() => setKlavyeYardimAcik(true)}
+          aria-haspopup="dialog"
+          aria-label="Klavye kısayolları"
+          title="Klavye kısayolları (F1)"
+          className={['group relative inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-lg border border-transparent bg-transparent px-2 text-sm text-zinc-600 transition-all',
+            'hover:border-zinc-200 hover:bg-zinc-100 hover:text-zinc-950',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1',
+          ].join(' ')}
+        >
+          <span aria-hidden="true" className="leading-none font-semibold text-base">⌨</span>
+          <span className="muzik-diger-etiket text-xs font-semibold whitespace-nowrap hidden sm:inline">Kısayollar</span>
+        </button>
+
         {/* ── "Ayarlar" açılır menüsü ── */}
         <div className="relative" ref={ayarlarRef}>
           <button
@@ -245,7 +287,47 @@ export default function MuzikScoreToolbar({
                 </label>
               </div>
 
+              <div className="mt-2 mb-1.5 border-t border-zinc-100 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Nota tuş düzeni</div>
+              <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Uluslararası harf düzeni: a=la, b=si, c=do, d=re, e=mi, f=fa, g=sol">
+                <input
+                  type="radio"
+                  name="muzik-nota-tus-duzeni"
+                  checked={notaTusDuzeni === 'alfabetik'}
+                  onChange={() => ayarGuncelle({ notaTusDuzeni: 'alfabetik' })}
+                  className="accent-amber-500"
+                />
+                Alfabetik nota kısayol düzeni (a&apos;dan g&apos;ye)
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700 mb-1" title="Piyano (klavye sırası, hızlı): a=do, s=re, d=mi, f=fa, g=sol, h=la, j=si. Arıza için yukarı/aşağı ok.">
+                <input
+                  type="radio"
+                  name="muzik-nota-tus-duzeni"
+                  checked={notaTusDuzeni === 'piyano'}
+                  onChange={() => ayarGuncelle({ notaTusDuzeni: 'piyano' })}
+                  className="accent-amber-500"
+                />
+                Piyano nota kısayol düzeni (a-s-d-f-g-h-j)
+              </label>
+
               <div className="mt-2 mb-1.5 border-t border-zinc-100 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Ses</div>
+              <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700 mb-1" title="Tarayıcı seslendirme (sesli yönerge). Kapalıyken ekran okuyucu (NVDA/JAWS vb.) okur; açıkken tarayıcı sesiyle okunur.">
+                <input
+                  type="checkbox"
+                  checked={sesliYonerge}
+                  onChange={(e) => ayarGuncelle({ sesAcik: e.target.checked })}
+                  className="accent-amber-500"
+                />
+                Tarayıcı seslendirme (sesli yönerge)
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700 mb-1" title="Notaya odaklanınca/tıklayınca piyanodan çal (erişilebilirlik)">
+                <input
+                  type="checkbox"
+                  checked={notaOdakPiyano}
+                  onChange={(e) => ayarGuncelle({ notaOdakPiyano: e.target.checked })}
+                  className="accent-amber-500"
+                />
+                Notaya odakta piyano
+              </label>
               <div className="flex items-center justify-between gap-2">
                 <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Notaları Tone.js piyano motoruyla çal (deneysel)">
                   <input
@@ -482,6 +564,8 @@ export default function MuzikScoreToolbar({
           </div>
         </div>
       )}
+
+      <MuzikKlavyeYardim acik={klavyeYardimAcik} onKapat={() => setKlavyeYardimAcik(false)} />
     </div>
   );
 }

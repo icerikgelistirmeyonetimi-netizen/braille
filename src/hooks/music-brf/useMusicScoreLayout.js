@@ -25,7 +25,7 @@ import {
 } from '../../utils/music-brf/musicConstants.js';
 
 const SCORE_LAYOUT_MIN_ITEM_GAP = 32;
-const SCORE_LAYOUT_MIN_DENSE_ITEM_GAP = 22;
+const SCORE_LAYOUT_MIN_DENSE_ITEM_GAP = 28;
 const SCORE_LAYOUT_MAX_ITEM_GAP = 76;
 const SCORE_LAYOUT_ROW_FILL_THRESHOLD = 0.72;
 const SCORE_LAYOUT_MEASURE_DISTRIBUTION_POWER = 1;
@@ -151,8 +151,9 @@ export function useMusicScoreLayout({
   const ilkSatirHeaderBilgisi = useMemo(() => {
     const keySayisi = keySignatureSayisiAl(muzikHeader.keySignature);
 
+    // Son accidental'ın merkezi (keySayisi-1)·GAP'te; + ~accidental yarısı/küçük pay.
     const keyWidth = keySayisi > 0
-      ? keySayisi * SVG_KEY_ACCIDENTAL_GAP + 8
+      ? Math.max(0, keySayisi - 1) * SVG_KEY_ACCIDENTAL_GAP + 10
       : 0;
 
     const timeWidth = muzikHeader.timeSignature ? 28 : 0;
@@ -160,8 +161,10 @@ export function useMusicScoreLayout({
     const keyEndX = keySayisi > 0
       ? keyStartX + keyWidth
       : keyStartX;
+    // Donanım→zaman boşluğu yalnızca donanım VARSA eklenir (yoksa clef→zaman
+    // mesafesi keyStartX'ten gelir, fazladan boşluk olmaz).
     const timeStartX = muzikHeader.timeSignature
-      ? keyEndX + SVG_TIME_SIGNATURE_GAP
+      ? keyEndX + (keySayisi > 0 ? SVG_TIME_SIGNATURE_GAP : 0)
       : keyEndX;
     const timeEndX = muzikHeader.timeSignature
       ? timeStartX + timeWidth
@@ -460,8 +463,12 @@ export function useMusicScoreLayout({
         maxWidth,
       );
     } else {
+      // ÖNEMLİ: max-width cap'i ASLA okunabilir min genişliğin altına inmemeli;
+      // aksi halde çok notalı ölçü (örn. 16'lık kümeler) min boşluğun altına
+      // ezilir ve notalar tıklanamaz/üst üste gelir. minReadableWidth, count×min-gap
+      // garantisi verir → cap onu korur.
       measureWidth = Math.max(measureWidth, minReadableWidth);
-      measureWidth = Math.min(measureWidth, SVG_MEASURE_MAX_WIDTH);
+      measureWidth = Math.min(measureWidth, Math.max(SVG_MEASURE_MAX_WIDTH, minReadableWidth));
       measureWidth = Math.min(measureWidth, Math.max(rowAvailable, minReadableWidth));
     }
 
@@ -692,15 +699,20 @@ export function useMusicScoreLayout({
       });
     }
 
+    // Konumlar zaman-orantılı (rawPositions). Eskiden bunlar EŞİT aralığa
+    // %82'ye varan oranda harmanlanıyordu → süre farkları kayboluyordu.
+    // Gould "Behind Bars" standardı: sıkıştırılmış orantısal (saf lineer değil).
+    // Bu yüzden blend DÜŞÜK tutulur (çoğunlukla orantısal); eşit-harman yalnızca
+    // hafif bir okunabilirlik/sıkışma payı + min-gap güvenliği sağlar.
     const freeRatio = Math.min(1, (available - minNeeded) / Math.max(1, available));
     const blend =
       sadeceOtomatikSuslardanMi ? 0.08 :
-      freeRatio > 0.55 ? 0.82 :
-      freeRatio > 0.35 ? 0.68 :
-      freeRatio > 0.18 ? 0.52 :
-      count >= 8 ? 0.46 :
-      count >= 5 ? 0.38 :
-      count >= 3 ? 0.26 : 0.18;
+      freeRatio > 0.55 ? 0.34 :
+      freeRatio > 0.35 ? 0.30 :
+      freeRatio > 0.18 ? 0.26 :
+      count >= 8 ? 0.22 :
+      count >= 5 ? 0.20 :
+      count >= 3 ? 0.16 : 0.12;
 
     const blended = adjusted.map((p, index) => {
       const t = index / (count - 1);

@@ -101,6 +101,34 @@ export const otomatikOlcuCizgisiOlustur = (key) => ({
   otomatikOlcuCizgisi: true,
 });
 
+/**
+ * İçeriği (nota/sus) kalmamış ölçüleri kapatan NORMAL ölçü çizgilerini kaldırır,
+ * böylece o boş ölçü görselden tamamen yok olur (silme sonrası "boş ölçü kalması"
+ * sorununu çözer). Özel çizgiler (final, repeat, volta, sectional) korunur.
+ * Klef/zaman/anahtar gibi yapısal öğeler "içerik" sayılmaz (korunur ama boş
+ * ölçüyü ayakta tutmaz). Auto-bar/auto-rest zaten kaynak listede bulunmaz.
+ */
+export const bosOlculeriTemizle = (ogeler) => {
+  if (!Array.isArray(ogeler) || !ogeler.length) return ogeler;
+  const icerikMi = (oge) => oge && (oge.tip === 'nota' || oge.tip === 'sus');
+  const sonuc = [];
+  let icerikVar = false; // son ölçü çizgisinden (ya da baştan) beri nota/sus görüldü mü
+  for (const oge of ogeler) {
+    if (olcuCizgisiMi(oge)) {
+      if (!icerikVar && !ozelOlcuCizgisiMi(oge)) {
+        // Boş ölçüyü kapatan normal çizgi → at (ölçü çöksün).
+        continue;
+      }
+      sonuc.push(oge);
+      icerikVar = false;
+    } else {
+      sonuc.push(oge);
+      if (icerikMi(oge)) icerikVar = true;
+    }
+  }
+  return sonuc;
+};
+
 export const sonrakiSkorDevamEdiyorMu = (liste, baslangicIdx) => {
   for (let i = baslangicIdx; i < liste.length; i += 1) {
     const oge = liste[i];

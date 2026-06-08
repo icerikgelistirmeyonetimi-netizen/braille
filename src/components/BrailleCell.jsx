@@ -40,6 +40,15 @@ export default function BrailleCell({
   baslik,
   baslikAriaLabel,
   baslikStyle,
+  // Çok hücreli alıştırmalarda hücrenin sıralı adı (ör. "1. hücre").
+  // Verilince: hücreye gelindiğinde ekran okuyucu (grup etiketi) ve
+  // uygulama sesi (konus) önce bu adı, sonra noktaları söyler.
+  hucreAdi,
+  // Yönerge okunurken kilit: tüm nokta etkileşimi kapanır (tıklama, parmak/fare
+  // ile üzerine gelme/seslendirme ve odak yok; ekran okuyucudan da gizlenir).
+  kilitli = false,
+  // Kilitliyken kullanıcı yine de etkileşmeye çalışırsa (tıklama) çağrılır.
+  onKilitliEtkilesim,
   statikDesen = false,
   // Tablet/yazı tableti modu: nokta NUMARA ETİKETLERİ aynalanır (1↔4, 2↔5, 3↔6).
   // Fiziksel braille tabletinin yazım yüzü için. Dot fillleri zaten dış kullanıcıdan
@@ -71,8 +80,9 @@ export default function BrailleCell({
   const AYNA_HARITASI = { 1: 4, 2: 5, 3: 6, 4: 1, 5: 2, 6: 3 };
   const etiketGoster = (n) => (aynaliEtiket ? AYNA_HARITASI[n] : n);
   const sonOkunan = useRef(null);
-  // Hücreyle herhangi bir parmak/fare etkileşimi (keşif veya tıklama)
-  const etkilesimli = tiklanabilir || kesfedilebilir;
+  // Hücreyle herhangi bir parmak/fare etkileşimi (keşif veya tıklama).
+  // Yönerge okunurken (kilitli) hiçbir etkileşim olmaz.
+  const etkilesimli = (tiklanabilir || kesfedilebilir) && !kilitli;
 
   const noktaDurumu = (n) => {
     const siniflar = ['dot'];
@@ -87,20 +97,33 @@ export default function BrailleCell({
 
   const ariaLabel = (n) => {
     const durum = aktifNoktalar.includes(n) || dogruNoktalar.includes(n) ? 'dolu' : 'boş';
-    return `${etiketGoster(n)} numaralı nokta, ${durum}`;
+    return `${etiketGoster(n)}. nokta, ${durum}`;
   };
 
   // Üzerine gelindiğinde / parmak gezdirildiğinde numarayı seslendir + kısa titreşim
   const noktaUzerinde = (n) => {
     if (!etkilesimli) return;
     if (sonOkunan.current === n) return;
+    // Hücreye taze giriş (mouse/odak yeni girdi): önce hücre adını söyle.
+    const ilkGiris = sonOkunan.current === null;
     sonOkunan.current = n;
     titret(25); // parmak yeni noktaya girdi
-    konus(String(etiketGoster(n)), { kesintiyle: true });
+    if (hucreAdi && ilkGiris) {
+      konus(`${hucreAdi}, ${etiketGoster(n)}`, { kesintiyle: true });
+    } else {
+      konus(String(etiketGoster(n)), { kesintiyle: true });
+    }
   };
 
   const noktayiBirak = () => {
     sonOkunan.current = null;
+  };
+
+  // Odak hücre dışına çıkınca sıfırla: tekrar girişte hücre adı yeniden söylensin.
+  const hucreOdakAyrildi = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      sonOkunan.current = null;
+    }
   };
 
   const statikKullan = statikDesen
@@ -149,7 +172,9 @@ export default function BrailleCell({
       <div
         className="cell-title"
         aria-label={baslik ? (baslikAriaLabel || baslik) : undefined}
-        aria-hidden={baslik ? undefined : true}
+        /* \u00C7ok h\u00FCcreli modda (hucreAdi verilince) ba\u015Fl\u0131k g\u00F6rsel kal\u0131r ama
+           ekran okuyucudan gizlenir; h\u00FCcre ad\u0131n\u0131 grup etiketi duyurur. */
+        aria-hidden={(baslik && !hucreAdi) ? undefined : true}
         style={baslik ? baslikStyle : { display: 'none' }}
       >
         {baslik || '\u00A0'}
@@ -157,11 +182,13 @@ export default function BrailleCell({
       <div
         className={'cell' + (statikKullan ? ' braille-cell-statik' : '')}
         role="group"
-        aria-label="Braille hücresi, altı nokta"
+        aria-label={hucreAdi || 'Braille hücresi, altı nokta'}
         onTouchStart={dokunusHareket}
         onTouchMove={dokunusHareket}
         onTouchEnd={dokunusBitti}
         onMouseLeave={noktayiBirak}
+        onBlur={hucreOdakAyrildi}
+        onClick={kilitli && onKilitliEtkilesim ? () => onKilitliEtkilesim() : undefined}
         {...(statikKullan
           ? {
               style: {
@@ -174,28 +201,32 @@ export default function BrailleCell({
           : {})}
       >
         {statikKullan ? null : NOKTA_DOM_SIRA.map((n) => {
-          const Etiket = tiklanabilir ? 'button' : 'div';
+          // Kilitliyken: tıklanamaz/odaklanamaz div + ekran okuyucudan gizli.
+          const Etiket = (tiklanabilir && !kilitli) ? 'button' : 'div';
           const yer = noktaGridYerlesimi[n];
           return (
             <Etiket
               key={n}
               className={noktaDurumu(n)}
-              aria-label={ariaLabel(n)}
+              aria-label={kilitli ? undefined : ariaLabel(n)}
+              aria-hidden={kilitli ? true : undefined}
               data-nokta={n}
               style={yer}
-              {...(tiklanabilir
-                ? {
-                    type: 'button',
-                    onClick: () => onNoktaTikla && onNoktaTikla(n),
-                    onMouseEnter: () => noktaUzerinde(n),
-                    onFocus: () => noktaUzerinde(n)
-                  }
-                : kesfedilebilir
+              {...(kilitli
+                ? {}
+                : tiklanabilir
                   ? {
-                      'aria-hidden': false,
-                      onMouseEnter: () => noktaUzerinde(n)
+                      type: 'button',
+                      onClick: () => onNoktaTikla && onNoktaTikla(n),
+                      onMouseEnter: () => noktaUzerinde(n),
+                      onFocus: () => noktaUzerinde(n)
                     }
-                  : { 'aria-hidden': false })}
+                  : kesfedilebilir
+                    ? {
+                        'aria-hidden': false,
+                        onMouseEnter: () => noktaUzerinde(n)
+                      }
+                    : { 'aria-hidden': false })}
             >
               {etiketGoster(n)}
             </Etiket>

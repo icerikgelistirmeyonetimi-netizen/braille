@@ -10,6 +10,8 @@ const VARSAYILAN = {
   titresimAcik: true,
   tema: 'normal',      // 'normal' | 'lowVision'
   tonejsSes: false,    // müzik piyano sesini Tone.js motoruyla çal
+  notaOdakPiyano: true, // notaya odaklanınca/tıklayınca piyanodan çal (erişilebilirlik)
+  notaTusDuzeni: 'alfabetik', // müzik klavye: 'alfabetik' (a=la,b=si,c=do,d=re,e=mi,f=fa,g=sol) | 'piyano' (a=do,s=re,d=mi,f=fa,g=sol,h=la,j=si)
   gizliModuller: []    // gizlenen modüllerin id listesi
 };
 

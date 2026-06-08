@@ -2,6 +2,38 @@ import React from 'react';
 import BrfMusicCellDebugTable from './BrfMusicCellDebugTable.jsx';
 import { MUSIC_CANONICAL_BRF } from '../../utils/music-brf/musicCanonicalFlags.js';
 
+// Ham BRF'yi basılı (embosser) görünümüne yaklaştır: her satır en çok 40 braille
+// hücresi; satır sonları ölçü sınırlarında (boşluk) verilir, ölçü ortadan bölünmez.
+const BRF_SATIR_HUCRE = 40;
+const BRF_BOSLUK_MU = (ch) => ch === '⠀' || ch === ' ';
+
+function brfSatirSar(satir, max = BRF_SATIR_HUCRE) {
+  const s = String(satir || '');
+  if (s.length <= max) return [s];
+  const out = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s.length - i <= max) { out.push(s.slice(i)); break; }
+    let cut = i + max;
+    let sonBosluk = -1;
+    for (let j = i; j < i + max && j < s.length; j += 1) {
+      if (BRF_BOSLUK_MU(s[j])) sonBosluk = j;
+    }
+    if (sonBosluk > i) cut = sonBosluk; // ölçü ortasından bölme
+    out.push(s.slice(i, cut).replace(/[⠀ ]+$/, ''));
+    i = cut;
+    while (i < s.length && BRF_BOSLUK_MU(s[i])) i += 1; // satır başı ayraçlarını at
+  }
+  return out;
+}
+
+function brfHam40(metin) {
+  return String(metin || '')
+    .split('\n')
+    .flatMap((satir) => brfSatirSar(satir))
+    .join('\n');
+}
+
 export default function MuzikBrailleOutput({
   hucreler,
   cevirSonuc,
@@ -121,14 +153,14 @@ export default function MuzikBrailleOutput({
       {brfHamMetin && (
         <div className="rounded-xl border border-slate-200 bg-white p-3 min-w-0 overflow-hidden">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-            Ham BRF
+            Ham BRF — 40 hücre / satır (basılı görünüm)
           </div>
           <div className="overflow-x-auto">
             <pre
               className="max-h-[220px] overflow-y-auto whitespace-pre font-mono text-base leading-7 text-slate-900"
               style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
             >
-              {brfHamMetin}
+              {brfHam40(brfHamMetin)}
             </pre>
           </div>
         </div>

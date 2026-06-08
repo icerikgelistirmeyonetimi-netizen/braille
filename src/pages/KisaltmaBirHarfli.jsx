@@ -19,6 +19,7 @@ export default function KisaltmaBirHarfli() {
       kategoriAdi="kısaltması"
       bolumAnahtari="kisaltma-bir-harfli"
       bittiMesaji="Tebrikler! Tüm bir harfli kısaltmaları öğrendiniz."
+      noktalariSeslendir
     />
   );
 }

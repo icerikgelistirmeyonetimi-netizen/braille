@@ -1,9 +1,11 @@
 ﻿// Müzik → BRF Yazım Editörü (ayrı sayfa)
 // Araclar.jsx içindeki müzik editöründen modüler olarak ayrılmış sürüm.
 // İki sekme: 1) Skor görünümü (SVG), 2) Braille çıktısı (BrailleGrid).
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import { useMuzikBrfEditor } from '../hooks/music-brf/useMuzikBrfEditor.jsx';
+import { konus } from '../utils/ses.js';
+import { ayarlariAl } from '../utils/ayarlar.js';
 import { anahtarYAl, anahtarFontClassAl, bagTipiTieMi, bagYonunuHesapla, bagCizimNoktalari, bagHitRectHesapla, ledgerCizgileri } from '../utils/music-brf/musicScoreHelpers.jsx';
 import MuzikBrfViewTabs from '../components/music/MuzikBrfViewTabs.jsx';
 import MuzikBrfScoreEditor from '../components/music/MuzikBrfScoreEditor.jsx';
@@ -126,11 +128,15 @@ export default function MuzikBrfYazim() {
     seciliNotayiGuncelle,
     seciliOgeyiGuncelle,
     seciliOgeyiSil,
+    ogeleriSil,
     seciliNotaModifierSil,
     seciliNotaModifierGuncelle,
     seciliBagiSil,
     seciliNotayiSusaCevir,
     seciliSusuNotayaCevir,
+    susEkleKonuma,
+    manuelOlcuCizgisiEkle,
+    bagAraclari,
     anahtarGlyphAl,
     setAktifArac,
     setBekleyenModifier,
@@ -147,6 +153,22 @@ export default function MuzikBrfYazim() {
   } = useMuzikBrfEditor();
 
   const olcuSayisi = (muzikSatirOlculeri || []).reduce((sum, row) => sum + (row?.length || 0), 0);
+
+  // Yeni bir uyarı/hata bildirimi geldiğinde seslendir.
+  // - Ekran okuyucu: aşağıdaki role="status" aria-live bölgesi zaten okur.
+  // - Tarayıcı seslendirme (sesAcik) açıksa: konus ile de oku (TTS kullanıcısı duysun).
+  const oncekiUyariSayisiRef = useRef(0);
+  useEffect(() => {
+    const liste = Array.isArray(muzikUyarilari) ? muzikUyarilari : [];
+    if (liste.length > oncekiUyariSayisiRef.current) {
+      const son = liste[liste.length - 1];
+      const mesaj = (son && (son.message || son.mesaj)) || (typeof son === 'string' ? son : '');
+      if (mesaj) {
+        try { if (ayarlariAl().sesAcik) konus(`Uyarı: ${mesaj}`, { kesintiyle: true }); } catch { /* */ }
+      }
+    }
+    oncekiUyariSayisiRef.current = liste.length;
+  }, [muzikUyarilari]);
 
   // Skor çizim alanını gerçek PDF olarak indir (yazdırma diyaloğu değil)
   const skorPdfIndir = async () => {
@@ -308,6 +330,7 @@ export default function MuzikBrfYazim() {
             baslangicBrailleLejantlari={baslangicBrailleLejantlari}
             baslangicBrailleLejantMapi={baslangicBrailleLejantMapi}
             seciliOgeyiSil={seciliOgeyiSil}
+            ogeleriSil={ogeleriSil}
             seciliNotaModifierSil={seciliNotaModifierSil}
             seciliNotaModifierGuncelle={seciliNotaModifierGuncelle}
             seciliBagiSil={seciliBagiSil}
@@ -315,6 +338,9 @@ export default function MuzikBrfYazim() {
             tupletSil={tupletSil}
             seciliNotayiSusaCevir={seciliNotayiSusaCevir}
             seciliSusuNotayaCevir={seciliSusuNotayaCevir}
+            susEkleKonuma={susEkleKonuma}
+            manuelOlcuCizgisiEkle={manuelOlcuCizgisiEkle}
+            bagAraclari={bagAraclari}
             sonEklenenOgeId={sonEklenenOgeId}
             anahtariDegistir={anahtariDegistir}
             setTimeSignature={setTimeSignature}

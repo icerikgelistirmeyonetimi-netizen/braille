@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import React, { useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import AnaMenu from './pages/AnaMenu.jsx';
 import HucreTanima from './pages/HucreTanima.jsx';
 import HarfEgitimi from './pages/HarfEgitimi.jsx';
@@ -78,6 +78,56 @@ function FransizcaBrailleEskiYol() {
   return slug ? <Navigate to={`/fransizca/${slug}`} replace /> : <Navigate to="/fransizca" replace />;
 }
 
+/**
+ * Rota değiştiğinde ekran okuyucu odağını yönetir:
+ *  - Bir modül açıldığında odak, açılan sayfanın başlığına taşınır. Aksi
+ *    halde NVDA, tıklanan modül butonunda kalır; kullanıcı açılan sayfaya
+ *    ulaşmak için tüm modül başlıklarını ok tuşlarıyla geçmek zorunda kalır.
+ *  - Ana sayfaya dönüldüğünde odak, geri gelinen (aktif) modül sekmesine
+ *    taşınır. Aksi halde imleç sayfa sonundaki son satıra düşer.
+ */
+function SayfaOdakYonetimi() {
+  const { pathname } = useLocation();
+  // Önceki yolu izleriz: yalnızca gerçek bir rota değişiminde odak taşırız.
+  // (Boolean bayrak yerine yol karşılaştırması — StrictMode'un mount'ta
+  // effect'i iki kez çağırması ilk yüklemede odağı çalmasın diye.)
+  const oncekiYol = useRef(null);
+
+  useEffect(() => {
+    const onceki = oncekiYol.current;
+    oncekiYol.current = pathname;
+
+    // İlk yükleme veya yol değişmediyse odağı taşımayız; ana sayfanın
+    // kendi sesli yönergesi var ve gereksiz odak hırsızlığını önleriz.
+    if (onceki === null || onceki === pathname) return undefined;
+
+    // Yeni içeriğin DOM'u yerleştikten sonra odakla.
+    const id = window.requestAnimationFrame(() => {
+      if (pathname === '/') {
+        // Ana sayfaya dönüşte: geri gelinen (aktif) modül sekmesine odaklan.
+        const aktifSekme = document.querySelector('.modul-yan .modul-sekme.aktif')
+          || document.querySelector('.modul-yan .modul-sekme');
+        if (aktifSekme) aktifSekme.focus();
+        return;
+      }
+
+      // Alt sayfalarda: açılan sayfanın başlığına odaklan.
+      // DesktopShell banner'ı (.ds-header) da .banner-baslik taşır; bu yüzden
+      // yalnızca sayfa içeriği (.ds-content) içindeki başlığı seçeriz.
+      const icerik = document.querySelector('#main .ds-content') || document.getElementById('main');
+      if (!icerik) return;
+      const baslik = icerik.querySelector('.banner-baslik') || icerik.querySelector('h1, h2');
+      if (!baslik) return;
+      if (!baslik.hasAttribute('tabindex')) baslik.setAttribute('tabindex', '-1');
+      baslik.focus();
+    });
+
+    return () => window.cancelAnimationFrame(id);
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
 
@@ -102,6 +152,7 @@ export default function App() {
   return (
     <div className="app">
       <a href="#main" className="skip-link">İçeriğe atla</a>
+      <SayfaOdakYonetimi />
       <main id="main">
         <DesktopShell>
           <Routes>

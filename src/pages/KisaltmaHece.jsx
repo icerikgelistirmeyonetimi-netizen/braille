@@ -29,6 +29,7 @@ export default function KisaltmaHece() {
       kategoriAdi="hecesi"
       bolumAnahtari="kisaltma-hece"
       bittiMesaji="Tebrikler! Tüm hece kısaltmalarını öğrendiniz."
+      noktalariSeslendir
     />
   );
 }

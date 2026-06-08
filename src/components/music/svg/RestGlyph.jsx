@@ -1,43 +1,15 @@
-// Dinlenme (sus) işaretleri — Unicode müzik sembolleri (U+1D13x). Uygulamadaki
-// font alt-kümesi SMuFL sus gliflerini (E4Ex) içermediğinden bunlar fallback
-// font (Cambria Math / Noto Music) ile çizilir.
-//   U+1D13B 𝄻 tam · U+1D13C 𝄼 yarım · U+1D13D 𝄽 dörtlük · U+1D13E 𝄾 sekizlik
-//   U+1D13F 𝄿 16 · U+1D140 𝅀 32 · U+1D141 𝅁 64
-const glyphMap = {
-  1:  String.fromCodePoint(0x1D13B),
-  2:  String.fromCodePoint(0x1D13C),
-  4:  String.fromCodePoint(0x1D13D),
-  8:  String.fromCodePoint(0x1D13E),
-  16: String.fromCodePoint(0x1D13F),
-  32: String.fromCodePoint(0x1D140),
-  64: String.fromCodePoint(0x1D141),
-};
+import { BRAVURA_FONT, REST_CP, REST_STAFF_Y, glyphChar } from '../../../utils/music-brf/bravuraMetrics.js';
 
-// Porte çizgileri: 64,76,88,100,112 (orta=88, aralık=12). Alphabetic baseline.
-// Değerler, glifin GERÇEK ink konumu (canvas piksel ölçümü) kullanılarak her
-// sus tipinin standart porte konumuna oturması için hesaplandı:
-//   • tam: blok 4. çizgiden (76) asılı  → baseline 78 (ink ≈ 77-81)
-//   • yarım: blok orta çizgiye (88) oturur → baseline 85 (ink ≈ 84-88)
-//   • dörtlük: orta çizgide dikey ortalı  → baseline 89 (ink ≈ 78-99)
-//   • sekizlik ve kısa suslar: gövde 3. boşlukta, üst-orta
-const REST_Y = {
-  1:  78,  // tam
-  2:  85,  // yarım
-  4:  89,  // dörtlük
-  8:  84,  // sekizlik
-  16: 82,
-  32: 81,
-  64: 80,
-};
+// Sus (rest) — standalone Bravura SMuFL glyph'i (nota kafası/bayrakla aynı standart).
+//   whole E4E3, half E4E4, quarter E4E5, 8th E4E6, 16th E4E7, 32nd E4E8, 64th E4E9.
+// SMuFL origin porte referansındadır; baseline = REST_STAFF_Y (whole 4. çizgiden asılır
+// = 76; diğerleri orta çizgi = 88). Dikey squash .muzik-rest-glyph CSS'iyle açılır.
+const FONT_SIZE = 40;
 
-// Porte çizgileri y = [64, 76, 88, 100, 112] (orta çizgi = 88, aralık = 12).
-// Sus glifinin dikey konumu tipine göre değişir (dominantBaseline:central → y
-// glifin görsel merkezidir):
-//   • Tam sus (1): 4. çizginin (y=76) altına asılır.
 function RestGlyph({ item, x, onClick, autoRest }) {
   const real = item.realValue;
-  const glyph = glyphMap[real] || String.fromCodePoint(0x1D13D);
-  const y = REST_Y[real] ?? 94;
+  const cp = REST_CP[real] || REST_CP[4];
+  const y = REST_STAFF_Y[real] ?? 88;
   const isAuto = Boolean(item.autoRest || item.otomatik || autoRest);
 
   return (
@@ -50,13 +22,16 @@ function RestGlyph({ item, x, onClick, autoRest }) {
         x={x}
         y={y}
         textAnchor="middle"
-        className="select-none fill-zinc-900 text-[36px]"
-        style={{ fontFamily: "'Bravura Text', 'Cambria Math', 'Noto Music', serif" }}
+        className="muzik-rest-glyph select-none fill-zinc-900"
+        style={{
+          fontFamily: BRAVURA_FONT,
+          fontSize: `${FONT_SIZE}px`,
+        }}
       >
-        {glyph}
+        {glyphChar(cp)}
       </text>
       {item.dotted && (
-        <circle cx={x + 16} cy={y - 12} r={2.4} className="fill-zinc-900" />
+        <circle cx={x + 13} cy={y - 6} r={2.4} className="fill-zinc-900" />
       )}
     </g>
   );

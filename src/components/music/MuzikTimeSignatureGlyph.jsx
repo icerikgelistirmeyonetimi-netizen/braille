@@ -1,4 +1,9 @@
 import React from 'react';
+import { glyphChar } from '../../utils/music-brf/bravuraMetrics.js';
+
+// SMuFL timeSigCommon (E08A) ve timeSigCutCommon (E08B) — standalone Bravura.
+const TS_COMMON = glyphChar(0xE08A);
+const TS_CUT = glyphChar(0xE08B);
 
 // Tek bir rakamı SMuFL müzik fontu zaman imzası glifine çevirir
 // (U+E080–U+E089 = timeSig0–timeSig9).
@@ -37,7 +42,7 @@ export default function MuzikTimeSignatureGlyph({
   x,
   yTop = 76,
   yBottom = 100,
-  ySymbol = 101,
+  ySymbol = 88,
   className = 'muzik-time-sig',
   hoverRectClass = 'muzik-note-hover-rect',
 }) {
@@ -62,7 +67,7 @@ export default function MuzikTimeSignatureGlyph({
           textAnchor="middle"
           className="muzik-time-sig-glyph"
         >
-          {String.fromCodePoint(0x1D134)}
+          {TS_COMMON}
         </text>
       </g>
     );
@@ -78,7 +83,7 @@ export default function MuzikTimeSignatureGlyph({
           textAnchor="middle"
           className="muzik-time-sig-glyph"
         >
-          {String.fromCodePoint(0x1D135)}
+          {TS_CUT}
         </text>
       </g>
     );

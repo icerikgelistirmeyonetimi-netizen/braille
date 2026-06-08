@@ -31,7 +31,7 @@ export default function MuzikBrfViewTabs({ aktifSekme, setAktifSekme, onHazirPar
     <div
       className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2"
     >
-      <div className="flex items-center gap-2" role="tablist" aria-label="Görünüm sekmeleri">
+      <div className="flex shrink-0 items-center gap-2" role="tablist" aria-label="Görünüm sekmeleri">
         {TAB_ITEMS.map((sek, idx) => {
           const aktif = aktifSekme === sek.id;
           return (
@@ -59,9 +59,9 @@ export default function MuzikBrfViewTabs({ aktifSekme, setAktifSekme, onHazirPar
         })}
       </div>
 
-      {/* Hazır parçalar — sağa yaslı select kutusu */}
-      <label className="ml-auto flex items-center gap-2 text-sm text-slate-600">
-        <span className="hidden sm:inline">Hazır parça:</span>
+      {/* Hazır parçalar — sağa yaslı select kutusu; yer kalmayınca daralır */}
+      <label className="ml-auto flex min-w-0 items-center gap-2 text-sm text-slate-600">
+        <span className="hidden sm:inline shrink-0">Hazır parça:</span>
         <select
           aria-label="Hazır parça seç"
           defaultValue=""
@@ -72,7 +72,7 @@ export default function MuzikBrfViewTabs({ aktifSekme, setAktifSekme, onHazirPar
             if (parca) onHazirParcaSec?.(parca);
             e.target.value = ''; // tekrar seçilebilsin
           }}
-          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-sky-400 max-w-[180px]"
+          className="min-w-0 w-full max-w-[180px] rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-sky-400"
         >
           <option value="">Seç…</option>
           {MUZIK_HAZIR_PARCALAR.map((p, i) => (

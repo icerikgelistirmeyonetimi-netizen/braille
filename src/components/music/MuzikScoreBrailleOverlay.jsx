@@ -255,9 +255,16 @@ export default function MuzikScoreBrailleOverlay({
       onBrailleDetayGoster?.({ anlam, hucre, oge: ogeNesnesi });
     };
 
+    const _noktaMetni = Array.isArray(hucre) && hucre.length ? ('nokta ' + hucre.join(' ')) : 'boşluk';
     return (
       <span
         key={`hucre-wrap-${satirIdx}-${olcu.index}-${item.index ?? i}`}
+        data-oge-id={ogeId || undefined}
+        data-braille-dots={Array.isArray(hucre) ? hucre.join('-') : ''}
+        className="muzik-braille-hucre"
+        tabIndex={ogeId ? -1 : undefined}
+        aria-label={ogeId ? `Braille ${_noktaMetni}` : undefined}
+        role={ogeId ? 'img' : undefined}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
         onClick={handleClick}
