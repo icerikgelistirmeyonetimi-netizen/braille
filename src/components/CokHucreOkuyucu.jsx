@@ -32,10 +32,8 @@ export default function CokHucreOkuyucu({
   sesKaydiButonEtiketi = 'Ses Kaydını Dinle',
   yonergeFormati = 'standart', // 'standart' | 'sirayla'
 }) {
-  const [indeks, setIndeks] = useState(() => {
-    const k = indeksAl(bolumAnahtari);
-    return k < ogeler.length ? k : 0;
-  });
+  // Ders her açılışta baştan başlar (kaldığı yerden devam etmez).
+  const [indeks, setIndeks] = useState(0);
   const [hucreIndeksi, setHucreIndeksi] = useState(0);
   const [basilanlar, setBasilanlar] = useState([]);
   const [yanlis, setYanlis] = useState([]);
@@ -46,6 +44,14 @@ export default function CokHucreOkuyucu({
   const sonHucreOgeRef = useRef(0); // hücre-noktası effect'inde öğe değişimini tespit için
   const [ogeSesiAktif, setOgeSesiAktif] = useState(Boolean(ogeSesiHerZaman));
   const [okumaModu, setOkumaModu] = useState(false);
+  // Yönerge seslendirilirken nokta etkileşimi kilitlenir (tıklama/hover/odak/klavye yok).
+  const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
+  const yonergeNesilRef = useRef(0);
+  const yonergeKilitTimerRef = useRef(null);
+  const uyariResumeTimerRef = useRef(null);
+  const uyariRef = useRef(null);
+  const uyariFocusIstek = useRef(false);
+  const oncekiYonergeOkunuyorRef = useRef(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -90,15 +96,58 @@ export default function CokHucreOkuyucu({
     return `${ttsBaşlık}${okunusKismi}. ${oge.anlam || ''} ${hucreYonergesi}`;
   }, [sadeceHucreYonergesiOku, yonergeFormati]);
 
-  // Nerede kaldıysa kaydet (kayıtlılar modunda kaydetme)
+  // Menüdeki ilerleme göstergesi için yalnızca en uzak ulaşılan öğeyi kaydet
+  // (ders baştan başlasa da ilerleme kaybolmasın). Kayıtlılar modunda kaydetme.
   useEffect(() => {
-    if (bolumAnahtari && !kayitlilarModu) indeksKaydet(bolumAnahtari, indeks);
+    if (bolumAnahtari && !kayitlilarModu && indeks > indeksAl(bolumAnahtari)) {
+      indeksKaydet(bolumAnahtari, indeks);
+    }
   }, [indeks, bolumAnahtari, kayitlilarModu]);
 
   const gosterToast = (mesaj) => {
     clearTimeout(toastTimerRef.current);
     setToast(mesaj);
     toastTimerRef.current = setTimeout(() => setToast(null), 2000);
+  };
+
+  // Yönergeyi seslendirirken noktaları kilitler; seslendirme bitince açar.
+  // onSon (utterance sonu) ana sinyaldir; güvenlik için bir zaman aşımı da var.
+  const yonergeKilidiAc = (nesil) => {
+    if (yonergeNesilRef.current !== nesil) return;
+    if (yonergeKilitTimerRef.current) {
+      clearTimeout(yonergeKilitTimerRef.current);
+      yonergeKilitTimerRef.current = null;
+    }
+    setYonergeOkunuyor(false);
+  };
+
+  const yonergeyiKilitleyerekSeslendir = (metin, secenek = {}) => {
+    const nesil = ++yonergeNesilRef.current;
+    setYonergeOkunuyor(true);
+    if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
+    // Asıl kilit açma sinyali konuşma sonu (onSon). Bu yalnızca onSon hiç
+    // gelmezse devreye girecek CÖMERT bir emniyet: gerçek konuşmadan önce
+    // ateşlenip yönergeyi erken açmasın (Türkçe TTS yavaş olabilir).
+    const maxMs = Math.min(30000, 6000 + (metin ? metin.length : 0) * 200);
+    yonergeKilitTimerRef.current = setTimeout(() => yonergeKilidiAc(nesil), maxMs);
+    konus(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
+  };
+
+  // Yönerge okunurken kullanıcı bir noktaya dokunmaya çalışırsa: uyar ve
+  // yönergeyi kısa süre duraklatıp kaldığı yerden sürdür (üst üste binmesin).
+  const yonergeBeklemeUyar = () => {
+    gosterToast('Yönerge bitmesini bekleyiniz.');
+    uyariFocusIstek.current = true;
+    try {
+      if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        if (uyariResumeTimerRef.current) clearTimeout(uyariResumeTimerRef.current);
+        uyariResumeTimerRef.current = setTimeout(() => {
+          try { window.speechSynthesis.resume(); } catch { /* yok say */ }
+          uyariResumeTimerRef.current = null;
+        }, 1800);
+      }
+    } catch { /* yok say */ }
   };
 
   const tumSesleriDurdur = () => {
@@ -156,11 +205,23 @@ export default function CokHucreOkuyucu({
     ogeSesiDurdur?.();
 
     if (bitti) {
+      yonergeNesilRef.current += 1; // bekleyen kilit açmalarını geçersiz kıl
+      setYonergeOkunuyor(false);
       konus(bittiMesaji);
       return;
     }
     const k = ogeler[indeks];
     if (!k) return undefined;
+
+    // Yeni öğe yüklendi: yönerge okunana kadar noktalar kilitli.
+    // Nesli artır ki önceki öğenin bekleyen kilit-açma zamanlayıcıları
+    // yeni öğeyi yanlışlıkla açmasın.
+    yonergeNesilRef.current += 1;
+    if (yonergeKilitTimerRef.current) {
+      clearTimeout(yonergeKilitTimerRef.current);
+      yonergeKilitTimerRef.current = null;
+    }
+    setYonergeOkunuyor(true);
 
     const metin = kelimeYonergeMetniAl(k);
     const gecikme = ogeSesiOnceCal ? 250 : 250;
@@ -187,7 +248,7 @@ export default function CokHucreOkuyucu({
       const yonergeyiOku = () => {
         if (konustu) return;
         konustu = true;
-        konus(metin);
+        yonergeyiKilitleyerekSeslendir(metin);
       };
 
       if (!ilkSesZatenCalindi) {
@@ -202,7 +263,7 @@ export default function CokHucreOkuyucu({
       }
     } else {
       konusmaTimer = window.setTimeout(() => {
-        konus(metin);
+        yonergeyiKilitleyerekSeslendir(metin);
       }, gecikme);
 
       if (sesAktifMi && typeof ogeSesiCal === 'function') {
@@ -224,7 +285,7 @@ export default function CokHucreOkuyucu({
         const tekrarOku = () => {
           if (tekrarKonustu) return;
           tekrarKonustu = true;
-          konus(metin, { kesintiyle: true });
+          yonergeyiKilitleyerekSeslendir(metin, { kesintiyle: true });
         };
         ogeSesiCal(k, { onEnded: tekrarOku });
         // Güvenlik: onEnded gelmezse en geç ~5 sn sonra oku.
@@ -232,7 +293,7 @@ export default function CokHucreOkuyucu({
         return;
       }
 
-      konus(metin, { kesintiyle: true });
+      yonergeyiKilitleyerekSeslendir(metin, { kesintiyle: true });
 
       if (sesAktifMi && typeof ogeSesiCal === 'function') {
         tekrarSesiTimerRef.current = window.setTimeout(() => {
@@ -286,11 +347,62 @@ export default function CokHucreOkuyucu({
     ogeSesiDurdur?.();
     const noktalar = aktif.hucreler[hucreIndeksi];
     if (!noktalar) return; // kelime değişmiş, indeks henüz sıfırlanmamış olabilir
-    konus(`${hucreIndeksi + 1}. hücre: ${noktalar.join(', ')} numaralı noktalara dokunun.`,
-          { kesintiyle: true });
+    yonergeyiKilitleyerekSeslendir(
+      `${hucreIndeksi + 1}. hücre: ${noktalar.join(', ')} numaralı noktalara dokunun.`,
+      { kesintiyle: true }
+    );
   }, [hucreIndeksi, indeks, aktif, bitti, ogeSesiDurdur]);
 
   useEffect(() => () => konusmayiDurdur(), []);
+
+  // Bileşen kaldırılırken yönerge kilit/sürdürme zamanlayıcılarını temizle.
+  useEffect(() => () => {
+    if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
+    if (uyariResumeTimerRef.current) clearTimeout(uyariResumeTimerRef.current);
+  }, []);
+
+  // Uyarı toast'u ekrana gelince ekran okuyucu imlecini oraya taşı.
+  // useEffect: React DOM güncellemesinden sonra çalışır → ref kesinlikle set olmuştur.
+  useEffect(() => {
+    if (!toast || !uyariFocusIstek.current) return undefined;
+    uyariFocusIstek.current = false;
+    const id = window.requestAnimationFrame(() => uyariRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, [toast]);
+
+  // Yönerge bittiğinde odağı doğrudan aktif hücrenin ilk noktasına (1. nokta)
+  // taşı. Böylece kullanıcı üst düğmelere / okuma moduna takılmadan başlar.
+  useEffect(() => {
+    const onceki = oncekiYonergeOkunuyorRef.current;
+    oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
+    if (!(onceki && !yonergeOkunuyor)) return undefined;
+    if (okumaModu || bitti) return undefined;
+    const id = window.requestAnimationFrame(() => {
+      const ilkNokta = document.querySelector('.page-mid button.dot');
+      if (ilkNokta) ilkNokta.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [yonergeOkunuyor, okumaModu, bitti]);
+
+  // Yönerge okunurken klavyeyle gezinme/etkileşim de kapalı: Tab, Shift+Tab,
+  // ok tuşları, Enter ve Space engellenir; denenirse "bekleyiniz" uyarısı verir.
+  useEffect(() => {
+    if (!yonergeOkunuyor) return undefined;
+    const engellenen = new Set([
+      'Tab', 'Enter', ' ', 'Spacebar',
+      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+      'Home', 'End', 'PageUp', 'PageDown'
+    ]);
+    const onKey = (e) => {
+      if (!engellenen.has(e.key)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      yonergeBeklemeUyar();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yonergeOkunuyor]);
 
   if (okumaModu) {
     return (
@@ -398,7 +510,7 @@ export default function CokHucreOkuyucu({
 
     return (
       <div className="page">
-        {toast && <div className="toast" aria-live="assertive">{toast}</div>}
+        {toast && <div ref={uyariRef} className="toast" aria-live="assertive" tabIndex={-1}>{toast}</div>}
         <div>
           <PageHeader baslik={baslik} />
           <div className="progress" aria-hidden="true">
@@ -480,10 +592,13 @@ className="btn"               type="button"
               <BrailleCell
                 key={hucreIndex}
                 baslik={`${hucreIndex + 1}`}
+                hucreAdi={`${hucreIndex + 1}. hücre`}
                 hedefNoktalar={noktalar}
                 dogruNoktalar={hucreIndex < guvenliHucreIndeksi ? noktalar : hucreIndex === guvenliHucreIndeksi ? basilanlar : []}
                 yanlisNoktalar={hucreIndex === guvenliHucreIndeksi ? yanlis : []}
                 tiklanabilir={hucreIndex === guvenliHucreIndeksi}
+                kilitli={yonergeOkunuyor}
+                onKilitliEtkilesim={yonergeBeklemeUyar}
                 onNoktaTikla={noktayaTikla}
                 baslikAriaLabel={`${hucreIndex + 1}. hücre, toplam ${hucreSayisi} hücreden`}
               />
@@ -496,6 +611,9 @@ className="btn"               type="button"
               dogruNoktalar={basilanlar}
               yanlisNoktalar={yanlis}
               tiklanabilir
+              kilitli={yonergeOkunuyor}
+              onKilitliEtkilesim={yonergeBeklemeUyar}
+              hucreAdi={hucreSayisi > 1 ? `${guvenliHucreIndeksi + 1}. hücre` : undefined}
               onNoktaTikla={noktayaTikla}
               baslikAriaLabel={hucreSayisi > 1
                 ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
@@ -563,14 +681,14 @@ className="btn"           type="button"
               }
 
               tekrarSesiTimerRef.current = window.setTimeout(() => {
-                konus(tekrarMetni, { kesintiyle: true });
+                yonergeyiKilitleyerekSeslendir(tekrarMetni, { kesintiyle: true });
                 tekrarSesiTimerRef.current = null;
               }, ogeSesiSonrasiKonusmaGecikmeMs);
 
               return;
             }
 
-            konus(tekrarMetni, { kesintiyle: true });
+            yonergeyiKilitleyerekSeslendir(tekrarMetni, { kesintiyle: true });
 
             if (sesAktifMi && typeof ogeSesiCal === 'function' && aktif) {
               if (tekrarSesiTimerRef.current) {

@@ -86,6 +86,8 @@ export default function DesenOgretici({
   const yonergeNesilRef = useRef(0);
   const yonergeKilitTimerRef = useRef(null);
   const uyariResumeTimerRef = useRef(null);
+  const uyariRef = useRef(null);
+  const uyariFocusIstek = useRef(false);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -133,6 +135,15 @@ export default function DesenOgretici({
     if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
     if (uyariResumeTimerRef.current) clearTimeout(uyariResumeTimerRef.current);
   }, []);
+
+  // Uyarı toast'u ekrana gelince ekran okuyucu imlecini oraya taşı.
+  // useEffect: React DOM güncellemesinden sonra çalışır → ref kesinlikle set olmuştur.
+  useEffect(() => {
+    if (!toast || !uyariFocusIstek.current) return undefined;
+    uyariFocusIstek.current = false;
+    const id = window.requestAnimationFrame(() => uyariRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, [toast]);
 
   // Yönerge bittiğinde odağı doğrudan ilk braille noktasına (1. nokta) taşı.
   // Böylece kullanıcı üst düğmelere / okuma moduna takılmadan 1. noktadan başlar.
@@ -182,6 +193,7 @@ export default function DesenOgretici({
   // yönergeyi kısa süre duraklatıp kaldığı yerden sürdür (üst üste binmesin).
   const yonergeBeklemeUyar = () => {
     gosterToast('Yönerge bitmesini bekleyiniz.');
+    uyariFocusIstek.current = true;
     try {
       if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking) {
         window.speechSynthesis.pause();
@@ -226,7 +238,10 @@ export default function DesenOgretici({
     const nesil = ++yonergeNesilRef.current;
     setYonergeOkunuyor(true);
     if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
-    const maxMs = Math.min(20000, 1500 + (metin ? metin.length : 0) * 90);
+    // Asıl kilit açma sinyali konuşma sonu (onSon). Bu yalnızca onSon hiç
+    // gelmezse devreye girecek CÖMERT bir emniyet: gerçek konuşmadan önce
+    // ateşlenip yönergeyi erken açmasın (Türkçe TTS yavaş olabilir).
+    const maxMs = Math.min(30000, 6000 + (metin ? metin.length : 0) * 200);
     yonergeKilitTimerRef.current = setTimeout(() => yonergeKilidiAc(nesil), maxMs);
     konus(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
   };
@@ -556,7 +571,7 @@ export default function DesenOgretici({
 
   return (
     <div className="page">
-      {toast && <div className="toast" aria-live="assertive">{toast}</div>}
+      {toast && <div ref={uyariRef} className="toast" aria-live="assertive" tabIndex={-1}>{toast}</div>}
       <div>
         {baslik && <PageHeader baslik={baslik} />}
         <div className="progress" aria-hidden="true">
