@@ -52,7 +52,8 @@ Multi-cell word reader. Steps through each cell one at a time.
 ```jsx
 <CokHucreOkuyucu
   baslik="Title"
-  ogeler={[{ yazi, okunus?, anlam?, hucreler: number[][], sesId? }]}
+  ogeler={[{ yazi, okunus?, anlam?, hucreler: number[][], sesId?,
+             sesOncesiYonergeMetni?, tamYonergeMetni? }]}
   bolumAnahtari="kuran-heceler"
   rtl
   ogeSesiCal={fn}
@@ -63,6 +64,9 @@ Multi-cell word reader. Steps through each cell one at a time.
   yonergeFormati="standart"   // 'standart' | 'sirayla'
 />
 ```
+`sesOncesiYonergeMetni` is read before `ogeSesiCal`; then the item sound plays; then
+`tamYonergeMetni` or the generated instruction is read. Use this for music pages where an
+intro/info sentence must come before the piano/sample sound.
 
 ---
 
@@ -183,7 +187,7 @@ Click/correct/wrong sounds play even when `sesAcik` (TTS narration) is off.
 
 **CRITICAL — Single TTS channel:** `konus()` cancels current utterance.
 You cannot speak a warning AND resume narration from the same point.
-For warnings during narration: show toast + `uyariFocusIstek.current = true` only — TTS keeps playing uninterrupted. Never call `konus()` or `pause()`/`resume()` for the warning.
+For warnings during narration: show a visual-only toast (`aria-live="off"`) — TTS keeps playing uninterrupted. Never call `konus()`, `pause()`/`resume()`, or focus the toast for the warning.
 
 **Completion screen pattern (bitti useEffect):**
 ```js
@@ -220,7 +224,7 @@ ayarlariDinle(fn)   // subscribe to changes, returns unsubscribe fn
 | Class | Purpose |
 |-------|---------|
 | `.hayalet-btn` | sr-only ghost button; appears visually only on `:focus-visible` |
-| `.toast` | Brief (2s) notification. Must have `ref`, `tabIndex={-1}`, `aria-live="assertive"` |
+| `.toast` | Brief (2s) visual-only warning during narration. Use `aria-live="off"`; do not focus it. |
 | `.modul-yan .modul-sekme.aktif` | Active module tab in sidebar — focus target on back-navigation |
 | `.banner-baslik` | Page heading — focus target on forward-navigation |
 | `.page-mid .cell .dot` | First dot in DesenOgretici — Tab from sentinel lands here |
@@ -251,6 +255,12 @@ KuranSureOkuma       → CokHucreOkuyucu directly
 ```
 Audio files: `public/audio/kuran/`. `SesIzinEkrani` component handles first-tap unlock.
 
+### Module 8 Music Pages (`MuzikBrailleSayfa` + `CokHucreOkuyucu`)
+
+- `/muzik/notalar`, `/muzik/sureler`, and sibling music lessons are backed by `src/data/muzik.js` and mapped through `src/pages/MuzikBrailleSayfa.jsx`.
+- If an intro/info sentence must be read before the piano/sample sound, put it in `sesOncesiYonergeMetni`; the order is info → item sound → `tamYonergeMetni`/generated instruction.
+- For clickless first-step info items, keep the whole message in `tamYonergeMetni`; prefix user-facing intro text with `Bilgilendirme:` when that is the desired narration.
+
 ---
 
 ## 10. NVDA A11y Patterns
@@ -261,19 +271,12 @@ const id = window.requestAnimationFrame(() => el.focus());
 return () => window.cancelAnimationFrame(id);
 ```
 
-**Focus toast after React DOM commit (reliable pattern):**
-```js
-// in yonergeBeklemeUyar:
-uyariFocusIstek.current = true;
-
-// separate useEffect:
-useEffect(() => {
-  if (!toast || !uyariFocusIstek.current) return;
-  uyariFocusIstek.current = false;
-  const id = window.requestAnimationFrame(() => uyariRef.current?.focus());
-  return () => window.cancelAnimationFrame(id);
-}, [toast]);
+**Warning toast pattern:**
+```jsx
+{toast && <div className="toast" aria-live="off">{toast}</div>}
 ```
+Warning toasts during narration are visual only. Do not focus them and do not announce them
+through NVDA; the active TTS instruction must remain uninterrupted.
 
 **aria rules:**
 - `aria-live="assertive"` — urgent: warnings, errors
@@ -291,7 +294,7 @@ useEffect(() => {
 | Change only DesenOgretici | **Always update CokHucreOkuyucu too** |
 | `konus()`, `pause()`/`resume()`, or `aria-live` on warning toast | `gosterToast()` only, `aria-live="off"` — visual only, NVDA silent, TTS uninterrupted |
 | Safety timer `90ms/char` — unlocks too early | `Math.min(30000, 6000 + len * 200)` |
-| `rAF → focus()` right after `setState` — ref may be null | `useEffect([toast])` then rAF |
+| Focusing/announcing warning toast after `setState` | Do not focus warning toast; keep it `aria-live="off"` and visual-only |
 | StrictMode: boolean flag for first-load skip | Compare `oncekiYol.current === null` |
 | `kilitli`: only block onClick | Render as `<div>`, `aria-hidden`, remove all handlers |
 | Auto-focus first dot after narration ends | Focus `dotSentinelRef` sentinel → Tab goes to first dot |
@@ -300,9 +303,12 @@ useEffect(() => {
 | Update `noktaListesi` format only in templates | Also update `nl()` in `RakamEgitimi`, `MatematikRakamEgitimi`, `MatematikSiraSayilari` |
 | `sesEfektiAcikMi()` gates on both `sesAcik` and `sesEfektiAcik` | Only gate on `sesEfektiAcik` |
 | `konus(bittiMesaji)` in bitti useEffect — writes to `_srBolge`, NVDA reads it after "Ana sayfaya dön" | `ekranOkuyucuTemizle()` then `konus(bittiMesaji, { srAtla: true })` |
+| Music intro before piano/sample sound placed inside `tamYonergeMetni` | Use `sesOncesiYonergeMetni` so order is info → sound → main instruction |
 | Page-specific intro only on first item — complex `tamYonergeMetni` | Use `i === 0 ? { tamYonergeMetni: \`${INTRO} ${ad}, ${detay} Lütfen...\` } : { yonergeDetay: detay }` |
 | `hucreBasliklari` hardcoded as `['1','2']` for multi-cell items | Set `hucreBasliklari` in data item (e.g. `['harf işareti','büyük harf']`); pass through converter with `hucreBasliklari: s.hucreBasliklari` |
 | Former `IsaretSayfasi` pages — use `ekBilgi` for kurallar/ornekler display | `isarettenOgeye(s)` converter: `{ hucreler, noktalar: hucreler[0], yonergeDetay: s.aciklama, ekBilgi: { aciklama, kurallar, ornekler } }` |
+| `sessizBaslat=true` in `SesIzinEkrani` + passing `ilkOgeSesiHariciCalindi={true}` → first item audio skipped | `sessizBaslat=true` only silently unlocks browser; user never heard audio → do NOT pass `ilkOgeSesiHariciCalindi` (leave default `false`) |
+| `AnaMenu` module tab click: focus stays on tab button | `modulSec()` calls `rAF → icerikBaslikRef.current?.focus()`; `h2.modul-icerik-baslik` has `tabIndex={-1}` |
 
 ---
 
