@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import DesenOgretici from '../components/DesenOgretici.jsx';
 import SesIzinEkrani from '../components/SesIzinEkrani.jsx';
 import { KURAN_TEMEL_HARFLERI } from '../data/kuran.js';
@@ -12,7 +12,6 @@ import {
 
 export default function KuranHarfEgitimi() {
   const [sesIzniVar, setSesIzniVar] = useState(false);
-  const [ilkSesCalindi, setIlkSesCalindi] = useState(false);
 
   const ogeler = KURAN_TEMEL_HARFLERI.map((h) => ({
     ad: h.harf,
@@ -48,10 +47,7 @@ export default function KuranHarfEgitimi() {
         butonMetni="Sesi Başlat ve Harf Eğitimine Geç"
         ilkSesUrl={kuranHarfSesUrlAl(ogeler[0])}
         sessizBaslat
-        onIzinVerildi={({ ilkSesCalindi: calindi } = {}) => {
-          setIlkSesCalindi(Boolean(calindi));
-          setSesIzniVar(true);
-        }}
+        onIzinVerildi={() => setSesIzniVar(true)}
       />
     );
   }
@@ -69,7 +65,6 @@ export default function KuranHarfEgitimi() {
       ogeSesiOnceCal
       ogeSesiHerZaman
       ogeSesiSonrasiKonusmaGecikmeMs={1200}
-      ilkOgeSesiHariciCalindi={ilkSesCalindi}
 okumaModundaSadeceOgeSesi
     />
   );
