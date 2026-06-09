@@ -23,17 +23,19 @@ These two are the main learning templates used across nearly all pages.
 
 Single or multi-cell braille pattern teacher. User taps dots in order.
 
-**Used by:** `HarfEgitimi`, `RakamEgitimi`, `NoktalamaEgitimi`, all 5 Kisaltma pages, `MatematikRakamEgitimi`, `FenSembolEgitimi`, `MuzikNotaEgitimi`, etc.
+**Used by:** `HarfEgitimi`, `RakamEgitimi`, `NoktalamaEgitimi`, all 5 Kisaltma pages, `MatematikRakamEgitimi`, `FenSembolEgitimi`, `MuzikNotaEgitimi`, `NoktalamaIsaretleri`, `OzelIsaretler`, `MatematikGeometriEgitimi`, `MatematikOlcuEgitimi`, `MatematikSembolEgitimi`, `MuzikSembolEgitimi`, `AlmancaBrailleSayfa`, `FransizcaBrailleSayfa`, `IngilizceBrailleSayfa`, etc.
 
 **Key props:**
 ```jsx
 <DesenOgretici
   baslik="Page Title"
-  ogeler={[{ ad, ariaAd?, noktalar, hucreler?, tamYonergeMetni?, altMetin?, yonergeDetay? }]}
+  ogeler={[{ ad, ariaAd?, noktalar, hucreler?, tamYonergeMetni?, altMetin?, altMetinAciklama?,
+             yonergeDetay?, ekBilgi?: { aciklama?, kurallar?, ornekler? } }]}
   kategoriAdi="harfi"         // used in instruction: "A harfi, 1,2 numaralı noktalardan..."
   bolumAnahtari="harfler"     // localStorage progress key
   bittiMesaji="Congrats!"
   noktalariSeslendir          // kisaltma pages: appends dot composition via noktaListesi()
+  seslendirmeDili="tr"        // TTS language: 'tr'(default)|'de'|'fr'|'en'
   rtl                         // Arabic etc.
   ogeSesiCal={fn}             // audio recording playback (optional)
   ogeSesiOnceCal              // play audio before instruction
@@ -298,9 +300,12 @@ useEffect(() => {
 | `kilitli`: only block onClick | Render as `<div>`, `aria-hidden`, remove all handlers |
 | Auto-focus first dot after narration ends | Focus `dotSentinelRef` sentinel → Tab goes to first dot |
 | Dot format: "1, 2 numaralı noktalardan" | `noktaListesi()`: "1. ve 2. noktalardan" |
-| Update `noktaListesi` format only in templates | Also update `nl()` in `RakamEgitimi` + `MatematikRakamEgitimi` |
+| Update `noktaListesi` format only in templates | Also update `nl()` in `RakamEgitimi`, `MatematikRakamEgitimi`, `MatematikSiraSayilari` |
 | `sesEfektiAcikMi()` gates on both `sesAcik` and `sesEfektiAcik` | Only gate on `sesEfektiAcik` |
 | `konus(bittiMesaji)` in bitti useEffect — writes to `_srBolge`, NVDA reads it after "Ana sayfaya dön" | `ekranOkuyucuTemizle()` then `konus(bittiMesaji, { srAtla: true })` |
+| Page-specific intro only on first item — complex `tamYonergeMetni` | Use `i === 0 ? { tamYonergeMetni: \`${INTRO} ${ad}, ${detay} Lütfen...\` } : { yonergeDetay: detay }` |
+| `hucreBasliklari` hardcoded as `['1','2']` for multi-cell items | Set `hucreBasliklari` in data item (e.g. `['harf işareti','büyük harf']`); pass through converter with `hucreBasliklari: s.hucreBasliklari` |
+| Former `IsaretSayfasi` pages — use `ekBilgi` for kurallar/ornekler display | `isarettenOgeye(s)` converter: `{ hucreler, noktalar: hucreler[0], yonergeDetay: s.aciklama, ekBilgi: { aciklama, kurallar, ornekler } }` |
 
 ---
 
@@ -314,12 +319,13 @@ src/
 │   ├── BrailleCell.jsx          # ★ Single cell — used on every learning page
 │   ├── BrailleKlavye.jsx        # 6-key keyboard for writing exercises
 │   ├── CokHucreOkuyucu.jsx      # ★ Multi-cell reading template
-│   ├── DesenOgretici.jsx        # ★ Single/multi-cell teaching template
+│   ├── DesenOgretici.jsx        # ★ Single/multi-cell teaching template (+ ekBilgi panel, seslendirmeDili)
 │   ├── DesktopShell.jsx         # ★ Page wrapper (banner + sidebar + ghost buttons)
 │   ├── KarisikYazmaButonu.jsx   # Mixed writing exercise link button
 │   ├── OkumaModu.jsx            # Reading mode list inside DesenOgretici
 │   ├── PageHeader.jsx           # Page title (.banner-baslik)
 │   └── SesIzinEkrani.jsx        # Audio permission screen (Kuran audio pages)
+│   # ✗ IsaretSayfasi.jsx — DELETED (migrated to DesenOgretici + ekBilgi)
 ├── pages/
 │   ├── AnaMenu.jsx              # Home / module list
 │   ├── HarfEgitimi.jsx          # Turkish letters → DesenOgretici

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import BrailleCell from './BrailleCell.jsx';
 import PageHeader from './PageHeader.jsx';
@@ -250,7 +250,7 @@ export default function DesenOgretici({
     // ateşlenip yönergeyi erken açmasın (Türkçe TTS yavaş olabilir).
     const maxMs = Math.min(30000, 6000 + (metin ? metin.length : 0) * 200);
     yonergeKilitTimerRef.current = setTimeout(() => yonergeKilidiAc(nesil), maxMs);
-    konus(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
+    konusDil(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
   };
 
   const modDegistir = (kayitlilar) => {
@@ -265,11 +265,11 @@ export default function DesenOgretici({
     const kaydedildi = sonraOgrenAl(anahtar).includes(aktifOge.ad);
     if (kaydedildi) {
       sonraOgrenKaldir(anahtar, aktifOge.ad);
-      konus('Sonra öğren listesinden kaldırıldı.');
+      konusDil('Sonra öğren listesinden kaldırıldı.');
       gosterToast('Sonra öğren listesinden kaldırıldı');
     } else {
       sonraOgrenKaydet(anahtar, aktifOge.ad);
-      konus('Sonra öğren listesine kaydedildi.');
+      konusDil('Sonra öğren listesine kaydedildi.');
       gosterToast('Sonra öğren listesine kaydedildi');
     }
   };
@@ -331,7 +331,7 @@ export default function DesenOgretici({
       const yazmaDavet = (yazmaKaynak && !(kayitlilarModu && aktifListe.length === 0))
         ? ' Şimdi yazma zamanı! Öğrendiklerinizi karışık yazma etkinliğinde uygulayabilirsiniz.'
         : '';
-      konus(tebrik + yazmaDavet, { srAtla: true });
+      konusDil(tebrik + yazmaDavet, { srAtla: true });
       return;
     }
     const oge = aktifListe[indeks];
@@ -536,7 +536,7 @@ export default function DesenOgretici({
               type="button"
               onClick={() => {
                 konusmayiDurdur();
-                konus('Karışık yazma etkinliği başlıyor.', { kesintiyle: true });
+                konusDil('Karışık yazma etkinliği başlıyor.', { kesintiyle: true });
                 navigate('/yazma-karisik/' + yazmaKaynak);
               }}
               aria-label="Karışık yazma etkinliğine geç"
@@ -574,7 +574,7 @@ export default function DesenOgretici({
       basariBildir('Tebrikler!');
       setTimeout(() => setIndeks((i) => i + 1), 800);
     } else {
-      konus(`Doğru. Sıradaki nokta: ${adimMetni(aktifAdimlar[yeni.length])}.`);
+      konusDil(`Doğru. Sıradaki nokta: ${adimMetni(aktifAdimlar[yeni.length])}.`);
     }
   };
 
@@ -761,6 +761,33 @@ className="btn"               type="button"
             {aktifOge.altMetinAciklama}
           </div>
         )}
+        {aktifOge.ekBilgi && (
+          <div className="isaret-metin-alti" aria-live="polite" style={{ width: '100%', maxWidth: 520 }}>
+            {aktifOge.ekBilgi.aciklama && (
+              <p style={{ margin: '0 0 0.75em 0' }}>{aktifOge.ekBilgi.aciklama}</p>
+            )}
+            {aktifOge.ekBilgi.kurallar?.length > 0 && (
+              <>
+                <strong>Kullanıldığı yerler:</strong>
+                <ul style={{ margin: '0.3em 0 0.8em 1.2em', padding: 0 }}>
+                  {aktifOge.ekBilgi.kurallar.map((kr, i) => (
+                    <li key={i} style={{ marginBottom: '0.3em' }}>{kr}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {aktifOge.ekBilgi.ornekler?.length > 0 && (
+              <>
+                <strong>Örnek:</strong>
+                <ul style={{ margin: '0.3em 0 0 1.2em', padding: 0 }}>
+                  {aktifOge.ekBilgi.ornekler.map((o, i) => (
+                    <li key={i} style={{ marginBottom: '0.3em' }}>{o}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="controls">
@@ -810,7 +837,7 @@ className="btn"           type="button"
             setIndeks(0);
             setBasilanlar([]);
             setYanlis([]);
-            konus('En başa dönüldü.');
+            konusDil('En başa dönüldü.');
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>

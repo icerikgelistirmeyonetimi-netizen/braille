@@ -91,7 +91,7 @@ export const MATEMATIK_SEMBOLLER = [
   { ad: 'bağ işareti', sembol: '-', aciklama: 'Bağlantılı sayılar ve zaman ifadelerinde araya 3-6 noktaları yazılır.', hucreler: [[3, 6]] },
   { ad: 'virgül / ondalık gösterim', sembol: ',', aciklama: 'Matematikte sayıların arasındaki virgül ve ondalık gösterim 2. nokta ile yazılır; ondalık yazımda virgülden sonra ikinci bir rakam işareti kullanılmaz.', hucreler: [[2]] },
   { ad: 'harf işareti', sembol: '\\', aciklama: 'Matematikte tek küçük harflerin önüne 5-6 noktaları yazılır.', hucreler: [HARF_ISARETI] },
-  { ad: 'tek büyük harf işareti', sembol: '\\^', aciklama: 'Tek büyük harf için harf işaretinden sonra 6. nokta kullanılır.', hucreler: [HARF_ISARETI, BUYUK_HARF_ISARETI] },
+  { ad: 'tek büyük harf işareti', sembol: '\\^', aciklama: 'Tek büyük harf için harf işaretinden sonra 6. nokta kullanılır.', hucreler: [HARF_ISARETI, BUYUK_HARF_ISARETI], hucreBasliklari: ['harf işareti', 'büyük harf'] },
   { ad: 'artı', sembol: '+', aciklama: 'Kılavuza göre artı işareti iki hücredir: 5-6 ve 2-6.', hucreler: ISLEM.arti },
   { ad: 'eksi', sembol: '-', aciklama: 'Kılavuza göre eksi işareti iki hücredir: 5-6 ve 3-6.', hucreler: ISLEM.eksi },
   { ad: 'çarpma', sembol: '×', aciklama: 'Çarpma yalnızca Unicode × (çarpı) ile yazılır; Latin x harfi çarpma değildir. İki hücre: 5-6 ve 2-3-6.', hucreler: ISLEM.carpma },
