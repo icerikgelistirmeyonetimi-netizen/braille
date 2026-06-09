@@ -79,6 +79,7 @@ export default function CokHucreOkuyucu({
 
   const kelimeYonergeMetniAl = useCallback((oge) => {
     if (!oge) return '';
+    if (oge.tamYonergeMetni) return oge.tamYonergeMetni;
 
     const hucreler = Array.isArray(oge.hucreler) ? oge.hucreler : [];
     const cokHucre = hucreler.length > 1;
@@ -559,7 +560,7 @@ className="btn"               type="button"
         )}
       </div>
 
-      <div className="page-mid" style={{ justifyContent: 'flex-start', gap: 10, paddingTop: 8 }}>
+      <div className="page-mid">
         {!bitti && (
           <div className="ders-eylem-satiri">
             <OkumaModuButonu onClick={okumaModunaGec} />
@@ -599,7 +600,7 @@ className="btn"               type="button"
         <span ref={dotSentinelRef} tabIndex={-1} aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', outline: 'none', pointerEvents: 'none' }} />
         {/* Aktif hücre gösterimi */}
         {ikiHucreTekSatir ? (
-          <div className="cell-row fit" style={{ '--hucre-sayisi': 2 }}>
+          <div className="cell-row fit" style={{ '--hucre-sayisi': k.hucreler.length }}>
             {k.hucreler.map((noktalar, hucreIndex) => (
               <BrailleCell
                 key={hucreIndex}
@@ -617,21 +618,19 @@ className="btn"               type="button"
             ))}
           </div>
         ) : (
-          <div className="aktif-hucre-wrap">
-            <BrailleCell
-              hedefNoktalar={aktifNoktalar}
-              dogruNoktalar={basilanlar}
-              yanlisNoktalar={yanlis}
-              tiklanabilir
-              kilitli={yonergeOkunuyor}
-              onKilitliEtkilesim={yonergeBeklemeUyar}
-              hucreAdi={hucreSayisi > 1 ? `${guvenliHucreIndeksi + 1}. hücre` : undefined}
-              onNoktaTikla={noktayaTikla}
-              baslikAriaLabel={hucreSayisi > 1
-                ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
-                : k.yazi}
-            />
-          </div>
+          <BrailleCell
+            hedefNoktalar={aktifNoktalar}
+            dogruNoktalar={basilanlar}
+            yanlisNoktalar={yanlis}
+            tiklanabilir
+            kilitli={yonergeOkunuyor}
+            onKilitliEtkilesim={yonergeBeklemeUyar}
+            hucreAdi={hucreSayisi > 1 ? `${guvenliHucreIndeksi + 1}. hücre` : undefined}
+            onNoktaTikla={noktayaTikla}
+            baslikAriaLabel={hucreSayisi > 1
+              ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
+              : k.yazi}
+          />
         )}
 
         {/* Tüm hücrelerin küçük önizlemesi — aktif olan vurgulanır */}
@@ -735,34 +734,34 @@ className="btn"           type="button"
         </button>
         {hucreSayisi > 1 ? (
           <>
-            <button className="btn" type="button" aria-label="Önceki hücre" disabled={ilkKelime && hucreIndeksi === 0} onClick={oncekiHucre}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
-              <span className="btn-etiket">Önceki</span>
+            <button className="btn" type="button" aria-label="Önceki öğe" disabled={ilkKelime && hucreIndeksi === 0} onClick={oncekiHucre}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+              <span className="btn-etiket">Önceki öğe</span>
             </button>
-            <button className="btn" type="button" aria-label={sonHucre ? 'Sıradaki kelimeyi atla' : 'Hücreyi atla'} onClick={sonrakiHucre}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="9 18 15 12 9 6"/></svg>
-              <span className="btn-etiket">Atla</span>
+            <button className="btn" type="button" aria-label={sonHucre ? 'Sonraki öğe' : 'Sonraki öğe'} onClick={sonrakiHucre}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+              <span className="btn-etiket">Sonraki öğe</span>
             </button>
           </>
         ) : (
           <>
-            <button className="btn" type="button" aria-label="Önceki" disabled={ilkKelime}
+            <button className="btn" type="button" aria-label="Önceki öğe" disabled={ilkKelime}
                     onClick={() => { tumSesleriDurdur(); setIndeks((i) => Math.max(0, i - 1)); }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="15 18 9 12 15 6"/></svg>
-              <span className="btn-etiket">Önceki</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+              <span className="btn-etiket">Önceki öğe</span>
             </button>
             <button
               className="btn"
               type="button"
-              aria-label="Atla, sonraki"
+              aria-label="Sonraki öğe"
               onClick={() => {
                 tumSesleriDurdur();
                 basariBildir('Sıradaki.');
                 setTimeout(() => setIndeks((i) => i + 1), 500);
               }}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="9 18 15 12 9 6"/></svg>
-              <span className="btn-etiket">Atla</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+              <span className="btn-etiket">Sonraki öğe</span>
             </button>
           </>
         )}

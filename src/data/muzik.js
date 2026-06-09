@@ -168,10 +168,10 @@ const KURAL_VOLTA = [
 ];
 
 const KURAL_BRAILLE_REPEAT = [
-  'Braille repeat işareti ⠶ (2-3-5-6) hemen önceki ölçü ya da ölçünün bir kısmını tekrarlar.',
+  'Braille tekrar işareti ⠶ (2-3-5-6) hemen önceki ölçü ya da ölçünün bir kısmını tekrarlar.',
   'Birden çok kez tekrar için işaretin sonuna boşluksuz sayı eklenir; ilk notada oktav işareti gerekir.',
-  'Nüans ve süslemeler farklıysa repeat işareti kullanılamaz.',
-  'Tie son notada ise repeat işaretinden SONRA yazılır.',
+  'Nüans ve süslemeler farklıysa tekrar işareti kullanılamaz.',
+  'Tie son notada ise tekrar işaretinden SONRA yazılır.',
 ];
 
 const KURAL_NUMARA_TEKRAR = [
@@ -201,7 +201,7 @@ export const MUZIK_NOTALAR = [
 
 /* ─────────  2) NOTA SÜRELERİ (Duration)  ──────────── */
 export const MUZIK_SURELER = [
-  R('8\'lik ve 128\'lik süre', [], 'Temel hücredir, 3 ve 6 noktası eklenmez. 8\'lik ve 128\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '♪'),
+  { ...R('8\'lik ve 128\'lik süre', [], 'Temel hücredir, 3 ve 6 noktası eklenmez. 8\'lik ve 128\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '♪'), tamYonergeMetni: 'Süreler notalara 3. ve 6. noktalardan eklemeler yapılarak tanımlanır. 8lik ve 128lik nota için ekleme yapılmaz. notalar doğal formlarında yazılır. Lütfen bu adımda tıklama yapmadan devam ediniz.' },
   R('8\'lik ve 128\'lik Do', ['1-4-5'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
   R('8\'lik ve 128\'lik Re', ['1-5'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
   R('8\'lik ve 128\'lik Mi', ['1-2-4'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
@@ -535,8 +535,8 @@ export const MUZIK_TEMPO_ISARETLERI = [
 
 /* ─────────────────  15) BRAILLE TEKRAR İŞARETLERİ  ─────────────────────── */
 export const MUZIK_TEKRAR = [
-  R('braille repeat işareti', ['2-3-5-6'], '(önceki ölçü/parçayı aynen tekrarlar) · ⠶', KURAL_BRAILLE_REPEAT, undefined, '𝄎'),
-  R('repeat ×3', ['2-3-5-6', '3-4-5-6', '1-4'], '(işaret + boşluksuz rakam = 3 kez)', KURAL_BRAILLE_REPEAT),
+  R('braille tekrar işareti', ['2-3-5-6'], '(önceki ölçü/parçayı aynen tekrarlar) · ⠶', KURAL_BRAILLE_REPEAT, undefined, '𝄎'),
+  R('tekrar ×3', ['2-3-5-6', '3-4-5-6', '1-4'], '(işaret + boşluksuz rakam = 3 kez)', KURAL_BRAILLE_REPEAT),
   R('geri sayım tekrarı (8↩4)', ['3-4-5-6', '1-2-5', '3-4-5-6', '1-4-5'], '(8 ölçü geri, 4 ölçü çal)', KURAL_NUMARA_TEKRAR),
   R('eşit geri sayım (4↩4)', ['3-4-5-6', '1-4-5'], '(araya başka müzik yoksa tek rakam yeter)', KURAL_NUMARA_TEKRAR),
   R('ölçü numarası tekrarı (#2)', ['3-4-5-6', '2-3'], '(belirli ölçünün tekrarı)', KURAL_OLCU_NO_TEKRAR),

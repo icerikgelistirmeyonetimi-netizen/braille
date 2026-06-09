@@ -132,6 +132,7 @@ export default function MuzikBrailleSayfa() {
       okunus: '',
       anlam: '',
       hucreler: s.hucreler || [],
+      ...(s.tamYonergeMetni ? { tamYonergeMetni: s.tamYonergeMetni } : {}),
     };
   });
 
