@@ -11,6 +11,7 @@ import { ayarlariAl, ayarlariDinle } from '../utils/ayarlar.js';
 export default function AnaMenu() {
   const navigate = useNavigate();
   const modulYanRef = useRef(null);
+  const icerikBaslikRef = useRef(null);
   const scrollDragRef = useRef(null);
   const [turAcik, setTurAcik] = useState(false);
   const [scrollGosterge, setScrollGosterge] = useState({ gorunur: false, top: 10, height: 48 });
@@ -130,6 +131,7 @@ export default function AnaMenu() {
     try { sessionStorage.setItem('aktifModul', id); } catch { /* ignore */ }
     const m = MODULLER.find((x) => x.id === id);
     if (m) konus(`${m.baslik}, ${m.altBaslik}`, { kesintiyle: true });
+    window.requestAnimationFrame(() => icerikBaslikRef.current?.focus());
   };
 
   return (
@@ -225,9 +227,16 @@ export default function AnaMenu() {
         </div>
 
         <section className="modul-icerik" aria-label={`${modul?.baslik} bölümleri`}>
-            <h2 className="modul-icerik-baslik">{modul?.baslik} — {modul?.altBaslik}</h2>
+            <h2 ref={icerikBaslikRef} className="modul-icerik-baslik" tabIndex={-1}>{modul?.baslik} — {modul?.altBaslik}</h2>
             <nav className="menu-grid" aria-label={modul?.baslik}>
               {modul?.ogeler.map((m) => {
+                if (m.tur === 'baslik') {
+                  return (
+                    <h3 key={m.id || m.baslik} className="menu-bolum-baslik">
+                      {m.baslik}
+                    </h3>
+                  );
+                }
                 const ilerleme = m.anahtar ? indeksAl(m.anahtar) : 0;
                 const tamamlandi = m.toplam && ilerleme >= m.toplam;
                 return (
