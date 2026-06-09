@@ -59,7 +59,6 @@ export default function CokHucreOkuyucu({
   const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
   const yonergeNesilRef = useRef(0);
   const yonergeKilitTimerRef = useRef(null);
-  const uyariResumeTimerRef = useRef(null);
   const uyariRef = useRef(null);
   const uyariFocusIstek = useRef(false);
   const dotSentinelRef = useRef(null);
@@ -145,21 +144,11 @@ export default function CokHucreOkuyucu({
     konus(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
   };
 
-  // Yönerge okunurken kullanıcı bir noktaya dokunmaya çalışırsa: uyar ve
-  // yönergeyi kısa süre duraklatıp kaldığı yerden sürdür (üst üste binmesin).
+  // Yönerge okunurken kullanıcı bir noktaya dokunmaya çalışırsa: sadece uyar,
+  // TTS kesintisiz devam eder.
   const yonergeBeklemeUyar = () => {
     gosterToast('Yönerge bitmesini bekleyiniz.');
     uyariFocusIstek.current = true;
-    try {
-      if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking) {
-        window.speechSynthesis.pause();
-        if (uyariResumeTimerRef.current) clearTimeout(uyariResumeTimerRef.current);
-        uyariResumeTimerRef.current = setTimeout(() => {
-          try { window.speechSynthesis.resume(); } catch { /* yok say */ }
-          uyariResumeTimerRef.current = null;
-        }, 1800);
-      }
-    } catch { /* yok say */ }
   };
 
   const tumSesleriDurdur = () => {
@@ -369,10 +358,9 @@ export default function CokHucreOkuyucu({
 
   useEffect(() => () => konusmayiDurdur(), []);
 
-  // Bileşen kaldırılırken yönerge kilit/sürdürme zamanlayıcılarını temizle.
+  // Bileşen kaldırılırken yönerge kilit zamanlayıcısını temizle.
   useEffect(() => () => {
     if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
-    if (uyariResumeTimerRef.current) clearTimeout(uyariResumeTimerRef.current);
   }, []);
 
   // Uyarı toast'u ekrana gelince ekran okuyucu imlecini oraya taşı.

@@ -86,7 +86,6 @@ a local `nl()` helper with the same logic — update them too when format change
 const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
 const yonergeNesilRef = useRef(0);          // generation counter — invalidates old timers
 const yonergeKilitTimerRef = useRef(null);  // safety timeout ref
-const uyariResumeTimerRef = useRef(null);   // TTS pause/resume timer
 const uyariRef = useRef(null);              // ref to warning toast DOM element
 const uyariFocusIstek = useRef(false);      // "focus toast on next render" flag
 ```
@@ -95,13 +94,13 @@ const uyariFocusIstek = useRef(false);      // "focus toast on next render" flag
 ```js
 yonergeKilidiAc(nesil)                      // unlock dots (checks generation)
 yonergeyiKilitleyerekSeslendir(metin, opt)  // speak + lock; safety: Math.min(30000, 6000+len*200)
-yonergeBeklemeUyar()                        // show toast + set focus flag + TTS pause/resume
+yonergeBeklemeUyar()                        // show toast + set focus flag (TTS continues uninterrupted)
 ```
 
 **Flow:**
 1. New item → increment generation, `setYonergeOkunuyor(true)`, call `yonergeyiKilitleyerekSeslendir`
 2. During narration: Tab/Arrow/Enter/Space → blocked by keydown capture → `yonergeBeklemeUyar()`
-3. `yonergeBeklemeUyar` → `gosterToast(...)` + `uyariFocusIstek.current = true` + TTS pause/resume
+3. `yonergeBeklemeUyar` → `gosterToast(...)` + `uyariFocusIstek.current = true` (TTS keeps playing)
 4. `useEffect([toast])` → after React commits DOM → `rAF → uyariRef.current?.focus()` (NVDA reads it)
 5. `onSon` fires → `yonergeKilidiAc(nesil)` → `setYonergeOkunuyor(false)`
 6. Narration ends → `dogruSesi()` (positive audio cue: dots now tappable) → focus invisible `dotSentinelRef` sentinel (tabIndex={-1}, aria-hidden); Tab → first dot
@@ -187,7 +186,7 @@ Click/correct/wrong sounds play even when `sesAcik` (TTS narration) is off.
 
 **CRITICAL — Single TTS channel:** `konus()` cancels current utterance.
 You cannot speak a warning AND resume narration from the same point.
-For warnings during narration: `pause()` → NVDA focus (aria-live) → `resume()`. Never call `konus()` for the warning.
+For warnings during narration: show toast + `uyariFocusIstek.current = true` only — TTS keeps playing uninterrupted. Never call `konus()` or `pause()`/`resume()` for the warning.
 
 **Completion screen pattern (bitti useEffect):**
 ```js
@@ -293,7 +292,7 @@ useEffect(() => {
 |-------|---------|
 | `useState(indeksAl(...))` — resumes from saved | `useState(0)` — always start from beginning |
 | Change only DesenOgretici | **Always update CokHucreOkuyucu too** |
-| `konus()` for warning during narration | `pause()` + NVDA focus + `resume()` |
+| `konus()` or `pause()`/`resume()` for warning during narration | Toast + `uyariFocusIstek` only — TTS plays uninterrupted |
 | Safety timer `90ms/char` — unlocks too early | `Math.min(30000, 6000 + len * 200)` |
 | `rAF → focus()` right after `setState` — ref may be null | `useEffect([toast])` then rAF |
 | StrictMode: boolean flag for first-load skip | Compare `oncekiYol.current === null` |
