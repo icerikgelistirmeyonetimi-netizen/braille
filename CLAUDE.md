@@ -100,7 +100,7 @@ yonergeBeklemeUyar()                        // show toast only — no focus, no 
 2. During narration: Tab/Arrow/Enter/Space → blocked by keydown capture → `yonergeBeklemeUyar()`
 3. `yonergeBeklemeUyar` → `gosterToast(...)` only (visual only, NVDA silent, TTS keeps playing)
 4. `onSon` fires → `yonergeKilidiAc(nesil)` → `setYonergeOkunuyor(false)`
-5. Narration ends → `dogruSesi()` (positive audio cue: dots now tappable) → focus invisible `dotSentinelRef` sentinel (tabIndex={-1}, aria-hidden); Tab → first dot
+5. Narration ends → `konus('Başla')` (TTS + NVDA aria-live, no `srAtla`) → focus invisible `dotSentinelRef` sentinel (tabIndex={-1}, aria-hidden); Tab → first dot
 
 **Toast JSX (always this exact pattern):**
 ```jsx
@@ -296,6 +296,7 @@ useEffect(() => {
 | `kilitli`: only block onClick | Render as `<div>`, `aria-hidden`, remove all handlers |
 | Auto-focus first dot after narration ends | Focus `dotSentinelRef` sentinel → Tab goes to first dot |
 | Dot format: "1, 2 numaralı noktalardan" | `noktaListesi()`: "1. ve 2. noktalardan" |
+| `noktaListesi(arr, 'dan')` — 2 args, cogulEk undefined → "noktalarundefined" in TTS | Always pass all 3 args: `noktaListesi(arr, 'dan', 'dan')` |
 | Update `noktaListesi` format only in templates | Also update `nl()` in `RakamEgitimi`, `MatematikRakamEgitimi`, `MatematikSiraSayilari` |
 | `sesEfektiAcikMi()` gates on both `sesAcik` and `sesEfektiAcik` | Only gate on `sesEfektiAcik` |
 | `konus(bittiMesaji)` in bitti useEffect — writes to `_srBolge`, NVDA reads it after "Ana sayfaya dön" | `ekranOkuyucuTemizle()` then `konus(bittiMesaji, { srAtla: true })` |
