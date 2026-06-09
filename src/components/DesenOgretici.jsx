@@ -302,7 +302,7 @@ export default function DesenOgretici({
       const adKategori = ad.trimEnd().endsWith(kategoriAdi) ? ad : `${ad} ${kategoriAdi}`;
       const ek = aktifOge.aciklama ? ` ${aktifOge.aciklama}` : '';
       const _nArr = aktifOge.noktalar || [];
-      const detay = aktifOge.yonergeDetay || `${noktaListesi(_nArr, 'dan')} oluşur.`;
+      const detay = aktifOge.yonergeDetay || `${noktaListesi(_nArr, 'dan', 'dan')} oluşur.`;
       return `${adKategori}, ${detay}${ek} Lütfen bu noktalara sırayla dokunun.`;
     }
     if (kalan.length === 0) {
@@ -350,7 +350,7 @@ export default function DesenOgretici({
     const ad = oge.ariaAd || oge.ad;
     const adKategori = ad.trimEnd().endsWith(kategoriAdi) ? ad : `${ad} ${kategoriAdi}`;
     const _nArr = oge.noktalar || [];
-    const detay = oge.yonergeDetay || `${noktaListesi(_nArr, 'dan')} oluşur.`;
+    const detay = oge.yonergeDetay || `${noktaListesi(_nArr, 'dan', 'dan')} oluşur.`;
     const ek = oge.aciklama ? ` ${oge.aciklama}` : '';
 
     const girisKomp = oge.tamYonergeMetni && noktalariSeslendir ? noktaKompozisyonMetni(oge) : '';
