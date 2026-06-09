@@ -94,8 +94,6 @@ export default function DesenOgretici({
   const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
   const yonergeNesilRef = useRef(0);
   const yonergeKilitTimerRef = useRef(null);
-  const uyariRef = useRef(null);
-  const uyariFocusIstek = useRef(false);
   const dotSentinelRef = useRef(null);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
@@ -144,14 +142,6 @@ export default function DesenOgretici({
     if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
   }, []);
 
-  // Uyarı toast'u ekrana gelince ekran okuyucu imlecini oraya taşı.
-  // useEffect: React DOM güncellemesinden sonra çalışır → ref kesinlikle set olmuştur.
-  useEffect(() => {
-    if (!toast || !uyariFocusIstek.current) return undefined;
-    uyariFocusIstek.current = false;
-    const id = window.requestAnimationFrame(() => uyariRef.current?.focus());
-    return () => window.cancelAnimationFrame(id);
-  }, [toast]);
 
 
   // Narrasyon bitince görünmez sentinel'e odaklan; Tab → ilk nokta.
@@ -198,7 +188,6 @@ export default function DesenOgretici({
   // TTS kesintisiz devam eder.
   const yonergeBeklemeUyar = () => {
     gosterToast('Yönerge bitmesini bekleyiniz.');
-    uyariFocusIstek.current = true;
   };
 
   const tumSesleriDurdur = () => {
@@ -572,7 +561,7 @@ export default function DesenOgretici({
 
   return (
     <div className="page">
-      {toast && <div ref={uyariRef} className="toast" aria-live="assertive" tabIndex={-1}>{toast}</div>}
+      {toast && <div className="toast" aria-live="off">{toast}</div>}
       <div>
         {baslik && <PageHeader baslik={baslik} />}
         <div className="progress" aria-hidden="true">

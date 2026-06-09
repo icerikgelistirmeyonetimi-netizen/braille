@@ -86,28 +86,25 @@ a local `nl()` helper with the same logic — update them too when format change
 const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
 const yonergeNesilRef = useRef(0);          // generation counter — invalidates old timers
 const yonergeKilitTimerRef = useRef(null);  // safety timeout ref
-const uyariRef = useRef(null);              // ref to warning toast DOM element
-const uyariFocusIstek = useRef(false);      // "focus toast on next render" flag
 ```
 
 **Shared functions:**
 ```js
 yonergeKilidiAc(nesil)                      // unlock dots (checks generation)
 yonergeyiKilitleyerekSeslendir(metin, opt)  // speak + lock; safety: Math.min(30000, 6000+len*200)
-yonergeBeklemeUyar()                        // show toast + set focus flag (TTS continues uninterrupted)
+yonergeBeklemeUyar()                        // show toast only — no focus, no NVDA announcement, TTS uninterrupted
 ```
 
 **Flow:**
 1. New item → increment generation, `setYonergeOkunuyor(true)`, call `yonergeyiKilitleyerekSeslendir`
 2. During narration: Tab/Arrow/Enter/Space → blocked by keydown capture → `yonergeBeklemeUyar()`
-3. `yonergeBeklemeUyar` → `gosterToast(...)` + `uyariFocusIstek.current = true` (TTS keeps playing)
-4. `useEffect([toast])` → after React commits DOM → `rAF → uyariRef.current?.focus()` (NVDA reads it)
-5. `onSon` fires → `yonergeKilidiAc(nesil)` → `setYonergeOkunuyor(false)`
-6. Narration ends → `dogruSesi()` (positive audio cue: dots now tappable) → focus invisible `dotSentinelRef` sentinel (tabIndex={-1}, aria-hidden); Tab → first dot
+3. `yonergeBeklemeUyar` → `gosterToast(...)` only (visual only, NVDA silent, TTS keeps playing)
+4. `onSon` fires → `yonergeKilidiAc(nesil)` → `setYonergeOkunuyor(false)`
+5. Narration ends → `dogruSesi()` (positive audio cue: dots now tappable) → focus invisible `dotSentinelRef` sentinel (tabIndex={-1}, aria-hidden); Tab → first dot
 
 **Toast JSX (always this exact pattern):**
 ```jsx
-{toast && <div ref={uyariRef} className="toast" aria-live="assertive" tabIndex={-1}>{toast}</div>}
+{toast && <div className="toast" aria-live="off">{toast}</div>}
 ```
 
 ---
@@ -292,7 +289,7 @@ useEffect(() => {
 |-------|---------|
 | `useState(indeksAl(...))` — resumes from saved | `useState(0)` — always start from beginning |
 | Change only DesenOgretici | **Always update CokHucreOkuyucu too** |
-| `konus()` or `pause()`/`resume()` for warning during narration | Toast + `uyariFocusIstek` only — TTS plays uninterrupted |
+| `konus()`, `pause()`/`resume()`, or `aria-live` on warning toast | `gosterToast()` only, `aria-live="off"` — visual only, NVDA silent, TTS uninterrupted |
 | Safety timer `90ms/char` — unlocks too early | `Math.min(30000, 6000 + len * 200)` |
 | `rAF → focus()` right after `setState` — ref may be null | `useEffect([toast])` then rAF |
 | StrictMode: boolean flag for first-load skip | Compare `oncekiYol.current === null` |
