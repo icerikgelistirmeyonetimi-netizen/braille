@@ -190,7 +190,11 @@ const KURAL_OLCU_NO_TEKRAR = [
 /* ─────────────────────────  1) NOTALAR (Pitch)  ────────────────────────── */
 // UEB Music: temel hücre = sekizlik (quaver). Süre eki için 3 ve/veya 6.
 export const MUZIK_NOTALAR = [
-  R('do (C)', ['1-4-5'], '', KURAL_NOTA, undefined, 'C'),
+  {
+    ...R('do (C)', ['1-4-5'], '', KURAL_NOTA, undefined, 'C'),
+    sesOncesiYonergeMetni: "Bilgilendirme: Bu eğitimde 8'lik nota süresine göre nota brailleri verilecektir.",
+    tamYonergeMetni: 'Do notası. Lütfen sırayla 1., 4. ve 5. noktalara dokununuz.',
+  },
   R('re (D)', ['1-5'], '', KURAL_NOTA, undefined, 'D'),
   R('mi (E)', ['1-2-4'], '', KURAL_NOTA, undefined, 'E'),
   R('fa (F)', ['1-2-4-5'], '', KURAL_NOTA, undefined, 'F'),
@@ -201,7 +205,7 @@ export const MUZIK_NOTALAR = [
 
 /* ─────────  2) NOTA SÜRELERİ (Duration)  ──────────── */
 export const MUZIK_SURELER = [
-  { ...R('8\'lik ve 128\'lik süre', [], 'Temel hücredir, 3 ve 6 noktası eklenmez. 8\'lik ve 128\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '♪'), tamYonergeMetni: 'Süreler notalara 3. ve 6. noktalardan eklemeler yapılarak tanımlanır. 8lik ve 128lik nota için ekleme yapılmaz. notalar doğal formlarında yazılır. Lütfen bu adımda tıklama yapmadan devam ediniz.' },
+  { ...R('8\'lik ve 128\'lik süre', [], 'Temel hücredir, 3 ve 6 noktası eklenmez. 8\'lik ve 128\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '♪'), tamYonergeMetni: 'Bilgilendirme: Süreler notalara 3. ve 6. noktalardan eklemeler yapılarak tanımlanır. 8lik ve 128lik nota için ekleme yapılmaz. notalar doğal formlarında yazılır. Lütfen bu adımda tıklama yapmadan devam ediniz.' },
   R('8\'lik ve 128\'lik Do', ['1-4-5'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
   R('8\'lik ve 128\'lik Re', ['1-5'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
   R('8\'lik ve 128\'lik Mi', ['1-2-4'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
@@ -239,6 +243,93 @@ export const MUZIK_SURELER = [
 ];
 
 /* ───────────────────  3) ESLAR (Rests) — UEB Music  ────────────────────── */
+const MUZIK_SURE_NOTA_TEMELLERI = [
+  { ad: 'Do', noktalar: [1, 4, 5] },
+  { ad: 'Re', noktalar: [1, 5] },
+  { ad: 'Mi', noktalar: [1, 2, 4] },
+  { ad: 'Fa', noktalar: [1, 2, 4, 5] },
+  { ad: 'Sol', noktalar: [1, 2, 5] },
+  { ad: 'La', noktalar: [2, 4] },
+  { ad: 'Si', noktalar: [2, 4, 5] },
+];
+
+const noktaGrubu = (noktalar) => noktalar.join('-');
+
+function sureDersiOlustur({ ad, ekNoktalar, aciklama, sembol, tamYonergeMetni }) {
+  const sureOgesi = {
+    ...R(`${ad} süre`, ekNoktalar.length ? [noktaGrubu(ekNoktalar)] : [], aciklama, KURAL_SURE, undefined, sembol),
+    ...(tamYonergeMetni ? { tamYonergeMetni } : {}),
+  };
+
+  return [
+    sureOgesi,
+    ...MUZIK_SURE_NOTA_TEMELLERI.map((nota) => R(
+      `${ad} ${nota.ad}`,
+      [noktaGrubu([...nota.noktalar, ...ekNoktalar].sort((a, b) => a - b))],
+      `${ad} ${nota.ad} notası. ${aciklama}`,
+      KURAL_SURE,
+      undefined,
+      sembol,
+    )),
+  ];
+}
+
+export const MUZIK_SURELER_TEMEL = [
+  ...sureDersiOlustur({
+    ad: "8'lik",
+    ekNoktalar: [],
+    aciklama: "Temel hücredir; 3 ve 6 noktası eklenmez.",
+    sembol: '8',
+    tamYonergeMetni: "Bilgilendirme: Süreler notalara 3. ve 6. noktalardan eklemeler yapılarak tanımlanır. Birinci aşamada ilköğretim düzeyinde en sık karşılaşılan 8lik, 4lük, 2lik ve 1lik süreler çalışılacaktır. 8lik nota için ekleme yapılmaz. Lütfen bu adımda tıklama yapmadan devam ediniz.",
+  }),
+  ...sureDersiOlustur({
+    ad: "4'lük",
+    ekNoktalar: [6],
+    aciklama: "Temel hücreye 6 noktası eklenir.",
+    sembol: '4',
+  }),
+  ...sureDersiOlustur({
+    ad: "2'lik",
+    ekNoktalar: [3],
+    aciklama: "Temel hücreye 3 noktası eklenir. Bu değer yarım nota olarak da adlandırılır.",
+    sembol: '2',
+  }),
+  ...sureDersiOlustur({
+    ad: "1'lik",
+    ekNoktalar: [3, 6],
+    aciklama: "Temel hücreye 3 ve 6 noktaları eklenir. Bu değer tam nota olarak da adlandırılır.",
+    sembol: '1',
+  }),
+];
+
+export const MUZIK_SURELER_ILERI = [
+  ...sureDersiOlustur({
+    ad: "16'lık",
+    ekNoktalar: [3, 6],
+    aciklama: "16'lık nota, 1'lik nota ile aynı braille hücresini kullanır; okuma bağlamdan anlaşılır.",
+    sembol: '16',
+    tamYonergeMetni: "Bilgilendirme: İkinci aşamada kullanım sıklığına göre 16lık, 32lik, 64lük ve 128lik süreler çalışılacaktır. 16lık nota 1lik nota ile aynı braille hücresini kullanır. Lütfen sırasıyla noktalara dokununuz.",
+  }),
+  ...sureDersiOlustur({
+    ad: "32'lik",
+    ekNoktalar: [3],
+    aciklama: "32'lik nota, 2'lik nota ile aynı braille hücresini kullanır; okuma bağlamdan anlaşılır.",
+    sembol: '32',
+  }),
+  ...sureDersiOlustur({
+    ad: "64'lük",
+    ekNoktalar: [6],
+    aciklama: "64'lük nota, 4'lük nota ile aynı braille hücresini kullanır; okuma bağlamdan anlaşılır.",
+    sembol: '64',
+  }),
+  ...sureDersiOlustur({
+    ad: "128'lik",
+    ekNoktalar: [],
+    aciklama: "128'lik nota, 8'lik nota ile aynı braille hücresini kullanır; okuma bağlamdan anlaşılır.",
+    sembol: '128',
+  }),
+];
+
 export const MUZIK_ESLAR = [
   R('tam (birlik) sus',     ['1-3-4'],   '(4 vuruş sessizlik)',         KURAL_ES, undefined, '𝄻'),
   R('yarım (ikilik) sus',   ['1-3-6'],   '(2 vuruş sessizlik)',         KURAL_ES, undefined, '𝄼'),
@@ -248,15 +339,20 @@ export const MUZIK_ESLAR = [
 ];
 
 /* ─────────────────────  4) OKTAV İŞARETLERİ  ───────────────────────────── */
-export const MUZIK_OKTAVLAR = [
-  R('1. oktav (en pes)', ['4'], '(piyanonun en alt do’sundan başlar) · 4 noktası', KURAL_OKTAV, undefined, '⠈'),
-  R('2. oktav', ['4-5'], '(1. oktavın bir üstü) · 4-5', KURAL_OKTAV, undefined, '⠨'),
-  R('3. oktav', ['4-5-6'], '(orta do’nun bir altı) · 4-5-6', KURAL_OKTAV, undefined, '⠸'),
-  R('4. oktav (orta do)', ['5'], '(Middle C oktavı) · 5 noktası', KURAL_OKTAV, undefined, '⠐'),
-  R('5. oktav', ['4-6'], '(orta do’nun bir üstü) · 4-6', KURAL_OKTAV, undefined, '⠠'),
-  R('6. oktav', ['5-6'], '(5. oktavın bir üstü) · 5-6', KURAL_OKTAV, undefined, '⠰'),
-  R('7. oktav (en tiz)', ['6'], '(piyanonun en üst oktavı) · 6 noktası', KURAL_OKTAV, undefined, '⠘'),
+// Temel: 4. (orta do), 5. ve 3. oktav — en sık kullanılan üçü
+export const MUZIK_OKTAVLAR_TEMEL = [
+  R(‘4. oktav (orta do)’, [‘5’],     ‘(Middle C oktavı) · 5 noktası’,                       KURAL_OKTAV, undefined, ‘⠐’),
+  R(‘5. oktav’,           [‘4-6’],   ‘(orta do\’nun bir üstü) · 4-6’,                        KURAL_OKTAV, undefined, ‘⠠’),
+  R(‘3. oktav’,           [‘4-5-6’], ‘(orta do\’nun bir altı) · 4-5-6’,                      KURAL_OKTAV, undefined, ‘⠸’),
 ];
+// İleri: 1., 2., 6., 7. oktav
+export const MUZIK_OKTAVLAR_ILERI = [
+  R(‘2. oktav’,           [‘4-5’],   ‘(1. oktavın bir üstü) · 4-5’,                          KURAL_OKTAV, undefined, ‘⠨’),
+  R(‘1. oktav (en pes)’,  [‘4’],     ‘(piyanonun en alt do\’sundan başlar) · 4 noktası’,      KURAL_OKTAV, undefined, ‘⠈’),
+  R(‘6. oktav’,           [‘5-6’],   ‘(5. oktavın bir üstü) · 5-6’,                          KURAL_OKTAV, undefined, ‘⠰’),
+  R(‘7. oktav (en tiz)’,  [‘6’],     ‘(piyanonun en üst oktavı) · 6 noktası’,                KURAL_OKTAV, undefined, ‘⠘’),
+];
+export const MUZIK_OKTAVLAR = [...MUZIK_OKTAVLAR_TEMEL, ...MUZIK_OKTAVLAR_ILERI];
 
 /* ─────────────────  5) ZAMAN İMZALARI (Time signatures)  ──────────────── */
 export const MUZIK_ZAMAN_IMZASI = [
@@ -557,11 +653,18 @@ export const MUZIK_BOLUMLER = [
     veri: MUZIK_NOTALAR,
   },
   {
-    slug: 'sureler',
-    kisaBaslik: 'Nota süreleri',
-    pageBaslik: 'Müzik · Nota Süreleri',
-    ilerlemeAnahtari: 'muzik-sureler',
-    veri: MUZIK_SURELER,
+    slug: 'sureler-temel',
+    kisaBaslik: 'Nota süreleri 1',
+    pageBaslik: 'Müzik · Nota Süreleri 1 (8lik, 4lük, 2lik, 1lik)',
+    ilerlemeAnahtari: 'muzik-sureler-temel',
+    veri: MUZIK_SURELER_TEMEL,
+  },
+  {
+    slug: 'sureler-ileri',
+    kisaBaslik: 'Nota süreleri 2',
+    pageBaslik: 'Müzik · Nota Süreleri 2 (16lık, 32lik, 64lük, 128lik)',
+    ilerlemeAnahtari: 'muzik-sureler-ileri',
+    veri: MUZIK_SURELER_ILERI,
   },
   {
     slug: 'sus',
@@ -571,11 +674,18 @@ export const MUZIK_BOLUMLER = [
     veri: MUZIK_SUS,
   },
   {
-    slug: 'oktav',
-    kisaBaslik: 'Oktav işaretleri',
-    pageBaslik: 'Müzik · Oktav işaretleri',
-    ilerlemeAnahtari: 'muzik-oktav',
-    veri: MUZIK_OKTAVLAR,
+    slug: 'oktav-temel',
+    kisaBaslik: 'Oktav (4, 5, 3)',
+    pageBaslik: 'Müzik · Oktav işaretleri — temel (4, 5, 3. oktav)',
+    ilerlemeAnahtari: 'muzik-oktav-temel',
+    veri: MUZIK_OKTAVLAR_TEMEL,
+  },
+  {
+    slug: 'oktav-ileri',
+    kisaBaslik: 'Oktav (1, 2, 6, 7)',
+    pageBaslik: 'Müzik · Oktav işaretleri — ileri (1, 2, 6, 7. oktav)',
+    ilerlemeAnahtari: 'muzik-oktav-ileri',
+    veri: MUZIK_OKTAVLAR_ILERI,
   },
   {
     slug: 'zaman-imzasi',
@@ -668,6 +778,30 @@ export const MUZIK_BOLUMLER = [
     pageBaslik: 'Müzik · Braille tekrar işaretleri',
     ilerlemeAnahtari: 'muzik-tekrar',
     veri: MUZIK_TEKRAR,
+  },
+];
+
+const MUZIK_ILERI_BOLUM_SLUGLARI = new Set([
+  'sureler-ileri',
+  'oktav-ileri',
+  'dinamikler',
+  'hairpin',
+  'nuans-once',
+  'nuans-sonra',
+  'suslemeler',
+  'duzensiz-gruplar',
+]);
+
+export const MUZIK_BOLUM_GRUPLARI = [
+  {
+    id: 'temel',
+    baslik: 'Temel müzik konuları',
+    bolumler: MUZIK_BOLUMLER.filter((bolum) => !MUZIK_ILERI_BOLUM_SLUGLARI.has(bolum.slug)),
+  },
+  {
+    id: 'ileri',
+    baslik: 'İleri müzik konuları',
+    bolumler: MUZIK_BOLUMLER.filter((bolum) => MUZIK_ILERI_BOLUM_SLUGLARI.has(bolum.slug)),
   },
 ];
 
@@ -791,11 +925,11 @@ export const MUZIK_SEMBOLLERI = [
 
 // Oktav işaretleri — UEB Music’te 7 oktav. (4. oktav = orta do oktavıdır.)
 export const OKTAV_ISARETLERI = [
-  { ad: '1. oktav', noktalar: [4] },
-  { ad: '2. oktav', noktalar: [4, 5] },
-  { ad: '3. oktav', noktalar: [4, 5, 6] },
   { ad: '4. oktav (orta do)', noktalar: [5] },
   { ad: '5. oktav', noktalar: [4, 6] },
+  { ad: '3. oktav', noktalar: [4, 5, 6] },
+  { ad: '2. oktav', noktalar: [4, 5] },
+  { ad: '1. oktav', noktalar: [4] },
   { ad: '6. oktav', noktalar: [5, 6] },
   { ad: '7. oktav', noktalar: [6] },
 ];

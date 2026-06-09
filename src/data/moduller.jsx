@@ -6,7 +6,7 @@ import {
   MATEMATIK_IFADELER
 } from './matematik.js';
 import { KURAN_HECELERI, KURAN_KELIMELERI_TEMEL } from './kuran.js';
-import { MUZIK_BOLUMLER } from './muzik.js';
+import { MUZIK_BOLUM_GRUPLARI } from './muzik.js';
 // İkonlar – sade çizgi tabanlı SVG'ler. currentColor kullanılır,
 // böylece tema rengine uyum sağlar.
 export const Ikon = {
@@ -377,6 +377,34 @@ export const Ikon = {
   ),
 };
 
+const muzikBolumIkonuAl = (slug) => {
+  if (slug === 'notalar') return Ikon.nota;
+  if (slug.startsWith('sureler')) return Ikon.sure;
+  if (slug.startsWith('oktav')) return Ikon.muzikDizi;
+  return Ikon.muzikSembol;
+};
+
+const muzikDiziMenuOgesi = {
+  yol: '/muzik-diziler',
+  baslik: 'Dizi Okuma',
+  ikon: Ikon.muzikDizi,
+  anahtar: 'muzik-dizi',
+  toplam: 3,
+};
+
+const muzikModulOgeleriOlustur = () => MUZIK_BOLUM_GRUPLARI.flatMap((grup) => [
+  { tur: 'baslik-toggle', id: `muzik-${grup.id}`, baslik: grup.baslik, toggleId: `muzik-${grup.id}` },
+  ...grup.bolumler.map((b) => ({
+    yol: `/muzik/${b.slug}`,
+    baslik: b.kisaBaslik,
+    ikon: muzikBolumIkonuAl(b.slug),
+    anahtar: b.ilerlemeAnahtari,
+    toplam: b.veri.length,
+    sectionId: `muzik-${grup.id}`,
+  })),
+  ...(grup.id === 'temel' ? [{ ...muzikDiziMenuOgesi, sectionId: 'muzik-temel' }] : []),
+]);
+
 export const MODULLER = [
   {
     id: 'modul1',
@@ -492,14 +520,7 @@ export const MODULLER = [
     altBaslik: 'Müzik Braille',
     ikon: Ikon.modul8,
     ogeler: [
-      ...MUZIK_BOLUMLER.map((b) => ({
-        yol: `/muzik/${b.slug}`,
-        baslik: b.kisaBaslik,
-        ikon: Ikon.muzikSembol,
-        anahtar: b.ilerlemeAnahtari,
-        toplam: b.veri.length,
-      })),
-      { yol: '/muzik-diziler', baslik: 'Dizi Okuma',     ikon: Ikon.muzikDizi, anahtar: 'muzik-dizi', toplam: 3 },
+      ...muzikModulOgeleriOlustur(),
       { yol: '/test-muzik',    baslik: 'Test / Sınav',   ikon: Ikon.test },
     ]
   },
