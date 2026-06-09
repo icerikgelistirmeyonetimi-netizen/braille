@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
-import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle, dogruSesi } from '../utils/ses.js';
+import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle } from '../utils/ses.js';
 import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 
 // [1]      + 'ya','a' → "1. noktaya"
@@ -368,7 +368,7 @@ export default function CokHucreOkuyucu({
     oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
     if (!(onceki && !yonergeOkunuyor)) return undefined;
     if (okumaModu || bitti) return undefined;
-    dogruSesi();
+    konus('Başla');
     const id = window.requestAnimationFrame(() => dotSentinelRef.current?.focus());
     return () => window.cancelAnimationFrame(id);
   }, [yonergeOkunuyor, okumaModu, bitti]);

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import BrailleCell from './BrailleCell.jsx';
 import PageHeader from './PageHeader.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
-import { konus, konusmayiDurdur, basariBildir, hataBildir, ekranOkuyucuTemizle, dogruSesi } from '../utils/ses.js';
+import { konus, konusmayiDurdur, basariBildir, hataBildir, ekranOkuyucuTemizle } from '../utils/ses.js';
 import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
 import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js';
@@ -151,7 +151,7 @@ export default function DesenOgretici({
     oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
     if (!(onceki && !yonergeOkunuyor)) return undefined;
     if (okumaModu || bitti) return undefined;
-    dogruSesi();
+    konus('Başla');
     const id = window.requestAnimationFrame(() => dotSentinelRef.current?.focus());
     return () => window.cancelAnimationFrame(id);
   }, [yonergeOkunuyor, okumaModu, bitti]);
