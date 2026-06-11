@@ -315,6 +315,7 @@ h1, h2, h3 { color: var(--fg); }
     width: 100%;
     min-height: 0;
     overflow: auto;
+    scrollbar-gutter: stable;
   }
 
   /* Alt sayfalardaki .page genişliği shell ile aynı kalsın (içeriğe göre daralmasın) */
@@ -337,6 +338,7 @@ h1, h2, h3 { color: var(--fg); }
   display: flex;
   flex-direction: column;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 /* App içindeki <main> şeffaf bir kapsayıcı: .page doğrudan .app'in
@@ -601,6 +603,7 @@ h1, h2, h3 { color: var(--fg); }
   gap: 8px;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
   padding: 4px;
 }
 /* Çok hücreli (4+) gösterimlerde otomatik küçültme */
@@ -1397,13 +1400,23 @@ h1, h2, h3 { color: var(--fg); }
 
 .menu-bolum-baslik {
   grid-column: 1 / -1;
-  margin: 8px 0 0;
-  padding: 6px 2px 2px;
+  margin: 0;
+  padding: 0 2px;
   color: var(--muted);
   font-size: 0.98em;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.1;
   text-align: left;
+}
+
+.muzik-grup-menu {
+  grid-auto-rows: auto;
+  align-content: start;
+}
+
+.muzik-grup-menu .menu-card {
+  height: auto;
+  min-height: clamp(132px, 22vh, 190px);
 }
 
 .menu-bolum-toggle {
@@ -3537,7 +3550,6 @@ h1, h2, h3 { color: var(--fg); }
 }
 .muzik-modifier { cursor: pointer; transition: opacity 0.12s; }
 .muzik-modifier:hover { opacity: 0.6; }
-.muzik-modifier:hover.muzik-hairpin { stroke: #d97706; }
 .araclar-muzik-palet-sembol {
   font-family: 'Bravura Text', 'Cambria Math', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', Georgia, 'Times New Roman', serif;
 }
@@ -3840,7 +3852,6 @@ g:hover .muzik-note-hover-rect,
   font-size: 22px;
   font-weight: 700;
 }
-.muzik-hairpin,
 .muzik-slur,
 .muzik-tuplet-bracket,
 .muzik-ottava-line,
@@ -4143,7 +4154,6 @@ g:hover .muzik-note-hover-rect,
   font-family: Georgia, 'Times New Roman', serif;
   font-style: italic;
 }
-.araclar-muzik-palet-ogesi.tip-hairpin .araclar-muzik-palet-sembol,
 .araclar-muzik-palet-ogesi.tip-degistirici .araclar-muzik-palet-sembol,
 .araclar-muzik-palet-ogesi.tip-donanim .araclar-muzik-palet-sembol,
 .araclar-muzik-palet-ogesi.tip-zaman .araclar-muzik-palet-sembol {

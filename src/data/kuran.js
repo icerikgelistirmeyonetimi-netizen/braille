@@ -39,19 +39,10 @@ export const KURAN_HARFLERI = [
   { harf: 'ن', ad: 'nun',          okunus: 'nun',  noktalar: [1, 3, 4, 5] },
   { harf: 'و', ad: 'vav',          okunus: 'vav',  noktalar: [2, 4, 5, 6] },
   { harf: 'ه', ad: 'he',           okunus: 'he',   noktalar: [1, 2, 5] },
-  { harf: 'لا', ad: 'lam-elif',    okunus: 'lam-elif', noktalar: [1, 2, 3, 6], sesId: '' },
+  { harf: 'لا', ad: 'lam-elif',    okunus: 'lam-elif', noktalar: [1, 2, 3, 6] },
   { harf: 'ي', ad: 'ye',           okunus: 'ye',   noktalar: [2, 4] },
-  // Ek/özel harfler
-  { harf: 'ء', ad: 'hemze',        okunus: 'hemze',     noktalar: [3] },
-  { harf: 'ة', ad: 'te marbuta',   okunus: 'te marbuta', noktalar: [1, 6] },
-  { harf: 'ى', ad: 'elif maksure', okunus: 'elif maksure', noktalar: [1, 3, 5] }
+ 
 ];
-
-const KURAN_HARF_EGITIMI_DISINDAKI_EK_HARFLER = new Set(['hemze', 'te marbuta', 'elif maksure']);
-
-export const KURAN_TEMEL_HARFLERI = KURAN_HARFLERI.filter(
-  (harf) => !KURAN_HARF_EGITIMI_DISINDAKI_EK_HARFLER.has(harf.ad)
-);
 
 // ----------------------------------------------------------------------------
 // Harekeler — Kur'an braillesi'nde harekeler ilgili harften SONRA ayrı bir
@@ -191,9 +182,6 @@ const KURAN_HECE_TEMEL_OKUNUS = {
   ه: ['he', 'hi', 'hü'],
   و: ['ve', 'vi', 'vu'],
   ي: ['ye', 'yi', 'yü'],
-  ء: ['e', 'i', 'ü'],
-  ة: ['te', 'ti', 'tü'],
-  ى: ['ye', 'yi', 'yü']
 };
 
 function kuranHeceOkunusunuAl(harfKarakteri, harekeAdi) {
@@ -266,11 +254,8 @@ const KELIME_TOKEN = {
   'و': [2, 4, 5, 6],
   'ه': [1, 2, 5],
   'لا': [1, 2, 3, 6],
-  'ﻻ': [1, 2, 3, 6],
   'ي': [2, 4],
-  'ء': [3],
-  'ة': [1, 6],
-  'ى': [1, 3, 5],
+  
   // Harekeler ve özel işaretler
   a: [3, 5],
   i: [2, 6],

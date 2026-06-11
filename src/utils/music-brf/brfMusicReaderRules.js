@@ -42,7 +42,7 @@ function yeniModifierId() {
   return `mod-imp-${MODIFIER_ID_SAYACI}`;
 }
 
-// tokens[i] konumundan başlayarak, en uzun süsleme/nüans/dinamik/hairpin
+// tokens[i] konumundan başlayarak, en uzun süsleme/nüans/dinamik
 // hücre dizisini eşleştirir. Bulursa { entry, length } döndürür.
 function matchModifierSequence(tokens, i) {
   const map = REVERSE_MAPS.modifierByCellKey;
@@ -1111,7 +1111,7 @@ export function readMusicBrailleGroup(group = [], context) {
       // Aksi halde grup ortasında — süsleme/nüans eşleştiricisine bırak.
     }
 
-    // Süsleme / nüans / dinamik / hairpin gibi notaya bağlı çok-hücreli
+    // Süsleme / nüans / dinamik gibi notaya bağlı çok-hücreli
     // işaretler. En uzun eşleşme önceliklidir; tek hücreli süslemeler
     // (trill 2-3-5, turn 2-5-6 vb.) nota/aksidental ile çakışmaz.
     const modMatch = matchModifierSequence(tokens, i);

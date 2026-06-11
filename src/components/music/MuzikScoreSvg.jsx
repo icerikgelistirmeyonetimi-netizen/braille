@@ -334,6 +334,7 @@ export default function MuzikScoreSvg({
   // Programatik odakta (Alt→braille) focusin TTS'i tekrar okumasın diye bastırma.
   const sonProgramatikOdakRef = useRef(null);
   const applicationRef = useRef(null);
+  const klavyeYakalayiciRef = useRef(null);
   // Klavye handler'ı güncel değerleri ref'ten okur → listener stabil (tek attach).
   // Atama, ihtiyaç duyulan tüm değerler tanımlandıktan SONRA yapılır (aşağıda).
   const kbRef = useRef({});
@@ -736,6 +737,7 @@ export default function MuzikScoreSvg({
     playFromOge, pause, isPlaying,
     cokluSecimIds, setCokluSecimIds,
     bagAraclari, manuelOlcuCizgisiEkle,
+    setHoverBrailleOgeId, notaOdakPiyano,
   };
 
   // ── Global klavye düzenleme modu — tek capture-listener, kbRef'ten okur ────
@@ -756,7 +758,8 @@ export default function MuzikScoreSvg({
 
     const handler = (e) => {
       const ae = document.activeElement;
-      if (ae && (/^(input|textarea|select)$/i.test(ae.tagName) || ae.isContentEditable)) return;
+      const muzikKlavyeYakalayiciMi = ae?.getAttribute?.('data-muzik-keyboard-sink') === 'true';
+      if (ae && !muzikKlavyeYakalayiciMi && (/^(input|textarea|select)$/i.test(ae.tagName) || ae.isContentEditable)) return;
 
       // F1 → klavye kısayolları yardım penceresini aç (her zaman, mod fark etmez).
       if (e.key === 'F1') {
@@ -774,6 +777,57 @@ export default function MuzikScoreSvg({
       const secimSifirla = () => {
         secimAnchorRef.current = null;
         if (k.cokluSecimIds && k.cokluSecimIds.length) k.setCokluSecimIds?.([]);
+      };
+
+      // NVDA browse mode swallows single-letter quick-nav keys before the browser
+      // can see them. Keeping focus in this real input puts NVDA in focus mode.
+      const yazmaYakalayiciyiOdakla = () => {
+        const input = klavyeYakalayiciRef.current;
+        if (!input) return;
+        try {
+          input.value = '';
+          input.focus({ preventScroll: true });
+        } catch { /* */ }
+      };
+
+      const skorOgesiniOdakla = () => {
+        const items = [...document.querySelectorAll('.araclar-muzik-skor-svg [data-nav]')];
+        const hedef = (k.seciliOgeId && items.find((el) => el.getAttribute('data-oge-id') === k.seciliOgeId)) || items[0] || applicationRef.current;
+        window.requestAnimationFrame(() => {
+          try { hedef?.focus?.({ preventScroll: true }); } catch { hedef?.focus?.(); }
+        });
+      };
+
+      const navOgeSec = (el, { duyurEt = true, piyanoCal = true } = {}) => {
+        if (!el) {
+          yazmaYakalayiciyiOdakla();
+          return;
+        }
+        const id = el.getAttribute('data-oge-id');
+        const nav = el.getAttribute('data-nav');
+        if (id) {
+          k.setSeciliOgeId?.(id);
+          k.setHoverBrailleOgeId?.((nav === 'nota' || nav === 'sus' || nav === 'barline') ? id : null);
+        }
+        if (piyanoCal && nav === 'nota' && k.notaOdakPiyano !== false) {
+          const oge = k.notaOgesiById?.get?.(id);
+          if (oge) k.playNote?.(oge, { keySignatureAccidentals: k.headerKeySignatureAccidentals });
+        }
+        yazmaYakalayiciyiOdakla();
+        if (duyurEt) {
+          const etiket = (el.getAttribute('aria-label') || '')
+            .replace(/^Nota:\s*/, '')
+            .replace(/^Sus:\s*/, 'sus ');
+          if (etiket) k.duyur?.(etiket);
+        }
+      };
+
+      const duzenlemeModunuKapat = () => {
+        duzenlemeModuRef.current = false;
+        setDuzenlemeModu(false);
+        altModRef.current = 'ekleme';
+        skorOgesiniOdakla();
+        k.duyur('Klavye düzenleme modu kapatıldı');
       };
 
       // Alt (tek başına, basılı) → seçili notanın braille'ine konumlan; önce nota
@@ -811,22 +865,24 @@ export default function MuzikScoreSvg({
         duzenlemeModuRef.current = yeni;
         setDuzenlemeModu(yeni);
         if (yeni) {
-          // Açılınca: önce yönergeyi seslendir, BİTİNCE dizeğe (notaya) odaklan.
-          const dizegeOdaklan = () => {
-            const items = [...document.querySelectorAll('.araclar-muzik-skor-svg [data-nav]')];
-            const hedef = (k.seciliOgeId && items.find((el) => el.getAttribute('data-oge-id') === k.seciliOgeId)) || items[0];
-            if (hedef) hedef.focus();
-            else applicationRef.current?.focus();
-          };
-          (k.duyurVeSonra || k.duyur)('Klavye düzenleme modu açıldı, nota yazmaya hazır', dizegeOdaklan);
+          const items = [...document.querySelectorAll('.araclar-muzik-skor-svg [data-nav]')];
+          const hedef = (k.seciliOgeId && items.find((el) => el.getAttribute('data-oge-id') === k.seciliOgeId)) || items[0];
+          if (hedef) navOgeSec(hedef, { duyurEt: false, piyanoCal: false });
+          else yazmaYakalayiciyiOdakla();
+          k.duyur('Klavye düzenleme modu açıldı, nota yazmaya hazır');
         } else {
-          altModRef.current = 'ekleme';
-          k.duyur('Klavye düzenleme modu kapatıldı');
+          duzenlemeModunuKapat();
         }
         return;
       }
 
       if (!duzenlemeModuRef.current) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault(); e.stopPropagation();
+        duzenlemeModunuKapat();
+        return;
+      }
 
       // F2 → alt-mod geçişi: Ekleme ↔ Düzeltme.
       if (e.key === 'F2') {
@@ -861,7 +917,13 @@ export default function MuzikScoreSvg({
         const ids = items.map((el) => el.getAttribute('data-oge-id'));
         secimAnchorRef.current = ids[0];
         k.setCokluSecimIds(ids);
-        items[items.length - 1]?.focus();
+        const son = items[items.length - 1];
+        const sonId = son?.getAttribute('data-oge-id');
+        if (sonId) {
+          k.setSeciliOgeId?.(sonId);
+          k.setHoverBrailleOgeId?.(sonId);
+        }
+        yazmaYakalayiciyiOdakla();
         k.duyur('tümü seçili, ' + ids.length + ' öğe');
         return;
       }
@@ -924,13 +986,13 @@ export default function MuzikScoreSvg({
           const hi = Math.max(anchorIdx, hedef);
           const ids = items.slice(lo, hi + 1).map(idOf);
           k.setCokluSecimIds(ids);
-          items[hedef]?.focus();
+          navOgeSec(items[hedef], { duyurEt: false });
           k.duyur(ids.length + ' öğe seçili');
         } else {
           // Tekli gezinme: çoklu seçimi temizle.
           secimAnchorRef.current = null;
           if (k.cokluSecimIds && k.cokluSecimIds.length) k.setCokluSecimIds([]);
-          items[hedef]?.focus();
+          navOgeSec(items[hedef]);
         }
         return;
       }
@@ -1894,6 +1956,19 @@ export default function MuzikScoreSvg({
       >
         {sesliDuyuru}
       </div>
+      <input
+        ref={klavyeYakalayiciRef}
+        data-muzik-keyboard-sink="true"
+        type="text"
+        className="sr-only"
+        tabIndex={duzenlemeModu ? 0 : -1}
+        aria-label="Müzik nota yazma alanı. Harflerle nota yazın; ok tuşlarıyla gezin; Enter veya Escape ile kapatın."
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        onInput={(e) => { e.currentTarget.value = ''; }}
+        onChange={(e) => { e.currentTarget.value = ''; }}
+      />
       {/* ── Skor satırları (yatay scroll için kendi container'ı) ────────── */}
       <div ref={skorScrollRef} className="muzik-skor-scroll w-full flex flex-col gap-2 overflow-x-auto">
       {muzikSatirlar.map((satir, satirIdx) => {

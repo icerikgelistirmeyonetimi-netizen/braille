@@ -1,5 +1,5 @@
 import { BRAILLE_CATEGORY_COLORS, normalizeBrailleColorStyle } from './brailleColors.js';
-import { MUZIK_SUSLEMELER, MUZIK_DINAMIKLER, MUZIK_HAIRPIN, MUZIK_NUANS_ONCE, MUZIK_NUANS_SONRA } from '../../data/muzik.js';
+import { MUZIK_SUSLEMELER, MUZIK_DINAMIKLER, MUZIK_NUANS_ONCE, MUZIK_NUANS_SONRA } from '../../data/muzik.js';
 
 function normalizeText(value) {
   return String(value || '').trim();
@@ -32,10 +32,9 @@ export function brailleSuslemeMi(anlam = {}) {
   return SUSLEME_ADLARI.has(ad) || SUSLEME_ADLARI.has(etiket);
 }
 
-// Tüm dinamik + hairpin adları — legend'da tek "dinamik" girdisiyle gruplanır.
+// Tüm dinamik adları — legend'da tek "dinamik" girdisiyle gruplanır.
 const DINAMIK_ADLARI = new Set(
-  [...(Array.isArray(MUZIK_DINAMIKLER) ? MUZIK_DINAMIKLER : []),
-   ...(Array.isArray(MUZIK_HAIRPIN) ? MUZIK_HAIRPIN : [])]
+  [...(Array.isArray(MUZIK_DINAMIKLER) ? MUZIK_DINAMIKLER : [])]
     .map((o) => lower(o.ad))
     .filter(Boolean),
 );
@@ -124,7 +123,7 @@ export function brailleKategoriAl(anlam = {}) {
     return 'susleme';
   }
 
-  // Dinamikler (p/f/mf/cresc/dim/hairpin…) — TÜMÜ tek "dinamik" kategorisinde.
+  // Dinamikler (p/f/mf/cresc/dim…) — TÜMÜ tek "dinamik" kategorisinde.
   // Süslemeden sonra, nota/aksidental kontrollerinden önce bakılır.
   if (kaynak === 'dynamic' || tip === 'dynamic' || kaynak === 'dinamik' || tip === 'dinamik'
     || DINAMIK_ADLARI.has(lower(a.ad)) || DINAMIK_ADLARI.has(lower(a.etiket))) {

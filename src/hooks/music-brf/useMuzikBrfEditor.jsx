@@ -2466,7 +2466,7 @@ export function useMuzikBrfEditor() {
           oktav: guvenliOktavAl(item.oktav, varsayilanGuvenliOktavAl()),
           accidental: item.accidental || null,
           dotted: Boolean(item.dotted),
-          // Süsleme / nüans / dinamik / hairpin gibi notaya bağlı modifier'lar
+          // Süsleme / nüans / dinamik gibi notaya bağlı modifier'lar
           // reader tarafından item.modifiers içinde gelir; eksiksiz çizim için koru.
           modifiers: (item.modifiers && typeof item.modifiers === 'object')
             ? {

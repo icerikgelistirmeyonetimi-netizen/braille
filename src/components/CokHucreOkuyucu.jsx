@@ -224,6 +224,9 @@ export default function CokHucreOkuyucu({
     setYonergeOkunuyor(true);
 
     const metin = kelimeYonergeMetniAl(k);
+    const sesOncesiYonergeMetni = typeof k.sesOncesiYonergeMetni === 'string'
+      ? k.sesOncesiYonergeMetni.trim()
+      : '';
     const gecikme = ogeSesiOnceCal ? 250 : 250;
     const sesAktifMi = ogeSesiHerZaman || ogeSesiAktif;
 
@@ -251,19 +254,43 @@ export default function CokHucreOkuyucu({
         yonergeyiKilitleyerekSeslendir(metin);
       };
 
-      if (!ilkSesZatenCalindi) {
-        ogeSesiTimerRef.current = window.setTimeout(() => {
+      const sesiCalSonraYonergeyiOku = () => {
+        if (!ilkSesZatenCalindi) {
           ogeSesiCal(k, { onEnded: yonergeyiOku });
           // Güvenlik: onEnded gelmezse (ör. ses çalınamazsa) en geç ~5 sn sonra oku.
           konusmaTimer = window.setTimeout(yonergeyiOku, 5000);
-        }, gecikme);
-      } else {
+          return;
+        }
         // İlk öğe sesi haricen çalındı: yönergeyi kısa gecikmeyle oku.
         konusmaTimer = window.setTimeout(yonergeyiOku, gecikme + ogeSesiSonrasiKonusmaGecikmeMs);
+      };
+
+      if (sesOncesiYonergeMetni) {
+        konusmaTimer = window.setTimeout(() => {
+          konus(sesOncesiYonergeMetni, {
+            kesintiyle: true,
+            onSon: sesiCalSonraYonergeyiOku
+          });
+        }, gecikme);
+      } else if (!ilkSesZatenCalindi) {
+        ogeSesiTimerRef.current = window.setTimeout(sesiCalSonraYonergeyiOku, gecikme);
+      } else {
+        sesiCalSonraYonergeyiOku();
       }
     } else {
-      konusmaTimer = window.setTimeout(() => {
+      const anaYonergeyiOku = () => {
         yonergeyiKilitleyerekSeslendir(metin);
+      };
+
+      konusmaTimer = window.setTimeout(() => {
+        if (sesOncesiYonergeMetni) {
+          konus(sesOncesiYonergeMetni, {
+            kesintiyle: true,
+            onSon: anaYonergeyiOku
+          });
+          return;
+        }
+        anaYonergeyiOku();
       }, gecikme);
 
       if (sesAktifMi && typeof ogeSesiCal === 'function') {
@@ -287,13 +314,34 @@ export default function CokHucreOkuyucu({
           tekrarKonustu = true;
           yonergeyiKilitleyerekSeslendir(metin, { kesintiyle: true });
         };
-        ogeSesiCal(k, { onEnded: tekrarOku });
-        // Güvenlik: onEnded gelmezse en geç ~5 sn sonra oku.
-        tekrarSesiTimerRef.current = window.setTimeout(tekrarOku, 5000);
+        const sesiCalSonraTekrarOku = () => {
+          ogeSesiCal(k, { onEnded: tekrarOku });
+          // Güvenlik: onEnded gelmezse en geç ~5 sn sonra oku.
+          tekrarSesiTimerRef.current = window.setTimeout(tekrarOku, 5000);
+        };
+        if (sesOncesiYonergeMetni) {
+          konus(sesOncesiYonergeMetni, {
+            kesintiyle: true,
+            onSon: sesiCalSonraTekrarOku
+          });
+        } else {
+          sesiCalSonraTekrarOku();
+        }
         return;
       }
 
-      yonergeyiKilitleyerekSeslendir(metin, { kesintiyle: true });
+      const anaYonergeyiTekrarOku = () => {
+        yonergeyiKilitleyerekSeslendir(metin, { kesintiyle: true });
+      };
+
+      if (sesOncesiYonergeMetni) {
+        konus(sesOncesiYonergeMetni, {
+          kesintiyle: true,
+          onSon: anaYonergeyiTekrarOku
+        });
+      } else {
+        anaYonergeyiTekrarOku();
+      }
 
       if (sesAktifMi && typeof ogeSesiCal === 'function') {
         tekrarSesiTimerRef.current = window.setTimeout(() => {
@@ -660,18 +708,32 @@ className="btn"           type="button"
 
             const sesAktifMi = ogeSesiHerZaman || ogeSesiAktif;
             const tekrarMetni = kelimeYonergeMetniAl(aktif || k);
+            const sesOncesiTekrarMetni = typeof aktif?.sesOncesiYonergeMetni === 'string'
+              ? aktif.sesOncesiYonergeMetni.trim()
+              : '';
 
             if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function' && aktif) {
-              ogeSesiCal(aktif);
+              const sesiCalSonraTekrarOku = () => {
+                ogeSesiCal(aktif);
 
-              if (tekrarSesiTimerRef.current) {
-                clearTimeout(tekrarSesiTimerRef.current);
+                if (tekrarSesiTimerRef.current) {
+                  clearTimeout(tekrarSesiTimerRef.current);
+                }
+
+                tekrarSesiTimerRef.current = window.setTimeout(() => {
+                  yonergeyiKilitleyerekSeslendir(tekrarMetni, { kesintiyle: true });
+                  tekrarSesiTimerRef.current = null;
+                }, ogeSesiSonrasiKonusmaGecikmeMs);
+              };
+
+              if (sesOncesiTekrarMetni) {
+                konus(sesOncesiTekrarMetni, {
+                  kesintiyle: true,
+                  onSon: sesiCalSonraTekrarOku
+                });
+              } else {
+                sesiCalSonraTekrarOku();
               }
-
-              tekrarSesiTimerRef.current = window.setTimeout(() => {
-                yonergeyiKilitleyerekSeslendir(tekrarMetni, { kesintiyle: true });
-                tekrarSesiTimerRef.current = null;
-              }, ogeSesiSonrasiKonusmaGecikmeMs);
 
               return;
             }

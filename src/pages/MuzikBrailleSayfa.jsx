@@ -75,6 +75,53 @@ export default function MuzikBrailleSayfa() {
     susSesiTimerlarRef.current.forEach(clearTimeout);
     susSesiTimerlarRef.current = [];
 
+    const zamanla = (fn, gecikmeMs) => {
+      const t = setTimeout(fn, Math.max(0, gecikmeMs));
+      susSesiTimerlarRef.current.push(t);
+      return t;
+    };
+
+    const ritimOrnegi = oge?.ritimOrnegi;
+    if (ritimOrnegi) {
+      const beatMs = ritimOrnegi.beatMs || 500;
+      const vurusSayisi = ritimOrnegi.vurusSayisi || 4;
+      const notaAd = oge?.notaAd && oge.notaAd !== 'sus' ? oge.notaAd : 'do';
+      const oktav = oge?.oktav ?? 4;
+      const piyanoCal = (durationMs = beatMs * 0.85) => {
+        playNote(
+          { tip: 'nota', notaAd, oktav, sureIndeksi: 1 },
+          { cutOff: true, durationMs },
+        );
+      };
+
+      for (let i = 0; i < vurusSayisi; i += 1) {
+        zamanla(() => metronomTikCal(), i * beatMs);
+      }
+      (ritimOrnegi.piyanoOlaylari || []).forEach((olay) => {
+        const baslangicMs = Number.isFinite(Number(olay.yarimVurus))
+          ? (Number(olay.yarimVurus) - 1) * (beatMs / 2)
+          : (Number(olay.vurus || 1) - 1) * beatMs;
+        const sureMs = Number.isFinite(Number(olay.sureMs))
+          ? Number(olay.sureMs)
+          : Number.isFinite(Number(olay.sureYarimVurus))
+            ? Number(olay.sureYarimVurus) * (beatMs / 2)
+            : Number.isFinite(Number(olay.sureVurus))
+              ? Number(olay.sureVurus) * beatMs
+              : beatMs * 0.85;
+        zamanla(() => piyanoCal(sureMs), baslangicMs);
+      });
+      (ritimOrnegi.piyanoVuruslari || []).forEach((vurus) => {
+        zamanla(piyanoCal, (vurus - 1) * beatMs);
+      });
+      (ritimOrnegi.piyanoYarimVuruslari || []).forEach((yarimVurus) => {
+        zamanla(() => piyanoCal((beatMs / 2) * 0.82), (yarimVurus - 1) * (beatMs / 2));
+      });
+      zamanla(() => {
+        if (typeof opts.onEnded === 'function') opts.onEnded();
+      }, (vurusSayisi * beatMs) + 450);
+      return;
+    }
+
     const vurusSayisi = oge?.vurusSayisi;
 
     // Sus sesi: önce do, ortada metronom tikleri, sonra do
@@ -107,7 +154,11 @@ export default function MuzikBrailleSayfa() {
     }
   }, [playNote]);
 
-  const ogeSesiDurdur = useCallback(() => { stopAll?.(); }, [stopAll]);
+  const ogeSesiDurdur = useCallback(() => {
+    susSesiTimerlarRef.current.forEach(clearTimeout);
+    susSesiTimerlarRef.current = [];
+    stopAll?.();
+  }, [stopAll]);
 
   if (!bolum) return <Navigate to="/muzik" replace />;
 
@@ -117,8 +168,10 @@ export default function MuzikBrailleSayfa() {
     const tekNotaMi = NOTA_ADLARI.includes(temizAd.toLocaleLowerCase('tr'));
     const yazi = tekNotaMi ? `${baseYazi} notası` : baseYazi;
     const ttsYazi = yazi;
-    // Oktav sayfası: "1. oktav …" → do notasını o oktavda çal
-    const oktavEslesmesi = s.ad.match(/^(\d+)\./);
+    // Oktav sayfası: "1. oktav …" → do notasını o oktavda çal.
+    // Diğer derslerde "1. dolap" gibi numaralı terimler oktav sanılmamalı.
+    const oktavSayfasi = bolum.slug?.startsWith('oktav');
+    const oktavEslesmesi = oktavSayfasi ? s.ad.match(/^(\d+)\./) : null;
     const notaAd = notaAdiniCikar(s.ad) || (oktavEslesmesi ? 'do' : null);
     const oktav = oktavEslesmesi ? parseInt(oktavEslesmesi[1]) : null;
     // Sus sayfası: aciklama'dan vuruş sayısını çıkar
@@ -129,21 +182,23 @@ export default function MuzikBrailleSayfa() {
       notaAd: notaAd || (vurusSayisi !== null ? 'sus' : null),
       oktav,
       vurusSayisi,
+      ritimOrnegi: s.ritimOrnegi,
       okunus: '',
       anlam: '',
       hucreler: s.hucreler || [],
+      ...(s.sesOncesiYonergeMetni ? { sesOncesiYonergeMetni: s.sesOncesiYonergeMetni } : {}),
       ...(s.tamYonergeMetni ? { tamYonergeMetni: s.tamYonergeMetni } : {}),
     };
   });
 
   // Nota veya sus sesi olan sayfalarda popup göster
-  const sesliSayfa = ogeler.some((o) => o.notaAd || o.vurusSayisi !== null && o.vurusSayisi !== undefined);
+  const sesliSayfa = ogeler.some((o) => o.ritimOrnegi || o.notaAd || o.vurusSayisi !== null && o.vurusSayisi !== undefined);
 
   if (sesliSayfa && !sesIzniVar) {
     return (
       <SesIzinEkrani
         baslik={bolum.pageBaslik}
-        aciklama="Bu etkinlikte piyano sesleri kullanılacak. Başlamadan önce sesi etkinleştirin."
+        aciklama="Bu etkinlikte piyano ve/veya baget sesleri kullanılacak. Başlamadan önce sesi etkinleştirin."
         butonMetni="Sesi Başlat ve Etkinliğe Geç"
         sessizBaslat
         onIzinVerildi={() => setSesIzniVar(true)}

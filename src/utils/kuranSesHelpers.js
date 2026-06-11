@@ -5,7 +5,7 @@ const KURAN_HARF_SES_ID = {
   se: 'se',
   cim: 'cim',
   ha: 'ha',
-  hı: 'hı',
+  hı: 'hâ',
   dal: 'dal',
   zel: 'zel',
   ra: 'ra',
@@ -29,11 +29,8 @@ const KURAN_HARF_SES_ID = {
   nun: 'nun',
   he: 'he',
   vav: 'vav',
-  'lam-elif': '',
-  ye: 'ye',
-  hemze: 'hemze',
-  'te marbuta': 'te-marbuta',
-  'elif maksure': 'elif-maksure',
+  'lam-elif': 'lam-elif',
+  ye: 'ye'
 };
 
 const KURAN_HARF_KARAKTER_AD = {
@@ -66,10 +63,7 @@ const KURAN_HARF_KARAKTER_AD = {
   'و': 'vav',
   'لا': '',
   'ﻻ': '',
-  'ي': 'ye',
-  'ء': 'hemze',
-  'ة': 'te-marbuta',
-  'ى': 'elif-maksure',
+  'ي': 'ye'
 };
 
 export function kuranSesSlug(value = '') {

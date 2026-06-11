@@ -5,7 +5,6 @@ import {
   MUZIK_BOLUMLER,
   MUZIK_SEMBOLLERI,
   MUZIK_DINAMIKLER,
-  MUZIK_HAIRPIN,
 } from '../../data/muzik.js';
 import { MUZIK_NOTA_IKON } from '../music/index.js';
 
@@ -301,16 +300,16 @@ export function dinamikSmuflGlyph(sembol) {
   return harfler.map((h) => DINAMIK_SMUFL_HARF[h.toLowerCase()]).join('');
 }
 
-// Dinamik + hairpin kayıt adlarının kümesi (küçük harf).
+// Dinamik kayıt adlarının kümesi (küçük harf).
 const DINAMIK_ADLAR = new Set(
-  [...(MUZIK_DINAMIKLER || []), ...(MUZIK_HAIRPIN || [])]
+  [...(MUZIK_DINAMIKLER || [])]
     .map((r) => String(r?.ad || '').toLowerCase().trim())
     .filter(Boolean),
 );
 
 // Bir modifier kaydı dinamik mi? (süslemeden ayırt etmek için.)
 // Süslemeler kayit.kategori === 'susleme' ile saklanır; dinamiklerde bu yoktur.
-// Ayrıca ad'a göre MUZIK_DINAMIKLER / MUZIK_HAIRPIN üyeliğiyle de doğrularız.
+// Ayrıca ad'a göre MUZIK_DINAMIKLER üyeliğiyle de doğrularız.
 export function dinamikModifierMi(kayit) {
   if (!kayit || typeof kayit !== 'object') return false;
   if (kayit.kategori === 'susleme') return false;
@@ -372,7 +371,7 @@ export const MUZIK_EDITOR_PALET_GRUPLARI = [
   MUZIK_EDITOR_SURE_GRUBU,
   MUZIK_EDITOR_NOTA_GRUBU,
   ...MUZIK_BOLUMLER
-    .filter((bolum) => bolum.slug !== 'notalar' && bolum.slug !== 'sureler')
+    .filter((bolum) => bolum.slug !== 'notalar' && !bolum.slug.startsWith('sureler'))
     .map((bolum) => ({
       slug: bolum.slug,
       baslik: bolum.kisaBaslik,

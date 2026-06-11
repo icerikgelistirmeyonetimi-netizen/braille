@@ -201,6 +201,7 @@ export default function App() {
           <Route path="/muzik-semboller" element={<MuzikSembolEgitimi />} />
           <Route path="/muzik-diziler" element={<MuzikDiziOkuma />} />
           <Route path="/muzik" element={<MuzikBrailleMenu />} />
+          <Route path="/muzik/grup/:grupId" element={<MuzikBrailleMenu />} />
           <Route path="/muzik/:slug" element={<MuzikBrailleSayfa />} />
           <Route path="/muzik-brf-yazim" element={<MuzikBrfYazim />} />
           <Route path="/test-muzik" element={<TestMuzik />} />

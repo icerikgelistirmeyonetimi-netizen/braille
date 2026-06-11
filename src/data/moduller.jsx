@@ -384,6 +384,13 @@ const muzikBolumIkonuAl = (slug) => {
   return Ikon.muzikSembol;
 };
 
+const muzikGrupMenuOgesi = (grup) => ({
+  yol: `/muzik/grup/${grup.id}`,
+  baslik: grup.baslik,
+  ikon: grup.id === 'temel' ? Ikon.nota : Ikon.muzikDizi,
+  altMetin: `${grup.bolumler.length} konu`,
+});
+
 const muzikDiziMenuOgesi = {
   yol: '/muzik-diziler',
   baslik: 'Dizi Okuma',
@@ -392,18 +399,10 @@ const muzikDiziMenuOgesi = {
   toplam: 3,
 };
 
-const muzikModulOgeleriOlustur = () => MUZIK_BOLUM_GRUPLARI.flatMap((grup) => [
-  { tur: 'baslik-toggle', id: `muzik-${grup.id}`, baslik: grup.baslik, toggleId: `muzik-${grup.id}` },
-  ...grup.bolumler.map((b) => ({
-    yol: `/muzik/${b.slug}`,
-    baslik: b.kisaBaslik,
-    ikon: muzikBolumIkonuAl(b.slug),
-    anahtar: b.ilerlemeAnahtari,
-    toplam: b.veri.length,
-    sectionId: `muzik-${grup.id}`,
-  })),
-  ...(grup.id === 'temel' ? [{ ...muzikDiziMenuOgesi, sectionId: 'muzik-temel' }] : []),
-]);
+const muzikModulOgeleriOlustur = () => [
+  ...MUZIK_BOLUM_GRUPLARI.map((grup) => muzikGrupMenuOgesi(grup)),
+  muzikDiziMenuOgesi,
+];
 
 export const MODULLER = [
   {

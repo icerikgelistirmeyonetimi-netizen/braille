@@ -20,7 +20,7 @@ export function muzikModifierOncesiSira(kayit) {
   if (/forward|ileri.*tekrar/.test(ad)) return 1;
   if (/volta|\bev\b|dolap/.test(ad)) return 2;
   if (tip === 'bag' && /(açılış|aç\b|köşeli.*aç|opening)/.test(ad)) return 3;
-  if (tip === 'dinamik' || tip === 'hairpin') return 4;
+  if (tip === 'dinamik') return 4;
   if (tip === 'tuplet' || /üçleme|leme|tuplet/.test(ad)) return 5;
   if (tip === 'susleme') return 7;
   if (tip === 'nuans') return 8;
@@ -37,7 +37,6 @@ export function muzikModifierSonrasiSira(kayit) {
   if (tip === 'bag' && /(kapanış|kapa\b|köşeli.*kapa|closing)/.test(ad)) return 4;
   if (tip === 'bag' && /(tie|^bağ\b)/.test(ad)) return 5;
   if (tip === 'bag') return 3;
-  if (tip === 'hairpin' && /(bitir|terminator|son)/.test(ad)) return 6;
   if (/nefes|kesme|caesura|break|breath/.test(ad)) return 7;
   if (/backward|geri/.test(ad)) return 8;
   return 9;

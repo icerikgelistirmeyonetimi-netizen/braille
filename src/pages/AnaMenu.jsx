@@ -14,16 +14,6 @@ export default function AnaMenu() {
   const icerikBaslikRef = useRef(null);
   const scrollDragRef = useRef(null);
   const [turAcik, setTurAcik] = useState(false);
-  const [kapaliSeksiyonlar, setKapaliSeksiyonlar] = useState(() => new Set(['muzik-ileri']));
-
-  const seksiyonToggle = (toggleId) => {
-    setKapaliSeksiyonlar((prev) => {
-      const next = new Set(prev);
-      if (next.has(toggleId)) next.delete(toggleId);
-      else next.add(toggleId);
-      return next;
-    });
-  };
   const [scrollGosterge, setScrollGosterge] = useState({ gorunur: false, top: 10, height: 48 });
   const [gizliModuller, setGizliModuller] = useState(
     () => ayarlariAl().gizliModuller || []
@@ -240,52 +230,34 @@ export default function AnaMenu() {
             <h2 ref={icerikBaslikRef} className="modul-icerik-baslik" tabIndex={-1}>{modul?.baslik} — {modul?.altBaslik}</h2>
             <nav className="menu-grid" aria-label={modul?.baslik}>
               {modul?.ogeler.map((m) => {
-                // Kapalı bölümdeki öğeyi gizle
-                if (m.sectionId && kapaliSeksiyonlar.has(m.sectionId)) return null;
-
-                if (m.tur === 'baslik-toggle') {
-                  const kapali = kapaliSeksiyonlar.has(m.toggleId);
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      className="btn menu-bolum-toggle"
-                      onClick={() => seksiyonToggle(m.toggleId)}
-                      aria-expanded={!kapali}
-                    >
-                      <span>{m.baslik}</span>
-                      <svg aria-hidden="true" className="menu-bolum-toggle-ikon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        {kapali
-                          ? <polyline points="5 8 10 13 15 8" />
-                          : <polyline points="5 13 10 8 15 13" />}
-                      </svg>
-                    </button>
-                  );
-                }
-
-                if (m.tur === 'baslik') {
-                  return (
-                    <h3 key={m.id || m.baslik} className="menu-bolum-baslik">
-                      {m.baslik}
-                    </h3>
-                  );
-                }
                 const ilerleme = m.anahtar ? indeksAl(m.anahtar) : 0;
-                const tamamlandi = m.toplam && ilerleme >= m.toplam;
+                const tamamlandi = Boolean(m.anahtar && m.toplam && ilerleme >= m.toplam);
                 return (
                   <button
                     key={m.yol}
                     type="button"
                     className="btn menu-card"
                     onClick={() => navigate(m.yol)}
-                    aria-label={m.baslik + (tamamlandi ? ', tamamlandı' : m.toplam ? `, ${ilerleme} / ${m.toplam}` : '')}
+                    aria-label={
+                      m.baslik +
+                      (m.altMetin
+                        ? `, ${m.altMetin}`
+                        : tamamlandi
+                          ? ', tamamlandı'
+                          : m.toplam
+                            ? `, ${ilerleme} / ${m.toplam}`
+                            : '')
+                    }
                   >
                     <span className="menu-card-ikon" aria-hidden="true">{m.ikon}</span>
                     <span className="menu-card-yazi">{m.baslik}</span>
-                    {tamamlandi && (
+                    {m.altMetin && (
+                      <span className="menu-card-ilerleme devam" aria-hidden="true">{m.altMetin}</span>
+                    )}
+                    {!m.altMetin && tamamlandi && (
                       <span className="menu-card-ilerleme tamamlandi" aria-hidden="true">✓ Tamamlandı</span>
                     )}
-                    {!tamamlandi && m.toplam && (
+                    {!m.altMetin && !tamamlandi && m.toplam && (
                       <span className="menu-card-ilerleme devam" aria-hidden="true">{ilerleme} / {m.toplam}</span>
                     )}
                   </button>

@@ -2476,7 +2476,7 @@ const MUZIK_EDITOR_PALET_GRUPLARI = [
     ogeler: MUZIK_EDITOR_ANAHTARLAR,
   },
   ...MUZIK_BOLUMLER
-    .filter((bolum) => bolum.slug !== 'notalar' && bolum.slug !== 'sureler')
+    .filter((bolum) => bolum.slug !== 'notalar' && !bolum.slug.startsWith('sureler'))
     .map((bolum) => ({
       slug: bolum.slug,
       baslik: bolum.kisaBaslik,
@@ -2496,7 +2496,7 @@ const MUZIK_SATIR_YUKSEKLIK = 132;
 // Modül 8 kurallarına göre her kategorinin uygulama tipi.
 // - 'standalone': skora doğrudan eklenir (notalar, sus, anahtarlar, ölçü çizgileri, tekrar)
 // - 'prepend':    skorun başına eklenir (anahtar)
-// - 'before-note': seçili bir notanın hücrelerinden ÖNCE bağlanır (oktav, aksidental, dinamik, hairpin, nüans-önce, süsleme)
+// - 'before-note': seçili bir notanın hücrelerinden ÖNCE bağlanır (oktav, aksidental, dinamik, nüans-önce, süsleme)
 // - 'after-note':  seçili bir notanın hücrelerinden SONRA bağlanır (fermata, nefes vb.)
 // - 'two-notes':   iki nota seçilerek bağ/slur kurulur
 // - 'header':      eserin başında veya bölüm değişiminde gelir (zaman imzası, donanım)
@@ -2504,6 +2504,8 @@ const MUZIK_KATEGORI_TIPI = {
   'notalar':          'standalone',
   'anahtarlar':       'prepend',
   'sus':              'standalone',
+  'sus-ileri':        'standalone',
+  'uzatma-noktasi':   'after-note',
   'oktav':            'before-note',
   'zaman-imzasi':     'header',
   'degistirici':      'before-note',
@@ -2511,7 +2513,6 @@ const MUZIK_KATEGORI_TIPI = {
   'olcu-cizgileri':   'standalone',
   'bag-slur':         'two-notes',
   'dinamikler':       'before-note',
-  'hairpin':          'before-note',
   'nuans-once':       'before-note',
   'nuans-sonra':      'after-note',
   'suslemeler':       'before-note',
@@ -2524,14 +2525,15 @@ const MUZIK_KATEGORI_IKON = {
   notalar:           { sembol: '♪',   etiket: 'Notalar' },
   anahtarlar:        { sembol: '𝄞',   etiket: 'Anahtarlar' },
   sus:               { sembol: '𝄽',   etiket: 'Sus (sessizlik)' },
+  'sus-ileri':       { sembol: '𝄾',   etiket: 'İleri sus işaretleri' },
+  'uzatma-noktasi':  { sembol: '·',   etiket: 'Uzatma noktası' },
   oktav:             { sembol: '8va', etiket: 'Oktav işaretleri', italic: true },
-  'zaman-imzasi':    { sembol: '4/4', etiket: 'Zaman imzası' },
-  degistirici:       { sembol: '♯',   etiket: 'Değiştiriciler' },
+  'zaman-imzasi':    { sembol: '4/4', etiket: 'Ölçü sayılarının yazımı' },
+  degistirici:       { sembol: '♯',   etiket: 'Değiştirici işaretler' },
   donanim:           { sembol: '♭♭',  etiket: 'Donanım' },
   'olcu-cizgileri':  { sembol: '𝄁',   etiket: 'Ölçü çizgileri' },
-  'bag-slur':        { sembol: '⌒',   etiket: 'Bağ / slur' },
-  dinamikler:        { sembol: 'f',   etiket: 'Dinamikler', italic: true },
-  hairpin:           { sembol: '<',   etiket: 'Hairpin' },
+  'bag-slur':        { sembol: '⌒',   etiket: 'Bağlar' },
+  dinamikler:        { sembol: 'f',   etiket: 'Nüanslar', italic: true },
   'nuans-once':      { sembol: '>',   etiket: 'Nüans (nota öncesi)' },
   'nuans-sonra':     { sembol: '𝄐',   etiket: 'Nüans (nota sonrası)' },
   suslemeler:        { sembol: 'tr',  etiket: 'Süslemeler', italic: true },
@@ -2748,7 +2750,6 @@ function muzikOgeGorselTipi(oge) {
   if (kategori.includes('donanım') || ad.includes('donanım')) return 'donanim';
   if (kategori.includes('ölçü') || ad.includes('çizgisi') || ad.includes('röpriz') || ad.includes('repeat') || ad.includes('volta') || ad.includes('dolap')) return 'olcu';
   if (kategori.includes('bağ') || ad.includes('slur') || ad.includes('bağ')) return 'bag';
-  if (kategori.includes('hairpin') || ad.includes('hairpin')) return 'hairpin';
   if (kategori.includes('dinamik') || /\b(pp|p|mp|mf|f|ff|sf)\b/u.test(ad) || ad.includes('cresc') || ad.includes('decresc') || ad.includes('dim') || ad.includes('rit')) return 'dinamik';
   if (kategori.includes('nüans') || ad.includes('staccato') || ad.includes('accent') || ad.includes('tenuto') || ad.includes('fermata') || ad.includes('nefes') || ad.includes('caesura')) return 'nuans';
   if (kategori.includes('süs') || ad.includes('trill') || ad.includes('turn') || ad.includes('mordent') || ad.includes('glissando') || ad.includes('appoggiatura')) return 'susleme';
@@ -2762,7 +2763,6 @@ function muzikGorselMetni(oge) {
   const ad = muzikMetinKucuk(oge.ad);
   const gorunum = String(oge.gorunum || oge.sembol || '').trim();
   const tip = muzikOgeGorselTipi(oge);
-  if (tip === 'hairpin') return ad.includes('decresc') ? '>' : '<';
   if (tip === 'donanim') {
     const sayi = Number(ad.match(/(\d+)/)?.[1] || 1);
     const sembol = ad.includes('bemol') ? '♭' : ad.includes('diyez') ? '♯' : '♮';
@@ -2835,7 +2835,7 @@ function muzikModifierOncesiSira(kayit) {
   if (/forward|ileri.*tekrar/.test(ad)) return 1;
   if (/volta|\bev\b|dolap/.test(ad)) return 2;
   if (tip === 'bag' && /(açılış|aç\b|köşeli.*aç|opening)/.test(ad)) return 3;
-  if (tip === 'dinamik' || tip === 'hairpin') return 4;
+  if (tip === 'dinamik') return 4;
   if (tip === 'tuplet' || /üçleme|leme|tuplet/.test(ad)) return 5;
   if (tip === 'susleme') return 7;
   if (tip === 'nuans') return 8;
@@ -2846,7 +2846,7 @@ function muzikModifierOncesiSira(kayit) {
 
 // Bölüm 4B — Bir notadan SONRA gelen işaretlerin kesin sırası:
 // 1) dot, 2) fermata, 3) slur/opening double, 4) closing bracket slur,
-// 5) tie, 6) hairpin terminator, 7) breath/break, 8) backward repeat
+// 5) tie, 6) other, 7) breath/break, 8) backward repeat
 function muzikModifierSonrasiSira(kayit) {
   const ad = String(kayit.ad || '').toLowerCase();
   const tip = String(kayit.gorselTip || '');
@@ -2854,7 +2854,6 @@ function muzikModifierSonrasiSira(kayit) {
   if (tip === 'bag' && /(kapanış|kapa\b|köşeli.*kapa|closing)/.test(ad)) return 4;
   if (tip === 'bag' && /(tie|^bağ\b)/.test(ad)) return 5;
   if (tip === 'bag') return 3;
-  if (tip === 'hairpin' && /(bitir|terminator|son)/.test(ad)) return 6;
   if (/nefes|kesme|caesura|break|breath/.test(ad)) return 7;
   if (/backward|geri/.test(ad)) return 8;
   return 9;
@@ -4069,8 +4068,8 @@ export default function Araclar() {
     // Audit Aşama 14 — Print repeat / volta için EXPLICIT tip alanı (regex bağımsız)
     const adLower = String(kayit.ad || '').toLowerCase();
     let tipOverride = null;
-    if (/tekrar başlangıcı|begin.*repeat|röpriz.*başla/.test(adLower)) tipOverride = 'beginRepeat';
-    else if (/tekrar sonu|end.*repeat|röpriz.*bitir/.test(adLower)) tipOverride = 'endRepeat';
+    if (/ileriye doğru tekrar|tekrar başlangıcı|begin.*repeat|röpriz.*başla/.test(adLower)) tipOverride = 'beginRepeat';
+    else if (/geriye doğru tekrar|tekrar sonu|end.*repeat|röpriz.*bitir/.test(adLower)) tipOverride = 'endRepeat';
     else if (/1\.\s*ev|1\.\s*dolap|volta\s*1/.test(adLower)) tipOverride = 'volta1';
     else if (/2\.\s*ev|2\.\s*dolap|volta\s*2/.test(adLower)) tipOverride = 'volta2';
     else if (/bitiş çizgisi|final.*bar/.test(adLower)) tipOverride = 'finalBarline';
@@ -5797,16 +5796,6 @@ export default function Araclar() {
                                           <title>{baslik}</title>{modMetin}
                                         </text>
                                       );
-                                    } else if (modTip === 'hairpin') {
-                                      const isDec = String(modMetin).includes('>');
-                                      cizimler.push(
-                                        <path key={key} d={isDec
-                                          ? `M ${x - 18} 132 L ${x + 22} 138 M ${x - 18} 144 L ${x + 22} 138`
-                                          : `M ${x - 18} 138 L ${x + 22} 132 M ${x - 18} 138 L ${x + 22} 144`}
-                                          className="muzik-hairpin muzik-modifier" onClick={onClick} >
-                                          <title>{baslik}</title>
-                                        </path>
-                                      );
                                     } else if (modTip === 'oktav') {
                                       const py = 54 - ustOf;
                                       ustOf += 11;
@@ -5890,15 +5879,6 @@ export default function Araclar() {
                             ) : gorselTip === 'dinamik' ? (
                               <>
                                 <text x={x} y="126" textAnchor="middle" className="muzik-dynamic">{gorselMetin}</text>
-                                <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
-                              </>
-                            ) : gorselTip === 'hairpin' ? (
-                              <>
-                                {String(gorselMetin).includes('>') ? (
-                                  <path d={`M ${x - 24} 122 L ${x + 18} 111 M ${x - 24} 122 L ${x + 18} 133`} className="muzik-hairpin" />
-                                ) : (
-                                  <path d={`M ${x - 22} 111 L ${x + 22} 122 L ${x - 22} 133`} className="muzik-hairpin" />
-                                )}
                                 <text x={x - 24} y="145" className="muzik-ogesi-etiket">{oge.ad}</text>
                               </>
                             ) : gorselTip === 'bag' ? (

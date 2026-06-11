@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import DesenOgretici from '../components/DesenOgretici.jsx';
 import SesIzinEkrani from '../components/SesIzinEkrani.jsx';
-import { KURAN_TEMEL_HARFLERI } from '../data/kuran.js';
+import { KURAN_HARFLERI } from '../data/kuran.js';
 import {
   kuranHarfSesIdAl,
   kuranHarfSesUrlAl,
@@ -13,7 +13,7 @@ import {
 export default function KuranHarfEgitimi() {
   const [sesIzniVar, setSesIzniVar] = useState(false);
 
-  const ogeler = KURAN_TEMEL_HARFLERI.map((h) => ({
+  const ogeler = KURAN_HARFLERI.map((h) => ({
     ad: h.harf,
     ariaAd: `${h.ad} harfi`,
     harfAdi: h.ad,

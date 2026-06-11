@@ -12,7 +12,6 @@ import {
   MUZIK_NUANS_ONCE,
   MUZIK_NUANS_SONRA,
   MUZIK_DINAMIKLER,
-  MUZIK_HAIRPIN,
 } from '../../data/muzik.js';
 
 function keyToDash(key = '') {
@@ -30,7 +29,7 @@ function hucreToDash(hucre) {
     .join('-');
 }
 
-// Süsleme / nüans / dinamik / hairpin gibi notaya bağlı çok-hücreli
+// Süsleme / nüans / dinamik gibi notaya bağlı çok-hücreli
 // "modifier" işaretlerini, hücre dizisi → kayıt eşlemesi olarak kurar.
 // Export motoru bu işaretleri kayit.hucreler hücreleriyle yazdığı için,
 // import sırasında aynı hücre dizilerini tanıyıp modifier olarak geri
@@ -59,7 +58,6 @@ function buildModifierSequences() {
       kayit: kategori === 'susleme' ? { ...rec, kategori: 'susleme', gorselTip: 'susleme' }
            : kategori === 'nuans'   ? { ...rec, kategori: 'nuans',   gorselTip: 'nuans'   }
            : kategori === 'dinamik' ? { ...rec, kategori: 'dinamik', gorselTip: 'dinamik' }
-           : kategori === 'hairpin' ? { ...rec, kategori: 'hairpin', gorselTip: 'hairpin' }
            : rec,
     });
   };
@@ -68,7 +66,6 @@ function buildModifierSequences() {
   (MUZIK_NUANS_ONCE || []).forEach((r) => ekle(r, 'oncesi', 'nuans'));
   (MUZIK_NUANS_SONRA || []).forEach((r) => ekle(r, 'sonrasi', 'nuans'));
   (MUZIK_DINAMIKLER || []).forEach((r) => ekle(r, 'oncesi', 'dinamik'));
-  (MUZIK_HAIRPIN || []).forEach((r) => ekle(r, 'oncesi', 'hairpin'));
 
   return { byKey, maxLen };
 }

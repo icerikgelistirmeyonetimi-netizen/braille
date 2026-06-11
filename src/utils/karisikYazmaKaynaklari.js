@@ -13,7 +13,7 @@ import {
   NOKTALAMA_ISARETLERI, OZEL_ISARETLER
 } from '../data/braille.js';
 import {
-  KURAN_TEMEL_HARFLERI, KURAN_HAREKELERI, KURAN_TECVID,
+  KURAN_HAREKELERI, KURAN_TECVID, KURAN_HARFLERI,
   KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL
 } from '../data/kuran.js';
 import { KURAN_SURELERI } from '../data/kuranSureler.js';
@@ -146,7 +146,7 @@ const KAYNAKLAR = {
     yol: '/kuran-harfler',
     baslik: "Kur'an-ı Kerim Harfleri",
     etiketTuru: 'harf',
-    items: KURAN_TEMEL_HARFLERI.map((h) => ({
+    items: KURAN_HARFLERI.map((h) => ({
       etiket: h.harf,
       ariaAd: `${h.ad} harfi`,
       hucreler: tek(h.noktalar)

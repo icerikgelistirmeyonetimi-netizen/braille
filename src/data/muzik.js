@@ -63,8 +63,9 @@ const KURAL_SURE = [
 ];
 
 const KURAL_NOKTALI_NOTA = [
-  'Noktalı nota: değeri 1,5 kat olur (1 + ½).',
-  'Braille’de notanın hemen ardına 3 noktası konur (es için de aynı kural).',
+  'Uzatma noktası, kendisinden önceki nota ya da susun değerini yarısı kadar uzatır.',
+  'Toplam değer 1,5 kat olur (1 + ½).',
+  'Braille’de nota ya da sus hücresinin hemen ardına 3 noktası konur.',
 ];
 
 const KURAL_ES = [
@@ -125,7 +126,7 @@ const KURAL_NUANS_ONCE = [
 
 const KURAL_NUANS_SONRA = [
   'Nota sonrası işaretler (fermata, nefes, break) notanın hemen ardına yazılır.',
-  'Aynı notada birden çok sonraki işaret varsa sıra: nokta, fermata, slur, tie, hairpin terminator, nefes, geriye repeat.',
+  'Aynı notada birden çok sonraki işaret varsa sıra: nokta, fermata, slur, tie, nefes, geriye repeat.',
 ];
 
 const KURAL_TRILL = [
@@ -223,23 +224,23 @@ export const MUZIK_SURELER = [
   R('4\'lük ve 64\'lük La', ['2-4-6'], '4\'lük ve 64\'lük aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♩'),
   R('4\'lük ve 64\'lük Si', ['2-4-5-6'], '4\'lük ve 64\'lük aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♩'),
 
-  R('Yarım ve 32\'lik süre', ['3'], 'Temel hücreye 3 noktası eklenir. Yarım ve 32\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
-  R('Yarım ve 32\'lik Do', ['1-3-4-5'], 'Yarım ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
-  R('Yarım ve 32\'lik Re', ['1-3-5'], 'Yarım ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
-  R('Yarım ve 32\'lik Mi', ['1-2-3-4'], 'Yarım ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
-  R('Yarım ve 32\'lik Fa', ['1-2-3-4-5'], 'Yarım ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
-  R('Yarım ve 32\'lik Sol', ['1-2-3-5'], 'Yarım ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
-  R('Yarım ve 32\'lik La', ['2-3-4'], 'Yarım ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
-  R('Yarım ve 32\'lik Si', ['2-3-4-5'], 'Yarım ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik süre', ['3'], 'Temel hücreye 3 noktası eklenir. Yarım ve 32\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik Do', ['1-3-4-5'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik Re', ['1-3-5'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik Mi', ['1-2-3-4'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik Fa', ['1-2-3-4-5'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik Sol', ['1-2-3-5'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik La', ['2-3-4'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik Si', ['2-3-4-5'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
 
-  R('Tam ve 16\'lık süre', ['3-6'], 'Temel hücreye 3 ve 6 noktaları eklenir. Tam ve 16\'lık nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '𝅝'),
-  R('Tam ve 16\'lık Do', ['1-3-4-5-6'], 'Tam ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
-  R('Tam ve 16\'lık Re', ['1-3-5-6'], 'Tam ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
-  R('Tam ve 16\'lık Mi', ['1-2-3-4-6'], 'Tam ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
-  R('Tam ve 16\'lık Fa', ['1-2-3-4-5-6'], 'Tam ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
-  R('Tam ve 16\'lık Sol', ['1-2-3-5-6'], 'Tam ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
-  R('Tam ve 16\'lık La', ['2-3-4-6'], 'Tam ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
-  R('Tam ve 16\'lık Si', ['2-3-4-5-6'], 'Tam ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık süre', ['3-6'], 'Temel hücreye 3 ve 6 noktaları eklenir. Tam ve 16\'lık nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık Do', ['1-3-4-5-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık Re', ['1-3-5-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık Mi', ['1-2-3-4-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık Fa', ['1-2-3-4-5-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık Sol', ['1-2-3-5-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık La', ['2-3-4-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık Si', ['2-3-4-5-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
 ];
 
 /* ───────────────────  3) ESLAR (Rests) — UEB Music  ────────────────────── */
@@ -255,7 +256,39 @@ const MUZIK_SURE_NOTA_TEMELLERI = [
 
 const noktaGrubu = (noktalar) => noktalar.join('-');
 
-function sureDersiOlustur({ ad, ekNoktalar, aciklama, sembol, tamYonergeMetni }) {
+const RITIM_BIRLIK_SUS = {
+  vurusSayisi: 8,
+  piyanoOlaylari: [{ vurus: 1, sureVurus: 4 }],
+};
+const RITIM_IKILIK_SUS = {
+  vurusSayisi: 4,
+  piyanoOlaylari: [{ vurus: 1, sureVurus: 2 }],
+};
+const RITIM_DORTLUK_SUS = {
+  vurusSayisi: 4,
+  piyanoOlaylari: [
+    { vurus: 1, sureVurus: 0.85 },
+    { vurus: 2, sureVurus: 0.85 },
+  ],
+};
+const RITIM_SEKIZLIK_SUS = {
+  vurusSayisi: 4,
+  piyanoOlaylari: [
+    { yarimVurus: 1, sureYarimVurus: 0.82 },
+    { yarimVurus: 3, sureYarimVurus: 0.82 },
+    { yarimVurus: 5, sureYarimVurus: 0.82 },
+    { yarimVurus: 7, sureYarimVurus: 0.82 },
+  ],
+};
+const RITIM_SEKIZLIK_NOTA = {
+  vurusSayisi: 4,
+  piyanoOlaylari: Array.from({ length: 8 }, (_, i) => ({
+    yarimVurus: i + 1,
+    sureYarimVurus: 0.82,
+  })),
+};
+
+function sureDersiOlustur({ ad, ekNoktalar, aciklama, sembol, tamYonergeMetni, notaRitimOrnegi }) {
   const sureOgesi = {
     ...R(`${ad} süre`, ekNoktalar.length ? [noktaGrubu(ekNoktalar)] : [], aciklama, KURAL_SURE, undefined, sembol),
     ...(tamYonergeMetni ? { tamYonergeMetni } : {}),
@@ -263,14 +296,17 @@ function sureDersiOlustur({ ad, ekNoktalar, aciklama, sembol, tamYonergeMetni })
 
   return [
     sureOgesi,
-    ...MUZIK_SURE_NOTA_TEMELLERI.map((nota) => R(
-      `${ad} ${nota.ad}`,
-      [noktaGrubu([...nota.noktalar, ...ekNoktalar].sort((a, b) => a - b))],
-      `${ad} ${nota.ad} notası. ${aciklama}`,
-      KURAL_SURE,
-      undefined,
-      sembol,
-    )),
+    ...MUZIK_SURE_NOTA_TEMELLERI.map((nota) => ({
+      ...R(
+        `${ad} ${nota.ad}`,
+        [noktaGrubu([...nota.noktalar, ...ekNoktalar].sort((a, b) => a - b))],
+        `${ad} ${nota.ad} notası. ${aciklama}`,
+        KURAL_SURE,
+        undefined,
+        sembol,
+      ),
+      ...(notaRitimOrnegi ? { ritimOrnegi: notaRitimOrnegi } : {}),
+    })),
   ];
 }
 
@@ -281,6 +317,7 @@ export const MUZIK_SURELER_TEMEL = [
     aciklama: "Temel hücredir; 3 ve 6 noktası eklenmez.",
     sembol: '8',
     tamYonergeMetni: "Bilgilendirme: Süreler notalara 3. ve 6. noktalardan eklemeler yapılarak tanımlanır. Birinci aşamada ilköğretim düzeyinde en sık karşılaşılan 8lik, 4lük, 2lik ve 1lik süreler çalışılacaktır. 8lik nota için ekleme yapılmaz. Lütfen bu adımda tıklama yapmadan devam ediniz.",
+    notaRitimOrnegi: RITIM_SEKIZLIK_NOTA,
   }),
   ...sureDersiOlustur({
     ad: "4'lük",
@@ -331,26 +368,75 @@ export const MUZIK_SURELER_ILERI = [
 ];
 
 export const MUZIK_ESLAR = [
-  R('tam (birlik) sus',     ['1-3-4'],   '(4 vuruş sessizlik)',         KURAL_ES, undefined, '𝄻'),
-  R('yarım (ikilik) sus',   ['1-3-6'],   '(2 vuruş sessizlik)',         KURAL_ES, undefined, '𝄼'),
-  R('dörtlük sus',          ['1-2-3-6'], '(1 vuruş sessizlik)',         KURAL_ES, undefined, '𝄽'),
-  R('sekizlik sus',         ['1-3-4-6'], '(yarım vuruş sessizlik)',     KURAL_ES, undefined, '𝄾'),
-  R('noktalı dörtlük sus',  ['1-2-3-6', '3'], '(1,5 vuruş sessizlik)',  KURAL_NOKTALI_NOTA, undefined, '𝄽·'),
+  {
+    ...R('birlik sus', ['1-3-4'], '(4 vuruş sessizlik)', KURAL_ES, undefined, '𝄻'),
+    sesOncesiYonergeMetni: 'Bu etkinlikte piyano ve baget sesleri kullanılacaktır. 4/4lük zaman diliminde, sesli notalar piyano ile, sessiz (sus) notalar bagetle belirtilmiştir.',
+    ritimOrnegi: RITIM_BIRLIK_SUS,
+  },
+  { ...R('ikilik sus', ['1-3-6'], '(2 vuruş sessizlik)', KURAL_ES, undefined, '𝄼'), ritimOrnegi: RITIM_IKILIK_SUS },
+  { ...R('dörtlük sus', ['1-2-3-6'], '(1 vuruş sessizlik)', KURAL_ES, undefined, '𝄽'), ritimOrnegi: RITIM_DORTLUK_SUS },
+  { ...R('sekizlik sus', ['1-3-4-6'], '(yarım vuruş sessizlik)', KURAL_ES, undefined, '𝄾'), ritimOrnegi: RITIM_SEKIZLIK_SUS },
+];
+
+export const MUZIK_ESLAR_ILERI = [
+  {
+    ...R("16'lık sus", ['1-3-4'], "16'lık sus, birlik sus ile aynı braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '16'),
+    tamYonergeMetni: "Bilgilendirme: İleri sus bölümünde 16lık, 32lik, 64lük ve 128lik suslar çalışılır. Bu suslar temel suslarla aynı braille hücrelerini kullanır; hangi sürenin okunacağı müzik bağlamından anlaşılır. Lütfen sırasıyla noktalara dokununuz.",
+  },
+  R("32'lik sus", ['1-3-6'], "32'lik sus, ikilik sus ile aynı braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '32'),
+  R("64'lük sus", ['1-2-3-6'], "64'lük sus, dörtlük sus ile aynı braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '64'),
+  R("128'lik sus", ['1-3-4-6'], "128'lik sus, sekizlik sus ile aynı braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '128'),
+];
+
+const MUZIK_UZATMA_NOKTASI_ORNEKLERI = [
+  { ad: "1'lik", nota: [1, 3, 4, 5, 6], sus: [1, 3, 4], sembol: '1' },
+  { ad: "2'lik", nota: [1, 3, 4, 5], sus: [1, 3, 6], sembol: '2' },
+  { ad: "4'lük", nota: [1, 4, 5, 6], sus: [1, 2, 3, 6], sembol: '4' },
+  { ad: "8'lik", nota: [1, 4, 5], sus: [1, 3, 4, 6], sembol: '8' },
+  { ad: "16'lık", nota: [1, 3, 4, 5, 6], sus: [1, 3, 4], sembol: '16' },
+  { ad: "32'lik", nota: [1, 3, 4, 5], sus: [1, 3, 6], sembol: '32' },
+  { ad: "64'lük", nota: [1, 4, 5, 6], sus: [1, 2, 3, 6], sembol: '64' },
+  { ad: "128'lik", nota: [1, 4, 5], sus: [1, 3, 4, 6], sembol: '128' },
+];
+
+export const MUZIK_UZATMA_NOKTASI = [
+  {
+    ...R('uzatma noktası', ['3'], 'Önceki nota ya da susun değerini yarısı kadar uzatır.', KURAL_NOKTALI_NOTA, undefined, '·'),
+    tamYonergeMetni: 'Bilgilendirme: Uzatma noktası, notanın yanına da gelse susun yanına da gelse kendisinden önceki değeri yarısı kadar uzatır. Braille yazıda ilgili nota ya da sus hücresinden hemen sonra 3 noktası yazılır.',
+  },
+  ...MUZIK_UZATMA_NOKTASI_ORNEKLERI.flatMap((sure) => [
+    R(
+      `noktalı ${sure.ad} Do`,
+      [noktaGrubu(sure.nota), '3'],
+      `${sure.ad} Do notasından sonra 3 noktası gelir; değer yarısı kadar uzar.`,
+      KURAL_NOKTALI_NOTA,
+      undefined,
+      `${sure.sembol}·`,
+    ),
+    R(
+      `noktalı ${sure.ad} sus`,
+      [noktaGrubu(sure.sus), '3'],
+      `${sure.ad} sustan sonra 3 noktası gelir; sus değeri yarısı kadar uzar.`,
+      KURAL_NOKTALI_NOTA,
+      undefined,
+      `${sure.sembol}𝄽·`,
+    ),
+  ]),
 ];
 
 /* ─────────────────────  4) OKTAV İŞARETLERİ  ───────────────────────────── */
 // Temel: 4. (orta do), 5. ve 3. oktav — en sık kullanılan üçü
 export const MUZIK_OKTAVLAR_TEMEL = [
-  R(‘4. oktav (orta do)’, [‘5’],     ‘(Middle C oktavı) · 5 noktası’,                       KURAL_OKTAV, undefined, ‘⠐’),
-  R(‘5. oktav’,           [‘4-6’],   ‘(orta do\’nun bir üstü) · 4-6’,                        KURAL_OKTAV, undefined, ‘⠠’),
-  R(‘3. oktav’,           [‘4-5-6’], ‘(orta do\’nun bir altı) · 4-5-6’,                      KURAL_OKTAV, undefined, ‘⠸’),
+  R('4. oktav (orta do)', ['5'],     '(Middle C oktavı) · 5 noktası',                       KURAL_OKTAV, undefined, '⠐'),
+  R("5. oktav",           ['4-6'],   "(orta do'nun bir üstü) · 4-6",                        KURAL_OKTAV, undefined, '⠠'),
+  R("3. oktav",           ['4-5-6'], "(orta do'nun bir altı) · 4-5-6",                      KURAL_OKTAV, undefined, '⠸'),
 ];
 // İleri: 1., 2., 6., 7. oktav
 export const MUZIK_OKTAVLAR_ILERI = [
-  R(‘2. oktav’,           [‘4-5’],   ‘(1. oktavın bir üstü) · 4-5’,                          KURAL_OKTAV, undefined, ‘⠨’),
-  R(‘1. oktav (en pes)’,  [‘4’],     ‘(piyanonun en alt do\’sundan başlar) · 4 noktası’,      KURAL_OKTAV, undefined, ‘⠈’),
-  R(‘6. oktav’,           [‘5-6’],   ‘(5. oktavın bir üstü) · 5-6’,                          KURAL_OKTAV, undefined, ‘⠰’),
-  R(‘7. oktav (en tiz)’,  [‘6’],     ‘(piyanonun en üst oktavı) · 6 noktası’,                KURAL_OKTAV, undefined, ‘⠘’),
+  R('2. oktav',           ['4-5'],   '(1. oktavın bir üstü) · 4-5',                          KURAL_OKTAV, undefined, '⠨'),
+  R('1. oktav (en pes)',  ['4'],     "(piyanonun en alt do'sundan başlar) · 4 noktası",      KURAL_OKTAV, undefined, '⠈'),
+  R('6. oktav',           ['5-6'],   '(5. oktavın bir üstü) · 5-6',                          KURAL_OKTAV, undefined, '⠰'),
+  R('7. oktav (en tiz)',  ['6'],     '(piyanonun en üst oktavı) · 6 noktası',                KURAL_OKTAV, undefined, '⠘'),
 ];
 export const MUZIK_OKTAVLAR = [...MUZIK_OKTAVLAR_TEMEL, ...MUZIK_OKTAVLAR_ILERI];
 
@@ -361,8 +447,12 @@ export const MUZIK_ZAMAN_IMZASI = [
   R('2/4', ['3-4-5-6', '1-2', '2-5-6'], '(iki dörtlük) · # + b (üst 2) + alt 4', KURAL_ZAMAN_IMZASI, undefined, '2/4'),
   R('6/8', ['3-4-5-6', '1-2-4', '2-3-6'], '(altı sekizlik) · # + f (üst 6) + alt 8', KURAL_ZAMAN_IMZASI, undefined, '6/8'),
   R('3/8', ['3-4-5-6', '1-4', '2-3-6'], '(üç sekizlik) · # + c (üst 3) + alt 8', KURAL_ZAMAN_IMZASI, undefined, '3/8'),
-  R('common time (4/4)', ['4-6', '1-4'], '(C işareti; 4/4 ile aynı süre)', KURAL_ZAMAN_IMZASI, undefined, '𝄴'),
-  R('cut common (2/2)', ['4-5-6', '1-4'], '(çizgili C; 2/2 ile aynı süre)', KURAL_ZAMAN_IMZASI, undefined, '𝄵'),
+
+  R('5/8', ['3-4-5-6', '1-5', '2-3-6'], '(beş sekizlik) · # + e (üst 5) + alt 8', KURAL_ZAMAN_IMZASI, undefined, '5/8'),
+  R('7/8', ['3-4-5-6', '1-2-4-5', '2-3-6'], '(yedi sekizlik) · # + g (üst 7) + alt 8', KURAL_ZAMAN_IMZASI, undefined, '7/8'),
+  R('9/8', ['3-4-5-6', '2-4', '2-3-6'], '(dokuz sekizlik) · # + i (üst 9) + alt 8', KURAL_ZAMAN_IMZASI, undefined, '9/8'),
+
+  R('2/2 (sebare)', ['3-4-5-6', '1-2', '2-3'], '(iki ikilik / alla breve) · # + b (üst 2) + alt 2', KURAL_ZAMAN_IMZASI, undefined, '𝄵'),
 ];
 
 export const MUZIK_DEGISTIRICI = [
@@ -397,63 +487,61 @@ export const MUZIK_OLCU_CIZGILERI = [
   {
     ad: 'ölçü ayracı (boşluk)',
     aciklama: 'Braille müzikte ölçü çizgisi yoktur — iki ölçü arasına 1 boşluk hücresi konur.',
-    hucreler: [],
+    hucreler: [[]],
     kurallar: KURAL_BARLINE,
     okumaOzeti: 'ölçüler arası boşluk hücresi',
+    tamYonergeMetni: 'Ölçü ayracı, Braille yazıda boşluk hücresidir. Sistemde boşluk tuşu olmadığı için bu hücre atlanabilir. Sonraki öğeye geçiniz.',
   },
   R('bitiş çizgisi (final)', ['1-2-6', '1-3'], '(eserin sonu)', KURAL_BARLINE, undefined, '𝄂'),
   R('bölüm sonu çift çubuk', ['1-2-6', '1-3', '3'], '(yeni bölüm başlıyorsa)', KURAL_BARLINE, undefined, '𝄁'),
-  R('tekrar başlangıcı (röpriz)', ['1-2-6', '2-3-5-6'], '(tekrarlanacak pasajın başı)', KURAL_BASKI_TEKRAR, undefined, '𝄆'),
-  R('tekrar sonu (röpriz)',       ['1-2-6', '2-3'],     '(tekrarlanacak pasajın sonu)', KURAL_BASKI_TEKRAR, undefined, '𝄇'),
-  R('1. ev (volta)', ['3-4-5-6', '2'],   '(ilk seferki son)',           KURAL_VOLTA, undefined, '1.'),
-  R('2. ev (volta)', ['3-4-5-6', '2-3'], '(tekrar sonrası alternatif son)', KURAL_VOLTA, undefined, '2.'),
+  R('ileriye doğru tekrar', ['1-2-6', '2-3-5-6'], '(tekrarlanacak pasajın başı)', KURAL_BASKI_TEKRAR, undefined, '𝄆'),
+  R('geriye doğru tekrar', ['1-2-6', '2-3'], '(tekrarlanacak pasajın sonu)', KURAL_BASKI_TEKRAR, undefined, '𝄇'),
+  R('1. dolap', ['3-4-5-6', '2'], '(ilk seferki son)', KURAL_VOLTA, undefined, '1.'),
+  R('2. dolap', ['3-4-5-6', '2-3'], '(tekrar sonrası alternatif son)', KURAL_VOLTA, undefined, '2.'),
   R('müzik kısa çizgisi', ['5'], '(bar içinde tekrar sonrası ayırıcı)', KURAL_BARLINE, undefined, '⠐'),
 ];
 
 /* ─────────────────  8) BAĞLAR ve SLUR İŞARETLERİ  ──────────────────────── */
 export const MUZIK_BAGLAR = [
-  R('bağ (tie)',         ['4', '1-4'],     '(aynı perdedeki iki notayı bağlar)', KURAL_BAG, undefined, '⌣'),
-  R('slur (legato)',     ['1-4'],          '(2–4 farklı notayı bağlar)',         KURAL_BAG, undefined, '⌒'),
-  R('köşeli slur (aç)',  ['5-6', '1-2'],   '(uzun cümle / katmanlı slur açılış)',KURAL_BAG, undefined, '⌒['),
-  R('köşeli slur (kapa)',['4-5', '2-3'],   '(uzun cümle / katmanlı slur kapanış)',KURAL_BAG, undefined, ']⌒'),
-  R('çift slur (4+ nota)', ['1-4', '1-4'], '(4 ve daha fazla nota için ikili slur)', KURAL_BAG, undefined, '⌒⌒'),
+  R('uzatma bağı', ['4', '1-4'], '(aynı perdedeki iki notayı bağlar)', KURAL_BAG, undefined, '⌣'),
+  R('hece bağı', ['1-4'], '(2-4 farklı notayı bağlar)', KURAL_BAG, undefined, '⌒'),
+  R('cümle bağı başlangıcı', ['5-6', '1-2'], '(uzun cümle bağı başlangıcı)', KURAL_BAG, undefined, '⌒['),
+  R('cümle bağı bitişi', ['4-5', '2-3'], '(uzun cümle bağı bitişi)', KURAL_BAG, undefined, ']⌒'),
+  R('çift hece bağı', ['1-4', '1-4'], '(4 ve daha fazla nota için çift hece bağı)', KURAL_BAG, undefined, '⌒⌒'),
 ];
 
 /* ─────────────────  9) DİNAMİKLER (sözcük temelli)  ─────────────────────── */
 // Tüm dinamikler önünde söz işareti ⠜ (3-4-5) bulunur; söz işareti kendisi dinamik değildir.
 export const MUZIK_DINAMIKLER = [
-  R('pp (pianissimo)', ['3-4-5', '1-2-3-4', '1-2-3-4'], '(çok hafif)', KURAL_WORD_SIGN, undefined, 'pp'),
-  R('p (piano)', ['3-4-5', '1-2-3-4'], '(hafif)', KURAL_WORD_SIGN, undefined, 'p'),
-  R('mp (mezzo piano)', ['3-4-5', '1-3-4', '1-2-3-4'], '(orta hafif)', KURAL_WORD_SIGN, undefined, 'mp'),
-  R('mf (mezzo forte)', ['3-4-5', '1-3-4', '1-2-4'], '(orta kuvvet)', KURAL_WORD_SIGN, undefined, 'mf'),
-  R('f (forte)', ['3-4-5', '1-2-4'], '(yüksek)', KURAL_WORD_SIGN, undefined, 'f'),
-  R('ff (fortissimo)', ['3-4-5', '1-2-4', '1-2-4'], '(çok kuvvetli)', KURAL_WORD_SIGN, undefined, 'ff'),
-  R('sf (sforzando)', ['3-4-5', '2-3-4', '1-2-4'], '(ani vurgu)', KURAL_WORD_SIGN, undefined, 'sf'),
-  R('cresc. (crescendo)', ['3-4-5', '1-4', '1-2-3-5', '3'], '(giderek kuvvetlenerek) · noktayla biter', KURAL_WORD_SIGN),
-  R('decresc. (decrescendo)', ['3-4-5', '1-4-5', '1-5', '1-4', '1-2-3-5', '3'], '(giderek hafifleyerek) · noktayla biter', KURAL_WORD_SIGN),
-  R('dim. (diminuendo)', ['3-4-5', '1-4-5', '2-4', '1-3-4', '3'], '(giderek azalt) · noktayla biter', KURAL_WORD_SIGN),
-  R('rit. (ritardando)', ['3-4-5', '1-2-3-5', '2-4', '2-3-4-5', '3'], '(giderek yavaşlat)', KURAL_WORD_SIGN),
-];
+  R('çift piyano', ['3-4-5', '1-2-3-4', '1-2-3-4'], '(pp)', KURAL_WORD_SIGN, undefined, 'pp'),
+  R('piyano', ['3-4-5', '1-2-3-4'], '(p)', KURAL_WORD_SIGN, undefined, 'p'),
+  R('mezo piyano', ['3-4-5', '1-3-4', '1-2-3-4'], '(mp)', KURAL_WORD_SIGN, undefined, 'mp'),
+  R('mezo forte', ['3-4-5', '1-3-4', '1-2-4'], '(mf)', KURAL_WORD_SIGN, undefined, 'mf'),
+  R('forte', ['3-4-5', '1-2-4'], '(f)', KURAL_WORD_SIGN, undefined, 'f'),
+  R('çift forte', ['3-4-5', '1-2-4', '1-2-4'], '(ff)', KURAL_WORD_SIGN, undefined, 'ff'),
+  R('sforzando', ['3-4-5', '2-3-4', '1-2-4'], '(sf)', KURAL_WORD_SIGN, undefined, 'sf'),
+  R('kreşendo', ['3-4-5', '1-4', '1-2-3-5', '3'], '(cr)', KURAL_WORD_SIGN, undefined, 'cr'),
+  R('dekreşendo', ['3-4-5', '1-4-5', '1-5', '1-4', '1-2-3-5', '3'], '(decr)', KURAL_WORD_SIGN, undefined, 'decr'),
+  R('diminiendo', ['3-4-5', '1-4-5', '2-4', '1-3-4', '3'], '(dim)', KURAL_WORD_SIGN, undefined, 'dim'),
+  R('riterdando', ['3-4-5', '1-2-3-5', '2-4', '2-3-4-5', '3'], '(rit)', KURAL_WORD_SIGN, undefined, 'rit'),
 
-/* ─────────────────  10) HAIRPIN (kıl) DİNAMİKLERİ  ─────────────────────── */
-export const MUZIK_HAIRPIN = [
-  R('hairpin crescendo', ['3-4-5', '1-4'], '(genişleyen iki çizgi) · etkilenen ilk notadan önce', KURAL_WORD_SIGN),
-  R('hairpin crescendo bitir', ['3-4-5', '2-5'], '(devamı yoksa son notadan sonra)', KURAL_WORD_SIGN),
-  R('hairpin decrescendo', ['3-4-5', '1-4-5'], '(daralan iki çizgi) · etkilenen ilk notadan önce', KURAL_WORD_SIGN),
-  R('hairpin decrescendo bitir', ['3-4-5', '2-5-6'], '(devamı yoksa son notadan sonra)', KURAL_WORD_SIGN),
+  R('keskin kreşendo başlangıcı', ['3-4-5', '1-4'], '(genişleyen iki çizgi) · etkilenen ilk notadan önce', KURAL_WORD_SIGN),
+  R('keskin kreşendo bitir', ['3-4-5', '2-5'], '(devamı yoksa son notadan sonra)', KURAL_WORD_SIGN),
+  R('keskin dekreşendo', ['3-4-5', '1-4-5'], '(daralan iki çizgi) · etkilenen ilk notadan önce', KURAL_WORD_SIGN),
+  R('keskin dekreşendo bitir', ['3-4-5', '2-5-6'], '(devamı yoksa son notadan sonra)', KURAL_WORD_SIGN),
 ];
 
 /* ─────────────────  11) NOTA ÖNCESİ NÜANSLAR  ──────────────────────────── */
 export const MUZIK_NUANS_ONCE = [
-  R('staccato', ['2-3-6'], '(kısa, kesik) · notanın hemen önünde', KURAL_NUANS_ONCE, undefined, '·'),
-  R('staccatissimo', ['6', '2-3-6'], '(çok kısa, sivri) · 6 + staccato', KURAL_NUANS_ONCE, undefined, '▽'),
-  R('mezzo-staccato', ['5', '2-3-6'], '(yarı kısa) · 5 + staccato', KURAL_NUANS_ONCE, undefined, '‧'),
-  R('tenuto (agogic accent)', ['4-5-6', '2-3-6'], '(tam süreyle uzat) · 4-5-6 + staccato hücresi', KURAL_NUANS_ONCE, undefined, '‒'),
-  R('accent', ['4-6', '2-3-6'], '(vurgulu çal) · 4-6 + staccato hücresi', KURAL_NUANS_ONCE, undefined, '>'),
-  R('expressive accent', ['4-5', '2-3-6'], '(ifadeli vurgu) · 4-5 + staccato hücresi', KURAL_NUANS_ONCE),
-  R('reversed accent', ['4', '2-3-6'], '(ters vurgu) · 4 + staccato hücresi', KURAL_NUANS_ONCE),
+  R('Stakato', ['2-3-6'], '(kısa, kesik) · notanın hemen önünde', KURAL_NUANS_ONCE, undefined, '·'),
+  R('Simo', ['6', '2-3-6'], '(çok kısa, sivri) · 6 + staccato', KURAL_NUANS_ONCE, undefined, '▽'),
+  R('mezzo-stakato', ['5', '2-3-6'], '(yarı kısa) · 5 + staccato', KURAL_NUANS_ONCE, undefined, '‧'),
+  R('tonuto', ['4-5-6', '2-3-6'], '(tam süreyle uzat) · 4-5-6 + staccato hücresi', KURAL_NUANS_ONCE, undefined, '‒'),
+  R('aksent', ['4-6', '2-3-6'], '(vurgulu çal) · 4-6 + staccato hücresi', KURAL_NUANS_ONCE, undefined, '>'),
+  R('İfadeli aksent', ['4-5', '2-3-6'], '(ifadeli vurgu) · 4-5 + staccato hücresi', KURAL_NUANS_ONCE),
+  R('ters aksent', ['4', '2-3-6'], '(ters vurgu) · 4 + staccato hücresi', KURAL_NUANS_ONCE),
   R('martellato', ['5-6', '2-3-6'], '(çekiç gibi sert vurgu) · 5-6 + staccato hücresi', KURAL_NUANS_ONCE),
-  R('swell (<>)', ['1-6', '3'], '(şişen-sönen vurgu) · 1-6 + 3', KURAL_NUANS_ONCE),
+  R('Şişirme nüansı (<>)', ['1-6', '3'], '(şişen-sönen vurgu) · 1-6 + 3', KURAL_NUANS_ONCE),
 ];
 
 /* ─────────────────  12) NOTA SONRASI NÜANSLAR  ─────────────────────────── */
@@ -463,26 +551,26 @@ export const MUZIK_NUANS_SONRA = [
   R('ölçü çizgisi üstü fermata', ['4-5-6', '1-2-6', '1-2-3'], '(ölçü çizgisinde durak)', KURAL_NUANS_SONRA),
   R('kare fermata', ['5-6', '1-2-6', '1-2-3'], '(kare şekilli uzatma)', KURAL_NUANS_SONRA),
   R('üçgen fermata', ['4-5', '1-2-6', '1-2-3'], '(çadır şekilli uzatma)', KURAL_NUANS_SONRA),
-  R('nefes işareti', ['3-4-5', '2'], '(kısa nefes molası) · ⠜⠂', KURAL_NUANS_SONRA, undefined, ','),
-  R('caesura (break / //)', ['6', '3-4'], '(genel mola, kesinti) · ⠠⠌', KURAL_NUANS_SONRA, undefined, '//'),
+  R('nefes işareti', ['3-4'], '(kısa nefes molası) · ⠌', KURAL_NUANS_SONRA, undefined, ','),
+  R('sezür  (kesinti / //)', ['6', '3-4'], '(genel mola, kesinti) · ⠠⠌', KURAL_NUANS_SONRA, undefined, '//'),
 ];
 
 /* ─────────────────────  13) SÜSLEMELER (Ornaments)  ────────────────────── */
 export const MUZIK_SUSLEMELER = [
-  R('kısa appoggiatura', ['2-6'], '(saplama yan nota; küçük çapraz çizgili)', KURAL_NUANS_ONCE, undefined, '♪'),
-  R('uzun appoggiatura', ['5', '2-6'], '(uzun yan nota; çapraz çizgisiz)', KURAL_NUANS_ONCE, undefined, '♩'),
-  R('trill', ['2-3-5'], '(iki nota arası hızlı titreşim)', KURAL_TRILL, undefined, 'tr'),
-  R('bemollü trill', ['1-2-6', '2-3-5'], '(bemol etkili trill)', KURAL_TRILL, undefined, 'tr♭'),
-  R('diyezli trill', ['1-4-6', '2-3-5'], '(diyez etkili trill)', KURAL_TRILL, undefined, 'tr♯'),
-  R('turn (notalar arası)', ['2-5-6'], '(üst-asıl-alt-asıl dönüşü)', KURAL_TURN, undefined, '∽'),
-  R('turn (nota üstünde)', ['6', '2-5-6'], '(notanın tam üstünde/altında)', KURAL_TURN, undefined, '∽⁺'),
-  R('ters turn (notalar arası)', ['2-5-6', '1-2-3'], '(alt-asıl-üst-asıl dönüşü)', KURAL_TURN, undefined, '∾'),
-  R('ters turn (nota üstünde)', ['6', '2-5-6', '1-2-3'], '(ters turn, nota üstünde/altında)', KURAL_TURN, undefined, '∾⁺'),
-  R('üst mordent', ['5', '2-3-5'], '(asıl-üst-asıl)', KURAL_TURN, undefined, '∿'),
-  R('uzun üst mordent', ['5-6', '2-3-5'], '(birden çok salınımlı üst mordent)', KURAL_TURN, undefined, '≈'),
-  R('alt mordent', ['5', '2-3-5', '1-2-3'], '(asıl-alt-asıl)', KURAL_TURN, undefined, '⌇'),
-  R('uzun alt mordent', ['5-6', '2-3-5', '1-2-3'], '(birden çok salınımlı alt mordent)', KURAL_TURN, undefined, '⌇⌇'),
-  R('glissando', ['4', '1'], '(iki nota arası kaydırma) · ⠈⠁', KURAL_NUANS_SONRA, undefined, '/'),
+  R('kısa apejetür', ['2-6'], '(saplama yan nota; küçük çapraz çizgili)', KURAL_NUANS_ONCE, undefined, '♪'),
+  R('uzun apejetür', ['5', '2-6'], '(uzun yan nota; çapraz çizgisiz)', KURAL_NUANS_ONCE, undefined, '♩'),
+  R('tril', ['2-3-5'], '(iki nota arası hızlı titreşim)', KURAL_TRILL, undefined, 'tr'),
+  R('bemollü tril', ['1-2-6', '2-3-5'], '(bemol etkili tril)', KURAL_TRILL, undefined, 'tr♭'),
+  R('diyezli tril', ['1-4-6', '2-3-5'], '(diyez etkili tril)', KURAL_TRILL, undefined, 'tr♯'),
+  R('grupeto (notalar arası)', ['2-5-6'], '(üst-asıl-alt-asıl dönüşü)', KURAL_TURN, undefined, '∽'),
+  R('grupeto (nota üstünde)', ['6', '2-5-6'], '(notanın tam üstünde/altında)', KURAL_TURN, undefined, '∽⁺'),
+  R('ters grupeto (notalar arası)', ['2-5-6', '1-2-3'], '(alt-asıl-üst-asıl dönüşü)', KURAL_TURN, undefined, '∾'),
+  R('ters grupeto (nota üstünde)', ['6', '2-5-6', '1-2-3'], '(ters grupeto, nota üstünde/altında)', KURAL_TURN, undefined, '∾⁺'),
+  R('üst mordan', ['5', '2-3-5'], '(asıl-üst-asıl)', KURAL_TURN, undefined, '∿'),
+  R('uzun üst mordan', ['5-6', '2-3-5'], '(birden çok salınımlı üst mordan)', KURAL_TURN, undefined, '≈'),
+  R('alt mordan', ['5', '2-3-5', '1-2-3'], '(asıl-alt-asıl)', KURAL_TURN, undefined, '⌇'),
+  R('uzun alt mordan', ['5-6', '2-3-5', '1-2-3'], '(birden çok salınımlı alt mordan)', KURAL_TURN, undefined, '⌇⌇'),
+  R('glisando', ['4', '1'], '(iki nota arası kaydırma) · ⠈⠁', KURAL_NUANS_SONRA, undefined, '/'),
 ];
 
 /* ─────────────────  14) DÜZENSİZ NOTA GRUPLARI  ────────────────────────── */
@@ -531,7 +619,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
     sembol: 'andante',
     bpmMin: 76, bpmMax: 108,
     dil: 'it',
-    hucreler: tempoHucreleri('andante'),
+    hucreler: [[1], [1, 3, 4, 5], [1, 4, 5], [1], [1, 3, 4, 5], [2, 3, 4, 5], [1, 5]],
     aciklama: 'Andante yürür gibi orta-yavaş tempoyu belirtir.',
     kurallar: [
       'Tempo ifadesi metin olarak yazılır.',
@@ -619,7 +707,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
     ad: 'A tempo',
     sembol: 'a tempo',
     dil: 'it',
-    hucreler: tempoHucreleri('a tempo'),
+    hucreler: tempoHucreleri('atempo'),
     aciklama: 'A tempo, önceki ana tempoya geri dön anlamına gelir.',
     kurallar: [
       'İki kelimeli tempo ifadeleri metin olarak gösterilir.',
@@ -667,11 +755,25 @@ export const MUZIK_BOLUMLER = [
     veri: MUZIK_SURELER_ILERI,
   },
   {
+    slug: 'sus-ileri',
+    kisaBaslik: 'Sus 2',
+    pageBaslik: 'İleri sus işaretleri (16lık, 32lik, 64lük, 128lik)',
+    ilerlemeAnahtari: 'muzik-sus-ileri',
+    veri: MUZIK_ESLAR_ILERI,
+  },
+  {
     slug: 'sus',
     kisaBaslik: 'Sus',
     pageBaslik: 'Müzik · Sus (sessizlik) işaretleri',
     ilerlemeAnahtari: 'muzik-sus',
     veri: MUZIK_SUS,
+  },
+  {
+    slug: 'uzatma-noktasi',
+    kisaBaslik: 'Uzatma noktası',
+    pageBaslik: 'Uzatma noktası',
+    ilerlemeAnahtari: 'muzik-uzatma-noktasi',
+    veri: MUZIK_UZATMA_NOKTASI,
   },
   {
     slug: 'oktav-temel',
@@ -689,8 +791,8 @@ export const MUZIK_BOLUMLER = [
   },
   {
     slug: 'zaman-imzasi',
-    kisaBaslik: 'Zaman imzası',
-    pageBaslik: 'Müzik · Zaman imzaları',
+    kisaBaslik: 'Ölçü sayılarının yazımı',
+    pageBaslik: 'Ölçü sayılarının yazımı',
     ilerlemeAnahtari: 'muzik-zaman',
     veri: MUZIK_ZAMAN_IMZASI,
   },
@@ -704,78 +806,72 @@ export const MUZIK_BOLUMLER = [
   },
   {
     slug: 'degistirici',
-    kisaBaslik: 'Aksidental',
-    pageBaslik: 'Müzik · Aksidentaller (diyez, bemol, naturel)',
+    kisaBaslik: 'Değiştirici işaretler',
+    pageBaslik: 'Değiştirici işaretler',
     ilerlemeAnahtari: 'muzik-degistirici',
     veri: MUZIK_DEGISTIRICILER,
   },
   {
     slug: 'donanim',
     kisaBaslik: 'Donanım',
-    pageBaslik: 'Müzik · Donanım (key signature)',
+    pageBaslik: 'Donanım (key signature)',
     ilerlemeAnahtari: 'muzik-donanim',
     veri: MUZIK_DONANIM,
   },
   {
     slug: 'olcu-cizgileri',
     kisaBaslik: 'Ölçü çizgisi ve tekrar',
-    pageBaslik: 'Müzik · Ölçü çizgileri ve baskı tekrarları',
+    pageBaslik: 'Ölçü çizgileri ve baskı tekrarları',
     ilerlemeAnahtari: 'muzik-olcu',
     veri: MUZIK_OLCU_CIZGILERI,
   },
   {
     slug: 'bag-slur',
-    kisaBaslik: 'Bağ ve slur',
-    pageBaslik: 'Müzik · Bağ ve slur işaretleri',
+    kisaBaslik: 'Bağlar',
+    pageBaslik: 'Bağlar',
     ilerlemeAnahtari: 'muzik-bag',
     veri: MUZIK_BAGLAR,
   },
   {
     slug: 'dinamikler',
-    kisaBaslik: 'Dinamikler',
-    pageBaslik: 'Müzik · Dinamikler (p, f, cresc.)',
+    kisaBaslik: 'Çalma Teknikleri',
+    pageBaslik: 'Çalma Teknikleri',
     ilerlemeAnahtari: 'muzik-dinamik',
     veri: MUZIK_DINAMIKLER,
   },
-  {
-    slug: 'hairpin',
-    kisaBaslik: 'Hairpin',
-    pageBaslik: 'Müzik · Hairpin dinamikleri (cresc./decresc.)',
-    ilerlemeAnahtari: 'muzik-hairpin',
-    veri: MUZIK_HAIRPIN,
-  },
+
   {
     slug: 'nuans-once',
     kisaBaslik: 'Nüans (önce)',
-    pageBaslik: 'Müzik · Nota öncesi nüanslar (staccato, accent, tenuto)',
+    pageBaslik: 'Nota öncesi nüanslar (staccato, accent, tenuto)',
     ilerlemeAnahtari: 'muzik-nuans-once',
     veri: MUZIK_NUANS_ONCE,
   },
   {
     slug: 'nuans-sonra',
     kisaBaslik: 'Nüans (sonra)',
-    pageBaslik: 'Müzik · Nota sonrası nüanslar (fermata, nefes, mola)',
+    pageBaslik: 'Nota sonrası nüanslar (fermata, nefes, mola)',
     ilerlemeAnahtari: 'muzik-nuans-sonra',
     veri: MUZIK_NUANS_SONRA,
   },
   {
     slug: 'suslemeler',
     kisaBaslik: 'Süslemeler',
-    pageBaslik: 'Müzik · Süslemeler (trill, turn, mordent…)',
+    pageBaslik: 'Süslemeler (trill, turn, mordent…)',
     ilerlemeAnahtari: 'muzik-susleme',
     veri: MUZIK_SUSLEMELER,
   },
   {
     slug: 'duzensiz-gruplar',
     kisaBaslik: 'Düzensiz gruplar',
-    pageBaslik: 'Müzik · Düzensiz nota grupları',
+    pageBaslik: 'Düzensiz nota grupları',
     ilerlemeAnahtari: 'muzik-duzensiz',
     veri: MUZIK_DUZENSIZ_GRUPLAR,
   },
   {
     slug: 'tekrar',
     kisaBaslik: 'Braille tekrar',
-    pageBaslik: 'Müzik · Braille tekrar işaretleri',
+    pageBaslik: 'Braille tekrar işaretleri',
     ilerlemeAnahtari: 'muzik-tekrar',
     veri: MUZIK_TEKRAR,
   },
@@ -783,9 +879,9 @@ export const MUZIK_BOLUMLER = [
 
 const MUZIK_ILERI_BOLUM_SLUGLARI = new Set([
   'sureler-ileri',
+  'sus-ileri',
   'oktav-ileri',
   'dinamikler',
-  'hairpin',
   'nuans-once',
   'nuans-sonra',
   'suslemeler',

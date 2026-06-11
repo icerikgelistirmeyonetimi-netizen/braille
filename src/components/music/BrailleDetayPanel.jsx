@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import BrailleHucreMini from './BrailleHucreMini.jsx';
 import { brailleKategoriAl } from '../../utils/music-brf/brailleLegendRegistry.js';
-import { MUZIK_SUSLEMELER, MUZIK_DINAMIKLER, MUZIK_HAIRPIN, MUZIK_NUANS_ONCE, MUZIK_NUANS_SONRA } from '../../data/muzik.js';
+import { MUZIK_SUSLEMELER, MUZIK_DINAMIKLER, MUZIK_NUANS_ONCE, MUZIK_NUANS_SONRA } from '../../data/muzik.js';
 
 // Her süsleme için "ne anlama gelir" + "ses ne yapar" açıklaması.
 // { anlam: kısa tanım, ses: çalındığında nasıl duyulur }
@@ -143,22 +143,13 @@ const DINAMIK_BILGI = {
     anlam: 'Giderek yavaşlatın (ritardando); bu bir tempo işaretidir.',
     ses: 'Tempo kademeli olarak düşer; notalar gitgide daha uzun aralıklarla duyulur.',
   },
-  'hairpin crescendo': {
-    anlam: 'Genişleyen iki çizgiyle gösterilen crescendo (kıl/hairpin).',
-    ses: 'Çizgilerin kapsadığı notalarda ses giderek yükselir.',
-  },
-  'hairpin decrescendo': {
-    anlam: 'Daralan iki çizgiyle gösterilen decrescendo (kıl/hairpin).',
-    ses: 'Çizgilerin kapsadığı notalarda ses giderek kısılır.',
-  },
 };
 
 // Tıklanan dinamiğin (p/f/mf/cresc…) kendi açıklama + kurallarından panel içeriği üretir.
 function dinamikKuralBilgisiAl(anlam = {}) {
   const ara = String(anlam?.etiket || anlam?.ad || anlam?.baslik || '').toLowerCase().trim();
   if (!ara) return null;
-  const havuz = [...(Array.isArray(MUZIK_DINAMIKLER) ? MUZIK_DINAMIKLER : []),
-                 ...(Array.isArray(MUZIK_HAIRPIN) ? MUZIK_HAIRPIN : [])];
+  const havuz = [...(Array.isArray(MUZIK_DINAMIKLER) ? MUZIK_DINAMIKLER : [])];
   // Önce ad, sonra sembol (pp, mf…) ile eşle.
   const kayit = havuz.find((o) => String(o.ad || '').toLowerCase() === ara)
     || havuz.find((o) => String(o.sembol || '').toLowerCase() === ara);

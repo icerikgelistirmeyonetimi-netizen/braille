@@ -258,6 +258,16 @@ Audio files: `public/audio/kuran/`. `SesIzinEkrani` component handles first-tap 
 ### Module 8 Music Pages (`MuzikBrailleSayfa` + `CokHucreOkuyucu`)
 
 - `/muzik/notalar`, `/muzik/sureler`, and sibling music lessons are backed by `src/data/muzik.js` and mapped through `src/pages/MuzikBrailleSayfa.jsx`.
+- `/muzik/grup/:grupId` is rendered by `src/pages/MuzikBrailleMenu.jsx`; group card labels should strip the leading `Müzik ·`/`Müzik:` prefix with `muzikMenuBasligi()` while lesson page headers may keep their full `pageBaslik`.
+- Current user-facing music lesson labels: `zaman-imzasi` is `Ölçü sayılarının yazımı`; `degistirici` is `Değiştirici işaretler`.
+- `olcu-cizgileri` terms use: blank measure separator as `[[]]` with a skip-style `tamYonergeMetni`, `ileriye doğru tekrar`, `geriye doğru tekrar`, `1. dolap`, `2. dolap`.
+- `dinamikler` is user-facing `Nüanslar`; entries should be read by meaning, not letters: `çift piyano`, `piyano`, `mezo piyano`, `mezo forte`, `forte`, `çift forte`, `sforzando`, `kreşendo`, `dekreşendo`, `diminiendo`, `riterdando`.
+- `Andante` in `MUZIK_TEMPO_ISARETLERI` has explicit cells; both `n` letters must be `[1, 3, 4, 5]`.
+- Tempo cells are in `src/data/muzik.js`: edit `tempoHucreleri(...)` callers or override a term with explicit `hucreler: [[...], ...]` inside `MUZIK_TEMPO_ISARETLERI` (for example `A tempo` currently sits there).
+- `sus` lesson uses `birlik sus`, `ikilik sus`, `dörtlük sus`, `sekizlik sus`; do not label the first two as `tam`/`yarım`. `sus-ileri` is a separate advanced lesson for `16'lık`, `32'lik`, `64'lük`, `128'lik` rests.
+- The first `sus` item has a `sesOncesiYonergeMetni` explaining that piano marks sounding notes and baget/metronome marks rests in 4/4.
+- Rest and 8th-note audio examples use explicit `ritimOrnegi` metadata in `src/data/muzik.js`, played by `MuzikBrailleSayfa`. Use `piyanoOlaylari` for sustained examples: birlik sus = 1 measure sustained piano + 1 measure rest; ikilik sus = beats 1-2 piano, beats 3-4 rest; dörtlük sus = beats 1-2 short piano, beats 3-4 rest; sekizlik notes = piano on every `1-ve, 2-ve, 3-ve, 4-ve`; sekizlik sus = piano on numbered beats, rest on `ve`.
+- Dotted rests/notes belong in the separate `uzatma-noktasi` lesson. The rule is: dot 3 follows the note/rest cell and extends the previous value by half.
 - If an intro/info sentence must be read before the piano/sample sound, put it in `sesOncesiYonergeMetni`; the order is info → item sound → `tamYonergeMetni`/generated instruction.
 - For clickless first-step info items, keep the whole message in `tamYonergeMetni`; prefix user-facing intro text with `Bilgilendirme:` when that is the desired narration.
 
