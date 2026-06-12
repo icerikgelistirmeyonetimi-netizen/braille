@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   MATEMATIK_SEMBOLLER,
   MATEMATIK_OLCULER,
@@ -191,17 +191,17 @@ export const Ikon = {
   kuranHarf: (
     <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <text x="32" y="50" textAnchor="middle" fontSize="44"
-            fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
             fill="currentColor" direction="rtl">ب</text>
     </svg>
   ),
   harake: (
     <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <text x="32" y="50" textAnchor="middle" fontSize="44"
-            fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
             fill="currentColor" direction="rtl">َ</text>
       <text x="32" y="36" textAnchor="middle" fontSize="22"
-            fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
             fill="currentColor" direction="rtl">ا</text>
     </svg>
   ),
@@ -215,8 +215,77 @@ export const Ikon = {
   kuranKelime: (
     <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
       <text x="32" y="44" textAnchor="middle" fontSize="22"
-            fontFamily="'Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
             fill="currentColor" direction="rtl">بِسْمِ</text>
+    </svg>
+  ),
+  cezmSedde: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="20" y="48" textAnchor="middle" fontSize="30"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">بّ</text>
+      <text x="44" y="48" textAnchor="middle" fontSize="30"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">بْ</text>
+    </svg>
+  ),
+  tenvin: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="12" y="46" textAnchor="middle" fontSize="22"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">نً</text>
+      <text x="32" y="46" textAnchor="middle" fontSize="22"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">نٌ</text>
+      <text x="52" y="46" textAnchor="middle" fontSize="22"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">نٍ</text>
+    </svg>
+  ),
+  taMerbuta: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="50" textAnchor="middle" fontSize="44"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">ة</text>
+    </svg>
+  ),
+  medHarf: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="44" textAnchor="middle" fontSize="28"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">ا و ي</text>
+    </svg>
+  ),
+  mukadderMed: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="50" textAnchor="middle" fontSize="40"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">اٰ</text>
+    </svg>
+  ),
+  elifZaid: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="28" y="50" textAnchor="middle" fontSize="42"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor" opacity="0.4">ا</text>
+      <circle cx="46" cy="16" r="6" fill="none" stroke="currentColor" strokeWidth="2.5"/>
+    </svg>
+  ),
+  hemze: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="32" y="50" textAnchor="middle" fontSize="44"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">ء</text>
+    </svg>
+  ),
+  hemzeVasl: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <text x="20" y="50" textAnchor="middle" fontSize="36"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">ٱ</text>
+      <text x="46" y="50" textAnchor="middle" fontSize="36"
+            fontFamily="'Amasya','Traditional Arabic','Amiri','Segoe UI',serif" fontWeight="800"
+            fill="currentColor">أ</text>
     </svg>
   ),
   modul6: (
@@ -466,17 +535,19 @@ export const MODULLER = [
     altBaslik: "Kur'an-ı Kerim",
     ikon: Ikon.modul5,
     ogeler: [
-      { yol: '/kuran-harfler',   baslik: "Kur'an-ı Kerim Harfleri", ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',   toplam: 31 },
-      { yol: '/kuran-harekeler', baslik: 'Harekeler',           ikon: Ikon.harake,    anahtar: 'kuran-harekeler', toplam: 8 },
-      { yol: '/kuran-tecvid',    baslik: 'Tecvid İşaretleri',  ikon: Ikon.tecvid,    anahtar: 'kuran-tecvid',    toplam: 7 },
-      { yol: '/kuran-heceler',   baslik: 'Hece Okuma',          ikon: Ikon.hece, anahtar: 'kuran-kelime-hece', toplam: KURAN_HECELERI.length },
-      {
-        yol: '/kuran-kelimeler-temel',
-        baslik: 'Kelime Okuma',
-        ikon: Ikon.kuranKelime,
-        anahtar: 'kuran-kelime-kelime-temel',
-        toplam: KURAN_KELIMELERI_TEMEL.length
-      },
+      { yol: '/kuran-harfler',                         baslik: "Kur'an-ı Kerim Harfleri", ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',          toplam: 31 },
+      { yol: '/kuran-harekeler',                       baslik: 'Harekeler',               ikon: Ikon.harake,    anahtar: 'kuran-harekeler',        toplam: 3 },
+      { yol: '/kuran-isaretler/cezm-sedde',            baslik: 'Cezim ve Şedde',          ikon: Ikon.cezmSedde,    anahtar: 'kuran-cezm-sedde',       toplam: 2 },
+      { yol: '/kuran-isaretler/tenvinler',             baslik: 'Tenvinler',               ikon: Ikon.tenvin,       anahtar: 'kuran-tenvinler',        toplam: 3 },
+      { yol: '/kuran-isaretler/ta-i-merbuta',          baslik: "Ta-i Merbûta",            ikon: Ikon.taMerbuta,    anahtar: 'kuran-ta-i-merbuta',     toplam: 1 },
+      { yol: '/kuran-isaretler/med-harfleri',          baslik: 'Med Harfleri',            ikon: Ikon.medHarf,      anahtar: 'kuran-med-harfleri',     toplam: 3 },
+      { yol: '/kuran-isaretler/mukadder-medler',       baslik: 'Mukadder Medler',         ikon: Ikon.mukadderMed,  anahtar: 'kuran-mukadder-medler',  toplam: 4 },
+      { yol: '/kuran-isaretler/elif-zaid',             baslik: 'Elif-i Zaid',             ikon: Ikon.elifZaid,     anahtar: 'kuran-elif-zaid',        toplam: 1 },
+      { yol: '/kuran-isaretler/diger-uzatma',          baslik: 'Diğer Uzatma',            ikon: Ikon.tecvid,       anahtar: 'kuran-diger-uzatma',     toplam: 2 },
+      { yol: '/kuran-isaretler/hemzeler',              baslik: 'Hemzeler',                ikon: Ikon.hemze,        anahtar: 'kuran-hemzeler',         toplam: 4 },
+      { yol: '/kuran-isaretler/hemze-vasl',            baslik: 'Hemze-i Vasl ve Kat',    ikon: Ikon.hemzeVasl,    anahtar: 'kuran-hemze-vasl',       toplam: 2 },
+      { yol: '/kuran-uzatma',                           baslik: 'Uzatma İşaretleri',       ikon: Ikon.tecvid,    anahtar: 'kuran-tecvid',           toplam: 22 },
+      // Hece Okuma ve Kelime Okuma gizlendi; veriler kuran.js'de duruyor.
       // "Kelime Okuma 2" (/kuran-kelimeler) ve "Kısa Sureler" (/kuran-sureler)
       // menüden gizlendi. Rotalar App.jsx'te durabilir; sadece listede görünmezler.
       { yol: '/test-kuran',      baslik: 'Test / Sınav',        ikon: Ikon.test }

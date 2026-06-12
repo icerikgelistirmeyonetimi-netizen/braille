@@ -162,8 +162,8 @@ const KAYNAKLAR = {
       hucreler: tek(h.noktalar)
     }))
   },
-  '/kuran-tecvid': {
-    yol: '/kuran-tecvid',
+  '/kuran-uzatma': {
+    yol: '/kuran-uzatma',
     baslik: 'Tecvid İşaretleri',
     etiketTuru: 'tecvid',
     items: KURAN_TECVID.map((t) => ({

@@ -1,16 +1,16 @@
 import React from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { NOKTALAMA } from '../data/braille.js';
 
 export default function NoktalamaEgitimi() {
   const ogeler = NOKTALAMA.map((n) => ({
-    ad: n.isaret,
-    ariaAd: n.isim,
-    noktalar: n.noktalar
+    yazi: n.isaret,
+    ttsYazi: n.isim,
+    hucreler: [n.noktalar],
   }));
 
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Noktalama İşaretleri"
       ogeler={ogeler}
       kategoriAdi="işareti"

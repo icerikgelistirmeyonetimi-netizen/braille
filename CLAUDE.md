@@ -14,65 +14,78 @@ React + Vite SPA. Braille education for visually impaired users.
 
 ---
 
-## 2. Core Template Components
+## 2. Core Template Component
 
-These two are the main learning templates used across nearly all pages.
-**If you change one, always check the other — they share identical systems.**
+**Single template used across all learning pages (Modül 10 BRF tools excepted).**
+`DesenOgretici` was deleted; every former DesenOgretici page now uses `CokHucreOkuyucu`.
 
-### 2.1 `src/components/DesenOgretici.jsx`
+### `src/components/CokHucreOkuyucu.jsx`
 
-Single or multi-cell braille pattern teacher. User taps dots in order.
+Universal braille cell teacher. Steps through each cell one at a time.
+When `kategoriAdi` is set it generates DesenOgretici-style instructions ("A harfi, 1. ve 2. noktadan oluşur. Lütfen sırayla dokunun.").
 
-**Used by:** `HarfEgitimi`, `RakamEgitimi`, `NoktalamaEgitimi`, all 5 Kisaltma pages, `MatematikRakamEgitimi`, `FenSembolEgitimi`, `MuzikNotaEgitimi`, `NoktalamaIsaretleri`, `OzelIsaretler`, `MatematikGeometriEgitimi`, `MatematikOlcuEgitimi`, `MatematikSembolEgitimi`, `MuzikSembolEgitimi`, `AlmancaBrailleSayfa`, `FransizcaBrailleSayfa`, `IngilizceBrailleSayfa`, etc.
+**Data format:**
+```js
+// Simple single-cell (e.g. HarfEgitimi):
+{ yazi: 'A', ttsYazi: 'A harfi', hucreler: [[1,2]] }
 
-**Key props:**
-```jsx
-<DesenOgretici
-  baslik="Page Title"
-  ogeler={[{ ad, ariaAd?, noktalar, hucreler?, tamYonergeMetni?, altMetin?, altMetinAciklama?,
-             yonergeDetay?, ekBilgi?: { aciklama?, kurallar?, ornekler? } }]}
-  kategoriAdi="harfi"         // used in instruction: "A harfi, 1,2 numaralı noktalardan..."
-  bolumAnahtari="harfler"     // localStorage progress key
-  bittiMesaji="Congrats!"
-  noktalariSeslendir          // kisaltma pages: appends dot composition via noktaListesi()
-  seslendirmeDili="tr"        // TTS language: 'tr'(default)|'de'|'fr'|'en'
-  rtl                         // Arabic etc.
-  ogeSesiCal={fn}             // audio recording playback (optional)
-  ogeSesiOnceCal              // play audio before instruction
-/>
+// Multi-cell with labels (e.g. RakamEgitimi):
+{ yazi: '1', ttsYazi: 'bir rakamı', hucreler: [[3,4,5,6],[2]], hucreAdlari: ['sayı işareti hücresi','rakam hücresi'],
+  yonergeDetay: '...' }
+
+// With extra info panel (e.g. MatematikSembolEgitimi):
+{ yazi: '+', hucreler: [[3,5]], yonergeDetay: '...', altMetin: '+',
+  ekBilgi: { aciklama?, kurallar?, ornekler? } }
+
+// Kisaltma pages:
+{ yazi: 'a', ttsYazi: 'a harfi, anne kelimesi', hucreler: [[1]], tamYonergeMetni: '...',
+  altMetin: '"anne"', altMetinAciklama: '...' }
 ```
 
-### 2.2 `src/components/CokHucreOkuyucu.jsx`
+**Used by (teaching):** `HarfEgitimi`, `RakamEgitimi`, `NoktalamaEgitimi`, all 5 Kisaltma pages,
+`NoktalamaIsaretleri`, `OzelIsaretler`, `MatematikRakamEgitimi`, `MatematikSiraSayilari`,
+`MatematikSembolEgitimi`, `MatematikOlcuEgitimi`, `MatematikGeometriEgitimi`,
+`FenYunanHarfler`, `FenSembolEgitimi`, `MuzikNotaEgitimi`, `MuzikSembolEgitimi`,
+`KuranHarfEgitimi`, `KuranHarekeEgitimi`, `AlmancaBrailleSayfa`, `FransizcaBrailleSayfa`, `IngilizceBrailleSayfa`
 
-Multi-cell word reader. Steps through each cell one at a time.
-
-**Used by:** `KuranHeceOkuma` → `KuranKelimeOkuma`, `KuranKelimeTemelSayfa`, `KuranKelimeOkumaSayfa`, `KuranSureOkuma`, `MuzikDiziOkuma`, `MatematikIfadeOkuma`, etc.
+**Used by (reading):** `KuranHeceOkuma` → `KuranKelimeOkuma`, `KuranKelimeTemelSayfa`,
+`KuranKelimeOkumaSayfa`, `KuranSureOkuma`, `KuranTecvidEgitimi`, `MuzikDiziOkuma`,
+`MatematikIfadeOkuma`, `MuzikBrailleSayfa`
 
 **Key props:**
 ```jsx
 <CokHucreOkuyucu
   baslik="Title"
-  ogeler={[{ yazi, okunus?, anlam?, hucreler: number[][], sesId?,
-             sesOncesiYonergeMetni?, tamYonergeMetni? }]}
-  bolumAnahtari="kuran-heceler"
-  rtl
+  ogeler={[{ yazi, ttsYazi?, okunus?, anlam?, aciklama?,
+             hucreler: number[][], hucreAdlari?, hucreBasliklari?,
+             tamYonergeMetni?, yonergeDetay?, sesOncesiYonergeMetni?,
+             altMetin?, altMetinAciklama?, ekBilgi?: { aciklama?, kurallar?, ornekler? } }]}
+  bolumAnahtari="harfler"
+  // Teaching mode (eski DesenOgretici props):
+  kategoriAdi="harfi"         // generates "A harfi, 1. ve 2. noktadan oluşur..." instruction
+  noktalariSeslendir          // appends full dot composition (kisaltma pages)
+  seslendirmeDili="tr"        // TTS language: 'tr'(default)|'de'|'fr'|'en'
+  // Audio:
   ogeSesiCal={fn}
-  ogeSesiOnceCal
+  ogeSesiOnceCal              // play audio before instruction
   ogeSesiHerZaman             // always play audio, no toggle
+  otomatikOgeSesi             // start with audio enabled
+  ustSesKontrolleriGoster     // show audio toggle in banner
+  ustSesButonEtiketi="Nota Sesi"
+  ustSesButonAriaLabel="Nota sesini çal"
+  // Reading mode:
+  rtl
   sadeceHucreYonergesiOku     // skip word/meaning, only read "cell X: tap dots N"
-  ikiHucreYanYana             // show 2-cell words side by side
+  ikiHucreYanYana
   yonergeFormati="standart"   // 'standart' | 'sirayla'
 />
 ```
-`sesOncesiYonergeMetni` is read before `ogeSesiCal`; then the item sound plays; then
-`tamYonergeMetni` or the generated instruction is read. Use this for music pages where an
-intro/info sentence must come before the piano/sample sound.
+`sesOncesiYonergeMetni` is read before `ogeSesiCal`; then item sound plays; then
+`tamYonergeMetni`/generated instruction. Use for music pages where info must precede sound.
 
 ---
 
-## 3. Shared Narration Lock System (both templates)
-
-Both files implement **identical** lock logic. Change one → change the other.
+## 3. Narration Lock System (`CokHucreOkuyucu`)
 
 **Shared dot-list helper (defined in both files):**
 ```js
@@ -150,6 +163,93 @@ Links to the mixed writing exercise for the current lesson.
 ### `src/components/PageHeader.jsx`
 Page title component. Carries `.banner-baslik` class → targeted by `SayfaOdakYonetimi`.
 
+### `src/components/BrailleGrid.jsx`
+Colored grid of braille cells. Color-codes cells by semantic type:
+- letter/default → blue (`#3b82f6`)
+- kisaltma/kök/parça/ayırma → red (`#ef4444`)
+- noktalama → green (`#10b981`)
+- islem/bölük → purple (`#7c3aed`)
+- isaret → black (`#000000`)
+- birim → CSS var `--braille-noktalama-fill`
+
+### `src/components/CokluTest.jsx`
+General-purpose multi-category quiz. Shuffles 10 random questions from a source.
+```jsx
+<CokluTest
+  baslik="Test Başlığı"
+  kaynaklar={{
+    anahtar: {
+      etiket: 'Görünen ad',
+      kategori: 'sembol/işaret/...',
+      veri: [{ ad, ariaAd?, ipucu?, hucreler: number[][] }]
+    }
+  }}
+/>
+```
+
+### `src/components/FullscreenButonu.jsx`
+Fullscreen API toggle button. Uses `tamEkranApiDestekleniyorMu()` from `utils/tamEkran.js`; shows iOS tip if API not supported.
+
+### `src/components/GorunumGecisi.jsx`
+Normal/lowVision theme toggle for low-vision users. Calls `ayarGuncelle({ tema })` and announces via TTS.
+
+### `src/components/TanitimTuru.jsx`
+Multi-step onboarding tour dialog (6 steps). Shown once via `localStorage` key `braille-tur-tamam-v1`. Props: `zorunlu` (default `true`), `onKapat`.
+
+### `src/components/OkumaModu.jsx`
+Reading mode grid of cards (used inside `CokHucreOkuyucu`). Contains three card-label helper functions:
+
+```js
+// Karakter sayısına göre font küçültme sınıfı — uzun metinler karta sığsın
+etiketFontSinifi(metin)
+// metin.length > 22 → 'etiket-kucuk'
+// metin.length > 14 → 'etiket-orta'
+// else             → '' (default size)
+
+// Parantez içi ifadeyi alt açıklama olarak ayır: "A (B)" → { ana:"A", alt:"B" }
+// Regex: /^(.*?)\s*\(([^)]+)\)\s*$/ — SON parantezi ayırır
+// "Lam-elif (Vakfı La) (Ayet sonunda)" → { ana:"Lam-elif (Vakfı La)", alt:"Ayet sonunda" }
+etiketiAyristir(etiket)
+
+// Tek başına görünmeyen Arapça birleşen diyakritikler için ◌ (U+25CC) önekle
+// ARAPC_DIAKRITIK = /^[ً-ٰٟ]+$/
+// "َ" → "◌َ"  — Harf kullanma, SADECE kesik çizgili daire (◌)
+okumaEtiketiHazirla(etiket)
+```
+
+**Font sınıfı CSS kuralları** (styles.css'te):
+```css
+/* Amasya SADECE RTL panelde (Modül 5 Arapça) — Latin/rakam kartlarında kullanma */
+.okuma-modu-etiket              { font-family: 'Segoe UI', sans-serif; }
+.okuma-modu-panel.rtl .okuma-modu-etiket { font-family: 'Amasya', 'Segoe UI', sans-serif; }
+.okuma-modu-etiket.etiket-orta  { font-size: clamp(0.68rem, 1.7vw, 0.88rem); }
+.okuma-modu-etiket.etiket-kucuk { font-size: clamp(0.56rem, 1.4vw, 0.72rem); }
+```
+`.okuma-modu-kutu` has `overflow: hidden` to prevent card overflow.
+
+**CRITICAL:** Never set Amasya as primary font on `.okuma-modu-etiket` — it replaces Western digits with Eastern Arabic-Indic numerals (١٢٣ instead of 123), breaking Module 1 and Module 6 reading mode cards.
+
+### `src/components/music/` — Music Editor Components
+Editor UI for the BRF music notation system:
+- `MuzikBrfScoreEditor.jsx` — main score editor
+- `MuzikScoreSvg.jsx` — SVG rendering of the score
+- `MuzikScoreToolbar.jsx` — editor toolbar
+- `MuzikBrailleOutput.jsx` — braille output panel
+- `MuzikBrfViewTabs.jsx` — view tab switcher
+- `MuzikKeySignatureModal.jsx` — key signature dialog
+- `MuzikBarlineTimeSignatureModal.jsx` — barline/time signature dialog
+- `MuzikNotaEditModal.jsx` — note edit dialog
+- `MuzikScoreHeader.jsx` / `MuzikScoreHeaderBraille.jsx` — score header display
+- `MuzikScoreBrailleOverlay.jsx` — braille overlay on score
+- `MuzikTimeSignatureGlyph.jsx` — time signature glyph
+- `MuzikKlavyeYardim.jsx` — keyboard shortcut help panel
+- `MuzikToolOptions.jsx` — tool options panel
+- `ScoreBarlineGlyph.jsx` — barline glyph
+- `BrailleDetayPanel.jsx` / `BrailleHucreMini.jsx` — braille detail panels
+- `BrfMusicCellDebugTable.jsx` — debug table (dev only)
+- `BeamGroup.jsx` — beam grouping component
+- `svg/` — low-level SVG glyphs: `AccidentalGlyph`, `BeamGroup`, `BeamLine`, `Flag`, `GraceNoteGlyph`, `MusicNoteGlyph`, `NoteHead`, `RestGlyph`, `SlurTiePath`, `StaffLines`, `Stem`
+
 ---
 
 ## 5. App.jsx — Routing & Focus Management
@@ -210,12 +310,50 @@ sonraOgrenAl(anahtar)
 **Monotonic rule:** only save when `indeks > indeksAl(bolumAnahtari)` — so progress bar
 in main menu never goes backward even though lessons always restart from 0.
 
+### `src/utils/noktaYardimci.js`
+```js
+noktaListesi(nArr, tekEk, cogulEk)  // "1. noktaya" / "1. ve 2. noktalara" etc.
+nlDan(nArr)                          // shorthand: noktaListesi(nArr, 'dan', 'dan')
+```
+Imported by `CokHucreOkuyucu` and any page that builds dot-description strings
+(`RakamEgitimi`, `MatematikRakamEgitimi`, `MatematikSiraSayilari` — they import `nlDan as nl`).
+
+### `src/utils/isaretCevir.js`
+```js
+isarettenOgeye(s, { ekBilgi?, okumaOzeti? } = {})
+// Converts a braille data symbol object to a CokHucreOkuyucu oge.
+// ekBilgi: true  → populate ekBilgi panel from s.aciklama/s.kurallar/s.ornekler
+// okumaOzeti: true → fall back to s.okumaOzeti when s.aciklama is empty (language pages)
+// Always passes s.hucreBasliklari through when present.
+```
+Used by: `NoktalamaIsaretleri`, `OzelIsaretler`, `MatematikSembolEgitimi`, `MatematikOlcuEgitimi`,
+`MatematikGeometriEgitimi`, `FenSembolEgitimi`, `MuzikSembolEgitimi`, `YabanciBrailleSayfa`.
+
+### `src/utils/diziYardimci.js`
+```js
+karistir(dizi)     // Fisher-Yates shuffle — returns new array, does not mutate
+HUCRE_SIRA_SOZ     // ['birinci','ikinci','üçüncü','dördüncü','beşinci','altıncı']
+```
+`HUCRE_SIRA_SOZ` is imported as `HUCRE_ETIKET` alias in test pages; as-is in `YazmaKarisik`.
+
 ### `src/utils/ayarlar.js`
 ```js
-ayarlariAl()   // → { sesAcik, konusmaHizi, titresimAcik, sesEfektiAcik, gizliModuller }
-ayarlariKaydet(obj)
-ayarlariDinle(fn)   // subscribe to changes, returns unsubscribe fn
+ayarlariAl()            // → { sesAcik, konusmaHizi, sesEfektiAcik, titresimAcik,
+                        //     yaziBoyutu, tema, tonejsSes, notaOdakPiyano,
+                        //     notaTusDuzeni, gizliModuller }
+ayarGuncelle(yama)      // partial update, fires listeners, applies CSS
+ayarlariSifirla()       // reset to defaults
+ayarlariDinle(fn)       // subscribe to changes, returns unsubscribe fn
+uygulaCss()             // sync --font-base + data-theme to document (called automatically)
 ```
+**Settings fields:**
+- `konusmaHizi` 0.5–1.5 (default 0.95)
+- `yaziBoyutu` 16–32 px (default 17)
+- `tema` `'normal'` | `'lowVision'` (default `'normal'`; old `'dark'`→`'lowVision'`, `'light'`→`'normal'` migrated automatically)
+- `tonejsSes` bool — play piano via Tone.js engine
+- `notaOdakPiyano` bool — play piano on note focus/click (accessibility)
+- `notaTusDuzeni` `'alfabetik'` | `'piyano'` — music keyboard layout
+- `gizliModuller` string[] — hidden module ids
 
 ---
 
@@ -227,14 +365,18 @@ ayarlariDinle(fn)   // subscribe to changes, returns unsubscribe fn
 | `.toast` | Brief (2s) visual-only warning during narration. Use `aria-live="off"`; do not focus it. |
 | `.modul-yan .modul-sekme.aktif` | Active module tab in sidebar — focus target on back-navigation |
 | `.banner-baslik` | Page heading — focus target on forward-navigation |
-| `.page-mid .cell .dot` | First dot in DesenOgretici — Tab from sentinel lands here |
-| `.page-mid button.dot` | First dot in CokHucreOkuyucu — Tab from sentinel lands here |
+| `.page-mid button.dot` | First dot — Tab from sentinel lands here |
+| `.okuma-modu-etiket` | Reading mode card label — Amasya font; responsive font-size |
+| `.okuma-modu-etiket.etiket-orta` | Reading mode: medium reduction for 15–22 char labels |
+| `.okuma-modu-etiket.etiket-kucuk` | Reading mode: large reduction for 23+ char labels |
+| `.okuma-modu-kutu` | Reading mode card — `overflow: hidden` prevents long-text overflow |
+| `.okuma-modu-alt` | Grey sub-description below card label (parenthetical or altEtiket) |
 
 ---
 
-## 8. Kisaltma Pages (DesenOgretici + `noktalariSeslendir`)
+## 8. Kisaltma Pages (`CokHucreOkuyucu` + `noktalariSeslendir`)
 
-All five use `<DesenOgretici noktalariSeslendir ... />`:
+All five use `<CokHucreOkuyucu noktalariSeslendir ... />`:
 ```
 KisaltmaBirHarfli    → bolumAnahtari="kisaltma-bir-harfli"
 KisaltmaIkiHarfli    → bolumAnahtari="kisaltma-iki-harfli"
@@ -245,17 +387,26 @@ KisaltmaKelimeParcasi → bolumAnahtari="kisaltma-kelime-parcasi"
 
 ---
 
-## 9. Kuran Pages (CokHucreOkuyucu + audio)
+## 9. Kuran Pages (`CokHucreOkuyucu` + audio)
 
 ```
 KuranHeceOkuma       → KuranKelimeOkuma(kaynakAnahtari="hece")      ogeSesiOnceCal + ogeSesiHerZaman
 KuranKelimeTemelSayfa → KuranKelimeOkuma(kaynakAnahtari="kelime-temel")
 KuranKelimeOkumaSayfa → KuranKelimeOkuma(kaynakAnahtari="kelime")
 KuranSureOkuma       → CokHucreOkuyucu directly
+KuranTecvidEgitimi   → route: /kuran-uzatma  bolumAnahtari="kuran-tecvid" (localStorage key — do NOT change)
 ```
 Audio files: `public/audio/kuran/`. `SesIzinEkrani` component handles first-tap unlock.
 
-### Module 8 Music Pages (`MuzikBrailleSayfa` + `CokHucreOkuyucu`)
+**Module 5 menu notes:**
+- Hece Okuma ve Kelime Okuma items are **hidden from menu** (removed from `moduller.jsx` ogeler). Data still exists in `kuran.js` — do not delete it.
+- Route was renamed `/kuran-tecvid` → `/kuran-uzatma`. `bolumAnahtari` stays `"kuran-tecvid"` for localStorage compatibility.
+- User-facing strings in Module 5 use **â → a** (e.g. "Ta-i Merbuta", "Elif-i Zaid"). Audio slug files (`kuranSesHelpers.js`) are **excluded** — they contain `hı: 'hâ'` and a `.replace(/â/g, 'a')` regex that must stay intact.
+
+### Music BRF Editor (`MuzikBrfYazim.jsx`)
+Route `/muzik-brf-yazim`. Full score editor backed by `components/music/MuzikBrfScoreEditor.jsx` and the `utils/music-brf/` pipeline. Uses Bravura SMuFL font for glyphs. Separate from the lesson pages — no `CokHucreOkuyucu`, no learning flow.
+
+### Module 8 Music Lesson Pages (`MuzikBrailleSayfa` + `CokHucreOkuyucu`)
 
 - `/muzik/notalar`, `/muzik/sureler`, and sibling music lessons are backed by `src/data/muzik.js` and mapped through `src/pages/MuzikBrailleSayfa.jsx`.
 - `/muzik/grup/:grupId` is rendered by `src/pages/MuzikBrailleMenu.jsx`; group card labels should strip the leading `Müzik ·`/`Müzik:` prefix with `muzikMenuBasligi()` while lesson page headers may keep their full `pageBaslik`.
@@ -310,15 +461,22 @@ through NVDA; the active TTS instruction must remain uninterrupted.
 | Auto-focus first dot after narration ends | Focus `dotSentinelRef` sentinel → Tab goes to first dot |
 | Dot format: "1, 2 numaralı noktalardan" | `noktaListesi()`: "1. ve 2. noktalardan" |
 | `noktaListesi(arr, 'dan')` — 2 args, cogulEk undefined → "noktalarundefined" in TTS | Always pass all 3 args: `noktaListesi(arr, 'dan', 'dan')` |
-| Update `noktaListesi` format only in templates | Also update `nl()` in `RakamEgitimi`, `MatematikRakamEgitimi`, `MatematikSiraSayilari` |
+| Update `noktaListesi` in `noktaYardimci.js` | Also update `nlDan` alias usages: `RakamEgitimi`, `MatematikRakamEgitimi`, `MatematikSiraSayilari` all import `nlDan as nl` |
 | `sesEfektiAcikMi()` gates on both `sesAcik` and `sesEfektiAcik` | Only gate on `sesEfektiAcik` |
 | `konus(bittiMesaji)` in bitti useEffect — writes to `_srBolge`, NVDA reads it after "Ana sayfaya dön" | `ekranOkuyucuTemizle()` then `konus(bittiMesaji, { srAtla: true })` |
 | Music intro before piano/sample sound placed inside `tamYonergeMetni` | Use `sesOncesiYonergeMetni` so order is info → sound → main instruction |
 | Page-specific intro only on first item — complex `tamYonergeMetni` | Use `i === 0 ? { tamYonergeMetni: \`${INTRO} ${ad}, ${detay} Lütfen...\` } : { yonergeDetay: detay }` |
 | `hucreBasliklari` hardcoded as `['1','2']` for multi-cell items | Set `hucreBasliklari` in data item (e.g. `['harf işareti','büyük harf']`); pass through converter with `hucreBasliklari: s.hucreBasliklari` |
-| Former `IsaretSayfasi` pages — use `ekBilgi` for kurallar/ornekler display | `isarettenOgeye(s)` converter: `{ hucreler, noktalar: hucreler[0], yonergeDetay: s.aciklama, ekBilgi: { aciklama, kurallar, ornekler } }` |
+| `isarettenOgeye` still outputs `noktalar` field | `CokHucreOkuyucu` ignores `noktalar`; correct converter: `{ yazi, hucreler, yonergeDetay, ekBilgi }` (no `noktalar`) |
+| `ad`/`ariaAd`/`noktalar` data format (old `DesenOgretici`) | Use `yazi`/`ttsYazi`/`hucreler: [[...]]` for `CokHucreOkuyucu` |
 | `sessizBaslat=true` in `SesIzinEkrani` + passing `ilkOgeSesiHariciCalindi={true}` → first item audio skipped | `sessizBaslat=true` only silently unlocks browser; user never heard audio → do NOT pass `ilkOgeSesiHariciCalindi` (leave default `false`) |
 | `AnaMenu` module tab click: focus stays on tab button | `modulSec()` calls `rAF → icerikBaslikRef.current?.focus()`; `h2.modul-icerik-baslik` has `tabIndex={-1}` |
+| Reading mode: use a letter (e.g. `ب`) as base for standalone Arabic diacritics | Use `◌` (U+25CC, DOTTED CIRCLE) — standard linguistic base; never a real letter |
+| `CokHucreOkuyucu`: `fontFamily: "'Amasya',..."` on `yazi` div — renders digits as Eastern Arabic (١٢٣) in non-Arabic pages | Use `rtl ? "'Amasya',..." : "'Segoe UI',..."` so Amasya only activates for RTL (Arabic) content |
+| `CokHucreOkuyucu`: `altMetin` always uses Amasya — breaks Latin symbols/text | Use `/[؀-ۿ]/.test(k.altMetin)` to apply Amasya only when altMetin contains Arabic characters |
+| â→a replacement touches audio slug files (`kuranSesHelpers.js`) | Only replace in user-facing strings (kuran.js `ad` fields, moduller.jsx, page titles). `kuranSesHelpers.js` has `hâ` audio key and regex — leave untouched |
+| `etiketiAyristir` splits the first parenthetical — "Lam-elif (Vakfı La) (Ayet sonunda)" → ana:"Lam-elif", alt:"Vakfı La" | Regex `^(.*?)\s*\(([^)]+)\)\s*$` splits the LAST group — intermediate parens stay in `ana` |
+| Bulk search-replace â→a across entire repo | Use per-file targeted replacement; `kuranSesHelpers.js` and regex strings must be excluded |
 
 ---
 
@@ -330,32 +488,154 @@ src/
 ├── styles.css                   # Global styles (.hayalet-btn, .toast, .cell, .dot, etc.)
 ├── components/
 │   ├── BrailleCell.jsx          # ★ Single cell — used on every learning page
+│   ├── BrailleGrid.jsx          # Colored braille cell grid (color by semantic type)
 │   ├── BrailleKlavye.jsx        # 6-key keyboard for writing exercises
-│   ├── CokHucreOkuyucu.jsx      # ★ Multi-cell reading template
-│   ├── DesenOgretici.jsx        # ★ Single/multi-cell teaching template (+ ekBilgi panel, seslendirmeDili)
+│   ├── CokHucreOkuyucu.jsx      # ★ Universal braille teaching template (all lesson pages)
+│   ├── CokluTest.jsx            # General-purpose multi-category quiz component
 │   ├── DesktopShell.jsx         # ★ Page wrapper (banner + sidebar + ghost buttons)
+│   ├── FullscreenButonu.jsx     # Fullscreen API toggle button
+│   ├── GorunumGecisi.jsx        # Normal/lowVision theme toggle (low-vision accessibility)
 │   ├── KarisikYazmaButonu.jsx   # Mixed writing exercise link button
-│   ├── OkumaModu.jsx            # Reading mode list inside DesenOgretici
+│   ├── OkumaModu.jsx            # Reading mode list inside CokHucreOkuyucu
 │   ├── PageHeader.jsx           # Page title (.banner-baslik)
-│   └── SesIzinEkrani.jsx        # Audio permission screen (Kuran audio pages)
-│   # ✗ IsaretSayfasi.jsx — DELETED (migrated to DesenOgretici + ekBilgi)
+│   ├── SesIzinEkrani.jsx        # Audio permission screen (Kuran/music audio pages)
+│   ├── TanitimTuru.jsx          # Multi-step onboarding tour (shown once via localStorage)
+│   ├── music/                   # ★ Music editor components (MuzikBrfScoreEditor, MuzikScoreSvg, etc.)
+│   │   └── svg/                 # SVG glyphs (AccidentalGlyph, Flag, NoteHead, RestGlyph, Stem, etc.)
+│   # ✗ IsaretSayfasi.jsx — DELETED
+│   # ✗ DesenOgretici.jsx — DELETED (consolidated into CokHucreOkuyucu)
+├── data/
+│   ├── braille.js               # Core braille alphabet data
+│   ├── fen.js                   # Science symbols
+│   ├── kuran.js                 # Quran letter/word data
+│   ├── kuranSureler.js          # Quran suras
+│   ├── matematik.js             # Math symbols
+│   ├── moduller.jsx             # Module list definitions
+│   ├── musicBrailleExamples.js  # Music braille example data
+│   ├── muzik.js                 # ★ Music lesson data (notes, rhythms, symbols)
+│   ├── muzikHazirParcalar.js    # Ready-made music pieces
+│   ├── turkceSozluk.js          # Turkish word list
+│   ├── yazmaCumleleri.js        # Writing exercise sentences
+│   ├── yazmaKelimeleri.js       # Writing exercise words
+│   ├── almancaBraille.js        # German braille data
+│   ├── fransizcaBraille.js      # French braille data
+│   └── ingilizceBraille.js      # English braille data
 ├── pages/
 │   ├── AnaMenu.jsx              # Home / module list
-│   ├── HarfEgitimi.jsx          # Turkish letters → DesenOgretici
+│   ├── Ayarlar.jsx              # Settings page
+│   ├── Araclar.jsx              # Tools page
+│   ├── BelgeBrf.jsx             # BRF document page
+│   ├── BrfOku.jsx               # BRF reader page
+│   ├── HarfEgitimi.jsx          # Turkish letters
+│   ├── HucreTanima.jsx          # Cell recognition exercise
 │   ├── KisaltmaBirHarfli.jsx    # ┐
-│   ├── KisaltmaHece.jsx         # │ Kisaltma pages → DesenOgretici + noktalariSeslendir
+│   ├── KisaltmaHece.jsx         # │ Kisaltma pages → CokHucreOkuyucu
 │   ├── KisaltmaIkiHarfli.jsx    # │
 │   ├── KisaltmaKelimeKoku.jsx   # │
 │   ├── KisaltmaKelimeParcasi.jsx # ┘
-│   ├── KuranHeceOkuma.jsx       # ┐
-│   ├── KuranKelimeOkuma.jsx     # │ Kuran pages → CokHucreOkuyucu + audio
-│   ├── KuranSureOkuma.jsx       # ┘
-│   └── YazmaKarisik.jsx         # Mixed writing exercise
+│   ├── KuranHarfEgitimi.jsx     # ┐
+│   ├── KuranHarekeEgitimi.jsx   # │
+│   ├── KuranHeceOkuma.jsx       # │ Kuran pages → CokHucreOkuyucu + audio
+│   ├── KuranKelimeOkuma.jsx     # │
+│   ├── KuranKelimeOkumaSayfa.jsx # │
+│   ├── KuranKelimeTemelSayfa.jsx # │
+│   ├── KuranSureOkuma.jsx       # │
+│   ├── KuranTecvidEgitimi.jsx   # ┘
+│   ├── MatematikGeometriEgitimi.jsx # ┐
+│   ├── MatematikIfadeOkuma.jsx      # │ Math pages
+│   ├── MatematikOlcuEgitimi.jsx     # │
+│   ├── MatematikRakamEgitimi.jsx    # │
+│   ├── MatematikSembolEgitimi.jsx   # │
+│   ├── MatematikSiraSayilari.jsx    # ┘
+│   ├── FenFizikFormulleri.jsx   # ┐
+│   ├── FenFormulOkuma.jsx       # │ Science pages
+│   ├── FenKimyaFormulleri.jsx   # │
+│   ├── FenSembolEgitimi.jsx     # │
+│   ├── FenYunanHarfler.jsx      # ┘
+│   ├── MuzikBrailleMenu.jsx     # Music module group menu
+│   ├── MuzikBrailleSayfa.jsx    # Music lesson page (CokHucreOkuyucu + audio)
+│   ├── MuzikBrfYazim.jsx        # Music BRF writing editor page
+│   ├── MuzikDiziOkuma.jsx       # Music scale reading
+│   ├── MuzikNotaEgitimi.jsx     # Music note teaching
+│   ├── MuzikSembolEgitimi.jsx   # Music symbol teaching
+│   ├── MuzikSureleri.jsx        # Music durations
+│   ├── NoktalamaEgitimi.jsx     # Punctuation teaching
+│   ├── NoktalamaIsaretleri.jsx  # Punctuation marks
+│   ├── OzelIsaretler.jsx        # Special marks
+│   ├── RakamEgitimi.jsx         # Numbers
+│   ├── AlmancaBrailleMenu.jsx / FransizcaBrailleMenu.jsx / IngilizceBrailleMenu.jsx  # Language menus
+│   ├── YabanciBrailleSayfa.jsx  # Shared lesson page for DE/FR/EN (prop: dil="de"|"fr"|"en")
+│   ├── Test.jsx / TestFen.jsx / TestKisaltma.jsx / TestKuran.jsx
+│   ├── TestMatematik.jsx / TestMuzik.jsx / TestNoktalama.jsx
+│   ├── TonePianoTest.jsx        # Piano/Tone.js test page (dev)
+│   ├── YazmaEgitimi.jsx         # Writing exercise
+│   ├── YazmaKarisik.jsx         # Mixed writing exercise
+│   ├── YazmaSerbest.jsx         # Free writing
+│   ├── YazmaYonergeli.jsx       # Guided writing
+│   └── YazmaYonergeliCumle.jsx  # Guided sentence writing
 └── utils/
     ├── ses.js                   # ★ konus(), konusmayiDurdur(), titret(), basariBildir()
     ├── ilerleme.js              # ★ localStorage: progress / index / learn-later
-    ├── ayarlar.js               # User settings (TTS, haptics, hidden modules)
-    └── karisikYazmaKaynaklari.js # URL → mixed writing source mapping
+    ├── ayarlar.js               # User settings (TTS, haptics, theme, music options)
+    ├── noktaYardimci.js         # noktaListesi(), nlDan() — dot description helpers
+    ├── isaretCevir.js           # isarettenOgeye() — symbol data → CokHucreOkuyucu oge
+    ├── diziYardimci.js          # karistir(), HUCRE_SIRA_SOZ — shuffle + ordinal words
+    ├── karisikYazmaKaynaklari.js # URL → mixed writing source mapping
+    ├── arduino.js               # Arduino hardware integration
+    ├── brailleAscii.js          # Braille ASCII encoding
+    ├── brailleCevir.js          # Braille conversion utilities
+    ├── brailleStatikHucreGorseli.js # Static cell image generator
+    ├── brfOkuyucu.js            # BRF file reader
+    ├── kisaltmaCevir.js         # Abbreviation converter
+    ├── kuranSesHelpers.js       # Quran audio helpers
+    ├── latinBrailleCevir.js     # Latin-to-braille converter
+    ├── okumaModuMetni.js        # Reading mode text helper
+    ├── paraBirimiKaynak.js      # Currency unit resource
+    ├── sallama.js               # Device shake detection
+    ├── tamEkran.js              # Fullscreen API utilities
+    ├── titresimDestek.js        # Haptic/vibration support
+    ├── toneSesAyarlari.js       # Tone.js audio settings
+    ├── music/                   # Music score engine
+    │   ├── index.js             # Public API re-exports
+    │   ├── musicBrfEngine.js    # BRF encode/decode
+    │   ├── musicConstants.js    # Note/duration constants
+    │   ├── musicDuration.js     # Duration calculations
+    │   ├── musicGroupingEngine.js # Beam grouping
+    │   ├── musicHeaderEngine.js # Score header parsing
+    │   ├── musicKeySignatureEngine.js # Key signature
+    │   ├── musicMeasureEngine.js # Measure handling
+    │   ├── musicOctaveEngine.js  # Octave logic
+    │   ├── musicRepeatEngine.js  # Repeat signs
+    │   └── musicScoreFactory.js  # Score object factory
+    └── music-brf/               # ★ Braille music notation system
+        ├── brailleColors.js     # Cell color mappings
+        ├── brailleLegendRegistry.js # Symbol legend
+        ├── brailleMeasureHelpers.js
+        ├── brailleText.js       # Braille text encoding
+        ├── bravuraMetrics.js    # Bravura SMuFL font metrics
+        ├── brfMusicReader.js    # BRF → score reader
+        ├── brfMusicReaderConstants.js
+        ├── brfMusicReaderRules.js
+        ├── musicBrailleImportEngine.js # Import pipeline
+        ├── musicBrailleReverseMaps.js
+        ├── musicBrfExportEngine.js # Export pipeline
+        ├── musicCanonicalFlags.js
+        ├── musicCanonicalPipeline.js
+        ├── musicHeaderHelpers.js
+        ├── musicMeasureHelpers.js
+        ├── musicPianoAudioHelpers.js
+        ├── musicPlaybackHelpers.js
+        ├── musicReadableSummary.js
+        ├── musicScoreHelpers.jsx
+        ├── musicScoreMathHelpers.js
+        ├── musicVisualBarlineHelpers.js
+        ├── musicVisualBeamHelpers.js
+        ├── musicVisualLayoutHelpers.js
+        ├── scorePdfExport.js
+        └── import/              # Symbol registries
+            ├── musicBrailleCellUtils.js
+            ├── musicBrailleNoteRegistry.js
+            └── musicBrailleSymbolRegistry.js
 ```
 
 `★` = most frequently edited files.

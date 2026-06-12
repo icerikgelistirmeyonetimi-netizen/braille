@@ -1,5 +1,5 @@
 import React from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { HECE_KISALTMALARI } from '../data/braille.js';
 
 const SON_KULLANILAMAZ = ['ba', 'be', 'bu', 'ka', 'ha', 'ki'];
@@ -8,11 +8,11 @@ export default function KisaltmaHece() {
   const ogeler = HECE_KISALTMALARI.map((k) => {
     const kisitli = SON_KULLANILAMAZ.includes(k.hece);
     return {
-      ad: k.hece,
-      ariaAd: kisitli
+      yazi: k.hece,
+      ttsYazi: kisitli
         ? `${k.hece} hecesi, kelime sonunda kullanılamaz`
         : `${k.hece} hecesi`,
-      noktalar: k.noktalar,
+      hucreler: [k.noktalar],
       tamYonergeMetni: kisitli
         ? `"${k.hece}" hecesi. Bu hece kelimenin sonunda kullanılamaz.`
         : `"${k.hece}" hecesi.`,
@@ -23,7 +23,7 @@ export default function KisaltmaHece() {
   });
 
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Hece Kısaltmaları"
       ogeler={ogeler}
       kategoriAdi="hecesi"

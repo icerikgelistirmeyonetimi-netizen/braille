@@ -3,6 +3,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import { NOKTALAMA_ISARETLERI, OZEL_ISARETLER } from '../data/braille.js';
 import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
+import { karistir, HUCRE_SIRA_SOZ as HUCRE_ETIKET } from '../utils/diziYardimci.js';
 
 // Modül 4 (Noktalama ve Özel İşaretler) Test/Sınav etkinliği.
 // Modül 1'deki Test.jsx mantığıyla aynıdır; bazı işaretler 1, 2 veya 3
@@ -38,17 +39,6 @@ const KAYNAKLAR = {
 };
 
 const SORU_SAYISI = 10;
-
-function karistir(dizi) {
-  const kopya = [...dizi];
-  for (let i = kopya.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [kopya[i], kopya[j]] = [kopya[j], kopya[i]];
-  }
-  return kopya;
-}
-
-const HUCRE_ETIKET = ['birinci', 'ikinci', 'üçüncü', 'dördüncü'];
 
 export default function TestNoktalama() {
   const [kaynak, setKaynak] = useState(null);

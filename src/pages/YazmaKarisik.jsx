@@ -5,6 +5,7 @@ import BrailleKlavye from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
 import { kaynagiAl } from '../utils/karisikYazmaKaynaklari.js';
 import { sonraOgrenTumunuAl } from '../utils/ilerleme.js';
+import { karistir, HUCRE_SIRA_SOZ } from '../utils/diziYardimci.js';
 
 // Aynı içerikteki dot dizilerini karşılaştır (sırasız küme eşitliği).
 const noktaEsit = (a, b) => {
@@ -15,20 +16,8 @@ const noktaEsit = (a, b) => {
   return sa.every((v, i) => v === sb[i]);
 };
 
-// Fisher-Yates karıştırma
-const karistir = (arr) => {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-};
-
 const NOKTA_TUS = { 1: 'F', 2: 'D', 3: 'S', 4: 'J', 5: 'K', 6: 'L' };
 const HUCRE_ETIKET = ['1.', '2.', '3.', '4.', '5.', '6.'];
-// Sesli yönergede "5." gibi nokta-sıralı ifadeler yerine sözcük kullan.
-const HUCRE_SIRA_SOZ = ['birinci', 'ikinci', 'üçüncü', 'dördüncü', 'beşinci', 'altıncı'];
 
 const SORU_SAYISI_VARSAYILAN = 10;
 

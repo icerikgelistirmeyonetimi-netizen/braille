@@ -1,5 +1,5 @@
 import React from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { IKI_HARFLI_KISALTMALAR } from '../data/braille.js';
 
 export default function KisaltmaIkiHarfli() {
@@ -9,8 +9,8 @@ export default function KisaltmaIkiHarfli() {
     const h1 = chars[1];
     const harfBuyuk = chars.join('');
     return {
-      ad: harfBuyuk,
-      ariaAd: `${harfBuyuk} kısaltması, ${k.kelime} kelimesi`,
+      yazi: harfBuyuk,
+      ttsYazi: `${harfBuyuk} kısaltması, ${k.kelime} kelimesi`,
       hucreler: [k.sol, k.sag],
       hucreBasliklari: [h0, h1],
       hucreAriaEtiketleri: [`${h0} harfi`, `${h1} harfi`],
@@ -22,7 +22,7 @@ export default function KisaltmaIkiHarfli() {
   });
 
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="İki Harfli Kısaltmalar"
       ogeler={ogeler}
       kategoriAdi="kısaltması"

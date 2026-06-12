@@ -1,20 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
 import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle } from '../utils/ses.js';
-import { indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
-
-// [1]      + 'ya','a' → "1. noktaya"
-// [1,2]    + 'ya','a' → "1. ve 2. noktalara"
-// [1,2,4]  + 'ya','a' → "1., 2. ve 4. noktalara"
-function noktaListesi(nArr, tekEk, cogulEk) {
-  if (!nArr || nArr.length === 0) return '';
-  if (nArr.length === 1) return `${nArr[0]}. nokta${tekEk}`;
-  if (nArr.length === 2) return `${nArr[0]}. ve ${nArr[1]}. noktalar${cogulEk}`;
-  const bas = nArr.slice(0, -1).map((n) => `${n}.`).join(', ');
-  return `${bas} ve ${nArr[nArr.length - 1]}. noktalar${cogulEk}`;
-}
+import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
+import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
+import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js';
+import { noktaListesi } from '../utils/noktaYardimci.js';
 
 // Genel amaçlı çok hücreli sıralı okuma bileşeni.
 // Her öge bir kelime/ifadedir; içindeki hücreler "hücre adımlama" modunda
@@ -42,7 +35,20 @@ export default function CokHucreOkuyucu({
   sesKaydiButonuGoster = false,
   sesKaydiButonEtiketi = 'Ses Kaydını Dinle',
   yonergeFormati = 'standart', // 'standart' | 'sirayla'
+  // DesenOgretici-style props
+  noktalariSeslendir = false,
+  kategoriAdi = '',
+  seslendirmeDili = 'tr',
+  otomatikOgeSesi = false,
+  ustSesKontrolleriGoster = false,
+  ustSesButonEtiketi = 'Ses',
+  ustSesButonAriaLabel = 'Sesi çal',
 }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const yazmaKaynak = mevcutSayfaIcinKaynakAnahtar(pathname);
+  const konusDil = useCallback((text, opts = {}) => konus(text, { dil: seslendirmeDili, ...opts }), [seslendirmeDili]);
+
   // Ders her açılışta baştan başlar (kaldığı yerden devam etmez).
   const [indeks, setIndeks] = useState(0);
   const [hucreIndeksi, setHucreIndeksi] = useState(0);
@@ -53,7 +59,7 @@ export default function CokHucreOkuyucu({
   const ogeSesiTimerRef = useRef(null);
   const tekrarSesiTimerRef = useRef(null);
   const sonHucreOgeRef = useRef(0); // hücre-noktası effect'inde öğe değişimini tespit için
-  const [ogeSesiAktif, setOgeSesiAktif] = useState(Boolean(ogeSesiHerZaman));
+  const [ogeSesiAktif, setOgeSesiAktif] = useState(Boolean(otomatikOgeSesi || ogeSesiHerZaman));
   const [okumaModu, setOkumaModu] = useState(false);
   // Yönerge seslendirilirken nokta etkileşimi kilitlenir (tıklama/hover/odak/klavye yok).
   const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
@@ -81,6 +87,31 @@ export default function CokHucreOkuyucu({
     const hucreler = Array.isArray(oge.hucreler) ? oge.hucreler : [];
     const cokHucre = hucreler.length > 1;
     const ilkHucre = Array.isArray(hucreler[0]) ? hucreler[0] : (hucreler[0] != null ? [hucreler[0]] : []);
+
+    // Sembol öğretme modu (kategoriAdi verilmişse — eski DesenOgretici davranışı)
+    if (kategoriAdi) {
+      const ttsBaşlık = oge.ttsYazi || oge.yazi || '';
+      const adKategori = ttsBaşlık.trimEnd().endsWith(kategoriAdi)
+        ? ttsBaşlık
+        : `${ttsBaşlık} ${kategoriAdi}`;
+      const anlamKismi = oge.anlam ? ` ${oge.anlam}` : '';
+      const aciklamaKismi = oge.aciklama ? ` ${oge.aciklama}` : '';
+      if (noktalariSeslendir) {
+        const kompozisyon = hucreler.map((noktalar, i) => {
+          const nArr = noktalar || [];
+          if (!nArr.length) return '';
+          const liste = noktaListesi(nArr, 'dan', 'dan');
+          return cokHucre ? `${i + 1}. hücre ${liste}` : liste;
+        }).filter(Boolean).join(', ');
+        const komp = kompozisyon ? `${kompozisyon} oluşur.` : '';
+        return `${adKategori},${anlamKismi}${aciklamaKismi} ${komp} Lütfen bu noktalara sırayla dokunun.`.replace(/\s+/g, ' ').trim();
+      }
+      const detay = oge.yonergeDetay
+        || (ilkHucre.length ? `${noktaListesi(ilkHucre, 'dan', 'dan')} oluşur.` : '');
+      return `${adKategori},${anlamKismi}${aciklamaKismi} ${detay} Lütfen bu noktalara sırayla dokunun.`.replace(/\s+/g, ' ').trim();
+    }
+
+    // Kelime okuma modu (eski CokHucreOkuyucu davranışı)
     let hucreYonergesi;
     if (yonergeFormati === 'sirayla') {
       const dokunYonergesi = ilkHucre.length
@@ -103,7 +134,7 @@ export default function CokHucreOkuyucu({
     const ttsBaşlık = oge.ttsYazi || oge.yazi;
     const okunusKismi = oge.okunus ? `, okunuşu: ${oge.okunus}` : '';
     return `${ttsBaşlık}${okunusKismi}. ${oge.anlam || ''} ${hucreYonergesi}`;
-  }, [sadeceHucreYonergesiOku, yonergeFormati]);
+  }, [sadeceHucreYonergesiOku, yonergeFormati, kategoriAdi, noktalariSeslendir]);
 
   // Menüdeki ilerleme göstergesi için yalnızca en uzak ulaşılan öğeyi kaydet
   // (ders baştan başlasa da ilerleme kaybolmasın). Kayıtlılar modunda kaydetme.
@@ -134,12 +165,9 @@ export default function CokHucreOkuyucu({
     const nesil = ++yonergeNesilRef.current;
     setYonergeOkunuyor(true);
     if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
-    // Asıl kilit açma sinyali konuşma sonu (onSon). Bu yalnızca onSon hiç
-    // gelmezse devreye girecek CÖMERT bir emniyet: gerçek konuşmadan önce
-    // ateşlenip yönergeyi erken açmasın (Türkçe TTS yavaş olabilir).
     const maxMs = Math.min(30000, 6000 + (metin ? metin.length : 0) * 200);
     yonergeKilitTimerRef.current = setTimeout(() => yonergeKilidiAc(nesil), maxMs);
-    konus(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
+    konusDil(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
   };
 
   // Yönerge okunurken kullanıcı bir noktaya dokunmaya çalışırsa: sadece uyar,
@@ -169,11 +197,11 @@ export default function CokHucreOkuyucu({
     const kaydedildi = sonraOgrenAl(anahtar).includes(aktif.yazi);
     if (kaydedildi) {
       sonraOgrenKaldir(anahtar, aktif.yazi);
-      konus('Sonra öğren listesinden kaldırıldı.');
+      konusDil('Sonra öğren listesinden kaldırıldı.');
       gosterToast('Sonra öğren listesinden kaldırıldı');
     } else {
       sonraOgrenKaydet(anahtar, aktif.yazi);
-      konus('Sonra öğren listesine kaydedildi.');
+      konusDil('Sonra öğren listesine kaydedildi.');
       gosterToast('Sonra öğren listesine kaydedildi');
     }
   };
@@ -205,9 +233,11 @@ export default function CokHucreOkuyucu({
     if (bitti) {
       yonergeNesilRef.current += 1; // bekleyen kilit açmalarını geçersiz kıl
       setYonergeOkunuyor(false);
-      // JSX'teki aria-live bölgesi tebrikler metnini duyuruyor; _srBolge'yi temizle.
       ekranOkuyucuTemizle();
-      konus(bittiMesaji, { srAtla: true });
+      const yazmaDavet = yazmaKaynak
+        ? ' Şimdi yazma zamanı! Öğrendiklerinizi karışık yazma etkinliğinde uygulayabilirsiniz.'
+        : '';
+      konusDil(bittiMesaji + yazmaDavet, { srAtla: true });
       return;
     }
     const k = ogeler[indeks];
@@ -395,9 +425,10 @@ export default function CokHucreOkuyucu({
     ogeSesiDurdur?.();
     const noktalar = aktif.hucreler[hucreIndeksi];
     if (!noktalar) return; // kelime değişmiş, indeks henüz sıfırlanmamış olabilir
+    const hucreEtiketi = aktif?.hucreAdlari?.[hucreIndeksi] || `${hucreIndeksi + 1}. hücre`;
     yonergeyiKilitleyerekSeslendir(
-      `${hucreIndeksi + 1}. hücre: ${noktaListesi(noktalar, 'ya', 'a')} dokunun.`,
-      { kesintiyle: true }
+      `${hucreEtiketi}: ${noktaListesi(noktalar, 'ya', 'a')} dokunun.`,
+      { kesintiyle: true, dil: seslendirmeDili }
     );
   }, [hucreIndeksi, indeks, aktif, bitti, ogeSesiDurdur]);
 
@@ -410,16 +441,27 @@ export default function CokHucreOkuyucu({
 
 
 
+  // Arduino: ekrandaki desen değiştikçe gönder (bağlı değilse sessizce yoksayılır).
+  useEffect(() => {
+    if (bitti) { deseniTemizle(); return; }
+    if (aktif?.hucreler?.length) {
+      if (aktif.hucreler.length > 1) satiriGonder(aktif.hucreler);
+      else deseniGonder(aktif.hucreler[0] || []);
+    }
+    return () => { deseniTemizle(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indeks, bitti]);
+
   // Narrasyon bitince görünmez sentinel'e odaklan; Tab → ilk nokta.
   useEffect(() => {
     const onceki = oncekiYonergeOkunuyorRef.current;
     oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
     if (!(onceki && !yonergeOkunuyor)) return undefined;
     if (okumaModu || bitti) return undefined;
-    konus('Başla');
+    konusDil('Başla');
     const id = window.requestAnimationFrame(() => dotSentinelRef.current?.focus());
     return () => window.cancelAnimationFrame(id);
-  }, [yonergeOkunuyor, okumaModu, bitti]);
+  }, [yonergeOkunuyor, okumaModu, bitti, konusDil]);
 
   // Yönerge okunurken klavyeyle gezinme/etkileşim de kapalı: Tab, Shift+Tab,
   // ok tuşları, Enter ve Space engellenir; denenirse "bekleyiniz" uyarısı verir.
@@ -476,18 +518,38 @@ export default function CokHucreOkuyucu({
   }
 
   if (bitti) {
+    const bosKayitli = kayitlilarModu && aktifListe.length === 0;
+    const yazmayaYonlendir = yazmaKaynak && !bosKayitli;
     return (
       <div className="page">
         <PageHeader baslik={baslik} />
         <div className="page-mid">
           <BrailleCell aktifNoktalar={[1, 2, 3, 4, 5, 6]} />
           <div className="instruction success" role="status" aria-live="assertive" style={{ margin: 0 }}>
-            {kayitlilarModu && aktifListe.length === 0
-              ? 'Bu bölümde henüz kaydedilmiş öğe yok.'
-              : bittiMesaji}
+            {bosKayitli ? 'Bu bölümde henüz kaydedilmiş öğe yok.' : bittiMesaji}
           </div>
+          {yazmayaYonlendir && (
+            <div style={{ textAlign: 'center', color: 'var(--accent)', fontWeight: 700, fontSize: '1.1em', marginTop: 4 }}>
+              Şimdi yazma zamanı! Öğrendiklerinizi karışık yazma etkinliğinde uygulayın.
+            </div>
+          )}
         </div>
         <div className="controls">
+          {yazmayaYonlendir && (
+            <button
+              className="btn aktif"
+              type="button"
+              onClick={() => {
+                konusmayiDurdur();
+                konusDil('Karışık yazma etkinliği başlıyor.', { kesintiyle: true });
+                navigate('/yazma-karisik/' + yazmaKaynak);
+              }}
+              aria-label="Karışık yazma etkinliğine geç"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><path d="M3 21l3-1 11-11-2-2L4 18l-1 3z"/><path d="M14 6l4 4"/></svg>
+              <span className="btn-etiket">Karışık Yazma Etkinliği</span>
+            </button>
+          )}
           {kayitlilarModu
             ? <button className="btn" type="button" onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tüm Listeye Dön</button>
             : <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
@@ -520,6 +582,7 @@ export default function CokHucreOkuyucu({
     tumSesleriDurdur();
 
     if (sonHucre) {
+      if (bolumAnahtari && aktif) ogrenildiIsaretle(bolumAnahtari, aktif.yazi);
       basariBildir('Sıradaki kelime.');
       setTimeout(() => setIndeks((i) => i + 1), 500);
     } else {
@@ -541,7 +604,7 @@ export default function CokHucreOkuyucu({
       basariBildir('Doğru!');
       setTimeout(() => sonrakiHucre(), 600);
     } else {
-      konus(`Doğru. Sıradaki nokta: ${aktifNoktalar[yeni.length]} numara.`);
+      konusDil(`Doğru. Sıradaki nokta: ${aktifNoktalar[yeni.length]} numara.`);
     }
   };
 
@@ -555,25 +618,28 @@ export default function CokHucreOkuyucu({
           {hucreSayisi > 1 && ` • Hücre ${guvenliHucreIndeksi + 1} / ${hucreSayisi}`}
         </div>
         {sesKaydiButonuGoster && typeof ogeSesiCal === 'function' && aktif && (
-          <div
-            className="controls"
-            style={{
-              justifyContent: 'flex-start',
-              padding: 0,
-              marginTop: 8,
-              marginBottom: 8,
-            }}
-          >
+          <div className="controls" style={{ justifyContent: 'flex-start', padding: 0, marginTop: 8, marginBottom: 8 }}>
             <button
-className="btn"               type="button"
-              onClick={() => {
-                tumSesleriDurdur();
-                ogeSesiCal(aktif);
-              }}
+              className="btn"
+              type="button"
+              onClick={() => { tumSesleriDurdur(); ogeSesiCal(aktif); }}
               aria-label={sesKaydiButonEtiketi}
             >
               🔊
               <span className="btn-etiket">{sesKaydiButonEtiketi}</span>
+            </button>
+          </div>
+        )}
+        {ustSesKontrolleriGoster && typeof ogeSesiCal === 'function' && aktif && (
+          <div className="controls" style={{ justifyContent: 'flex-start', padding: 0, marginTop: 8, marginBottom: 8 }}>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => { tumSesleriDurdur(); setOgeSesiAktif(true); if (aktif) ogeSesiCal(aktif); }}
+              aria-label={ustSesButonAriaLabel}
+            >
+              🔊
+              <span className="btn-etiket">{ustSesButonEtiketi}</span>
             </button>
           </div>
         )}
@@ -610,7 +676,7 @@ className="btn"               type="button"
             fontSize: rtl ? '1.8em' : '1.6em',
             lineHeight: rtl ? 1.5 : 1.2,
             fontWeight: 700,
-            fontFamily: rtl ? "'Amasya', serif" : undefined,
+            fontFamily: rtl ? "'Amasya', 'Segoe UI', sans-serif" : "'Segoe UI', sans-serif",
             color: 'var(--accent)',
             direction: rtl ? 'rtl' : 'ltr',
             margin: 0,
@@ -650,7 +716,7 @@ className="btn"               type="button"
             tiklanabilir
             kilitli={yonergeOkunuyor}
             onKilitliEtkilesim={yonergeBeklemeUyar}
-            hucreAdi={hucreSayisi > 1 ? `${guvenliHucreIndeksi + 1}. hücre` : undefined}
+            hucreAdi={hucreSayisi > 1 ? (k.hucreAdlari?.[guvenliHucreIndeksi] || `${guvenliHucreIndeksi + 1}. hücre`) : undefined}
             onNoktaTikla={noktayaTikla}
             baslikAriaLabel={hucreSayisi > 1
               ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
@@ -689,12 +755,43 @@ className="btn"               type="button"
         {k.okunus && (
           <div role="status" aria-live="polite"
                style={{ textAlign: 'center', fontSize: '1.15em', color: 'var(--accent)', fontWeight: 700 }}>
-            “{k.okunus}”
+            &ldquo;{k.okunus}&rdquo;
+          </div>
+        )}
+        {k.altMetin && (
+          <div aria-hidden="true" style={{ textAlign: 'center', fontSize: '1.4em', color: 'var(--accent)', fontWeight: 700, fontFamily: /[؀-ۿ]/.test(k.altMetin) ? "'Amasya', 'Segoe UI', sans-serif" : "'Segoe UI', sans-serif" }}>
+            {k.altMetin}
           </div>
         )}
         {k.anlam && (
           <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.9em', maxWidth: 560, margin: '0 auto' }}>
             {k.anlam}
+          </div>
+        )}
+        {k.altMetinAciklama && (
+          <div aria-hidden="true" style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.95em', maxWidth: 520 }}>
+            {k.altMetinAciklama}
+          </div>
+        )}
+        {k.ekBilgi && (
+          <div className="isaret-metin-alti" aria-live="polite" style={{ width: '100%', maxWidth: 520 }}>
+            {k.ekBilgi.aciklama && <p style={{ margin: '0 0 0.75em 0' }}>{k.ekBilgi.aciklama}</p>}
+            {k.ekBilgi.kurallar?.length > 0 && (
+              <>
+                <strong>Kullanıldığı yerler:</strong>
+                <ul style={{ margin: '0.3em 0 0.8em 1.2em', padding: 0 }}>
+                  {k.ekBilgi.kurallar.map((kr, i) => <li key={i} style={{ marginBottom: '0.3em' }}>{kr}</li>)}
+                </ul>
+              </>
+            )}
+            {k.ekBilgi.ornekler?.length > 0 && (
+              <>
+                <strong>Örnek:</strong>
+                <ul style={{ margin: '0.3em 0 0 1.2em', padding: 0 }}>
+                  {k.ekBilgi.ornekler.map((o, i) => <li key={i} style={{ marginBottom: '0.3em' }}>{o}</li>)}
+                </ul>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -765,7 +862,7 @@ className="btn"           type="button"
             setHucreIndeksi(0);
             setBasilanlar([]);
             setYanlis([]);
-            konus('En başa dönüldü.');
+            konusDil('En başa dönüldü.');
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>

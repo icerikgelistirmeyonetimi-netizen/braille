@@ -2,24 +2,28 @@ import React from 'react';
 import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { KURAN_TECVID } from '../data/kuran.js';
 
-// Tecvid işaretleri çoğunlukla bir veya iki braille hücresinden oluşur.
-// Diğer Kur'an-ı Kerim sayfalarıyla tutarlı olması için çok hücreli okuyucu
-// tasarımını kullanır (her hücre ayrı ayrı gösterilir, noktalar tek tek işlenir).
-const TECVID_OGELERI = KURAN_TECVID.map((t) => ({
+// hucreler: [[1,2],[3,4]] → geçer; hucreler: [1,2,3] (flat) → [[1,2,3]] olarak normalleştirir
+function normalizeHucreler(h) {
+  const arr = h.hucreler ?? h.noktalar;
+  if (!arr || arr.length === 0) return [];
+  return Array.isArray(arr[0]) ? arr : [arr];
+}
+
+const OGELER = KURAN_TECVID.map((t) => ({
   yazi: t.ad,
-  okunus: '',
-  anlam: t.aciklama || '',
-  hucreler: t.hucreler,
-  sembol: t.sembol,
+  altMetin: t.sembol || undefined,
+  hucreler: normalizeHucreler(t),
+  yonergeDetay: t.aciklama || undefined,
 }));
 
 export default function KuranTecvidEgitimi() {
   return (
     <CokHucreOkuyucu
-      baslik="Kur'an-ı Kerim: Tecvid İşaretleri"
-      ogeler={TECVID_OGELERI}
-      bittiMesaji="Tebrikler! Kur'an-ı Kerim tecvid işaretlerini tamamladınız."
+      baslik="Kur'an-ı Kerim: Uzatma İşaretleri"
+      ogeler={OGELER}
+      kategoriAdi="işareti"
       bolumAnahtari="kuran-tecvid"
+      bittiMesaji="Tebrikler! Kur'an-ı Kerim uzatma işaretlerini tamamladınız."
     />
   );
 }

@@ -9,6 +9,7 @@ import {
   KELIME_PARCASI_KISALTMALARI
 } from '../data/braille.js';
 import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
+import { karistir, HUCRE_SIRA_SOZ as HUCRE_ETIKET } from '../utils/diziYardimci.js';
 
 // Modül 3 (Kısaltma Sistemi) Test/Sınav etkinliği.
 // Modül 1'deki Test.jsx ile aynı mantıkta çalışır; tek farkı bazı
@@ -72,17 +73,6 @@ const KAYNAKLAR = {
 };
 
 const SORU_SAYISI = 10;
-
-function karistir(dizi) {
-  const kopya = [...dizi];
-  for (let i = kopya.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [kopya[i], kopya[j]] = [kopya[j], kopya[i]];
-  }
-  return kopya;
-}
-
-const HUCRE_ETIKET = ['birinci', 'ikinci', 'üçüncü', 'dördüncü'];
 
 export default function TestKisaltma() {
   const [kaynak, setKaynak] = useState(null);

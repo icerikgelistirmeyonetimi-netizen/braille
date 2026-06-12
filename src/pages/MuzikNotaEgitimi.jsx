@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { NOTALAR } from '../data/muzik.js';
 import { usePianoNotePreview } from '../hooks/music-brf/usePianoNotePreview.js';
 import { muzikNotaPiyanoSesUrlAl } from '../utils/music-brf/musicPianoAudioHelpers.js';
@@ -12,11 +12,11 @@ export default function MuzikNotaEgitimi() {
   });
 
   const ogeler = NOTALAR.map((n) => ({
-    ad: `${n.ad.charAt(0).toUpperCase()}${n.ad.slice(1)}`,
-    ariaAd: `${n.ad} notası`,
+    yazi: `${n.ad.charAt(0).toUpperCase()}${n.ad.slice(1)}`,
+    ttsYazi: `${n.ad} notası`,
     notaAd: n.ad,
-    noktalar: n.noktalar,
-    aciklama: `${n.ad.charAt(0).toUpperCase() + n.ad.slice(1)} notasının temel hücresi: ${n.noktalar.join('-')}. UEB Music’te bu hücre sekizliği (quaver) temsil eder; süre için 3 ve/veya 6 noktası eklenir.`,
+    hucreler: [n.noktalar],
+    aciklama: `${n.ad.charAt(0).toUpperCase() + n.ad.slice(1)} notasının temel hücresi: ${n.noktalar.join('-')}. UEB Music'te bu hücre sekizliği (quaver) temsil eder; süre için 3 ve/veya 6 noktası eklenir.`,
   }));
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function MuzikNotaEgitimi() {
   }, [playNote]);
 
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Müzik: Notalar (Do – Si)"
       ogeler={ogeler}
       kategoriAdi="nota"

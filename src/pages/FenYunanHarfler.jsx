@@ -1,16 +1,16 @@
 import React from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { YUNAN_HARFLERI, YUNAN_GOSTERGESI } from '../data/fen.js';
 
 export default function FenYunanHarfler() {
   const ogeler = YUNAN_HARFLERI.map((h) => ({
-    ad: h.harf,
-    ariaAd: `${h.ad} harfi`,
-    noktalar: h.noktalar,
-    aciklama: `Yunan göstergesi (${YUNAN_GOSTERGESI.join('-')}) sonrası ${h.ad}: ${h.noktalar.join('-')}.`
+    yazi: h.harf,
+    ttsYazi: `${h.ad} harfi`,
+    hucreler: [h.noktalar],
+    aciklama: `Yunan göstergesi (${YUNAN_GOSTERGESI.join('-')}) sonrası ${h.ad}: ${h.noktalar.join('-')}.`,
   }));
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Fen: Yunan Harfleri"
       ogeler={ogeler}
       kategoriAdi="Yunan harfi"

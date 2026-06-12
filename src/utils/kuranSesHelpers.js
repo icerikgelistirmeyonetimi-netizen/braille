@@ -113,9 +113,12 @@ export function kuranHarfSesUrlAl(oge) {
   return kuranAudioUrl(`harfler/${sesId}.wav`);
 }
 
+const HAREKE_SLUG = { 'üstün': 'fetha', 'esre': 'kesra', 'ötre': 'damme' };
+
 export function kuranHeceSesUrlAl(oge) {
   const harfSesId = oge?.harfSesId || kuranHarfKarakterindenSesIdAl(oge?.harf);
-  const hareke = kuranSesSlug(oge?.hareke || '');
+  const harekeAd = oge?.hareke || '';
+  const hareke = HAREKE_SLUG[harekeAd] || kuranSesSlug(harekeAd);
 
   if (!harfSesId || !hareke) return '';
 

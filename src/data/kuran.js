@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // MEB Kur'an-ı Kerim Braille Yazı Kılavuzu — Modül 5 verileri.
 // -----------------------------------------------------------------------------
 // Burada yer alan harf, hareke ve tecvid işaretlerinin braille nokta karşılıkları
@@ -43,7 +43,6 @@ export const KURAN_HARFLERI = [
   { harf: 'ي', ad: 'ye',           okunus: 'ye',   noktalar: [2, 4] },
  
 ];
-
 // ----------------------------------------------------------------------------
 // Harekeler — Kur'an braillesi'nde harekeler ilgili harften SONRA ayrı bir
 // braille hücresi olarak yazılır. Aşağıdaki nokta karşılıkları MEB Kur'an
@@ -51,47 +50,149 @@ export const KURAN_HARFLERI = [
 // ----------------------------------------------------------------------------
 export const KURAN_HAREKELERI = [
   {
-    isaret: 'َ', ad: 'fetha', okunus: 'üstün',
-    noktalar: [3, 5],
+    isaret: 'َ', ad: 'üstün', okunus: 'üstün',
+    noktalar: [2],
     aciklama: 'Harfin üstüne konur, harfi e/a sesiyle okutur. Braillede harften sonra yazılır.'
   },
   {
-    isaret: 'ِ', ad: 'kesra', okunus: 'esre',
-    noktalar: [2, 6],
+    isaret: 'ِ', ad: 'esre', okunus: 'esre',
+    noktalar: [1, 5],
     aciklama: 'Harfin altına konur, harfi i sesiyle okutur. Braillede harften sonra yazılır.'
   },
   {
-    isaret: 'ُ', ad: 'damme', okunus: 'ötre',
+    isaret: 'ُ', ad: 'ötre', okunus: 'ötre',
     noktalar: [1, 3, 6],
     aciklama: 'Harfin üstüne konur, harfi u/ü sesiyle okutur. Braillede harften sonra yazılır.'
   },
+];
+export const CEZM_SEDDE = [
   {
-    isaret: 'ْ', ad: 'sükûn', okunus: 'cezim',
-    noktalar: [4],
+    isaret: 'ْ', ad: 'cezim', okunus: 'cezim',
+    noktalar: [2,5],
     aciklama: 'Harfin üstüne konur, harfin sessiz okunduğunu gösterir. Cezimli harf hece sonu olur.'
   },
   {
     isaret: 'ّ', ad: 'şedde', okunus: 'şedde',
     noktalar: [6],
     aciklama: 'Harfin üstüne konur, harfin iki defa (vurgulu) okunduğunu gösterir.'
+  }
+];
+export const MED_HARFLERI = [
+  {
+    isaret: 'ا', ad: 'Uzatma harfi elif', okunus: '',
+    noktalar: [1],
+    aciklama: ''
   },
   {
-    isaret: 'ً', ad: 'fethatan', okunus: 'iki üstün',
-    noktalar: [2, 3, 5, 6],
+    isaret: 'ي', ad: 'uzatma harfi ya', okunus: '',
+    noktalar: [2, 4],
+    aciklama: ''
+  },
+  {
+    isaret: 'و', ad: 'uzatma harfi vav', okunus: '',
+    noktalar: [2, 4, 5, 6],
+    aciklama: ''
+  }
+];
+export const MUKADDER_MEDLER = [
+  {
+    isaret: 'ٰ', ad: 'Mukadder elif', okunus: '',
+    noktalar: [4],
+    aciklama: ''
+  },
+  {
+    isaret: 'ٰ', ad: 'Elif üzeri dik üstün', okunus: '',
+    noktalar: [3, 4, 5],
+    aciklama: ''
+  },
+  {
+    isaret: 'ى', ad: 'Mukadder ya ve zamir ha uzatması', okunus: '',
+    noktalar: [4, 5],
+    aciklama: ''
+  },
+  {
+    isaret: 'و', ad: 'Mukadder vav, med ve zamir ha uzatması', okunus: '',
+    noktalar: [3, 4, 6],
+    aciklama: ''
+  }
+];
+export const ELIF_ZAID = [
+  {
+    isaret: 'ا', ad: 'Elif-i Zaid', okunus: '',
+    noktalar: [1],
+    aciklama: ''
+  }
+];
+export const HEMZELER = [
+  {
+    isaret: 'أ', ad: 'Hemze-elif', okunus: '',
+    noktalar: [4],
+    aciklama: ''
+  },
+  {
+    isaret: 'ؤ', ad: 'Vavlı hemze', okunus: '',
+    noktalar: [1,2,5,6],
+    aciklama: ''
+  },
+  {
+    isaret: 'ئ', ad: 'Ya\'lı hemze', okunus: '',
+    noktalar: [1, 3, 4 , 5, 6],
+    aciklama: ''
+  },
+  {
+    isaret: 'ء', ad: 'Kıvrık hemze', okunus: '',
+    noktalar: [3],
+    aciklama: ''
+  }
+];
+export const TENVINLER = [
+  {
+    isaret: 'ً', ad: 'üstün tenvin', okunus: 'iki üstün',
+    noktalar: [[1],[2, 3]],
     aciklama: 'Tenvinli fetha. "an / en" sesi verir; kelime sonunda kullanılır.'
   },
   {
-    isaret: 'ٍ', ad: 'kesratan', okunus: 'iki esre',
-    noktalar: [2, 3, 5],
+    isaret: 'ٍ', ad: 'esre tenvin', okunus: 'iki esre',
+    noktalar: [3, 5],
     aciklama: 'Tenvinli kesra. "in" sesi verir; kelime sonunda kullanılır.'
   },
   {
-    isaret: 'ٌ', ad: 'dammetan', okunus: 'iki ötre',
-    noktalar: [1, 2, 5, 6],
+    isaret: 'ٌ', ad: 'ötre tenvin', okunus: 'iki ötre',
+    noktalar: [2, 6],
     aciklama: 'Tenvinli damme. "un / ün" sesi verir; kelime sonunda kullanılır.'
   }
 ];
-
+export const TA_I_MERBUTA = [
+  {
+    isaret: 'ة', ad: 'Ta-i merbûta', okunus: '',
+    noktalar: [1, 6],
+    aciklama: ''
+  },
+];
+export const DIGER_UZATMA = [
+  {
+    isaret: 'ى', ad: 'Elif\'in yerini tutan ya', okunus: '',
+    noktalar: [1, 3, 5],
+    aciklama: ''
+  },
+  {
+    isaret: 'و', ad: 'Elif\'in yerini tutan vav', okunus: '',
+    noktalar: [3, 4, 5, 6],
+    aciklama: ''
+  }
+];
+export const HEMZE_VASL = [
+  {
+    isaret: 'ٱ', ad: 'Hemze-i vasl', okunus: '',
+    noktalar: [1],
+    aciklama: ''
+  },
+  {
+    isaret: 'أ', ad: 'Hemze-i Kat', okunus: '',
+    noktalar: [3, 4],
+    aciklama: ''
+  }
+]
 // ----------------------------------------------------------------------------
 // Tecvid işaretleri — Kur'an braillesi'nde sık kullanılan temel işaretler.
 // Her biri bir veya iki braille hücresinden oluşur. Daha ayrıntılı tecvid
@@ -100,47 +201,137 @@ export const KURAN_HAREKELERI = [
 // ----------------------------------------------------------------------------
 export const KURAN_TECVID = [
   {
-    ad: 'Med (Uzatma) İşareti',
-    sembol: 'ٓ',
-    hucreler: [[2, 5]],
-    aciklama: 'Üstündeki harfin uzatılarak okunmasını gösterir. Tabii medde göre ses 2-5 elif miktarı uzatılır.'
+    ad: 'Hurufu mukatta\'a ve ayet ortası durak işareti',
+    sembol: '',
+    hucreler: [[2, 6]],
+    aciklama: 'Sure başlarında bulunan kesik harflerin (Elif-Lam-Mîm vb.) okunuşunda veya ayet ortalarında genel bir durak/ayrım yerini belirtmek için kullanılır.'
   },
   {
-    ad: 'Vasl (Birleştirme) İşareti',
-    sembol: 'ٱ',
-    hucreler: [[3, 4]],
-    aciklama: 'Kelime başındaki elifin geçişle okunmadığını, önceki kelimeye birleşerek okunduğunu gösterir.'
+    ad: 'Ayet sonu işareti',
+    sembol: '۝',
+    hucreler: [[2, 3, 5, 6]],
+    aciklama: 'Bir ayetin bittiğini gösteren yuvarlak (۝) işarettir. Burada durmak (vakıf yapmak) sünnettir. Durulduğunda son harfin harekesine göre tecvid kuralları uygulanır.'
   },
   {
-    ad: 'Vakf-ı Lâzım (Mim)',
-    sembol: 'مـ',
-    hucreler: [[5], [1, 3, 4]],
-    aciklama: 'Mutlaka durulması gereken yer. Geçilmesi caiz değildir.'
+    ad: 'Vakf-ı Lazım (Ayet ortasında)',
+    sembol: 'م',
+    hucreler: [[3, 6], [1, 3, 4]],
+    aciklama: 'Kesinlikle durulması gereken duraktır. Geçilmesi halinde ayetin anlamı ciddi şekilde bozulur. Sembolü "Mim" (م) harfidir.'
   },
   {
-    ad: 'Vakf-ı Câiz (Cim)',
-    sembol: 'جـ',
-    hucreler: [[5], [2, 4, 5]],
-    aciklama: 'Hem durulması hem geçilmesi caiz olan yer.'
+    ad: 'Vakf-ı Lazım (Ayet sonunda)',
+    sembol: 'م',
+    hucreler: [[2, 3, 5, 6], [1, 3, 4]],
+    aciklama: 'Kesinlikle durulması gereken duraktır. Geçilmesi halinde ayetin anlamı ciddi şekilde bozulur. Sembolü "Mim" (م) harfidir.'
   },
   {
-    ad: 'Vakf-ı Mücevvez (Z)',
-    sembol: 'زـ',
-    hucreler: [[5], [1, 3, 5, 6]],
-    aciklama: 'Durulması da geçilmesi de caiz; geçilmesi daha güzel olan yer.'
+    ad: 'Vakf-ı mutlak (Ayet ortasında)',
+    sembol: 'ط',
+    hucreler: [[3, 6], [2,3,4,5,6]],
+    aciklama: 'Durulması okumaya devam etmekten (geçmekten) daha iyi (evla) olan duraktır. Konu tamamlansa da lafız devam eder. Sembolü "Tı" (ط) harfidir.'
   },
   {
-    ad: 'Vakf-ı Murahhas (Sad)',
-    sembol: 'صـ',
-    hucreler: [[5], [1, 2, 3, 4, 6]],
-    aciklama: 'Mana tamam olmadığı için durulmaması, geçilmesi tercih edilen yer.'
+    ad: 'Vakf-ı mutlak (Ayet sonunda)',
+    sembol: 'ط',
+    hucreler: [[2, 3, 5, 6], [2,3,4,5,6]],
+    aciklama: 'Durulması okumaya devam etmekten (geçmekten) daha iyi (evla) olan duraktır. Konu tamamlansa da lafız devam eder. Sembolü "Tı" (ط) harfidir.'
   },
   {
-    ad: 'Vakf-ı Mu‘ânaka (Üç Nokta)',
-    sembol: '∴ ∴',
-    hucreler: [[2, 5, 6], [2, 5, 6]],
-    aciklama: 'İki taraftan birinde durulur, diğerinde durulmaz. Her iki noktada birden durulmaz.'
-  }
+    ad: 'Vakf-ı caiz (Ayet ortasında)',
+    sembol: 'ج',
+    hucreler: [[3, 6], [2, 4, 5]],
+    aciklama: 'Hem durmanın hem de geçmenin caiz (serbest) olduğu duraktır. Ancak durmak, geçmekten daha iyidir. Sembolü "Cim" (ج) harfidir.'
+  },
+  {
+    ad: 'Vakf-ı caiz (Ayet sonunda)',
+    sembol: 'ج',
+    hucreler: [[2, 3, 5, 6], [2, 4, 5]],
+    aciklama: 'Hem durmanın hem de geçmenin caiz (serbest) olduğu duraktır. Ancak durmak, geçmekten daha iyidir. Sembolü "Cim" (ج) harfidir.'
+  },
+  {
+    ad: 'Vakf-ı mücevvez (Ayet ortasında)',
+    sembol: 'ز',
+    hucreler: [[3, 6], [1, 3, 5, 6]],
+    aciklama: 'Durmak caiz olmakla birlikte, geçmenin (okumaya devam etmenin) daha iyi (evla) olduğu duraktır. Sembolü "Ze" (ز) harfidir.'
+  },
+  {
+    ad: 'Vakf-ı mücevvez (Ayet sonunda)',
+    sembol: 'ز',
+    hucreler: [[2, 3, 5, 6], [1, 3, 5, 6]],
+    aciklama: 'Durmak caiz olmakla birlikte, geçmenin (okumaya devam etmenin) daha iyi (evla) olduğu duraktır. Sembolü "Ze" (ز) harfidir.'
+  },
+  {
+    ad: 'Vakf-ı murahhas (Ayet ortasında)',
+    sembol: 'ص',
+    hucreler: [[3, 6], [1, 2, 3, 4, 6]],
+    aciklama: 'Aslında geçilmesi gereken ancak nefes yetmemesi gibi zaruri durumlarda durulmasına ruhsat verilen duraktır. Geçmek daha iyidir. Sembolü "Sad" (ص) harfidir.'
+  },
+  {
+    ad: 'Vakf-ı murahhas (Ayet sonunda)',
+    sembol: 'ص',
+    hucreler: [[2, 3, 5, 6], [1, 2, 3, 4, 6]],
+    aciklama: 'Aslında geçilmesi gereken ancak nefes yetmemesi gibi zaruri durumlarda durulmasına ruhsat verilen duraktır. Geçmek daha iyidir. Sembolü "Sad" (ص) harfidir.'
+  },
+  {
+    ad: 'Kaf Durağı (Ayet ortasında)',
+    sembol: 'ق',
+    hucreler: [[3, 6], [1, 2, 3, 4, 5]],
+    aciklama: 'Burada durulabileceği söylenmiş olsa da geçmek (okumaya devam etmek) daha iyidir. Sembolü "Kaf" (ق) harfidir.'
+  },
+  {
+    ad: 'Kaf Durağı (Ayet sonunda)',
+    sembol: 'ق',
+    hucreler: [[2, 3, 5, 6], [1, 2, 3, 4, 5]],
+    aciklama: 'Burada durulabileceği söylenmiş olsa da geçmek (okumaya devam etmek) daha iyidir. Sembolü "Kaf" (ق) harfidir.'
+  },
+  {
+    ad: 'Kıf Durağı (Ayet ortasında)',
+    sembol: 'قف',
+    hucreler: [[3, 6], [1, 2, 3, 4, 5], [1, 2, 4]],
+    aciklama: 'Arapça "Dur!" emridir. Anlamın bozulmaması için mutlaka durulması gereken duraktır. Sembolü "Kıf" (قف) kelimesidir.'
+  },
+  {
+    ad: 'Kıf Durağı (Ayet sonunda)',
+    sembol: 'قف',
+    hucreler: [[2, 3, 5, 6], [1, 2, 3, 4, 5], [1, 2, 4]],
+    aciklama: 'Arapça "Dur!" emridir. Anlamın bozulmaması için mutlaka durulması gereken duraktır. Sembolü "Kıf" (قف) kelimesidir.'
+  },
+  {
+    ad: 'Lam-elif (Vakfı La) (Ayet ortasında)',
+    sembol: 'لا',
+    hucreler: [[3, 6], [1, 2, 3, 6]],
+    aciklama: '"Durma!" anlamına gelir. Ayet ortasında kesinlikle durulmaz. Nefes biterse, geriden kelime alınarak tekrar okunmalıdır. Sembolü "Lam-elif" (لا) harfidir.'
+  },
+  {
+    ad: 'Lam-elif (Vakfı La) (Ayet sonunda)',
+    sembol: 'لا',
+    hucreler: [[2, 3, 5, 6], [1, 2, 3, 6]],
+    aciklama: '"Durma!" anlamına gelir. Ancak ayet sonlarında (durmak sünnet olduğu için) durulmasında bir sakınca yoktur. Sembolü "Lam-elif" (لا) harfidir.'
+  },
+  {
+    ad: 'Muanaka Vakfı (Vakfı Murakaba) (Bir durakla birlikte)',
+    sembol: '∴',
+    hucreler: [2, 5, 6],
+    aciklama: 'Birbirine yakın iki yerde bulunan üç nokta (∴) işaretidir. Bu iki duraktan sadece birinde durulur, diğerinde kesinlikle durulmaz geçilir.'
+  },
+  {
+    ad: 'Muanaka Vakfı (Vakfı Murakaba) (ayet ortasında)',
+    sembol: '∴',
+    hucreler: [[3, 6], [1, 2, 3, 4, 5], [1, 2, 4], [2, 5, 6]],
+    aciklama: 'Birbirine yakın iki yerde bulunan üç nokta (∴) işaretidir. Bu iki duraktan sadece birinde durulur, diğerinde kesinlikle durulmaz geçilir.'
+  },
+  {
+    ad: 'Muanaka Vakfı (Vakfı Murakaba) (ayet sonunda)',
+    sembol: '∴',
+    hucreler: [[2, 3, 5, 6], [1, 2, 3, 6], [2, 5, 6]],
+    aciklama: 'Birbirine yakın iki yerde bulunan üç nokta (∴) işaretidir. Bu iki duraktan sadece birinde durulur, diğerinde kesinlikle durulmaz geçilir.'
+  },
+  {
+    ad: 'Ayn durağı (Rüku alameti) (ayet sonunda)',
+    sembol: 'ع',
+    hucreler: [[2, 3, 5, 6], [1, 2, 3, 5, 6]],
+    aciklama: 'Bir konunun veya kıssanın bittiğini gösterir. Namazda okunurken rükûya gitmek (eğilmek) veya hatim okunurken okumayı bitirmek için en uygun yerdir. Sembolü "Ayn" (ع) harfidir.'
+  },
 ];
 
 // ----------------------------------------------------------------------------
@@ -149,7 +340,7 @@ export const KURAN_TECVID = [
 // Okunuşlar Türkçe Kur'an öğretiminde yaygın söylenişe göre verilmiştir.
 // ----------------------------------------------------------------------------
 const KURAN_TEMEL_HAREKELER = KURAN_HAREKELERI.filter((h) =>
-  ['fetha', 'kesra', 'damme'].includes(h.ad)
+  ['üstün', 'esre', 'ötre'].includes(h.ad)
 );
 
 /** @type {Record<string, [string, string, string]>} Harf → [fetha, kesra, damme] okunuşu */
@@ -189,13 +380,13 @@ function kuranHeceOkunusunuAl(harfKarakteri, harekeAdi) {
   if (!uclu) {
     return '';
   }
-  if (harekeAdi === 'fetha') {
+  if (harekeAdi === 'üstün') {
     return uclu[0];
   }
-  if (harekeAdi === 'kesra') {
+  if (harekeAdi === 'esre') {
     return uclu[1];
   }
-  if (harekeAdi === 'damme') {
+  if (harekeAdi === 'ötre') {
     return uclu[2];
   }
   return '';
@@ -293,17 +484,17 @@ function k(yazi, okunus, anlam, kod) {
 // -----------------------------------------------------------------------------
 export const KURAN_KELIMELERI_TEMEL = [
   // 1 — Üstün (çoğunlukla üstün hareke; başlangıç)
-  k('مَا', 'mâ', '(1) Üstün: “şey / ne …” ihtiyacında', 'م a ا'),
-  k('لَا', 'lâ', '(1) Üstün: inkâr / bağlaç olarak “hayır/değil”', 'ل a ا'),
+  k('مَا', 'ma', '(1) Üstün: “şey / ne …” ihtiyacında', 'م a ا'),
+  k('لَا', 'la', '(1) Üstün: inkar / bağlaç olarak “hayır/değil”', 'ل a ا'),
   k('وَ', 've', '(1) Üstün: “ve”', 'و a'),
-  k('هٰذَا', 'hâzâ', '(1) Üstün: “bu” (işaret)', 'ه a ذ a ا'),
-  k('كَمَا', 'kemâ', '(1) Üstün: “tıpkı … gibi”', 'ك a م a ا'),
+  k('هٰذَا', 'haza', '(1) Üstün: “bu” (işaret)', 'ه a ذ a ا'),
+  k('كَمَا', 'kema', '(1) Üstün: “tıpkı … gibi”', 'ك a م a ا'),
   // 2 — Esre ağırlıklı örnekler
   k('فِي', 'fî', '(2) Esre: “içinde / -de / -da”', 'ف i ي'),
   k('بِهِ', 'bihi', '(2) Esre: “onunla / onda”', 'ب i ه i'),
-  k('بِمَا', 'bimâ', '(2) Esre + üstün: “onunla / ne ile…”', 'ب i م a ا'),
-  k('إِلىٰ', 'ilâ', '(2) Esre ağırlıklı yer / yön — “ila / -e doğru”', 'ا i ل a ى'),
-  k('إِلَيْهِ', 'ileyhi', '(2) Esre + yapı: ilâ + zamir bağlamına hazırlık', 'ا i ل a ي 0 ه i'),
+  k('بِمَا', 'bima', '(2) Esre + üstün: “onunla / ne ile…”', 'ب i م a ا'),
+  k('إِلىٰ', 'ila', '(2) Esre ağırlıklı yer / yön — “ila / -e doğru”', 'ا i ل a ى'),
+  k('إِلَيْهِ', 'ileyhi', '(2) Esre + yapı: ila + zamir bağlamına hazırlık', 'ا i ل a ي 0 ه i'),
   k('حِينَ', 'hîne', '(2) Esre + med ile “ zaman / vakit ”', 'ح i M ن a'),
   k('إِنْ', 'in', '(2) Esre ile koşul / temennî kökleri', 'ا i ن 0'),
   k('قِيلَ', 'kîle', '(2) Kesra ile fiil yapısı: “demek / denildi…”', 'ق i ي 0 ل a'),
@@ -316,11 +507,11 @@ export const KURAN_KELIMELERI_TEMEL = [
   // 4 — Şedde (taşdid / çift okuma hücresi)
   k('إِنَّ', 'inne', '(4) Şedde: “şüphesiz / muhakkak …”', 'ا i ن ~ a'),
   k('رَبِّ', 'rabbi', '(4) Şedde: “Rabbim / Rabbinin …” kökü', 'ر a ب ~ i'),
-  k('لِلّٰهِ', 'lillâhi', '(4) Şedde: lam-lam Allah — “Allah için / Allah’a”', 'ل i ل ~ ه i'),
+  k('لِلّٰهِ', 'lillahi', '(4) Şedde: lam-lam Allah — “Allah için / Allah’a”', 'ل i ل ~ ه i'),
   k('شَرِّ', 'şerri', '(4) Şedde: “şer / kötülük” çoğul yapı girişi', 'ش a ر ~ i'),
   k('كُلٌّ', 'küllün', '(4) Şedde + ötre + tenvin kısa örnek', 'ك u ل ~ U'),
-  k('إِنَّمَا', 'innemâ', '(4) Şedde + üstün ile “ancak / yalnız …”', 'ا i ن ~ a م a ا'),
-  k('إِيَّاكَ', 'iyyâke', '(4) Şedde karmaşık örnekleştirilmiş “seni / sana doğrudan ”', 'ا i ي ~ a ا ك a'),
+  k('إِنَّمَا', 'innema', '(4) Şedde + üstün ile “ancak / yalnız …”', 'ا i ن ~ a م a ا'),
+  k('إِيَّاكَ', 'iyyake', '(4) Şedde karmaşık örnekleştirilmiş “seni / sana doğrudan ”', 'ا i ي ~ a ا ك a'),
   // 5 — Cezım ve sükûn (sessiz çıkış hücreleri ile)
   k('بِسْمِ', 'bismi', '(5) Cezım: lam üzerinde cezım — başlangıca hazırlık', 'ب i س 0 م i'),
   k('قُلْ', 'kul', '(5) Cezım: mim cezım — “De ki…”', 'ق u ل 0'),
@@ -335,53 +526,53 @@ export const KURAN_KELIMELERI = [
   // Besmele ve sık geçen genel kelimeler
   // ===========================================================================
   k('بِسْمِ',     'bismi',  '“adıyla”',           'ب i س 0 م i'),
-  k('اللّٰهِ',     'Allâhi', '“Allah’ın”',         'ا ل ل ~ ه i'),
+  k('اللّٰهِ',     'Allahi', '“Allah’ın”',         'ا ل ل ~ ه i'),
   k('رَبِّ',      'rabbi',  '“Rabbi”',            'ر a ب ~ i'),
-  k('الرَّحْمٰنِ', 'er-Rahmân', '“Rahmân”',        'ا ل ر ~ a ح 0 م a ن i'),
+  k('الرَّحْمٰنِ', 'er-Rahman', '“Rahman”',        'ا ل ر ~ a ح 0 م a ن i'),
   k('الرَّحِيمِ',  'er-Rahîm',  '“Rahîm”',         'ا ل ر ~ a ح i M م i'),
   k('قُلْ',       'kul',    '“De ki”',            'ق u ل 0'),
   k('هُوَ',       'hüve',   '“O”',                'ه u و a'),
-  k('لَا',        'lâ',     '“yok / değil”',      'ل a ا'),
+  k('لَا',        'la',     '“yok / değil”',      'ل a ا'),
   k('مَنْ',       'men',    '“kim”',              'م a ن 0'),
   k('فِي',       'fî',     '“içinde”',            'ف i ي'),
   k('مِنْ',       'min',    '“-den / -dan”',       'م i ن 0'),
-  k('إِلَى',      'ilâ',    '“-e doğru”',          'ا i ل a ى'),
-  k('عَلَى',      'alâ',    '“üzerine”',           'ع a ل a ى'),
+  k('إِلَى',      'ila',    '“-e doğru”',          'ا i ل a ى'),
+  k('عَلَى',      'ala',    '“üzerine”',           'ع a ل a ى'),
   k('وَ',        've',     '“ve”',                'و a'),
   k('أَوْ',       'ev',     '“veya”',              'ا a و 0'),
   k('إِنَّ',      'inne',   '“muhakkak ki”',       'ا i ن ~ a'),
   k('أَنْتَ',     'ente',   '“sen”',               'ا a ن 0 ت a'),
   k('نَحْنُ',     'nahnü',  '“biz”',               'ن a ح 0 ن u'),
-  k('ذٰلِكَ',     'zâlike', '“şu / bu”',           'ذ a ل i ك a'),
-  k('هٰذَا',      'hâzâ',   '“bu”',                'ه a ذ a ا'),
+  k('ذٰلِكَ',     'zalike', '“şu / bu”',           'ذ a ل i ك a'),
+  k('هٰذَا',      'haza',   '“bu”',                'ه a ذ a ا'),
 
   // ===========================================================================
-  // Fâtiha Sûresi (1) — 7 ayet
+  // Fatiha Sûresi (1) — 7 ayet
   // ===========================================================================
   k('الْحَمْدُ',  'el-hamdü', '“Hamd / övgü”',     'ا ل 0 ح a م 0 د u'),
-  k('لِلّٰهِ',     'lillâhi',  '“Allah’a aittir”',  'ل i ل ~ ه i'),
+  k('لِلّٰهِ',     'lillahi',  '“Allah’a aittir”',  'ل i ل ~ ه i'),
   k('رَبِّ',      'rabbi',   '“Rabbi”',            'ر a ب ~ i'),
-  k('الْعَالَمِينَ', 'el-âlemîn', '“âlemlerin”',   'ا ل 0 ع a ا ل a م i M ن a'),
-  k('مَالِكِ',    'mâliki',  '“sahibi / Mâliki”',   'م a ا ل i ك i'),
+  k('الْعَالَمِينَ', 'el-alemîn', '“alemlerin”',   'ا ل 0 ع a ا ل a م i M ن a'),
+  k('مَالِكِ',    'maliki',  '“sahibi / Maliki”',   'م a ا ل i ك i'),
   k('يَوْمِ',     'yevmi',   '“gün”',              'ي a و 0 م i'),
   k('الدِّينِ',   'ed-dîni', '“din / hesap”',      'ا ل د ~ i M ن i'),
-  k('إِيَّاكَ',   'iyyâke',  '“yalnız sana”',      'ا i ي ~ a ا ك a'),
+  k('إِيَّاكَ',   'iyyake',  '“yalnız sana”',      'ا i ي ~ a ا ك a'),
   k('نَعْبُدُ',   'na‘büdü', '“ibadet ederiz”',    'ن a ع 0 ب u د u'),
   k('نَسْتَعِينُ', 'nesta‘în', '“yardım dileriz”', 'ن a س 0 ت a ع i M ن u'),
-  k('اهْدِنَا',   'ihdinâ',  '“bizi hidayete erdir”', 'ا 0 ه 0 د i ن a ا'),
-  k('الصِّرَاطَ', 'es-sırâta', '“yol”',            'ا ل ص ~ i ر a ا ط a'),
+  k('اهْدِنَا',   'ihdina',  '“bizi hidayete erdir”', 'ا 0 ه 0 د i ن a ا'),
+  k('الصِّرَاطَ', 'es-sırata', '“yol”',            'ا ل ص ~ i ر a ا ط a'),
   k('الْمُسْتَقِيمَ', 'el-müstakîm', '“dosdoğru”', 'ا ل 0 م u س 0 ت a ق i M م a'),
-  k('صِرَاطَ',    'sırâta',  '“yolu”',             'ص i ر a ا ط a'),
+  k('صِرَاطَ',    'sırata',  '“yolu”',             'ص i ر a ا ط a'),
   k('الَّذِينَ',  'ellezîne', '“o kimseler ki”',   'ا ل ~ a ذ i M ن a'),
   k('أَنْعَمْتَ', 'en‘amte',  '“nimet verdin”',    'ا a ن 0 ع a م 0 ت a'),
   k('عَلَيْهِمْ', 'aleyhim',  '“onlara”',          'ع a ل a ي 0 ه i م 0'),
   k('غَيْرِ',     'ğayri',   '“-in dışında”',      'غ a ي 0 ر i'),
   k('الْمَغْضُوبِ', 'el-mağdûbi', '“gazaba uğramışlar”', 'ا ل 0 م a غ 0 ض u M ب i'),
-  k('وَلَا',      'velâ',    '“ve değil”',         'و a ل a ا'),
-  k('الضَّالِّينَ', 'ed-dâllîn', '“sapkınlar”',    'ا ل ض ~ a ا ل ~ i M ن a'),
+  k('وَلَا',      'vela',    '“ve değil”',         'و a ل a ا'),
+  k('الضَّالِّينَ', 'ed-dallîn', '“sapkınlar”',    'ا ل ض ~ a ا ل ~ i M ن a'),
 
   // ===========================================================================
-  // İhlâs Sûresi (112) — 4 ayet
+  // İhlas Sûresi (112) — 4 ayet
   // ===========================================================================
   k('أَحَدٌ',     'ehad',    '“tek / bir”',        'ا a ح a د U'),
   k('الصَّمَدُ',  'es-Samed', '“Samed (hiçbir şeye muhtaç olmayan)”', 'ا ل ص ~ a م a د u'),
@@ -399,24 +590,24 @@ export const KURAN_KELIMELERI = [
   k('بِرَبِّ',    'bi-rabbi', '“Rabbine”',         'ب i ر a ب ~ i'),
   k('الْفَلَقِ',  'el-felak', '“sabahın / şafağın”', 'ا ل 0 ف a ل a ق i'),
   k('شَرِّ',      'şerri',   '“kötülüğünden”',     'ش a ر ~ i'),
-  k('مَا',        'mâ',      '“şey”',              'م a ا'),
+  k('مَا',        'ma',      '“şey”',              'م a ا'),
   k('خَلَقَ',     'halaka',  '“yarattı”',          'خ a ل a ق a'),
-  k('غَاسِقٍ',    'ğâsikın', '“karanlık çöktüğünde”', 'غ a ا س i ق I'),
-  k('إِذَا',      'izâ',     '“-dığı zaman”',      'ا i ذ a ا'),
+  k('غَاسِقٍ',    'ğasikın', '“karanlık çöktüğünde”', 'غ a ا س i ق I'),
+  k('إِذَا',      'iza',     '“-dığı zaman”',      'ا i ذ a ا'),
   k('وَقَبَ',     'vekabe',  '“çöktüğünde”',       'و a ق a ب a'),
-  k('النَّفَّاثَاتِ', 'en-neffâsâti', '“üfleyenler”', 'ا ل ن ~ a ف ~ a ا ث a ا ت i'),
+  k('النَّفَّاثَاتِ', 'en-neffasati', '“üfleyenler”', 'ا ل ن ~ a ف ~ a ا ث a ا ت i'),
   k('الْعُقَدِ',  'el-ukad', '“düğümler”',         'ا ل 0 ع u ق a د i'),
-  k('حَاسِدٍ',    'hâsidin', '“hasetçinin”',       'ح a ا س i د I'),
+  k('حَاسِدٍ',    'hasidin', '“hasetçinin”',       'ح a ا س i د I'),
   k('حَسَدَ',     'hasede',  '“haset etti”',       'ح a س a د a'),
 
   // ===========================================================================
-  // Nâs Sûresi (114) — 6 ayet
+  // Nas Sûresi (114) — 6 ayet
   // ===========================================================================
-  k('النَّاسِ',   'en-nâsi', '“insanların”',        'ا ل ن ~ a ا س i'),
+  k('النَّاسِ',   'en-nasi', '“insanların”',        'ا ل ن ~ a ا س i'),
   k('مَلِكِ',     'meliki',  '“hükümdarı”',         'م a ل i ك i'),
-  k('إِلٰهِ',     'ilâhi',   '“ilahı”',             'ا i ل a ه i'),
-  k('الْوَسْوَاسِ', 'el-vesvâs', '“vesveseci”',     'ا ل 0 و a س 0 و a ا س i'),
-  k('الْخَنَّاسِ', 'el-hannâs', '“sinsi”',          'ا ل 0 خ a ن ~ a ا س i'),
+  k('إِلٰهِ',     'ilahi',   '“ilahı”',             'ا i ل a ه i'),
+  k('الْوَسْوَاسِ', 'el-vesvas', '“vesveseci”',     'ا ل 0 و a س 0 و a ا س i'),
+  k('الْخَنَّاسِ', 'el-hannas', '“sinsi”',          'ا ل 0 خ a ن ~ a ا س i'),
   k('يُوَسْوِسُ', 'yüvesvisü', '“vesvese verir”',   'ي u و a س 0 و i س u'),
   k('صُدُورِ',    'sudûri',  '“göğüslerinde”',      'ص u د u M ر i'),
   k('الْجِنَّةِ', 'el-cinneti', '“cinler”',         'ا ل 0 ج i ن ~ a ة i'),
@@ -424,56 +615,56 @@ export const KURAN_KELIMELERI = [
   // ===========================================================================
   // Kevser Sûresi (108) — 3 ayet
   // ===========================================================================
-  k('إِنَّا',     'innâ',    '“muhakkak ki biz”',  'ا i ن ~ a ا'),
-  k('أَعْطَيْنَاكَ', 'a‘taynâke', '“sana verdik”',  'ا a ع 0 ط a ي 0 ن a ا ك a'),
+  k('إِنَّا',     'inna',    '“muhakkak ki biz”',  'ا i ن ~ a ا'),
+  k('أَعْطَيْنَاكَ', 'a‘taynake', '“sana verdik”',  'ا a ع 0 ط a ي 0 ن a ا ك a'),
   k('الْكَوْثَرَ', 'el-Kevser', '“Kevser”',         'ا ل 0 ك a و 0 ث a ر a'),
   k('فَصَلِّ',    'fesalli', '“öyleyse namaz kıl”',  'ف a ص a ل ~ i'),
   k('وَانْحَرْ',  've-nhar', '“ve kurban kes”',     'و a ا 0 ن 0 ح a ر 0'),
-  k('شَانِئَكَ',  'şâni’eke', '“sana kin tutan”',   'ش a ا ن i ء a ك a'),
+  k('شَانِئَكَ',  'şani’eke', '“sana kin tutan”',   'ش a ا ن i ء a ك a'),
   k('الْأَبْتَرُ', 'el-ebter', '“soyu kesik”',       'ا ل 0 ا a ب 0 ت a ر u'),
 
   // ===========================================================================
   // Asr Sûresi (103) — 3 ayet
   // ===========================================================================
   k('وَالْعَصْرِ', 've-l-asri', '“asra yemin olsun”', 'و a ا ل 0 ع a ص 0 ر i'),
-  k('الْإِنْسَانَ', 'el-insâne', '“insan”',          'ا ل 0 ا i ن 0 س a ا ن a'),
+  k('الْإِنْسَانَ', 'el-insane', '“insan”',          'ا ل 0 ا i ن 0 س a ا ن a'),
   k('لَفِي',     'lefî',    '“gerçekten içindedir”', 'ل a ف i M'),
   k('خُسْرٍ',    'husrin',  '“ziyan / hüsran”',    'خ u س 0 ر I'),
-  k('إِلَّا',     'illâ',    '“ancak”',             'ا i ل ~ a ا'),
-  k('آمَنُوا',   'âmenû',   '“iman ettiler”',      'ا M م a ن u M ا'),
+  k('إِلَّا',     'illa',    '“ancak”',             'ا i ل ~ a ا'),
+  k('آمَنُوا',   'amenû',   '“iman ettiler”',      'ا M م a ن u M ا'),
   k('عَمِلُوا',  'amilû',   '“iş işlediler”',      'ع a م i ل u M ا'),
-  k('الصَّالِحَاتِ', 'es-sâlihât', '“salih ameller”', 'ا ل ص ~ a ا ل i ح a ا ت i'),
-  k('تَوَاصَوْا', 'tevâsav', '“tavsiyeleştiler”',  'ت a و a ا ص a و 0 ا'),
+  k('الصَّالِحَاتِ', 'es-salihat', '“salih ameller”', 'ا ل ص ~ a ا ل i ح a ا ت i'),
+  k('تَوَاصَوْا', 'tevasav', '“tavsiyeleştiler”',  'ت a و a ا ص a و 0 ا'),
   k('بِالْحَقِّ', 'bi-l-hakkı', '“hak ile”',        'ب i ا ل 0 ح a ق ~ i'),
   k('بِالصَّبْرِ', 'bi-s-sabri', '“sabır ile”',     'ب i ا ل ص ~ a ب 0 ر i'),
 
   // ===========================================================================
   // Nasr Sûresi (110) — 3 ayet
   // ===========================================================================
-  k('جَاءَ',     'câe',     '“geldi”',             'ج a ا ء a'),
+  k('جَاءَ',     'cae',     '“geldi”',             'ج a ا ء a'),
   k('نَصْرُ',    'nasru',   '“yardım”',             'ن a ص 0 ر u'),
   k('الْفَتْحُ', 'el-fethu', '“fetih”',             'ا ل 0 ف a ت 0 ح u'),
   k('رَأَيْتَ',  'reeyte',  '“gördün”',             'ر a ا a ي 0 ت a'),
   k('يَدْخُلُونَ', 'yedhulûne', '“giriyorlar”',     'ي a د 0 خ u ل u M ن a'),
   k('دِينِ',     'dîni',    '“dinine”',             'د i M ن i'),
-  k('أَفْوَاجًا', 'efvâcen', '“bölük bölük”',      'ا a ف 0 و a ا ج A ا'),
+  k('أَفْوَاجًا', 'efvacen', '“bölük bölük”',      'ا a ف 0 و a ا ج A ا'),
   k('فَسَبِّحْ', 'fesebbih', '“tesbih et”',         'ف a س a ب ~ i ح 0'),
   k('بِحَمْدِ',  'bi-hamdi', '“hamd ile”',          'ب i ح a م 0 د i'),
   k('رَبِّكَ',   'rabbike', '“Rabbinin”',           'ر a ب ~ i ك a'),
   k('وَاسْتَغْفِرْهُ', 've-stağfirh', '“ve O’ndan af dile”', 'و a ا 0 س 0 ت a غ 0 ف i ر 0 ه u'),
-  k('كَانَ',     'kâne',    '“oldu / idi”',         'ك a ا ن a'),
-  k('تَوَّابًا', 'tevvâben', '“tevbeleri kabul edici”', 'ت a و ~ a ا ب A ا'),
+  k('كَانَ',     'kane',    '“oldu / idi”',         'ك a ا ن a'),
+  k('تَوَّابًا', 'tevvaben', '“tevbeleri kabul edici”', 'ت a و ~ a ا ب A ا'),
 
   // ===========================================================================
-  // Kâfirûn Sûresi (109) — 6 ayet
+  // Kafirûn Sûresi (109) — 6 ayet
   // ===========================================================================
-  k('يَا',       'yâ',      '“ey”',                'ي a ا'),
-  k('أَيُّهَا',  'eyyühâ',  '“ey siz”',             'ا a ي ~ u ه a ا'),
-  k('الْكَافِرُونَ', 'el-kâfirûn', '“kâfirler”',    'ا ل 0 ك a ا ف i ر u M ن a'),
+  k('يَا',       'ya',      '“ey”',                'ي a ا'),
+  k('أَيُّهَا',  'eyyüha',  '“ey siz”',             'ا a ي ~ u ه a ا'),
+  k('الْكَافِرُونَ', 'el-kafirûn', '“kafirler”',    'ا ل 0 ك a ا ف i ر u M ن a'),
   k('أَعْبُدُ',  'a‘büdü',  '“ibadet ederim”',      'ا a ع 0 ب u د u'),
   k('تَعْبُدُونَ', 'ta‘büdûne', '“ibadet edersiniz”', 'ت a ع 0 ب u د u M ن a'),
-  k('عَابِدُونَ', 'âbidûne', '“ibadet edicilersiniz”', 'ع a ا ب i د u M ن a'),
-  k('عَابِدٌ',   'âbidün',  '“ibadet edici”',       'ع a ا ب i د U'),
+  k('عَابِدُونَ', 'abidûne', '“ibadet edicilersiniz”', 'ع a ا ب i د u M ن a'),
+  k('عَابِدٌ',   'abidün',  '“ibadet edici”',       'ع a ا ب i د U'),
   k('عَبَدْتُمْ', 'abedtüm', '“ibadet ettiniz”',    'ع a ب a د 0 ت u م 0'),
   k('لَكُمْ',    'leküm',   '“sizin için”',         'ل a ك u م 0'),
   k('دِينُكُمْ', 'dîneküm', '“sizin dininiz”',      'د i M ن u ك u م 0'),
@@ -488,16 +679,16 @@ export const KURAN_KELIMELERI = [
   k('كَيْفَ',    'keyfe',   '“nasıl”',              'ك a ي 0 ف a'),
   k('فَعَلَ',    'feale',   '“yaptı”',              'ف a ع a ل a'),
   k('رَبُّكَ',   'rabbüke', '“Rabbin”',             'ر a ب ~ u ك a'),
-  k('بِأَصْحَابِ', 'bi-eshâbi', '“sahiplerine”',    'ب i ا a ص 0 ح a ا ب i'),
+  k('بِأَصْحَابِ', 'bi-eshabi', '“sahiplerine”',    'ب i ا a ص 0 ح a ا ب i'),
   k('الْفِيلِ',  'el-fîli', '“fil”',                'ا ل 0 ف i M ل i'),
   k('يَجْعَلْ',  'yec‘al',  '“kılmadı mı?”',        'ي a ج 0 ع a ل 0'),
   k('كَيْدَهُمْ', 'keydehüm', '“tuzaklarını”',     'ك a ي 0 د a ه u م 0'),
   k('تَضْلِيلٍ', 'tadlîlin', '“boşa çıkarma”',     'ت a ض 0 ل i M ل I'),
   k('أَرْسَلَ',  'ersele',  '“gönderdi”',           'ا a ر 0 س a ل a'),
   k('طَيْرًا',   'tayren',  '“kuşlar”',             'ط a ي 0 ر A ا'),
-  k('أَبَابِيلَ', 'ebâbîl', '“sürü sürü”',         'ا a ب a ا ب i M ل a'),
+  k('أَبَابِيلَ', 'ebabîl', '“sürü sürü”',         'ا a ب a ا ب i M ل a'),
   k('تَرْمِيهِمْ', 'termîhim', '“onlara atıyordu”', 'ت a ر 0 م i M ه i م 0'),
-  k('بِحِجَارَةٍ', 'bi-hicâretin', '“taşlarla”',    'ب i ح i ج a ا ر a ة I'),
+  k('بِحِجَارَةٍ', 'bi-hicaretin', '“taşlarla”',    'ب i ح i ج a ا ر a ة I'),
   k('سِجِّيلٍ',  'siccîlin', '“pişirilmiş çamur”', 'س i ج ~ i M ل I'),
   k('فَجَعَلَهُمْ', 'fece‘alehüm', '“onları kıldı”', 'ف a ج a ع a ل a ه u م 0'),
   k('كَعَصْفٍ',  'ke-asfin', '“ekin yaprağı gibi”', 'ك a ع a ص 0 ف I'),
@@ -506,37 +697,37 @@ export const KURAN_KELIMELERI = [
   // ===========================================================================
   // Kureyş Sûresi (106) — 4 ayet
   // ===========================================================================
-  k('لِإِيلَافِ', 'li-îlâfi', '“ülfet etmesi için”', 'ل i ا i M ل a ا ف i'),
+  k('لِإِيلَافِ', 'li-îlafi', '“ülfet etmesi için”', 'ل i ا i M ل a ا ف i'),
   k('قُرَيْشٍ',  'Kureyşin', '“Kureyş’in”',        'ق u ر a ي 0 ش I'),
-  k('إِيلَافِهِمْ', 'îlâfihim', '“onların ülfeti”', 'ا i M ل a ا ف i ه i م 0'),
+  k('إِيلَافِهِمْ', 'îlafihim', '“onların ülfeti”', 'ا i M ل a ا ف i ه i م 0'),
   k('رِحْلَةَ',  'rıhlete', '“yolculuk”',          'ر i ح 0 ل a ة a'),
-  k('الشِّتَاءِ', 'eş-şitâi', '“kışın”',           'ا ل ش ~ i ت a ا ء i'),
+  k('الشِّتَاءِ', 'eş-şitai', '“kışın”',           'ا ل ش ~ i ت a ا ء i'),
   k('وَالصَّيْفِ', 've-s-sayfi', '“ve yazın”',     'و a ا ل ص ~ a ي 0 ف i'),
   k('فَلْيَعْبُدُوا', 'felya‘büdû', '“öyleyse ibadet etsinler”', 'ف a ل 0 ي a ع 0 ب u د u M ا'),
   k('رَبَّ',     'rabbe',   '“Rabbi”',              'ر a ب ~ a'),
   k('الْبَيْتِ', 'el-beyti', '“ev / Ka‘be”',        'ا ل 0 ب a ي 0 ت i'),
   k('أَطْعَمَهُمْ', 'at‘amehüm', '“onları doyurdu”', 'ا a ط 0 ع a م a ه u م 0'),
   k('جُوعٍ',     'cû‘in',   '“açlık”',              'ج u M ع I'),
-  k('وَآمَنَهُمْ', 've-âmenehüm', '“ve onları emin kıldı”', 'و a ا M م a ن a ه u م 0'),
+  k('وَآمَنَهُمْ', 've-amenehüm', '“ve onları emin kıldı”', 'و a ا M م a ن a ه u م 0'),
   k('خَوْفٍ',    'havfin',  '“korku”',              'خ a و 0 ف I'),
 
   // ===========================================================================
   // Ek kelimeler — kısa sureler, dua ve sık öğretim kelimeleri (≥250 kelime için)
   // ===========================================================================
   k('إِنَّهُ',   'innehu',  '“şüphesiz O”',         'ا i ن ~ a ه u'),
-  k('إِنَّهَا',  'innehâ',  '“şüphesiz o (dişi)”',  'ا i ن ~ a ه a'),
+  k('إِنَّهَا',  'inneha',  '“şüphesiz o (dişi)”',  'ا i ن ~ a ه a'),
   k('إِنَّكَ',   'inneke',  '“şüphesiz sen”',       'ا i ن ~ a ك a'),
   k('إِنَّنِي',  'inne-nî','“ben şüphesiz”',       'ا i ن ~ a ن i'),
   k('إِنَّهُمْ', 'innahüm','“şüphesiz onlar”',     'ا i ن ~ a ه u م 0'),
   k('أَنَّ',     'enne',    '“-dığına / çünkü”',    'ا a ن ~ a'),
-  k('لٰكِنَّ',   'lâkinne', '“ama / fakat”',       'ل a ك i ن ~ a'),
-  k('لٰكِنْ',    'lâkin',   '“fakat”',              'ل a ك i ن 0'),
-  k('إِلهُ',     'ilâhü',   '“ilahı”',              'ا i ل a ه u'),
-  k('آيَةً',     'âyeten',  '“bir ayâ (işâret)”',   'ا M ي a ة A'),
-  k('آيَاتٍ',    'âyâtin',  '“âyetlerden”',        'ا M ي a ت I'),
-  k('آيَاتٌ',    'âyâtun',  '“âyetler”',           'ا M ي a ت U'),
-  k('كِتَابٍ',    'kitâbin','“bir kitaptan”',      'ك i ت a ا ب I'),
-  k('كِتَابٌ',    'kitâbun','“bir kitap”',         'ك i ت a ا ب U'),
+  k('لٰكِنَّ',   'lakinne', '“ama / fakat”',       'ل a ك i ن ~ a'),
+  k('لٰكِنْ',    'lakin',   '“fakat”',              'ل a ك i ن 0'),
+  k('إِلهُ',     'ilahü',   '“ilahı”',              'ا i ل a ه u'),
+  k('آيَةً',     'ayeten',  '“bir aya (işaret)”',   'ا M ي a ة A'),
+  k('آيَاتٍ',    'ayatin',  '“ayetlerden”',        'ا M ي a ت I'),
+  k('آيَاتٌ',    'ayatun',  '“ayetler”',           'ا M ي a ت U'),
+  k('كِتَابٍ',    'kitabin','“bir kitaptan”',      'ك i ت a ا ب I'),
+  k('كِتَابٌ',    'kitabun','“bir kitap”',         'ك i ت a ا ب U'),
   k('حَكِيمٌ',    'hakîmun','“hükümran / hikmetli”','ح a ك i M م U'),
   k('حَكِيمًا',   'hakîmen','“hikmet sahibi”',      'ح a ك i M م A ا'),
   k('عَلِيمًا',   '‘alîmen', '“(her şeyi) bilir”',  'ع a ل i M م A ا'),
@@ -544,88 +735,88 @@ export const KURAN_KELIMELERI = [
   k('غَفُورًا',   'ğafûren','“bağışlayıcı olarak”','غ a ف u M ر A ا'),
   k('شَكُورٌ',    'şekûrun','“şükredenleri sever”','ش a ك u M ر U'),
   k('رَؤُوفٌ',    'reuûfun','“pek merhametli”',    'ر a ا u ف U'),
-  k('صَمْدًا',    'samedâ',  '“(samed) sığınak olarak”','ص a م 0 د A ا'),
-  k('إِحدَىٰ',    'ihdâ',   '“(ikinin) birini”',    'ا i ح 0 د a ى'),
+  k('صَمْدًا',    'sameda',  '“(samed) sığınak olarak”','ص a م 0 د A ا'),
+  k('إِحدَىٰ',    'ihda',   '“(ikinin) birini”',    'ا i ح 0 د a ى'),
   k('اثْنَيْنِ',  'işneyne', '“ikisini birden”',    'ا 0 ث 0 ن a ي 0 ن i'),
   k('مِائَةٍ',    'mi-etin','“ yüz ”',             'م i ا ء a ت I'),
-  k('وَاضِحًا',   'vâdıhen', '“açıkça”',           'و a ا ض i ح A ا'),
+  k('وَاضِحًا',   'vadıhen', '“açıkça”',           'و a ا ض i ح A ا'),
 
-  // Mâûn (107), Tekâsür (102), Humeze (104) ve benzer — kelime seçkisi
+  // Maûn (107), Tekasür (102), Humeze (104) ve benzer — kelime seçkisi
   k('يُكَذِّبُ','yukezzibu','“(yalan) diyor”',      'ي u ك a ذ ~ i ب u'),
   k('بِالدِّينِ','bi-d-dîni', '“din üzerinde / dîne”','ب i ا ل د ~ i M ن i'),
   k('الْيَتِيمَ','el-yetime', '“yetimi”',          'ا ل 0 ي a ت i م a'),
-  k('طَعَامِ','taâmi',       '“(yemenin) tadını/tasarrufunu”','ط a ع a ا م i'),
-  k('الْمِسْكِينِ','el-miskîni','“misâkîne / yoksula”','ا ل 0 م i س 0 ك i ن i'),
-  k('صَلَاتِهِمْ','salâtihim', '“(onların) namazını”','ص a ل a ا ت i ه i م 0'),
-  k('سَاهُونَ','sâhûne',     '“(dalgınlar)”',       'س a ا ه u ن a'),
-  k('صَلَاوَٰتُ','salâvâtü','(çoğ.namaz/bereket) ','ص a ل a و a ت u'),
-  k('الْمَاعُونَ','el-mâ‘ûne','“(Mâûn: yardım eşyası)”','ا ل 0 م a ا ع u ن a'),
-  k('تَكَاثُرَ','tekâsura',  '“çoklukla övünmeyi”', 'ت a ك a ا ث u ر a'),
+  k('طَعَامِ','taami',       '“(yemenin) tadını/tasarrufunu”','ط a ع a ا م i'),
+  k('الْمِسْكِينِ','el-miskîni','“misakîne / yoksula”','ا ل 0 م i س 0 ك i ن i'),
+  k('صَلَاتِهِمْ','salatihim', '“(onların) namazını”','ص a ل a ا ت i ه i م 0'),
+  k('سَاهُونَ','sahûne',     '“(dalgınlar)”',       'س a ا ه u ن a'),
+  k('صَلَاوَٰتُ','salavatü','(çoğ.namaz/bereket) ','ص a ل a و a ت u'),
+  k('الْمَاعُونَ','el-ma‘ûne','“(Maûn: yardım eşyası)”','ا ل 0 م a ا ع u ن a'),
+  k('تَكَاثُرَ','tekasura',  '“çoklukla övünmeyi”', 'ت a ك a ا ث u ر a'),
   k('أَلْهٰكُمْ','ellehāküm','“(sizi) oyaladı”',    'ا a ل 0 ه a ك u م 0'),
-  k('الْجَاحِيمَ','el-câhîme', '“(cehennemi)”',     'ا ل 0 ج a ا ح i م a'),
+  k('الْجَاحِيمَ','el-cahîme', '“(cehennemi)”',     'ا ل 0 ج a ا ح i م a'),
 
   // Dürüst kısaltılmış sık dua ve zikir sözcükleri
   k('رَبَّنَا','rabbena',   '“Rabbimiz”',           'ر a ب ~ a ن a ا'),
   k('اغْفِرْلِي','ağfir lî',' “bana mağfiret et” ','ا 0 غ 0 ف i ر 0 ل i'),
-  k('ارْحَمْنَا','erhamnâ', '“bize merhamet et”',  'ا 0 ر 0 ح a م 0 ن a ا'),
-  k('هَدِنَا','hedinâ',    '“bizi hidayete erdir”','ه a د i ن a ا'),
+  k('ارْحَمْنَا','erhamna', '“bize merhamet et”',  'ا 0 ر 0 ح a م 0 ن a ا'),
+  k('هَدِنَا','hedina',    '“bizi hidayete erdir”','ه a د i ن a ا'),
   k('بِالْحَقِّ','bi-l-hakkı', '“hak ile” (tekrar)','ب i ا ل 0 ح a ق ~ i'),
-  k('بِالصِّرَاطِ','bi-s-sırâti', '“yol üzerinde”','ب i ا ل ص ~ i ر a ا ط i'),
+  k('بِالصِّرَاطِ','bi-s-sırati', '“yol üzerinde”','ب i ا ل ص ~ i ر a ا ط i'),
   k('بِالْفَلَقِ','bi-l-felak', '“fecre/korunmaya”','ب i ا ل 0 ف a ل a ق i'),
-  k('بِالنَّاسِ','bi-n-nâsi', '“insanlardan (korunma)”','ب i ا ل ن ~ a ا س i'),
+  k('بِالنَّاسِ','bi-n-nasi', '“insanlardan (korunma)”','ب i ا ل ن ~ a ا س i'),
   k('مِنْ شَرِّ','min şerri', '“şerrinden”',      'م i ن 0 ش a ر ~ i'),
   k('مِنْ حَسَدٍ','min hasedin', '“hasedinden”',  'م i ن 0 ح a س a د I'),
-  k('مَلِكِ النَّاسِ','meliki-n-nâsi', '“insanların Meliki”','م a ل i ك i ا ل ن ~ a ا س i'),
-  k('إِلٰهِ النَّاسِ','ilâhi-n-nâsi', '“insanların ilâhı”','ا i ل a ه i ا ل ن ~ a ا س i'),
+  k('مَلِكِ النَّاسِ','meliki-n-nasi', '“insanların Meliki”','م a ل i ك i ا ل ن ~ a ا س i'),
+  k('إِلٰهِ النَّاسِ','ilahi-n-nasi', '“insanların ilahı”','ا i ل a ه i ا ل ن ~ a ا س i'),
   k('فِي صُدُورِ','fî sudûri', '“göğüslerinde”',   'ف i ص u د u M ر i'),
   k('مِنَ الْجِنَّةِ','mine-l-cinneti', '“cinlerden”','م i ن a ا ل 0 ج i ن ~ a ة i'),
-  k('وَالنَّاسِ','ve-n-nâsi', '“ve insanlardan”',  'و a ا ل ن ~ a ا س i'),
-  k('يَا رَبَّ','yâ Rabbe', '“ey Rabbim”',         'ي a ا ر a ب ~ a'),
-  k('رَبَّ الْعَالَمِينَ','rabbe-l-âlemîn', '“âlemlerin Rabbi”','ر a ب ~ a ا ل 0 ع a ا ل a م i M ن a'),
-  k('الْحَمْدُ لِلّٰهِ','el-hamdü lillâhi', '“hamd Allah’a mahsustur”','ا ل 0 ح a م 0 د u ل i ل ~ ه i'),
-  k('سُبْحَانَ','sübhâne',  '“noksan sıfatlardan münezzeh”','س u ب 0 ح a ن a'),
-  k('سُبْحَانَ اللّٰهِ','sübhânellâhi', '“Allah’ı tesbih ederim”','س u ب 0 ح a ن a ا ل ل ~ ه i'),
+  k('وَالنَّاسِ','ve-n-nasi', '“ve insanlardan”',  'و a ا ل ن ~ a ا س i'),
+  k('يَا رَبَّ','ya Rabbe', '“ey Rabbim”',         'ي a ا ر a ب ~ a'),
+  k('رَبَّ الْعَالَمِينَ','rabbe-l-alemîn', '“alemlerin Rabbi”','ر a ب ~ a ا ل 0 ع a ا ل a م i M ن a'),
+  k('الْحَمْدُ لِلّٰهِ','el-hamdü lillahi', '“hamd Allah’a mahsustur”','ا ل 0 ح a م 0 د u ل i ل ~ ه i'),
+  k('سُبْحَانَ','sübhane',  '“noksan sıfatlardan münezzeh”','س u ب 0 ح a ن a'),
+  k('سُبْحَانَ اللّٰهِ','sübhanellahi', '“Allah’ı tesbih ederim”','س u ب 0 ح a ن a ا ل ل ~ ه i'),
   k('الْحَقُّ','el-hakkü',  '“hak / gerçek”',     'ا ل 0 ح a ق ~ u'),
   k('الْعَزِيزُ','el-azîzü', '“izzet sahibi”',     'ا ل 0 ع a ز i M ز u'),
   k('الْغَفُورُ','el-ğafûrü', '“bağışlayıcı”',     'ا ل 0 غ a ف u M ر u'),
   k('الْوَدُودُ','el-vedûdü', '“çok seven”',       'ا ل 0 و a د u M د u'),
   k('الْحَكِيمُ','el-hakîmü', '“hikmet sahibi”',   'ا ل 0 ح a ك i M م u'),
   k('الْعَلِيمُ','el-‘alîmü', '“her şeyi bilen”',   'ا ل 0 ع a ل i M م u'),
-  k('الْخَبِيرُ','el-habîrü', '“hiçbir şeyden gâfil değil”','ا ل 0 خ a ب i M ر u'),
+  k('الْخَبِيرُ','el-habîrü', '“hiçbir şeyden gafil değil”','ا ل 0 خ a ب i M ر u'),
   k('السَّمِيعُ','es-semî‘u', '“işiten”',          'ا ل س ~ a م i M ع u'),
   k('الْبَصِيرُ','el-basîrü', '“gören”',           'ا ل 0 ب a ص i M ر u'),
-  k('السَّلَامُ','es-selâmü', '“selâm (es-selâm)”','ا ل س ~ a ل a ا م u'),
+  k('السَّلَامُ','es-selamü', '“selam (es-selam)”','ا ل س ~ a ل a ا م u'),
   k('الْمُؤْمِنُ','el-mü’minü', '“imanı koruyan”', 'ا ل 0 م u ا 0 م i ن u'),
-  k('الْمُهَيْمِنُ','el-müheyminü', '“her şeye hâkim”','ا ل 0 م u ه a ي 0 م i ن u'),
-  k('الْجَبَّارُ','el-cabbârü', '“dilediğini yapan”','ا ل 0 ج a ب ~ a ر u'),
+  k('الْمُهَيْمِنُ','el-müheyminü', '“her şeye hakim”','ا ل 0 م u ه a ي 0 م i ن u'),
+  k('الْجَبَّارُ','el-cabbarü', '“dilediğini yapan”','ا ل 0 ج a ب ~ a ر u'),
   k('الْمُتَكَبِّرُ','el-mütekabbirü', '“büyüklükten münezzeh”','ا ل 0 م u ت a ك a ب ~ i ر u'),
-  k('الْخَالِقُ','el-hâlıkü', '“yaratan”',         'ا ل 0 خ a ا ل i ق u'),
-  k('الْبَارِئُ','el-bâriu', '“yoktan var eden”',  'ا ل 0 ب a ا ر i ء u'),
+  k('الْخَالِقُ','el-halıkü', '“yaratan”',         'ا ل 0 خ a ا ل i ق u'),
+  k('الْبَارِئُ','el-bariu', '“yoktan var eden”',  'ا ل 0 ب a ا ر i ء u'),
   k('الْمُصَوِّرُ','el-musavvirü', '“suret veren”','ا ل 0 م u ص a و ~ i ر u'),
   k('الْجَمِيلُ','el-cemîlü', '“güzel”',           'ا ل 0 ج a م i M ل u'),
   k('الْقَرِيبُ','el-karîbü', '“yakın”',           'ا ل 0 ق a ر i M ب u'),
-  k('الْمُجِيبُ','el-mucîbü', '“duâya icabet eden”','ا ل 0 م u ج i M ب u'),
-  k('الْحَنَّانُ','el-hannânu', '“merhamet eden”', 'ا ل 0 ح a ن ~ a ن u'),
-  k('الْمَنَّانُ','el-mennânu', '“nimet veren”',   'ا ل 0 م a ن ~ a ن u'),
-  k('الْوَهَّابُ','el-vehhâbü', '“karşılıksız veren”','ا ل 0 و a ه ~ a ب u'),
-  k('الْفَتَّاحُ','el-fettâhü', '“hüküm açan”',    'ا ل 0 ف a ت ~ a ح u'),
+  k('الْمُجِيبُ','el-mucîbü', '“duaya icabet eden”','ا ل 0 م u ج i M ب u'),
+  k('الْحَنَّانُ','el-hannanu', '“merhamet eden”', 'ا ل 0 ح a ن ~ a ن u'),
+  k('الْمَنَّانُ','el-mennanu', '“nimet veren”',   'ا ل 0 م a ن ~ a ن u'),
+  k('الْوَهَّابُ','el-vehhabü', '“karşılıksız veren”','ا ل 0 و a ه ~ a ب u'),
+  k('الْفَتَّاحُ','el-fettahü', '“hüküm açan”',    'ا ل 0 ف a ت ~ a ح u'),
 
   // Uzayıcı tekrarı önlemek için farklı esma ve sıfat birleşimleri / kısa cümlecikler
-  k('آمَنتُ باللّٰهِ','âmentü billâhi',' “Allah’a îmân ettim”','ا M م a ن 0 ت u ب i ل ل ~ ه i'),
+  k('آمَنتُ باللّٰهِ','amentü billahi',' “Allah’a îman ettim”','ا M م a ن 0 ت u ب i ل ل ~ ه i'),
   k('حَقًّا','hakkan',' “hak olarak / gerçekten” ','ح a ق ~ A ا'),
-  k('لاَ إِلهَ إِلاَّ هوَ','lâ ilâhe illâ hüve', '“O’ndan başka ilâh yok”','ل a ا ا i ل a ه a ا i ل ~ a ا ه u و a'),
-  k('وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ','ve hüve alâ kulli şey’in kadîr', '“O her şeye kadirdir”','و a ه u و a ع a ل a ى ك u ل ~ i ش a ي 0 ء I ق a د i M ر U'),
+  k('لاَ إِلهَ إِلاَّ هوَ','la ilahe illa hüve', '“O’ndan başka ilah yok”','ل a ا ا i ل a ه a ا i ل ~ a ا ه u و a'),
+  k('وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ','ve hüve ala kulli şey’in kadîr', '“O her şeye kadirdir”','و a ه u و a ع a ل a ى ك u ل ~ i ش a ي 0 ء I ق a د i M ر U'),
   k('وَهُوَ السَّمِيعُ الْعَلِيمُ','ve hüve-s-semî‘u-l-‘alîm', '“O işitendir, bilendir”','و a ه u و a ا ل س ~ a م i M ع u ا ل 0 ع a ل i M م u'),
   k('رَبِّ اغْفِرْ وَارْحَمْ','rabbi ağfir verham', '“Rabbim bağışla ve merhamet et”','ر a ب ~ i ا 0 غ 0 ف i ر 0 و a ا 0 ر 0 ح a م 0'),
-  k('وَأَنْتَ خَيْرُ الرَّاحِمِينَ','ve ente hayrur-râhimîn', '“sen merhametlilerin en hayırlısısın”','و a ا a ن 0 ت a خ a ي 0 ر u ا ل ر ~ a ا ح i م i M ن a'),
-  k('رَبَّنَا آتِنَا','rabbena âtinâ', '“Rabbimiz bize ver”','ر a ب ~ a ن a ا ا M ت i ن a ا'),
-  k('فِي الدُّنْيَا وَالْآخِرَةِ','fi-d-dünyâ ve-l-âhireti', '“dünya ve âhirette”','ف i ا ل د ~ u ن 0 ي a و a ا ل M ا خ i ر a ة i'),
+  k('وَأَنْتَ خَيْرُ الرَّاحِمِينَ','ve ente hayrur-rahimîn', '“sen merhametlilerin en hayırlısısın”','و a ا a ن 0 ت a خ a ي 0 ر u ا ل ر ~ a ا ح i م i M ن a'),
+  k('رَبَّنَا آتِنَا','rabbena atina', '“Rabbimiz bize ver”','ر a ب ~ a ن a ا ا M ت i ن a ا'),
+  k('فِي الدُّنْيَا وَالْآخِرَةِ','fi-d-dünya ve-l-ahireti', '“dünya ve ahirette”','ف i ا ل د ~ u ن 0 ي a و a ا ل M ا خ i ر a ة i'),
   k('حَسَنَةً','haseneten',' “iyi / güzel bir şey olarak” ','ح a س a ن a ة A'),
-  k('وَاقِعًا','vâḳıan','“(ortaya çıkan) olarak” ','و a ا ق i ع A ا'),
-  k('تَائِبًا','tâiben',' “tevbe ederek” ','ت a ا i ب A ا'),
-  k('عَٰبِدًا','âbidâ','“(ibâdet ederek)” ','ع a ب i د A ا'),
-  k('شَاكِرًا','şâkiren',' “şükrederek” ','ش a ا ك i ر A ا'),
-  k('صَابِرًا','sâbiren',' “sabr ederek” ','ص a ا ب i ر A ا'),
+  k('وَاقِعًا','vaḳıan','“(ortaya çıkan) olarak” ','و a ا ق i ع A ا'),
+  k('تَائِبًا','taiben',' “tevbe ederek” ','ت a ا i ب A ا'),
+  k('عَٰبِدًا','abida','“(ibadet ederek)” ','ع a ب i د A ا'),
+  k('شَاكِرًا','şakiren',' “şükrederek” ','ش a ا ك i ر A ا'),
+  k('صَابِرًا','sabiren',' “sabr ederek” ','ص a ا ب i ر A ا'),
 
   // Kısa sıfat-cevher tekrarı (öğretim amaçlı, farklı yazım)
   k('رَحْمَةٌ','rahmetun',' “bir rahmet” ','ر a ح 0 م a ة U'),
@@ -635,60 +826,60 @@ export const KURAN_KELIMELERI = [
   k('خَيْرًا','hayren',' “hayır olarak” ',   'خ a ي 0 ر A ا'),
   k('شَرٌّ','şerrun','“şer”',                'ش a ر ~ U'),
   k('نُورًا','nûren',' “nûr olarak” ',       'ن u و a ر A ا'),
-  k('هُدًى','huden','“hüdâ olarak” ',        'ه u د A ا'),
+  k('هُدًى','huden','“hüda olarak” ',        'ه u د A ا'),
   k('ذِكْرًا','zikren','“zikir olarak” ',    'ذ i ك 0 ر A ا'),
   k('حِكْمَةً','hikmeten','“hikmet” ',        'ح i ك 0 م a ة A'),
   k('قُوَّةً','kuvveten','“kuvvet” ',         'ق u و ~ a ة A'),
-  k('مَوْلَىٰ','mevlâ','“velî / sahip” ',    'م a و 0 ل a ى'),
-  k('مَوْلَاهُ','mevlâhü','“O’nun velîsi” ',  'م a و 0 ل a ه u'),
+  k('مَوْلَىٰ','mevla','“velî / sahip” ',    'م a و 0 ل a ى'),
+  k('مَوْلَاهُ','mevlahü','“O’nun velîsi” ',  'م a و 0 ل a ه u'),
 
-  // Fâtiha tekrarı (ayrı diziliş ile — öğrenci alıştırması)
-  k('بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ','bi-smi’llâhi-r-Rahmâni-r-Rahîm', '“besmele (tam)”','ب i س 0 م i ا ل ل ~ ه i ا ل ر ~ a ح 0 م a ن i ا ل ر ~ a ح i M م i'),
-  k('الْحَمْدُ لِلّٰهِ رَبِّ الْعَالَمِينَ','el-hamdü lillâhi rabbi-l-âlemîn', '“âlemlerin Rabbine hamd”','ا ل 0 ح a م 0 د u ل i ل ~ ه i ر a ب ~ i ا ل 0 ع a ا ل a م i M ن a'),
+  // Fatiha tekrarı (ayrı diziliş ile — öğrenci alıştırması)
+  k('بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ','bi-smi’llahi-r-Rahmani-r-Rahîm', '“besmele (tam)”','ب i س 0 م i ا ل ل ~ ه i ا ل ر ~ a ح 0 م a ن i ا ل ر ~ a ح i M م i'),
+  k('الْحَمْدُ لِلّٰهِ رَبِّ الْعَالَمِينَ','el-hamdü lillahi rabbi-l-alemîn', '“alemlerin Rabbine hamd”','ا ل 0 ح a م 0 د u ل i ل ~ ه i ر a ب ~ i ا ل 0 ع a ا ل a م i M ن a'),
 
-  // Ad-Duhâ ve eş-Şerh seçkisi
-  k('وَالضُّحَىٰ','ve-d-duhâ','“kuşluk vaktine”','و a ا ل ض ~ u ح a ى'),
+  // Ad-Duha ve eş-Şerh seçkisi
+  k('وَالضُّحَىٰ','ve-d-duha','“kuşluk vaktine”','و a ا ل ض ~ u ح a ى'),
   k('وَاللَّيْلِ','ve-l-leyle', '“geceye”',        'و a ا ل ل ~ a ي 0 ل i'),
-  k('مَا وَدَّعَكَ','mâ vedde‘ake', '“seni bırakmadı”','م a ا و a د ~ a ع a ك a'),
+  k('مَا وَدَّعَكَ','ma vedde‘ake', '“seni bırakmadı”','م a ا و a د ~ a ع a ك a'),
   k('رَبُّكَ','rabbüke','“Rabbin”',              'ر a ب ~ u ك a'),
-  k('قَلَىٰ','kelâ','“(sana karşı kötülük) bilmedi”','ق a ل a ى'),
+  k('قَلَىٰ','kela','“(sana karşı kötülük) bilmedi”','ق a ل a ى'),
   k('لَسَوْفَ','lesevfe', '“(ileride)And ver”',   'ل a س u و 0 ف a'),
   k('يُعْطِيكَ','yû‘tîke','“sana verecek”',      'ي u ع 0 ط i ك a'),
-  k('فَإِذَا','fe-izâ', '“öyleyse ne zaman ki”','ف a ا i ذ a ا'),
+  k('فَإِذَا','fe-iza', '“öyleyse ne zaman ki”','ف a ا i ذ a ا'),
   k('فَرَغْتَ','ferağte', '“boşaldın / işini bitirdin”','ف a ر 0 غ 0 ت a'),
   k('فَانْصَبْ','fansab', '“yorul da yorul”',     'ف a ا 0 ن 0 ص a ب 0'),
-  k('إِلَىٰ رَبِّكَ','ilâ rabbike','“Rabbine doğru”','ا i ل a ى ر a ب ~ i ك a'),
+  k('إِلَىٰ رَبِّكَ','ila rabbike','“Rabbine doğru”','ا i ل a ى ر a ب ~ i ك a'),
   k('فَارْغَبْ','farğab','“iste / yönel”',      'ف a ا 0 ر 0 غ a ب 0'),
 
   // Kısa sure ve sûre başlıkları (okuma alıştırması)
-  k('سُورَةُ الْأَعْلَىٰ','sûretü-l-A‘lâ', '“A‘lâ sûresi”','س u و a ر a ة u ا ل 0 ا a ع 0 ل a ى'),
+  k('سُورَةُ الْأَعْلَىٰ','sûretü-l-A‘la', '“A‘la sûresi”','س u و a ر a ة u ا ل 0 ا a ع 0 ل a ى'),
   k('سُورَةُ الشَّمْسِ','sûretü-ş-Şems', '“Şems sûresi”','س u و a ر a ة u ا ل ش ~ a م 0 س i'),
   k('سُورَةُ اللَّيْلِ','sûretü-l-Leyl', '“Leyl sûresi”','س u و a ر a ة u ا ل ل ~ a ي 0 ل i'),
-  k('سُورَةُ الضُّحَىٰ','sûretü-d-Duhâ', '“Duhâ sûresi”','س u و a ر a ة u ا ل ض ~ u ح a ى'),
-  k('سُورَةُ الشَّرْحِ','sûretü-ş-Şerh', '“İnşirâh (Şerh) sûresi”','س u و a ر a ة u ا ل ش ~ a ر 0 ح i'),
+  k('سُورَةُ الضُّحَىٰ','sûretü-d-Duha', '“Duha sûresi”','س u و a ر a ة u ا ل ض ~ u ح a ى'),
+  k('سُورَةُ الشَّرْحِ','sûretü-ş-Şerh', '“İnşirah (Şerh) sûresi”','س u و a ر a ة u ا ل ش ~ a ر 0 ح i'),
   k('سُورَةُ التِّينِ','sûretü-t-Tîn', '“Tîn sûresi”','س u و a ر a ة u ا ل ت ~ i M ن i'),
   k('سُورَةُ الْعَلَقِ','sûretü-l-‘Alak', '“Alak sûresi”','س u و a ر a ة u ا ل 0 ع a ل a ق i'),
   k('سُورَةُ الْقَدْرِ','sûretü-l-Kadr', '“Kadr sûresi”','س u و a ر a ة u ا ل 0 ق a د 0 ر i'),
   k('سُورَةُ الْبَيِّنَةِ','sûretü-l-Beyyine', '“Beyyine sûresi”','س u و a ر a ة u ا ل 0 ب a ي ~ i ن a ة i'),
   k('سُورَةُ الزَّلْزَلَةِ','sûretüz-Zelzele', '“Zelzele sûresi”','س u و a ر a ة u ا ل ز ~ a ل 0 ز a ل a ة i'),
-  k('سُورَةُ الْعَادِيَاتِ','sûretü-l-‘Âdiyât', '“Âdiyât sûresi”','س u و a ر a ة u ا ل 0 ع a ا د i ي a ا ت i'),
-  k('سُورَةُ الْمَاعُونِ','sûretü-l-Mâûn', '“Mâûn sûresi”','س u و a ر a ة u ا ل م a ا ع u ن i'),
-  k('سُورَةُ التَّكَاثُرِ','sûretü-t-Tekâsür', '“Tekâsür sûresi”','س u و a ر a ة u ا ل ت ~ a ك a ا ث u ر i'),
+  k('سُورَةُ الْعَادِيَاتِ','sûretü-l-‘adiyat', '“adiyat sûresi”','س u و a ر a ة u ا ل 0 ع a ا د i ي a ا ت i'),
+  k('سُورَةُ الْمَاعُونِ','sûretü-l-Maûn', '“Maûn sûresi”','س u و a ر a ة u ا ل م a ا ع u ن i'),
+  k('سُورَةُ التَّكَاثُرِ','sûretü-t-Tekasür', '“Tekasür sûresi”','س u و a ر a ة u ا ل ت ~ a ك a ا ث u ر i'),
   k('سُورَةُ الْعَصْرِ','sûretü-l-‘Asr', '“Asr sûresi”','س u و a ر a ة u ا ل 0 ع a ص 0 ر i'),
   k('سُورَةُ الْهُمَزَةِ','sûretü-l-Humeze', '“Humeze sûresi”','س u و a ر a ة u ا ل 0 ه u م a ز a ة i'),
   k('سُورَةُ الْفِيلِ','sûretü-l-Fîl', '“Fîl sûresi”','س u و a ر a ة u ا ل 0 ف i M ل i'),
   k('سُورَةُ قُرَيْشٍ','sûretü Kureyş', '“Kureyş sûresi”','س u و a ر a ة u ق u ر a ي 0 ش I'),
 
   // Kalan adet için kısa “ezber / tekrar” ifadeleri
-  k('يَارَبَّ','yâ Rabbe', '“ey Rabbim”',         'ي a ا ر a ب ~ a'),
-  k('آمِينَ','âmîne', '“âmîn”',                  'ا M م i ن a'),
-  k('آمِينُ','âmînü', '“âmîn (bitiş sesi)”',     'ا M م i ن u'),
-  k('آمِنُوا','âminû', '“iman edin”',            'ا M م i ن u M ا'),
+  k('يَارَبَّ','ya Rabbe', '“ey Rabbim”',         'ي a ا ر a ب ~ a'),
+  k('آمِينَ','amîne', '“amîn”',                  'ا M م i ن a'),
+  k('آمِينُ','amînü', '“amîn (bitiş sesi)”',     'ا M م i ن u'),
+  k('آمِنُوا','aminû', '“iman edin”',            'ا M م i ن u M ا'),
   k('يُؤْمِنُونَ','yu’minûne', '“iman ederler”','ي u ا 0 م i ن u M ن a'),
-  k('كَفَرُوا','keferû', '“inkâr ettiler”',     'ك a ف a ر u M ا'),
+  k('كَفَرُوا','keferû', '“inkar ettiler”',     'ك a ف a ر u M ا'),
   k('ظَلَمُوا','zalemû', '“zulmettiler”',      'ظ a ل a م u M ا'),
-  k('هَادُوا','hâdû', '“(Yahûdîler) olarak”',    'ه a ا د u M ا'),
-  k('نَصَارَىٰ','nasârâ', '“(Hristiyanlar)”',   'ن a ص a ر a ى'),
+  k('هَادُوا','hadû', '“(Yahûdîler) olarak”',    'ه a ا د u M ا'),
+  k('نَصَارَىٰ','nasara', '“(Hristiyanlar)”',   'ن a ص a ر a ى'),
   k('أَجْمَعِينَ','ecma‘în', '“tümüyle”',        'ا a ج 0 م a ع i M ن a'),
   k('يَجْمَعُ','yecma‘u', '“toplar / bir araya getirir”','ي a ج 0 م a ع u'),
   k('يُبَشِّرُ','yubeşşiru', '“müjde verir”',   'ي u ب a ش ~ i ر u'),
@@ -704,12 +895,12 @@ export const KURAN_KELIMELERI = [
   k('حَلِيمٌ','halîmun', '“yumuşak huylu”',     'ح a ل i M م U'),
   k('شَدِيدٌ','şedîdun', '“şiddetli”',         'ش a د i M د U'),
   k('شَكُورٌ','şekûrun', '“şükredenleri sever”','ش a ك u M ر U'),
-  k('حَمِيدٌ','hamîdun', '“övgüye lâyık”',     'ح a م i M د U'),
+  k('حَمِيدٌ','hamîdun', '“övgüye layık”',     'ح a م i M د U'),
   k('مَجِيدٌ','mecîdun', '“şanlı / yüce”',     'م a ج i M د U'),
-  k('صَادِقٌ','sâdıkun', '“doğru sözlü”',      'ص a ا د i ق U'),
-  k('ثَاقِبٌ','sâkıbun', '“parlak / delen”',   'ث a ا ق i ب U'),
+  k('صَادِقٌ','sadıkun', '“doğru sözlü”',      'ص a ا د i ق U'),
+  k('ثَاقِبٌ','sakıbun', '“parlak / delen”',   'ث a ا ق i ب U'),
 
   // Son tamamlayıcı küçük ekleme (liste ≥250 için)
-  k('آتَاكَ','âteke', '“sana verdi / geldi”',   'ا M ت a ك a')
+  k('آتَاكَ','ateke', '“sana verdi / geldi”',   'ا M ت a ك a')
 ];
 

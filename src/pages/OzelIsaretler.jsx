@@ -1,23 +1,13 @@
 import React from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { OZEL_ISARETLER } from '../data/braille.js';
+import { isarettenOgeye } from '../utils/isaretCevir.js';
 
-function isarettenOgeye(s) {
-  const hucreler = s.hucreler || [];
-  return {
-    ad: s.ad,
-    altMetin: s.sembol && s.sembol !== '—' ? s.sembol : undefined,
-    hucreler,
-    noktalar: hucreler[0] || [],
-    yonergeDetay: s.aciklama || undefined,
-  };
-}
-
-const OGELER = OZEL_ISARETLER.map(isarettenOgeye);
+const OGELER = OZEL_ISARETLER.map((s) => isarettenOgeye(s));
 
 export default function OzelIsaretler() {
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Diğer Özel İşaretler"
       ogeler={OGELER}
       kategoriAdi="işareti"

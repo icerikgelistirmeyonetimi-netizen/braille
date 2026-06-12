@@ -8,6 +8,7 @@ import {
   KURAN_HECELERI
 } from '../data/kuran.js';
 import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
+import { karistir, HUCRE_SIRA_SOZ as HUCRE_ETIKET } from '../utils/diziYardimci.js';
 
 // Modül 5 (Kur'an) Test/Sınav etkinliği. Çoklu hücreli sorulara izin verir.
 // 3 yanlış bastığında doğru cevap açıklanıp seslendirilir.
@@ -60,17 +61,6 @@ const KAYNAKLAR = {
 };
 
 const SORU_SAYISI = 10;
-
-function karistir(dizi) {
-  const kopya = [...dizi];
-  for (let i = kopya.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [kopya[i], kopya[j]] = [kopya[j], kopya[i]];
-  }
-  return kopya;
-}
-
-const HUCRE_ETIKET = ['birinci', 'ikinci', 'üçüncü', 'dördüncü', 'beşinci', 'altıncı'];
 
 export default function TestKuran() {
   const [kaynak, setKaynak] = useState(null);

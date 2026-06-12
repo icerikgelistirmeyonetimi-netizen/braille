@@ -3,6 +3,32 @@ import { konus, konusmayiDurdur } from '../utils/ses.js';
 
 const HUCRE_SIRASI = [1, 4, 2, 5, 3, 6];
 
+// Karakter sayısına göre font küçültme sınıfı — uzun metinler karta sığsın
+function etiketFontSinifi(metin) {
+  if (typeof metin !== 'string') return '';
+  if (metin.length > 22) return 'etiket-kucuk';
+  if (metin.length > 14) return 'etiket-orta';
+  return '';
+}
+
+// Etiket içindeki parantez içeriğini alt açıklama olarak ayır: "A (B)" → { ana:"A", alt:"B" }
+function etiketiAyristir(etiket) {
+  if (typeof etiket !== 'string') return { ana: etiket, alt: null };
+  const m = etiket.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (!m) return { ana: etiket, alt: null };
+  return { ana: m[1].trim(), alt: m[2].trim() };
+}
+
+// Arapça birleşen diyakritikler tek başına gösterilince çok küçük görünür.
+// Bunları ب (ba) üzerinde göster: َ → بَ
+const ARAPC_DIAKRITIK = /^[ً-ٰٟ]+$/;
+function okumaEtiketiHazirla(etiket) {
+  if (typeof etiket === 'string' && ARAPC_DIAKRITIK.test(etiket.trim())) {
+    return `◌${etiket.trim()}`;  // ◌ = U+25CC kesik çizgili daire
+  }
+  return etiket;
+}
+
 export const hucreleriNormalizeEt = (hucreler) => {
   if (!Array.isArray(hucreler)) return [];
   if (hucreler.length === 0) return [];
@@ -261,7 +287,15 @@ export default function OkumaModuListesi({
                 onClick={() => onSec(index)}
                 aria-label={`${ariaEtiket}. Braille noktaları: ${hucreNoktaMetni(hucreler)}. Öğrenme modunda aç.`}
               >
-                <span className="okuma-modu-etiket" dir={rtl ? 'rtl' : undefined} lang={rtl ? 'ar' : undefined}>{etiket}</span>
+                {(() => {
+                  const { ana, alt: parantezAlt } = etiketiAyristir(okumaEtiketiHazirla(etiket));
+                  return (
+                    <>
+                      <span className={`okuma-modu-etiket${etiketFontSinifi(ana) ? ' ' + etiketFontSinifi(ana) : ''}`} dir={rtl ? 'rtl' : undefined} lang={rtl ? 'ar' : undefined}>{ana}</span>
+                      {parantezAlt && <span className="okuma-modu-alt">{parantezAlt}</span>}
+                    </>
+                  );
+                })()}
                 {altEtiket && altEtiket !== etiket && <span className="okuma-modu-alt">{altEtiket}</span>}
                 <span className="okuma-modu-mini-hucreler" aria-hidden="true">
                   {hucreler.slice(0, 4).map((hucre, hucreIndex) => (

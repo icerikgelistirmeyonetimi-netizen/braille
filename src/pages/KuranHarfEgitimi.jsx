@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import SesIzinEkrani from '../components/SesIzinEkrani.jsx';
 import { KURAN_HARFLERI } from '../data/kuran.js';
 import {
@@ -7,18 +7,17 @@ import {
   kuranHarfSesUrlAl,
   kuranSesCal,
   kuranSesiniDurdur,
-  kuranSesleriPreloadEt,
 } from '../utils/kuranSesHelpers.js';
 
 export default function KuranHarfEgitimi() {
   const [sesIzniVar, setSesIzniVar] = useState(false);
 
   const ogeler = KURAN_HARFLERI.map((h) => ({
-    ad: h.harf,
-    ariaAd: `${h.ad} harfi`,
+    yazi: h.harf,
+    ttsYazi: `${h.ad} harfi`,
     harfAdi: h.ad,
     sesId: h.sesId ?? kuranHarfSesIdAl(h.ad),
-    noktalar: h.noktalar,
+    hucreler: [h.noktalar],
     aciklama: '',
     tamYonergeMetni: `${h.noktalar.join(', ')} numaralı noktalardan oluşur. Lütfen numaralara sırayla dokunun.`,
   }));
@@ -26,13 +25,9 @@ export default function KuranHarfEgitimi() {
   const harfSesiCal = useCallback((oge, opts = {}) => {
     const url = kuranHarfSesUrlAl(oge);
 
-    console.log('KURAN HARF SES ISTEK', {
-      oge,
-      url,
-    });
+    console.log('KURAN HARF SES ISTEK', { oge, url });
 
     if (!url) {
-      // Ses yoksa bitiş callback'ini yine de tetikle (Braille okuması beklemede kalmasın)
       if (typeof opts.onEnded === 'function') opts.onEnded();
       return;
     }
@@ -53,7 +48,7 @@ export default function KuranHarfEgitimi() {
   }
 
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Kur'an-ı Kerim: Harf Eğitimi"
       ogeler={ogeler}
       kategoriAdi="Kur'an harfi"
@@ -65,7 +60,7 @@ export default function KuranHarfEgitimi() {
       ogeSesiOnceCal
       ogeSesiHerZaman
       ogeSesiSonrasiKonusmaGecikmeMs={1200}
-okumaModundaSadeceOgeSesi
+      okumaModundaSadeceOgeSesi
     />
   );
 }

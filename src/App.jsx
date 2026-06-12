@@ -24,6 +24,7 @@ import TestNoktalama from './pages/TestNoktalama.jsx';
 import KuranHarfEgitimi from './pages/KuranHarfEgitimi.jsx';
 import KuranHarekeEgitimi from './pages/KuranHarekeEgitimi.jsx';
 import KuranTecvidEgitimi from './pages/KuranTecvidEgitimi.jsx';
+import KuranIsaretEgitimi from './pages/KuranIsaretEgitimi.jsx';
 import KuranHeceOkuma from './pages/KuranHeceOkuma.jsx';
 import KuranKelimeOkumaSayfa from './pages/KuranKelimeOkumaSayfa.jsx';
 import KuranKelimeTemelSayfa from './pages/KuranKelimeTemelSayfa.jsx';
@@ -50,11 +51,9 @@ import MuzikBrailleSayfa from './pages/MuzikBrailleSayfa.jsx';
 import MuzikBrfYazim from './pages/MuzikBrfYazim.jsx';
 import TestMuzik from './pages/TestMuzik.jsx';
 import IngilizceBrailleMenu from './pages/IngilizceBrailleMenu.jsx';
-import IngilizceBrailleSayfa from './pages/IngilizceBrailleSayfa.jsx';
 import AlmancaBrailleMenu from './pages/AlmancaBrailleMenu.jsx';
-import AlmancaBrailleSayfa from './pages/AlmancaBrailleSayfa.jsx';
 import FransizcaBrailleMenu from './pages/FransizcaBrailleMenu.jsx';
-import FransizcaBrailleSayfa from './pages/FransizcaBrailleSayfa.jsx';
+import YabanciBrailleSayfa from './pages/YabanciBrailleSayfa.jsx';
 import Araclar from './pages/Araclar.jsx';
 import BelgeBrf from './pages/BelgeBrf.jsx';
 import BrfOku from './pages/BrfOku.jsx';
@@ -178,7 +177,8 @@ export default function App() {
           <Route path="/test-noktalama" element={<TestNoktalama />} />
           <Route path="/kuran-harfler" element={<KuranHarfEgitimi />} />
           <Route path="/kuran-harekeler" element={<KuranHarekeEgitimi />} />
-          <Route path="/kuran-tecvid" element={<KuranTecvidEgitimi />} />
+          <Route path="/kuran-isaretler/:slug" element={<KuranIsaretEgitimi />} />
+          <Route path="/kuran-uzatma" element={<KuranTecvidEgitimi />} />
           <Route path="/kuran-heceler" element={<KuranHeceOkuma />} />
           <Route path="/kuran-kelimeler-temel" element={<KuranKelimeTemelSayfa />} />
           <Route path="/kuran-kelimeler" element={<KuranKelimeOkumaSayfa />} />
@@ -209,15 +209,15 @@ export default function App() {
           <Route path="/almanca-braille" element={<Navigate to="/almanca" replace />} />
           <Route path="/almanca-braille/:slug" element={<AlmancaBrailleEskiYol />} />
           <Route path="/almanca" element={<AlmancaBrailleMenu />} />
-          <Route path="/almanca/:slug" element={<AlmancaBrailleSayfa />} />
+          <Route path="/almanca/:slug" element={<YabanciBrailleSayfa dil="de" />} />
           <Route path="/fransizca-braille" element={<Navigate to="/fransizca" replace />} />
           <Route path="/fransizca-braille/:slug" element={<FransizcaBrailleEskiYol />} />
           <Route path="/fransizca" element={<FransizcaBrailleMenu />} />
-          <Route path="/fransizca/:slug" element={<FransizcaBrailleSayfa />} />
+          <Route path="/fransizca/:slug" element={<YabanciBrailleSayfa dil="fr" />} />
           <Route path="/ingilizce-braille" element={<Navigate to="/ingilizce" replace />} />
           <Route path="/ingilizce-braille/:slug" element={<IngilizceBrailleEskiYol />} />
           <Route path="/ingilizce" element={<IngilizceBrailleMenu />} />
-          <Route path="/ingilizce/:slug" element={<IngilizceBrailleSayfa />} />
+          <Route path="/ingilizce/:slug" element={<YabanciBrailleSayfa dil="en" />} />
           <Route path="/araclar" element={<Araclar />} />
           <Route path="/belge-brf" element={<BelgeBrf />} />
           <Route path="/brf-oku" element={<BrfOku />} />

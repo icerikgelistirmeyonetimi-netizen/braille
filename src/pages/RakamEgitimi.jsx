@@ -1,16 +1,9 @@
 import React from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { RAKAMLAR } from '../data/braille.js';
+import { nlDan as nl } from '../utils/noktaYardimci.js';
 
 const SAYI_ISARETI = [3, 4, 5, 6];
-
-function nl(nArr) {
-  if (!nArr || nArr.length === 0) return '';
-  if (nArr.length === 1) return `${nArr[0]}. noktadan`;
-  if (nArr.length === 2) return `${nArr[0]}. ve ${nArr[1]}. noktalardan`;
-  const bas = nArr.slice(0, -1).map((n) => `${n}.`).join(', ');
-  return `${bas} ve ${nArr[nArr.length - 1]}. noktalardan`;
-}
 
 const INTRO = 'Sayı yazımı için sayı işareti öne eklenmelidir.';
 
@@ -18,9 +11,8 @@ export default function RakamEgitimi() {
   const ogeler = RAKAMLAR.map((r, i) => {
     const detay = `önce sayı işareti hücresindeki ${nl(SAYI_ISARETI)}; sonra rakam hücresindeki ${nl(r.noktalar)} oluşur.`;
     return {
-      ad: r.rakam,
-      ariaAd: `${r.rakam} rakamı`,
-      noktalar: r.noktalar,
+      yazi: r.rakam,
+      ttsYazi: `${r.rakam} rakamı`,
       hucreler: [SAYI_ISARETI, r.noktalar],
       hucreBasliklari: ['sayı', r.rakam],
       hucreAriaEtiketleri: ['sayı işareti', `${r.rakam} rakam hücresi`],
@@ -32,7 +24,7 @@ export default function RakamEgitimi() {
   });
 
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Rakam Eğitimi"
       ogeler={ogeler}
       kategoriAdi="rakamı"

@@ -3,6 +3,7 @@ import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import { HARFLER, RAKAMLAR, NOKTALAMA } from '../data/braille.js';
 import { konus, basariBildir, hataBildir } from '../utils/ses.js';
+import { karistir } from '../utils/diziYardimci.js';
 
 const KAYNAKLAR = {
   harfler: {
@@ -23,15 +24,6 @@ const KAYNAKLAR = {
 };
 
 const SORU_SAYISI = 10;
-
-function karistir(dizi) {
-  const kopya = [...dizi];
-  for (let i = kopya.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [kopya[i], kopya[j]] = [kopya[j], kopya[i]];
-  }
-  return kopya;
-}
 
 export default function Test() {
   const [kaynak, setKaynak] = useState(null);

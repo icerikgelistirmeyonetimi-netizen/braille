@@ -1,5 +1,5 @@
 import React from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { KELIME_PARCASI_KISALTMALARI } from '../data/braille.js';
 
 export default function KisaltmaKelimeParcasi() {
@@ -7,8 +7,8 @@ export default function KisaltmaKelimeParcasi() {
     const sagEtiket = k.etiket.split('+')[1];
     const onekEtiket = k.sol.join(',');
     return {
-      ad: k.etiket,
-      ariaAd: `${k.etiket} sembolü, ${k.ekler} ekleri`,
+      yazi: k.etiket,
+      ttsYazi: `${k.etiket} sembolü, ${k.ekler} ekleri`,
       hucreler: [k.sol, k.sag],
       hucreBasliklari: [onekEtiket, sagEtiket],
       hucreAriaEtiketleri: [`${onekEtiket} noktaları, ön ek`, `${sagEtiket} sembolü`],
@@ -20,7 +20,7 @@ export default function KisaltmaKelimeParcasi() {
   });
 
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Kelime Parçası Kısaltmaları"
       ogeler={ogeler}
       kategoriAdi="sembolü"

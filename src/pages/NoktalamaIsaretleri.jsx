@@ -1,23 +1,13 @@
-import React, { useMemo } from 'react';
-import DesenOgretici from '../components/DesenOgretici.jsx';
+import React from 'react';
+import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { NOKTALAMA_ISARETLERI } from '../data/braille.js';
+import { isarettenOgeye } from '../utils/isaretCevir.js';
 
-function isarettenOgeye(s) {
-  const hucreler = s.hucreler || [];
-  return {
-    ad: s.ad,
-    altMetin: s.sembol && s.sembol !== '—' ? s.sembol : undefined,
-    hucreler,
-    noktalar: hucreler[0] || [],
-    yonergeDetay: s.aciklama || undefined,
-  };
-}
-
-const OGELER = NOKTALAMA_ISARETLERI.map(isarettenOgeye);
+const OGELER = NOKTALAMA_ISARETLERI.map((s) => isarettenOgeye(s));
 
 export default function NoktalamaIsaretleri() {
   return (
-    <DesenOgretici
+    <CokHucreOkuyucu
       baslik="Noktalama İşaretleri"
       ogeler={OGELER}
       kategoriAdi="işareti"
