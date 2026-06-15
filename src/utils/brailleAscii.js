@@ -70,3 +70,24 @@ export function unicodeBrailleToBrfAscii(metin = '') {
     })
     .join('');
 }
+
+/**
+ * Braille ASCII metnini Unicode braille'e (⠿, U+2800) çevirir — TERS yön.
+ * Yüklenen .brf dosyaları embosser ASCII'siyle gelir; GÖSTERİM için (Ham BRF
+ * görünümü) dots'a çevrilmeli, yoksa ASCII harfleri "bozuk" görünür. Zaten Unicode
+ * braille olan karakterler + \n/\r korunur (Unicode .brf de güvenle geçer).
+ */
+export function brfAsciiToUnicodeBraille(metin = '') {
+  return Array.from(String(metin || ''))
+    .map((ch) => {
+      if (ch === '\n' || ch === '\r') return ch;
+      const code = ch.charCodeAt(0);
+      if (code >= 0x2800 && code <= 0x28ff) return ch; // zaten Unicode braille
+      const dots = brfNoktalaradon(ch);
+      if (!dots) return ch; // Braille ASCII tablosunda yok → olduğu gibi
+      let bits = 0;
+      for (const d of dots) bits |= 1 << (d - 1);
+      return String.fromCodePoint(0x2800 + bits);
+    })
+    .join('');
+}

@@ -144,12 +144,22 @@ function brfMuzikOkuTekGecis(brfText, options = {}) {
       }
     }
 
+    // Satır başı ölçü numarası bağlamı (Lesson 5): bu müzik satırının İLK
+    // grubundaki alt-rakam dizisi, notaya bitişik olsa bile ölçü numarasıdır
+    // (süsleme değil). İlk readMusicBrailleGroup çağrısı bayrağı tüketir.
+    context.satirBasiBekliyor = true;
     let group = [];
     cells.forEach((cell) => {
       if (cell.type === 'space') {
         if (group.length) {
           readMusicBrailleGroup(group, context);
           group = [];
+        }
+        // Satır başı ölçü numarasından (Lesson 5) SONRAKİ boşluk barline DEĞİLDİR —
+        // numarayı müzikten ayıran ayraç boşluğudur (sahte ölçü oluşturmaz).
+        if (context.barNoSonrasiBoslukAtla) {
+          context.barNoSonrasiBoslukAtla = false;
+          return;
         }
         // §14: eser-içi zaman/donanım değişiminden SONRAKİ boşluk barline değildir
         // (formatlama ayracı) → bu boşluğu ölçü çizgisi yapma, atla.

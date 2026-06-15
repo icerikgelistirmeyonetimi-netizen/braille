@@ -14,6 +14,7 @@ import {
   muzikOgeleriOlcuOlcuOkunurMetinAl,
 } from '../../utils/music-brf/musicReadableSummary.js';
 import { brfMuzikOku } from '../../utils/music-brf/brfMusicReader.js';
+import { brfAsciiToUnicodeBraille } from '../../utils/brailleAscii.js';
 import {
   scoreToReaderResult,
   scoreToCanonicalBrf,
@@ -3021,11 +3022,16 @@ export function useMuzikBrfEditor() {
   const brfMetniYukle = async (rawBrfText, ad = '') => {
     if (!rawBrfText) return;
 
-    setBrfHamMetin(rawBrfText || '');
+    // Yüklenen .brf embosser Braille ASCII'siyle gelebilir (harf/sembol). GÖSTERİM ve
+    // işleme için Unicode braille'e çevir → "Ham BRF" görünümü dots gösterir (bozuk ASCII
+    // harfleri değil); zaten Unicode olan dosyalar değişmeden geçer. Reader ikisini de okur.
+    const brfText = brfAsciiToUnicodeBraille(rawBrfText || '');
+
+    setBrfHamMetin(brfText);
     setBrfImportKirli(false);
 
     try {
-      const readerResult = brfMuzikOku(rawBrfText);
+      const readerResult = brfMuzikOku(brfText);
       const header = brfReaderHeaderOlustur(readerResult.header || {}, ad);
       // GRUPLAMA tespiti: reader gruplama devamı notalarını `grupSureIndeksi` ile etiketler. Kaynak BRF
       // gruplama yazımı kullanıyorsa (8'lik-hücre devamları), indir/overlay'in AYNI grup formunu üretmesi

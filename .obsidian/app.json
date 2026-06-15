@@ -1,0 +1,20 @@
+{
+  "userIgnoreFilters": [
+    "node_modules/",
+    "dist/",
+    "dist-ssr/",
+    "build/",
+    "android/",
+    "public/",
+    ".git/",
+    ".vite/"
+  ],
+  "showUnsupportedFiles": false,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "docs",
+  "attachmentFolderPath": "docs/ekler",
+  "alwaysUpdateLinks": true,
+  "useMarkdownLinks": false,
+  "newLinkFormat": "shortest",
+  "promptDelete": false
+}

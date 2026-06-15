@@ -1188,6 +1188,25 @@ function readRestCell(cell, context, candidates, groupState = null) {
 
 export function readMusicBrailleGroup(group = [], context) {
   const tokens = (group || []).filter((cell) => cell?.type === 'braille');
+  // Satır başı bağlamı: yalnızca satırın İLK grubu için geçerli; burada tüket.
+  const satirBasi = !!context?.satirBasiBekliyor;
+  if (context) context.satirBasiBekliyor = false;
+
+  // Satır başı ölçü numarası (Lesson 5, PDF s.40): satırın İLK grubu TÜMÜYLE üst-rakam
+  // (a–j) ise bu bir ölçü numarasıdır — müzik DEĞİL (müzik satırının ilk notası oktav
+  // işaretiyle başlar, üst-rakamla değil). Atla; ardından gelen ayraç boşluğu da barline
+  // DEĞİLDİR (numarayı müzikten ayıran boşluk). Bar 1=⠁, bar 16=⠁⠋ gibi.
+  if (satirBasi && tokens.length && tokens.every((t) => UPPER_DIGIT_BY_DASH.has(dotsToDashKey(t.dots)))) {
+    const no = tokens.map((t) => UPPER_DIGIT_BY_DASH.get(dotsToDashKey(t.dots))).join('');
+    tokens.forEach((t) => pushDebug(context, t, {
+      category: 'bar-number',
+      meaning: `${no}. ölçü numarası`,
+      effect: 'satır başı ölçü numarası (müzik içeriği değil; atlandı)',
+    }));
+    context.barNoSonrasiBoslukAtla = true;
+    return;
+  }
+
   const groupState = {
     lookaheadDotted: false,
     lookaheadMinRemaining: 0,
@@ -1476,6 +1495,10 @@ export function readMusicBrailleGroup(group = [], context) {
       const grupBasi = i === 0;
       const grupSonu = j >= tokens.length;
       const tumGrup = grupBasi && grupSonu;
+      // Satır başı ölçü numarası (Lesson 5): satırın ilk hücresindeki alt-rakam
+      // dizisi, ardından nota gelse de ölçü numarasıdır (süsleme/grace DEĞİL).
+      // İndirilen numaralı .brf geri okunduğunda hayalet süsleme oluşmaz.
+      const satirBasiNumara = satirBasi && grupBasi;
 
       // Braille ÖLÇÜ-TEKRARI ⠶ (2-3-5-6): önceki ölçüyü aynen tekrarlar. Grup BAŞINDA (kendi ölçüsü) ise
       // bar-repeat'tir. Ardından ⠼N gelirse N KOPYA (örn. ⠶⠼⠓ = önceki ölçünün 8 kopyası, bars 2-9 = bar1).
@@ -1519,6 +1542,7 @@ export function readMusicBrailleGroup(group = [], context) {
       // ardından bir nota grubu geliyorsa bu ölçü numarası DEĞİL süslemedir →
       // bar-number'ı atla, aşağıdaki süsleme eşleştiricisine bırak.
       const cakisanSusleme =
+        !satirBasiNumara &&
         runLen === 1 &&
         CAKISAN_TEK_SUSLEME.has(dashKey) &&
         notaGrubuBaslangici(tokens, j);
@@ -1527,7 +1551,7 @@ export function readMusicBrailleGroup(group = [], context) {
       // ⠲ lower-rakam-4 ile çakışır.) Bu konumdan başlayan hücreler bilinen bir çok-hücreli
       // süsleme/nüans dizisiyse ölçü numarası DEĞİL → atlama. (Modifier dizilerinin lower-rakam
       // olmayan hücreleri olduğundan çok-haneli ölçü numarasıyla karışmaz.)
-      const cokHucreModifier = (() => {
+      const cokHucreModifier = satirBasiNumara ? false : (() => {
         const maxLen = REVERSE_MAPS.modifierMaxLen || 1;
         for (let len = Math.min(maxLen, tokens.length - i); len >= 2; len -= 1) {
           const seqKey = tokens.slice(i, i + len).map((t) => dotsToDashKey(t.dots)).join('|');

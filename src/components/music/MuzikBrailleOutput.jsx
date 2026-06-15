@@ -1,5 +1,6 @@
 import React from 'react';
 import BrfMusicCellDebugTable from './BrfMusicCellDebugTable.jsx';
+import { brfNumaraliGorunum, brfGorunumMetinden, altRakamYaz } from '../../utils/music-brf/muzikOlcuNumarasi.js';
 
 // Ham BRF'yi basılı (embosser) görünümüne yaklaştır: her satır en çok 40 braille
 // hücresi; satır sonları ölçü sınırlarında (boşluk) verilir, ölçü ortadan bölünmez.
@@ -52,6 +53,15 @@ export default function MuzikBrailleOutput({
   const brfReaderCells = Array.isArray(brfOkumaSonucu?.cells) ? brfOkumaSonucu.cells : [];
   const brfReaderWarnings = Array.isArray(brfOkumaSonucu?.warnings) ? brfOkumaSonucu.warnings : [];
 
+  // Satır başı ölçü numarası (Lesson 5) — SUNUM: kanonik BRF'i değiştirmez,
+  // yalnızca gösterim için satırlara böler + her satırın ilk ölçü no'sunu hesaplar.
+  // Yüklenen parça (Ham BRF) için reader sonucundan; yeni yazılan skorun export
+  // önizlemesi için metinden (reader içeride çalışır).
+  const numarali = brfHamMetin ? brfNumaraliGorunum(brfHamMetin, brfOkumaSonucu, { genislik: 40 }) : null;
+  const numaraliExport = (brfExportMetni && !brfHamMetin)
+    ? brfGorunumMetinden(brfExportMetni, { genislik: 40 })
+    : null;
+
   const gosterilecekBrfMetni =
     hamBrfMetni ||
     aktifBrfKaynakMetni ||
@@ -103,51 +113,43 @@ export default function MuzikBrailleOutput({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          onClick={() => {
-            navigator.clipboard?.writeText(kopyalanacakBrfMetni || '');
-          }}
-        >
-          BRF metnini kopyala
-        </button>
-
-        <button
-          type="button"
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          onClick={() => {
-            const blob = new Blob([kopyalanacakBrfMetni || ''], {
-              type: 'text/plain;charset=utf-8',
-            });
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'muzik.brf';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-          }}
-        >
-          .brf indir
-        </button>
-      </div>
+      {/* Kopyala / indir butonları KALDIRILDI — alt çubukta "BRF İndir" + "Braille Kopyala" var (kullanıcı isteği). */}
 
       {brfHamMetin && (
         <div className="rounded-xl border border-slate-200 bg-white p-3 min-w-0 overflow-hidden">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-            Ham BRF — 40 hücre / satır (basılı görünüm)
+            Ham BRF — 40 hücre / satır, satır başı ölçü numaralı (basılı görünüm)
           </div>
-          <div className="overflow-x-auto">
-            <pre
-              className="max-h-[220px] overflow-y-auto whitespace-pre font-mono text-base leading-7 text-slate-900"
-              style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
-            >
-              {brfHam40(brfHamMetin)}
-            </pre>
+          <div className="overflow-x-auto max-h-[260px] overflow-y-auto">
+            {numarali ? (
+              <div
+                className="font-mono text-base leading-7 text-slate-900"
+                style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
+              >
+                {numarali.basliklar.flatMap((b, bi) =>
+                  brfSatirSar(b).map((sar, si) => (
+                    <div key={`h-${bi}-${si}`} className="whitespace-pre text-slate-500">{sar || ' '}</div>
+                  )))}
+                {numarali.govde.map((s, i) => (
+                  <div key={`g-${i}`} className="flex items-baseline gap-2 whitespace-pre">
+                    <span
+                      className="shrink-0 w-7 text-right text-[11px] font-sans tabular-nums text-slate-400 select-none"
+                      aria-hidden="true"
+                    >
+                      {s.no}
+                    </span>
+                    <span><span className="text-sky-700" title={`${s.no}. ölçü`}>{altRakamYaz(s.no)}⠀</span>{s.metin}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <pre
+                className="whitespace-pre font-mono text-base leading-7 text-slate-900"
+                style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
+              >
+                {brfHam40(brfHamMetin)}
+              </pre>
+            )}
           </div>
         </div>
       )}
@@ -177,15 +179,38 @@ export default function MuzikBrailleOutput({
       {brfExportMetni && !brfHamMetin && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 min-w-0 overflow-hidden">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-            Yeniden üretilen BRF export önizleme — 40 hücre / ölçü bazlı satır
+            Yeniden üretilen BRF export önizleme — 40 hücre / satır, satır başı ölçü numaralı
           </div>
-          <div className="overflow-x-auto">
-            <pre
-              className="max-h-[260px] overflow-y-auto whitespace-pre font-mono text-lg leading-7 text-slate-900"
-              style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
-            >
-              {brfExportMetni}
-            </pre>
+          <div className="overflow-x-auto max-h-[260px] overflow-y-auto">
+            {numaraliExport ? (
+              <div
+                className="font-mono text-lg leading-7 text-slate-900"
+                style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
+              >
+                {numaraliExport.basliklar.flatMap((b, bi) =>
+                  brfSatirSar(b).map((sar, si) => (
+                    <div key={`eh-${bi}-${si}`} className="whitespace-pre text-slate-500">{sar || ' '}</div>
+                  )))}
+                {numaraliExport.govde.map((s, i) => (
+                  <div key={`eg-${i}`} className="flex items-baseline gap-2 whitespace-pre">
+                    <span
+                      className="shrink-0 w-7 text-right text-[11px] font-sans tabular-nums text-slate-400 select-none"
+                      aria-hidden="true"
+                    >
+                      {s.no}
+                    </span>
+                    <span><span className="text-sky-700" title={`${s.no}. ölçü`}>{altRakamYaz(s.no)}⠀</span>{s.metin}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <pre
+                className="whitespace-pre font-mono text-lg leading-7 text-slate-900"
+                style={{ fontFamily: "'DejaVu Sans Mono', 'Consolas', monospace" }}
+              >
+                {brfExportMetni}
+              </pre>
+            )}
           </div>
         </div>
       )}

@@ -13,6 +13,7 @@ import MuzikBrailleOutput from '../components/music/MuzikBrailleOutput.jsx';
 import PerkinsYazimPaneli from '../components/music/PerkinsYazimPaneli.jsx';
 import { brailleMetniOlustur } from '../utils/music-brf/brailleText.js';
 import { unicodeBrailleToBrfAscii } from '../utils/brailleAscii.js';
+import { numaraliBrfMetni } from '../utils/music-brf/muzikOlcuNumarasi.js';
 
 // Aşama 1: sabitler ve saf Braille helper fonksiyonları utils/music-brf altına taşındı.
 
@@ -398,8 +399,15 @@ export default function MuzikBrfYazim() {
             type="button"
             className="btn"
             onClick={() => {
-              const metin = indirilecekBrfMetni;
-              if (!metin) return;
+              // "BRF okuma" görünümüyle AYNI KAYNAK: görünüm yüklenen `brfHamMetin`'i
+              // (yoksa yeni skorda `brfExportMetni`'yi) numaralı gösterir → indirilen dosya
+              // da AYNI olsun. (Eskiden indir hep yeniden-üretilen `brfExportMetni`'yi alıyordu
+              // → görünümden farklı oktav/ölçü = kullanıcı şikâyeti.)
+              const kaynak = brfHamMetin || brfExportMetni || canonicalBrfText || '';
+              if (!kaynak) return;
+              // Satır başı ölçü numaralı + 40-hücre satırlı standart biçim (Lesson 5);
+              // round-trip güvenli değilse orijinali aynen döndürür.
+              const metin = numaraliBrfMetni(kaynak);
               // Unicode braille → embosser-uyumlu Braille ASCII (.brf standardı)
               const asciiMetin = unicodeBrailleToBrfAscii(metin);
               const blob = new Blob([asciiMetin], { type: 'text/plain;charset=utf-8' });
@@ -457,8 +465,10 @@ export default function MuzikBrfYazim() {
             type="button"
             className="btn"
             onClick={async () => {
-              // BRF okuma sekmesindeki "BRF export" ile aynı braille metin (Unicode ⠿, satır düzenli)
-              const braille = brfExportMetni || canonicalBrfText || tekBrfMetni || brfHamMetin || brailleMetniOlustur(hucreler);
+              // İNDİR + GÖRÜNÜM ile AYNI KAYNAK: yüklenen `brfHamMetin` (yoksa `brfExportMetni`)
+              // → kopya, indir ve "BRF okuma" üçü birebir aynı.
+              const kaynak = brfHamMetin || brfExportMetni || canonicalBrfText || brailleMetniOlustur(hucreler);
+              const braille = numaraliBrfMetni(kaynak);
               try {
                 await navigator.clipboard.writeText(braille);
               } catch {
