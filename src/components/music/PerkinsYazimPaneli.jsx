@@ -101,6 +101,20 @@ function barlineBak(dashDizi) {
   return { tam, onek };
 }
 
+// Yapısal çok-hücreli işaret (volta / cümle bağı / tuplet) — barlineBak ile aynı anahtar biçimi
+function yapiBak(dashDizi) {
+  const map = REVERSE.yapiByCellKey;
+  if (!map) return { tam: null, onek: false };
+  const key = dashDizi.join('-');
+  const tam = map.get(key) || null;
+  let onek = false;
+  const prefix = key + '-';
+  for (const k of map.keys()) {
+    if (k.length > key.length && k.startsWith(prefix)) { onek = true; break; }
+  }
+  return { tam, onek };
+}
+
 // ─── Bileşen ──────────────────────────────────────────────────────────────────
 export default function PerkinsYazimPaneli({
   acik,
@@ -129,6 +143,8 @@ export default function PerkinsYazimPaneli({
   const [gecmis, setGecmis]         = useState([]);
   const [hedefNode, setHedefNode]   = useState(null);
   const [caretEtiket, setCaretEtiket] = useState('');
+  const [olcuHucreleri, setOlcuHucreleri]   = useState([]); // imlecin bulunduğu ölçünün canlı braille hücreleri
+  const [gosterilenOlcuNo, setGosterilenOlcuNo] = useState(null);
 
   const pressedRef     = useRef(new Set());
   const pendingRef     = useRef(new Set());
@@ -137,6 +153,22 @@ export default function PerkinsYazimPaneli({
   const modRef         = useRef('ekleme');
   const perkinsRef     = useRef(null);
   const acildiRef      = useRef(false);
+  const odakIstendiRef = useRef(false); // kullanıcı yazım alanıyla etkileşimde mi (remount sonrası odak için)
+
+  // Yazım alanı ref-callback'i: portal yeniden hedeflenince (silme/yazım satır değiştirir →
+  // createPortal konteyneri değişir) textarea YENİDEN MOUNT olur ve odak gövdeye kayar. Bu
+  // callback yeni node mount olunca tam o anda çalışır → kullanıcı yazım alanındaysa odağı
+  // geri verir (rAF/effect tabanlı geri-alma remount'ı kaçırabiliyordu). Tarayıcıda doğrulandı.
+  const yazimAlaniRef = useCallback((el) => {
+    perkinsRef.current = el;
+    if (el && odakIstendiRef.current && document.activeElement !== el) {
+      requestAnimationFrame(() => {
+        if (perkinsRef.current === el && odakIstendiRef.current && document.activeElement !== el) {
+          try { el.focus(); } catch { /* */ }
+        }
+      });
+    }
+  }, []);
 
   // Maximal-munch çözücü durumu
   const bekleyenDiziRef     = useRef([]);   // dash[]
@@ -152,13 +184,18 @@ export default function PerkinsYazimPaneli({
 
   // ── Aktif öğe → satır indeksi + ölçü numarası ──────────────────────────────
   const aktifId = seciliOgeId || sonEklenenOgeId;
+  // KRİTİK: Panel KONUMU (portal hedefi) yalnız YAZIM konumunu (sonEklenenOgeId) izler —
+  // imleç (seciliOgeId) gezinme/silme ile değişince DEĞİL. Aksi halde her ok/silme satır
+  // değiştirdiğinde createPortal hedef konteyneri değişir → textarea unmount/remount olur →
+  // o anki ok/Backspace tuşu DÜŞER, odak gövdeye kayıp skorun kendi handler'ına gider →
+  // gezinme/silme "efektif çalışmaz" (atlama/tekrar). Yazınca panel yine ilgili satıra gelir.
   const aktifSatirIdx = useMemo(() => {
-    if (aktifId && svgYerlesimHaritasi?.get) {
-      const yer = svgYerlesimHaritasi.get(aktifId);
+    if (sonEklenenOgeId && svgYerlesimHaritasi?.get) {
+      const yer = svgYerlesimHaritasi.get(sonEklenenOgeId);
       if (Number.isFinite(Number(yer?.satirIdx))) return Number(yer.satirIdx);
     }
     return null;
-  }, [aktifId, svgYerlesimHaritasi]);
+  }, [sonEklenenOgeId, svgYerlesimHaritasi]);
   const aktifOlcuNo = useMemo(() => {
     if (aktifId && svgYerlesimHaritasi?.get) {
       const m = svgYerlesimHaritasi.get(aktifId)?.measureIndex;
@@ -183,6 +220,36 @@ export default function PerkinsYazimPaneli({
     const id = requestAnimationFrame(() => setCaretEtiket(ogeEtiketiAl(seciliOgeId)));
     return () => cancelAnimationFrame(id);
   }, [acik, seciliOgeId, gecmis.length]);
+
+  // İmlecin BULUNDUĞU ölçünün braille hücrelerini skor overlay'inden CANLI oku → yazım alanında
+  // göster. Böylece: (a) silince hücre buradan da kalkar, (b) hangi ölçüdeysem onun braille'i
+  // görünür, (c) yeni ölçüye geçince temizlenip yeni ölçünün hücreleri gelir. Skor değişimi
+  // (svgYerlesimHaritasi/muzikSatirSayisi/gecmis) ve imleç (seciliOgeId) tetikler; rAF ile DOM güncel.
+  useEffect(() => {
+    if (!acik) { setOlcuHucreleri([]); setGosterilenOlcuNo(null); return undefined; }
+    const id = requestAnimationFrame(() => {
+      const harita = svgYerlesimHaritasi;
+      // İmleç olarak seciliOgeId (commit'lenmiş prop) — caret etiketiyle TUTARLI (caretIdRef
+      // hızlı gezinmede ileride olabilir). İnsan hızında ikisi özdeş.
+      const caretId = seciliOgeId || sonEklenenOgeId;
+      const mi = (caretId && harita?.get) ? harita.get(caretId)?.measureIndex : null;
+      if (mi == null) { setOlcuHucreleri([]); setGosterilenOlcuNo(null); return; }
+      const cells = [];
+      document.querySelectorAll('.muzik-braille-hucre[data-oge-id]').forEach((el) => {
+        const oid = el.getAttribute('data-oge-id');
+        if (oid && harita.get(oid)?.measureIndex === mi) {
+          cells.push({ ogeId: oid, unicode: dashUnicode(el.getAttribute('data-braille-dots') || ''), label: el.getAttribute('aria-label') || '', caretMi: oid === caretId });
+        }
+      });
+      // Hücreler AYNIYSA state'i değiştirme → svgYerlesimHaritasi her render yeni referans
+      // olduğundan setOlcuHucreleri(yeni dizi) sonsuz render döngüsü + tüm rAF iptaline yol açıyordu.
+      setOlcuHucreleri((prev) => (prev.length === cells.length
+        && prev.every((p, i) => p.ogeId === cells[i].ogeId && p.unicode === cells[i].unicode && p.caretMi === cells[i].caretMi)
+        ? prev : cells));
+      setGosterilenOlcuNo(mi + 1);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [acik, seciliOgeId, sonEklenenOgeId, svgYerlesimHaritasi, muzikSatirSayisi, gecmis.length]);
 
   useEffect(() => {
     if (acik && !acildiRef.current) {
@@ -335,6 +402,14 @@ export default function PerkinsYazimPaneli({
     duyurVeGecmis(entry.label || 'ölçü çizgisi', unicode, 'barline');
   }, [duyurVeGecmis, manuelOlcuCizgisiEkle]);
 
+  // ── Uygula: yapısal işaret (volta / cümle bağı / tuplet) — tanı + duyur ──────
+  // (Tam yerleştirme editörden yapılır: volta ölçü-aralığı, bağ iki nota, tuplet grubu.)
+  const uygulaYapi = useCallback((entry, dashDizi) => {
+    const unicode = dashDizi.map(dashUnicode).join('');
+    const tipClass = /volta/.test(entry.tip || '') ? 'barline' : 'modifier';
+    duyurVeGecmis(entry.label || 'işaret', unicode, tipClass);
+  }, [duyurVeGecmis]);
+
   const bilinmeyen = useCallback((dash) => {
     duyurVeGecmis(`bilinmeyen hücre: ${dash || 'boş'}`, dashUnicode(dash), 'bilinmeyen');
   }, [duyurVeGecmis]);
@@ -343,9 +418,9 @@ export default function PerkinsYazimPaneli({
   const zorlaCoz = useCallback(() => {
     clearTimeout(cozTimerRef.current);
     let dizi = bekleyenDiziRef.current.slice();
-    const maxLen = Math.min(REVERSE.modifierMaxLen || 1, 6);
+    const maxLen = Math.min(Math.max(REVERSE.modifierMaxLen || 1, REVERSE.yapiMaxLen || 1, 3), 8);
     while (dizi.length) {
-      // En uzun çok-hücreli (modifier/barline) ön-ek eşleşmesi
+      // En uzun çok-hücreli (modifier/barline/yapı) ön-ek eşleşmesi
       let uygulandi = false;
       for (let len = Math.min(dizi.length, maxLen); len >= 2; len -= 1) {
         const parca = dizi.slice(0, len);
@@ -353,23 +428,27 @@ export default function PerkinsYazimPaneli({
         if (mdf.tam) { uygulaModifier(mdf.tam, parca); dizi = dizi.slice(len); uygulandi = true; break; }
         const bar = barlineBak(parca);
         if (bar.tam) { uygulaBarline(bar.tam, parca); dizi = dizi.slice(len); uygulandi = true; break; }
+        const yap = yapiBak(parca);
+        if (yap.tam) { uygulaYapi(yap.tam, parca); dizi = dizi.slice(len); uygulandi = true; break; }
       }
       if (uygulandi) { bekleyenDiziRef.current = dizi; continue; }
-      // Çok-hücreli yok → ilk hücreyi tekil çöz (nota/sus/oktav/arıza/nokta),
-      // olmazsa tek-hücreli modifier (stakato/tril/grupeto), o da olmazsa bilinmeyen.
+      // Çok-hücreli yok → ilk hücreyi tekil çöz (nota/sus/oktav/arıza/nokta), olmazsa
+      // tek-hücreli modifier (stakato/tril/grupeto) ya da yapı (tek-hücre üçleme), o da olmazsa bilinmeyen.
       const ilk = dizi[0];
       const tok = tekHucreCoz(ilk);
       if (tok) {
         uygulaTekil(tok, ilk);
       } else {
         const md = REVERSE.modifierByCellKey.get(ilk);
+        const yp = REVERSE.yapiByCellKey?.get(ilk);
         if (md) uygulaModifier(md, [ilk]);
+        else if (yp) uygulaYapi(yp, [ilk]);
         else bilinmeyen(ilk);
       }
       dizi = dizi.slice(1);
       bekleyenDiziRef.current = dizi;
     }
-  }, [uygulaModifier, uygulaBarline, uygulaTekil, bilinmeyen]);
+  }, [uygulaModifier, uygulaBarline, uygulaYapi, uygulaTekil, bilinmeyen]);
 
   // Bekleyen tamponu değerlendir: daha uzun token mümkünse bekle, değilse çöz.
   const tamponuDegerlendir = useCallback(() => {
@@ -377,11 +456,12 @@ export default function PerkinsYazimPaneli({
     if (!dizi.length) return;
     const mdf = modifierBak(dizi);
     const bar = barlineBak(dizi);
-    if (!(mdf.onek || bar.onek)) { zorlaCoz(); return; }
+    const yap = yapiBak(dizi);
+    if (!(mdf.onek || bar.onek || yap.onek)) { zorlaCoz(); return; }
 
     // Daha uzun token mümkün. Tampon ŞU AN tam bir yorum taşıyor mu?
-    const tamYorum = Boolean(mdf.tam) || Boolean(bar.tam)
-      || (dizi.length === 1 && (tekHucreCoz(dizi[0]) != null || REVERSE.modifierByCellKey.has(dizi[0])));
+    const tamYorum = Boolean(mdf.tam) || Boolean(bar.tam) || Boolean(yap.tam)
+      || (dizi.length === 1 && (tekHucreCoz(dizi[0]) != null || REVERSE.modifierByCellKey.has(dizi[0]) || REVERSE.yapiByCellKey?.has(dizi[0])));
 
     setSonDecodeMetni(tamYorum
       ? 'işaret tanındı — sonraki hücreyle uzatabilirsiniz…'
@@ -395,9 +475,10 @@ export default function PerkinsYazimPaneli({
     const yeni = [...bekleyenDiziRef.current, dash];
     const mdf = modifierBak(yeni);
     const bar = barlineBak(yeni);
+    const yap = yapiBak(yeni);
 
     // Yeni hücre mevcut diziyi uzatıyor (ön-ek ya da tam) → tampona al, değerlendir.
-    if (mdf.onek || bar.onek || mdf.tam || bar.tam) {
+    if (mdf.onek || bar.onek || yap.onek || mdf.tam || bar.tam || yap.tam) {
       bekleyenDiziRef.current = yeni;
       tamponuDegerlendir();
       return;
@@ -432,12 +513,30 @@ export default function PerkinsYazimPaneli({
     const ids = navOgeIdleri();
     const cur = caretIdRef.current;
     if (!cur || !ids.length) { konus('silinecek öğe yok', { kesintiyle: true }); return; }
+    // Klef / zaman imzası başlangıç işaretleri gerçek öğe değildir → silinemez (yanıltıcı
+    // "silindi" duyurusu yapma; imleci sonraki gerçek öğeye taşı).
+    if (cur === 'ANAHTAR_BAS' || cur === 'ZAMAN_IMZA') {
+      const hedef = ids.find((id) => id !== 'ANAHTAR_BAS' && id !== 'ZAMAN_IMZA') || null;
+      if (hedef) { caretIdRef.current = hedef; setSeciliOgeId?.(hedef); }
+      konus('başlangıç işareti silinemez', { kesintiyle: true });
+      return;
+    }
     const idx = ids.indexOf(cur);
-    const komsu = yon === 'geri' ? (ids[idx - 1] ?? ids[idx + 1] ?? null) : (ids[idx + 1] ?? ids[idx - 1] ?? null);
+    if (idx < 0) { konus('silinecek öğe yok', { kesintiyle: true }); return; }
+    // Komşu imleci GERÇEK öğeler (klef/zaman sentinel'leri hariç) arasından seç → silince imleç
+    // "başlangıç işaretine" düşüp ölçü braille görünümünü boşaltmasın; gerçek nota/sus'ta kalsın.
+    const gercekMi = (id) => id && id !== 'ANAHTAR_BAS' && id !== 'ZAMAN_IMZA';
+    const onceki = ids.slice(0, idx).reverse().find(gercekMi);
+    const sonraki = ids.slice(idx + 1).find(gercekMi);
+    const komsu = yon === 'geri' ? (onceki ?? sonraki ?? null) : (sonraki ?? onceki ?? null);
     konus(`${ogeEtiketiAl(cur) || 'öğe'} silindi`, { kesintiyle: true });
     ogeleriSil?.(cur);
     caretIdRef.current = komsu;
     setSeciliOgeId?.(komsu);
+    // Silme satır sayısını değiştirip paneli yeniden-portallayabilir (textarea remount).
+    // Odağı `yazimAlaniRef` callback'i (yeni node mount olunca) geri verir; ek olarak anlık dene.
+    odakIstendiRef.current = true;
+    window.requestAnimationFrame(() => { if (document.activeElement !== perkinsRef.current) perkinsRef.current?.focus(); });
   }, [ogeleriSil, setSeciliOgeId]);
 
   const olcuCizgisiEkle = useCallback(() => {
@@ -458,7 +557,8 @@ export default function PerkinsYazimPaneli({
   // ── Klavye ──────────────────────────────────────────────────────────────────
   const handleKeyDown = useCallback((e) => {
     const key = e.key.toLowerCase();
-    if (key === 'escape')    { e.preventDefault(); kapat(); return; }
+    odakIstendiRef.current = true; // kullanıcı yazım alanında — remount sonrası odağı koru
+    if (key === 'escape')    { e.preventDefault(); odakIstendiRef.current = false; kapat(); return; }
     if (key === 'tab')       return;
     if (key === 'f2')        { e.preventDefault(); modDegistir(); return; }
     if (key === 'arrowleft')  { e.preventDefault(); imleceTasi('geri');  return; }
@@ -602,11 +702,12 @@ export default function PerkinsYazimPaneli({
           </div>
 
           <textarea
-            ref={perkinsRef}
+            ref={yazimAlaniRef}
             className="perkins-klavye-alan"
             rows={1}
             value=""
             onChange={() => {}}
+            onFocus={() => { odakIstendiRef.current = true; }}
             onKeyDown={handleKeyDown}
             onKeyUp={handleKeyUp}
             aria-label="Braille Perkins klavye giriş alanı"
@@ -625,32 +726,30 @@ export default function PerkinsYazimPaneli({
             Backspace siler, F2 düzeltme moduna geçer, Escape çıkar.
           </span>
 
-          {gecmis.length > 0 && (
+          {/* İmlecin bulunduğu ölçünün CANLI braille'i — skorla senkron (silince kalkar,
+              ölçü değişince yenilenir). İmleçteki hücreler vurgulanır. */}
+          {olcuHucreleri.length > 0 ? (
             <div className="perkins-gecmis">
               <p className="perkins-gecmis-baslik">
-                Son yazılanlar ({gecmis.length})
-                <button
-                  type="button"
-                  className="perkins-gecmis-temizle"
-                  onClick={() => { setGecmis([]); setSonDecodeMetni(''); }}
-                  aria-label="Geçmişi temizle"
-                >
-                  Temizle
-                </button>
+                {gosterilenOlcuNo ? `${gosterilenOlcuNo}. ölçü braille` : 'Ölçü braille'} ({olcuHucreleri.length})
               </p>
-              <div className="perkins-gecmis-liste" aria-label="Yazılan braille hücreler">
-                {gecmis.map((item, i) => (
+              <div className="perkins-gecmis-liste" aria-label={`${gosterilenOlcuNo || ''}. ölçü braille hücreleri`}>
+                {olcuHucreleri.map((h, i) => (
                   <span
-                    key={`${i}-${item.unicode}`}
-                    className={`perkins-gecmis-hucre${item.tip === 'nota' ? ' nota' : item.tip === 'sus' ? ' sus' : item.tip === 'barline' ? ' barline' : item.tip === 'modifier' ? ' modifier' : item.tip === 'bilinmeyen' ? ' bilinmeyen' : ''}`}
-                    title={item.metni}
-                    aria-label={item.metni}
+                    key={`${h.ogeId}-${i}`}
+                    className={`perkins-gecmis-hucre${h.caretMi ? ' caret' : ''}`}
+                    title={h.label}
+                    aria-label={h.caretMi ? `${h.label}, imleç` : h.label}
                   >
-                    {item.unicode}
+                    {h.unicode}
                   </span>
                 ))}
               </div>
             </div>
+          ) : (
+            <p className="perkins-gecmis-baslik" aria-live="polite">
+              {gosterilenOlcuNo ? `${gosterilenOlcuNo}. ölçü boş` : 'Bu ölçüde henüz braille yok'}
+            </p>
           )}
         </div>
       )}

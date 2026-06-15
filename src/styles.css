@@ -6071,6 +6071,18 @@ g:hover .muzik-note-hover-rect,
 .perkins-gecmis-hucre.barline { border-color: #c4b5fd; background: #f5f3ff; color: #6d28d9; font-weight: 700; }
 .perkins-gecmis-hucre.modifier { border-color: #fcd34d; background: #fffbeb; color: #b45309; }
 .perkins-gecmis-hucre.bilinmeyen { border-color: #fca5a5; background: #fef2f2; color: #b91c1c; }
+/* İmlecin üzerinde olduğu ölçü-braille hücresi — belirgin vurgulama */
+.perkins-gecmis-hucre.caret {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.45);
+}
+[data-theme="lowVision"] .perkins-gecmis-hucre.caret {
+  border-color: #60a5fa; background: #1e3a8a; color: #fff;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.7);
+}
 
 /* ── Başlık / Beste formu ── */
 .perkins-form {

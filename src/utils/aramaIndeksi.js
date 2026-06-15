@@ -80,6 +80,30 @@ const HARF_ANAHTARLARI = [
 ];
 const KEYFI_ANAHTARLAR = new Set([...RAKAM_ANAHTARLARI, ...HARF_ANAHTARLARI]);
 
+// Harf (a-z + Türkçe) hücre desenleri — geometri nokta-adı tespitinde kullanılır.
+const HARF_DESENLERI = new Set([
+  '1', '12', '14', '145', '15', '124', '1245', '125', '24', '245', // a-j
+  ...HARF_ANAHTARLARI,                                              // k-z, ç ğ ö ş ü
+  '35',                                                             // ı
+]);
+
+/**
+ * Geometri girişinde keyfî NOKTA ADI harflerinin indeksleri (aranamaz hücreler).
+ * Nokta adları daima harf/büyük-harf işaretinden (⠰=56 / ⠠=6) SONRA gelir; şekil
+ * sembolleri (açı 246, üçgen, diklik 236…) bu işaretlerden ÖNCE gelir → aranabilir kalır.
+ */
+function geometriNoktaAdiIndeksleri(anahtarlar) {
+  const sonuc = [];
+  let etiketModu = false;
+  for (let i = 0; i < anahtarlar.length; i += 1) {
+    const a = anahtarlar[i];
+    if (a === '56' || a === '6') { etiketModu = true; continue; } // harf iş. / büyük harf iş.
+    if (etiketModu && HARF_DESENLERI.has(a)) { sonuc.push(i); continue; } // nokta adı harfi
+    etiketModu = false; // şekil sembolü / ayraç → etiket dizisi biter, aranabilir
+  }
+  return sonuc;
+}
+
 // Sözlük (metin) araması eş anlamlıları: veri sembolü işaretin ADIYLA tanımlı
 // (ör. "+" → "artı") ama kullanıcı işlemin adıyla arayabilir ("toplama"). Anahtar
 // = girişin etiketi (küçük harf, tam eşleşme — fen "artı (yük)" gibi farklı etiketler
@@ -164,17 +188,29 @@ function ekle({ etiket, altEtiket, hucreler, yol, modulBaslik, modulKonu, katego
     .filter((h) => h.length > 0);
   if (temizHucreler.length === 0) return;
   const etiketTemiz = String(etiket ?? '').trim() || '(adsız)';
+  const anahtarlar = temizHucreler.map((h) => h.join(''));
+  // aranamaz: HÜCRE-bazlı keyfî hücre indeksleri (Set). Eşleşme yalnız aranabilir
+  // (keyfî olmayan) hücreyi içeren pencerelerde geçerlidir.
+  //  - ornek === 'geometri' → keyfî NOKTA ADI harfleri (şekil sembolleri aranabilir kalır)
+  //  - ornek (true)         → tüm keyfî desenli hücreler (ifade/tarih/rumuz: sayı+harf)
+  let aranamaz;
+  if (ornek === 'geometri') {
+    aranamaz = new Set(geometriNoktaAdiIndeksleri(anahtarlar));
+  } else if (ornek) {
+    aranamaz = new Set(anahtarlar.map((a, i) => (KEYFI_ANAHTARLAR.has(a) ? i : -1)).filter((i) => i >= 0));
+  }
   _indeks.push({
     etiket: etiketTemiz,
     esler: ARAMA_ES_ANLAMLILAR[metinNormalle(etiketTemiz)], // sözlük araması eş anlamlıları
     altEtiket: altEtiket ? String(altEtiket).trim() : '',
     hucreler: temizHucreler,
-    anahtarlar: temizHucreler.map((h) => h.join('')),
+    anahtarlar,
     yol,
     modulBaslik,
     modulKonu: modulKonu || MODUL_KONU[modulBaslik] || modulBaslik,
     kategori,
-    ornek: !!ornek, // örnek/ifade girişi (sayılar keyfî) — arama sayı-eşleşmesinde atlanır
+    ornek: !!ornek,
+    aranamaz, // Set<number> | undefined
   });
 }
 
@@ -269,8 +305,13 @@ kaynakEkle(MATEMATIK_SEMBOLLER, (s) => ({ etiket: s.ad, altEtiket: s.sembol, huc
 kaynakEkle(MATEMATIK_OLCULER, (s) => ({ etiket: s.ad, altEtiket: s.sembol, hucreler: s.hucreler }),
   { modulBaslik: 'Modül 6', kategori: 'Ölçüler', yol: '/mat-olculer' });
 
-kaynakEkle(GEOMETRI_SEMBOLLERI, (s) => ({ etiket: s.ad, altEtiket: s.sembol, hucreler: s.hucreler }),
-  { modulBaslik: 'Modül 6', kategori: 'Geometri', yol: '/mat-geometri' });
+kaynakEkle(GEOMETRI_SEMBOLLERI, (s) => ({
+  etiket: s.ad, altEtiket: s.sembol, hucreler: s.hucreler,
+  // İki+ ardışık büyük harf (AB, ABC) = keyfî nokta adı → 'geometri' modu: yalnız
+  // nokta-adı harfleri aranamaz olur; şekil sembolleri (açı/üçgen/diklik) aranabilir
+  // kalır. Tek harfli anlamlı semboller (çap R, yarıçap r…) ornek DEĞİL.
+  ornek: /[A-Z]{2}/.test(s.sembol || '') ? 'geometri' : false,
+}), { modulBaslik: 'Modül 6', kategori: 'Geometri', yol: '/mat-geometri' });
 
 kaynakEkle(MATEMATIK_IFADELER, (s) => ({ etiket: s.yazi, altEtiket: s.okunus, hucreler: s.hucreler }),
   // ornek: ifadelerdeki sayılar keyfî — rakam araması bu örnekleri getirmez (yalnız işaret/ayraç).
@@ -328,48 +369,67 @@ export function sorguHucreleri(girdi) {
     .filter(Boolean);
 }
 
-/** hay dizisinde needle'ı bitişik alt-dizi olarak arar; başlangıç indeksi (yoksa -1). */
-function bitisikAltDiziBul(hay, needle) {
+/** i. hücre aranamaz (keyfî) mı? */
+function aranamazMi(giris, i) {
+  return giris.aranamaz ? giris.aranamaz.has(i) : false;
+}
+
+/** q'ya eşit İLK ARANABİLİR hücrenin indeksi (keyfî hücreler atlanır); yoksa -1. */
+function ilkAranabilirIndeks(giris, q) {
+  const a = giris.anahtarlar;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] === q && !aranamazMi(giris, i)) return i;
+  }
+  return -1;
+}
+
+/**
+ * needle'ı bitişik alt-dizi olarak arar; pencere EN AZ bir aranabilir hücre içermeli
+ * (tamamı keyfî pencere — ör. yalnız nokta adları — geçersiz). Başlangıç indeksi / -1.
+ */
+function aranabilirPencere(giris, needle) {
+  const hay = giris.anahtarlar;
   if (needle.length === 0 || needle.length > hay.length) return -1;
   for (let i = 0; i + needle.length <= hay.length; i += 1) {
     let eslesti = true;
     for (let j = 0; j < needle.length; j += 1) {
       if (hay[i + j] !== needle[j]) { eslesti = false; break; }
     }
-    if (eslesti) return i;
+    if (!eslesti) continue;
+    let aranabilirVar = false;
+    for (let j = 0; j < needle.length; j += 1) {
+      if (!aranamazMi(giris, i + j)) { aranabilirVar = true; break; }
+    }
+    if (aranabilirVar) return i;
   }
   return -1;
 }
 
 /**
  * Eşleşen sembolleri döndürür.
- * - Tek hücre girilirse ("123"): hücrelerinden BİRİ eşleşen tüm semboller.
- * - Çok hücre girilirse ("123 145"): hücre dizisi bu sırayı BİTİŞİK içeren semboller.
+ * - Tek hücre ("123"): aranabilir hücrelerinden BİRİ eşleşen semboller.
+ * - Çok hücre ("123 145"): hücre dizisini BİTİŞİK içeren ve en az bir aranabilir
+ *   hücresi eşleşen semboller.
+ * Keyfî (aranamaz) hücreler eşleşmeye sayılmaz: ifade/tarih/rumuzdaki sayı-harfler,
+ * geometrideki nokta adları. Anlamlı hücreler (işaret/ayraç/şekil sembolü) eşleşir.
  * Her sonuçta `eslesenIndeksler` (vurgulanacak hücre indeksleri) döner.
- * @param {string} girdi - "123" veya boşlukla ayrılmış "123 145"
  */
 export function aramaYap(girdi) {
   const qHucreler = sorguHucreleri(girdi);
   if (qHucreler.length === 0) return [];
-  // Sorgunun TÜM hücreleri keyfî (rakam VEYA harf deseni) ise, örnek girişler (tarih/
-  // ifade/rumuz — sayı ve harfleri keyfî) atlanır. İşaret/ayraç/gösterge içeren sorgu
-  // (bağ, büyük harf işareti, rakam işareti …) örneği yine bulur.
-  const tumuKeyfi = qHucreler.every((k) => KEYFI_ANAHTARLAR.has(k));
   const sonuclar = [];
 
   if (qHucreler.length === 1) {
     const q = qHucreler[0];
     for (const giris of ARAMA_INDEKSI) {
-      if (giris.ornek && tumuKeyfi) continue;
-      const idx = giris.anahtarlar.indexOf(q);
+      const idx = ilkAranabilirIndeks(giris, q);
       if (idx !== -1) sonuclar.push({ ...giris, eslesenIndeksler: [idx] });
     }
     return sonuclar;
   }
 
   for (const giris of ARAMA_INDEKSI) {
-    if (giris.ornek && tumuKeyfi) continue;
-    const bas = bitisikAltDiziBul(giris.anahtarlar, qHucreler);
+    const bas = aranabilirPencere(giris, qHucreler);
     if (bas !== -1) {
       const eslesenIndeksler = qHucreler.map((_, k) => bas + k);
       sonuclar.push({ ...giris, eslesenIndeksler });

@@ -12,6 +12,9 @@ import {
   MUZIK_NUANS_ONCE,
   MUZIK_NUANS_SONRA,
   MUZIK_DINAMIKLER,
+  MUZIK_OLCU_CIZGILERI,
+  MUZIK_BAGLAR,
+  MUZIK_DUZENSIZ_GRUPLAR,
 } from '../../data/muzik.js';
 
 function keyToDash(key = '') {
@@ -70,6 +73,28 @@ function buildModifierSequences() {
   return { byKey, maxLen };
 }
 
+// Yapısal çok-hücreli işaretler: voltalar (1./2. dolap), cümle (bracket) bağı, düzensiz
+// gruplar (tuplet). Reader bunları KENDİ mantığıyla çözer (bu harita reader'da kullanılmaz);
+// Perkins yazım panelinin chord girişinde "bilinmeyen" çıkmasın diye tanınmaları gerekir.
+// Anahtar barlineByCellKey ile aynı biçimde: hücre dash'leri '-' ile birleştirilir.
+function buildYapiSequences() {
+  const byKey = new Map();
+  let maxLen = 1;
+  const ekle = (rec, tip) => {
+    if (!rec || !Array.isArray(rec.hucreler) || rec.hucreler.length === 0) return;
+    const dash = rec.hucreler.map(hucreToDash);
+    if (dash.some((d) => !d)) return; // boş hücreli (ör. ölçü ayracı) atla
+    const key = dash.join('-');
+    if (byKey.has(key)) return;
+    maxLen = Math.max(maxLen, rec.hucreler.length);
+    byKey.set(key, { tip, label: rec.ad, gorunum: rec.gorunum || rec.sembol || rec.ad, kayit: rec });
+  };
+  (MUZIK_OLCU_CIZGILERI || []).forEach((r) => { if (/dolap/i.test(r.ad || '')) ekle(r, /1/.test(r.ad) ? 'volta1' : 'volta2'); });
+  (MUZIK_BAGLAR || []).forEach((r) => { if (/cümle bağı/i.test(r.ad || '')) ekle(r, 'bracketSlur'); });
+  (MUZIK_DUZENSIZ_GRUPLAR || []).forEach((r) => ekle(r, 'tuplet'));
+  return { byKey, maxLen };
+}
+
 export function musicBrailleReverseMapsOlustur() {
   const noteByCellKey = new Map();
   const restByCellKey = new Map();
@@ -111,6 +136,7 @@ export function musicBrailleReverseMapsOlustur() {
   slurTieByCellKey.set('4', { tip: 'tieLead', label: 'uzatma bağı' });
 
   const { byKey: modifierByCellKey, maxLen: modifierMaxLen } = buildModifierSequences();
+  const { byKey: yapiByCellKey, maxLen: yapiMaxLen } = buildYapiSequences();
 
   return {
     noteByCellKey,
@@ -121,6 +147,8 @@ export function musicBrailleReverseMapsOlustur() {
     slurTieByCellKey,
     modifierByCellKey,
     modifierMaxLen,
+    yapiByCellKey,
+    yapiMaxLen,
     numberMaps: {
       upper: UPPER_NUMBER_BY_KEY,
       lower: LOWER_NUMBER_BY_KEY,
