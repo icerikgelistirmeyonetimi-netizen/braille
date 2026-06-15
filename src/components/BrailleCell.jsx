@@ -108,10 +108,13 @@ export default function BrailleCell({
     const ilkGiris = sonOkunan.current === null;
     sonOkunan.current = n;
     titret(25); // parmak yeni noktaya girdi
+    // srAtla: _srBolge'ye YAZMA — ekran okuyucu nokta butonunun aria-label'ini
+    // ("N. nokta, durum") zaten odakta/dokunuşta okur; konus yalnız app TTS için
+    // sayıyı sesli söyler (çift duyuru/araya girme olmaz).
     if (hucreAdi && ilkGiris) {
-      konus(`${hucreAdi}, ${etiketGoster(n)}`, { kesintiyle: true });
+      konus(`${hucreAdi}, ${etiketGoster(n)}`, { kesintiyle: true, srAtla: true });
     } else {
-      konus(String(etiketGoster(n)), { kesintiyle: true });
+      konus(String(etiketGoster(n)), { kesintiyle: true, srAtla: true });
     }
   };
 

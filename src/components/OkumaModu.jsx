@@ -291,7 +291,7 @@ export default function OkumaModuListesi({
                   const { ana, alt: parantezAlt } = etiketiAyristir(okumaEtiketiHazirla(etiket));
                   return (
                     <>
-                      <span className={`okuma-modu-etiket${etiketFontSinifi(ana) ? ' ' + etiketFontSinifi(ana) : ''}`} dir={rtl ? 'rtl' : undefined} lang={rtl ? 'ar' : undefined}>{ana}</span>
+                      <span className={`okuma-modu-etiket${etiketFontSinifi(ana) ? ' ' + etiketFontSinifi(ana) : ''}`} dir={rtl ? 'rtl' : undefined} lang={rtl ? 'ar' : (seslendirmeDili !== 'tr' ? seslendirmeDili : undefined)}>{ana}</span>
                       {parantezAlt && <span className="okuma-modu-alt">{parantezAlt}</span>}
                     </>
                   );

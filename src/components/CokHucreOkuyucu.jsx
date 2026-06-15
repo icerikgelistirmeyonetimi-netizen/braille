@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
-import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle } from '../utils/ses.js';
+import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle, dogruSesi, yanlisSesi } from '../utils/ses.js';
 import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
 import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js';
@@ -48,6 +48,10 @@ export default function CokHucreOkuyucu({
   const { pathname } = useLocation();
   const yazmaKaynak = mevcutSayfaIcinKaynakAnahtar(pathname);
   const konusDil = useCallback((text, opts = {}) => konus(text, { dil: seslendirmeDili, ...opts }), [seslendirmeDili]);
+  // Ekran okuyucu (NVDA) otomatik dil değiştirme: yabancı dil sayfalarında (Modül 9 de/fr/en)
+  // yabancı içerik (harf/sözcük) lang ile işaretlenir → NVDA o kısmı o dilin sesiyle okur;
+  // Türkçe yönergeler lang taşımaz, tr (sayfa varsayılanı) kalır. Türkçe sayfalar (tr) etkilenmez.
+  const yabanciDil = seslendirmeDili !== 'tr' ? seslendirmeDili : null;
 
   // Ders her açılışta baştan başlar (kaldığı yerden devam etmez).
   const [indeks, setIndeks] = useState(0);
@@ -63,6 +67,13 @@ export default function CokHucreOkuyucu({
   const [okumaModu, setOkumaModu] = useState(false);
   // Yönerge seslendirilirken nokta etkileşimi kilitlenir (tıklama/hover/odak/klavye yok).
   const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
+  // Ekran okuyucu için: yönerge KALICI bölgede durur (kaybolmaz); "sıradaki nokta"
+  // AYRI canlı bölgede güncellenir (her dokunuşta eskisiyle yer değiştirir). Görsel YOK.
+  const [srYonergeMetni, setSrYonergeMetni] = useState('');
+  // Yönerge aria-live bölgesini her seslendirmede (yeni öğe VE "Tekrar") yeniden
+  // duyurmak için nonce: aynı metinde bile içerik değişsin → NVDA tekrar okur.
+  const [yonergeNonce, setYonergeNonce] = useState(0);
+  const [srSiradakiNokta, setSrSiradakiNokta] = useState('');
   const yonergeNesilRef = useRef(0);
   const yonergeKilitTimerRef = useRef(null);
   const dotSentinelRef = useRef(null);
@@ -167,7 +178,11 @@ export default function CokHucreOkuyucu({
     if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
     const maxMs = Math.min(30000, 6000 + (metin ? metin.length : 0) * 200);
     yonergeKilitTimerRef.current = setTimeout(() => yonergeKilidiAc(nesil), maxMs);
-    konusDil(metin, { ...secenek, onSon: () => yonergeKilidiAc(nesil) });
+    // Ekran okuyucu: yönergeyi _srBolge'ye YAZMA (srAtla) — düz metin lang taşıyamaz +
+    // "Başla" anında üzerine yazardı. Bunun yerine bileşenin aria-live yönerge bölgesi
+    // (lang span'li) duyurur. Yeni öğede metin zaten değiştiği için bölge bir kez okur;
+    // nonce SADECE "Tekrar"da (aynı metin) bump edilir → çift-okuma olmaz.
+    konusDil(metin, { srAtla: true, ...secenek, onSon: () => yonergeKilidiAc(nesil) });
   };
 
   // Yönerge okunurken kullanıcı bir noktaya dokunmaya çalışırsa: sadece uyar,
@@ -254,6 +269,10 @@ export default function CokHucreOkuyucu({
     setYonergeOkunuyor(true);
 
     const metin = kelimeYonergeMetniAl(k);
+    // Ekran okuyucu: yönergeyi KALICI bölgeye yaz (hep okunabilir kalır) + yeni öğe/hücreye
+    // geçince "sıradaki nokta" bölgesini temizle (eski yönlendirme kalmasın).
+    setSrYonergeMetni(metin);
+    setSrSiradakiNokta('');
     const sesOncesiYonergeMetni = typeof k.sesOncesiYonergeMetni === 'string'
       ? k.sesOncesiYonergeMetni.trim()
       : '';
@@ -332,6 +351,9 @@ export default function CokHucreOkuyucu({
     }
 
     const tekrar = () => {
+      // Tekrar: yönerge metni AYNI kaldığından aria-live bölgesi kendiliğinden
+      // yeniden okumaz; nonce'u değiştirerek NVDA'nın tekrar okumasını sağla.
+      setYonergeNonce((n) => n + 1);
       if (tekrarSesiTimerRef.current) {
         clearTimeout(tekrarSesiTimerRef.current);
         tekrarSesiTimerRef.current = null;
@@ -458,8 +480,18 @@ export default function CokHucreOkuyucu({
     oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
     if (!(onceki && !yonergeOkunuyor)) return undefined;
     if (okumaModu || bitti) return undefined;
-    konusDil('Başla');
-    const id = window.requestAnimationFrame(() => dotSentinelRef.current?.focus());
+    // "Başla" _srBolge'ye YAZILMAZ (srAtla) — yoksa aria-live yönerge bölgesini ezerdi.
+    // App TTS açıkken yine sesli söylenir; NVDA için yönerge bölgesi yeterli cue'dur.
+    konusDil('Başla', { srAtla: true });
+    // Yönerge bitince odağı BOŞ sentinel yerine İLK BRAILLE NOKTASINA ver (kullanıcı:
+    // "yönerge bitince boş diyor; orada braille noktalarını saymalı"): NVDA boş gizli
+    // span'i "boş" diye okuyordu → artık basılacak nokta ("1. nokta…") okunur, kullanıcı
+    // doğrudan noktanın üzerine konumlanır. Nokta yoksa sentinel'e düş (eski davranış).
+    const id = window.requestAnimationFrame(() => {
+      const kok = dotSentinelRef.current?.parentElement;
+      const ilkNokta = kok?.querySelector('button.dot.target') || kok?.querySelector('button.dot');
+      (ilkNokta || dotSentinelRef.current)?.focus();
+    });
     return () => window.cancelAnimationFrame(id);
   }, [yonergeOkunuyor, okumaModu, bitti, konusDil]);
 
@@ -497,6 +529,7 @@ export default function CokHucreOkuyucu({
             baslik={baslik}
             ogeler={ogeler}
             rtl={rtl}
+            seslendirmeDili={seslendirmeDili}
             getEtiket={(oge) => oge.yazi}
             getTtsEtiket={(oge) => oge.ttsYazi || oge.yazi}
             getAltEtiket={(oge) => oge.okunus || oge.anlam}
@@ -590,22 +623,61 @@ export default function CokHucreOkuyucu({
     }
   };
 
+  // Tüm dokunuş geri-bildirimleri (doğru/yanlış/sıradaki nokta/tamamlandı) TEK assertive
+  // durum bölgesinden geçer → ekran okuyucu OTOMATİK okur (odak taşımadan, dokunma akışı
+  // bozulmadan). TTS srAtla ile (çift duyuru yok — bölge _srBolge'ye yazmaz). Opsiyonel ses.
+  const srDurumDuyur = (mesaj, ses) => {
+    if (ses === 'dogru') dogruSesi();
+    else if (ses === 'yanlis') yanlisSesi();
+    setSrSiradakiNokta(mesaj);
+    konusDil(mesaj, { srAtla: true });
+  };
+
   const noktayaTikla = (n) => {
     if (basilanlar.includes(n)) return;
     if (n !== aktifNoktalar[basilanlar.length]) {
+      // YANLIŞ → otomatik okunan durum bölgesi + yanlış sesi.
       setYanlis([n]);
-      hataBildir(aktifNoktalar.includes(n) ? `Sıra yanlış. Önce ${aktifNoktalar[basilanlar.length]} numaraya basın.` : `${n} numara yanlış.`);
+      srDurumDuyur(
+        aktifNoktalar.includes(n)
+          ? `Yanlış. Sıra yanlış, önce ${aktifNoktalar[basilanlar.length]} numaraya basın.`
+          : `Yanlış. ${n} numara bu hücrede yok.`,
+        'yanlis',
+      );
       setTimeout(() => setYanlis([]), 700);
       return;
     }
     const yeni = [...basilanlar, n];
     setBasilanlar(yeni);
-    if (yeni.length === aktifNoktalar.length) {
-      basariBildir('Doğru!');
-      setTimeout(() => sonrakiHucre(), 600);
-    } else {
-      konusDil(`Doğru. Sıradaki nokta: ${aktifNoktalar[yeni.length]} numara.`);
+    if (yeni.length < aktifNoktalar.length) {
+      // DOĞRU ama hücrede başka nokta var → DOĞRU SESİ (ding) + yalnız "sıradaki nokta".
+      // ⚠ "Doğru" SÖZCÜĞÜ KALDIRILDI (kullanıcı: "sıradaki nokta yönergesinden sonra bir
+      // önceki doğru cevap için doğru diyor"): mesaj "Doğru" ile başlayıp her dokunuşta
+      // tekrarlanıyordu; hızlı dokununca NVDA kuyruğu önceki dokunuşun "Doğru"sunu GEÇ
+      // okuyup karıştırıyordu. Ses olumlu onayı verir (kuyruksuz), metin kısalır → gecikme yok.
+      srDurumDuyur(`Sıradaki nokta: ${aktifNoktalar[yeni.length]} numara.`, 'dogru');
+      return;
     }
+    // Hücre tamamlandı.
+    if (!sonHucre) {
+      // Öğede başka hücre var → ses + kısa duyuru (yine "Doğru" sözcüğü yok) + sonraki hücre.
+      srDurumDuyur('Sonraki hücreye geçiliyor.', 'dogru');
+      setTimeout(() => setHucreIndeksi((i) => i + 1), 900);
+      return;
+    }
+    // ÖĞE tamamlandı → "Tebrikler" (HEMEN değişme) → "Sonraki öğe" → SONRA geçiş (kullanıcı isteği).
+    if (bolumAnahtari && aktif) ogrenildiIsaretle(bolumAnahtari, aktif.yazi);
+    const sonOge = indeks >= aktifListe.length - 1;
+    // "doğru" sözcüğü çıkarıldı (kullanıcı şikâyeti: gecikmeli "doğru"); ses + "Tebrikler" yeterli.
+    srDurumDuyur('Tebrikler! Öğeyi tamamladınız.', 'dogru');
+    setTimeout(() => {
+      if (sonOge) {
+        setIndeks((i) => i + 1); // son öğe → bitti ekranı (bittiMesaji okunur)
+      } else {
+        srDurumDuyur('Sonraki öğe.');
+        setTimeout(() => setIndeks((i) => i + 1), 1200);
+      }
+    }, 1500);
   };
 
     return (
@@ -668,9 +740,11 @@ export default function CokHucreOkuyucu({
             </button>
           </div>
         )}
-        {/* Kelime/ifade yazısı */}
+        {/* Kelime/ifade yazısı — Tab ile odaklanabilir (kullanıcı: "tab bu bölümlere de
+            odaklanabilmeli"): ekran okuyucu kelimenin üstüne gelince o dilde (lang) okur. */}
         <div
-          lang={rtl ? 'ar' : undefined}
+          tabIndex={0}
+          lang={rtl ? 'ar' : (yabanciDil || undefined)}
           style={{
             textAlign: 'center',
             fontSize: rtl ? '1.8em' : '1.6em',
@@ -689,6 +763,27 @@ export default function CokHucreOkuyucu({
         </div>
 
         <span ref={dotSentinelRef} tabIndex={-1} aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', outline: 'none', pointerEvents: 'none' }} />
+
+        {/* Ekran okuyucu için (görsel YOK): yönerge CANLI bölge (aria-live=polite + atomic) —
+            yönerge artık _srBolge yerine BURADAN duyurulur (lang span yabancı harfi o dilde
+            okutur, kalan Türkçe tr kalır). nonce sonu görünmez karakter ile değişir → aynı
+            metinde (Tekrar) bile NVDA yeniden okur. ALTINDA sıradaki nokta/dönüt AYRI canlı bölge. */}
+        {srYonergeMetni && (() => {
+          // Yabancı dil sayfasında yönerge "ä işareti, …" gibi yabancı harfle BAŞLAR;
+          // o token <span lang> ile sarılır → NVDA harfi o dilde okur, kalan Türkçe tr kalır.
+          const token = k.ttsYazi || k.yazi || '';
+          const nonceEk = yonergeNonce % 2 ? ' ' : '';
+          const govde = (yabanciDil && token && srYonergeMetni.startsWith(token))
+            ? (<><span lang={yabanciDil}>{token}</span>{srYonergeMetni.slice(token.length)}{nonceEk}</>)
+            : (<>{srYonergeMetni}{nonceEk}</>);
+          return <div className="sr-only" aria-live="polite" aria-atomic="true">{govde}</div>;
+        })()}
+        {/* ⚠ role="status" KULLANMA: role=status örtük POLITE'tir; aria-live=assertive ile
+            çelişir → NVDA polite sayıp güncellemeleri KUYRUĞA alır (kesmez) → önceki öğenin
+            "Doğru. Sıradaki nokta…" duyurusu sonraki öğe yüklenince sonradan okunur (sızıntı).
+            Saf aria-live=assertive: en yeni mesaj öncekini KESER + boş div "boş" okunmaz. */}
+        <div className="sr-only" aria-live="assertive" aria-atomic="true">{srSiradakiNokta}</div>
+
         {/* Aktif hücre gösterimi */}
         {ikiHucreTekSatir ? (
           <div className="cell-row fit" style={{ '--hucre-sayisi': k.hucreler.length }}>
