@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
@@ -32,21 +32,75 @@ const COK_HUCRE_OZEL_ANONSLARI = OZEL_ISARETLER
   }))
   .sort((a, b) => b.anahtarlar.length - a.anahtarlar.length);
 
+// Hücre işaret anonsunu, harfin/rakamın yanında gösterilecek kompakt görsel etikete çevirir.
+const ISARET_GORSEL_ETIKET = {
+  'sayı işareti': '#',
+  'büyük harf işareti': '⇧',
+};
+
+// Normal modda tüm hücre dizisini metne çevirir (sayı/büyük harf modu boyunca takip edilir).
+function normalModMetni(hucreler) {
+  const durum = yeniYazmaDurumu();
+  let out = '';
+  for (const noktalar of hucreler) {
+    const r = hucreyiIsle(durum, noktalar);
+    if (r.tip === 'karakter' && r.deger !== null) out += r.deger;
+  }
+  return out;
+}
+
+// Normal modda son eklenen hücrenin bağlam içindeki çözümü (seslendirme için).
+function normalSonHucreBilgisi(hucreler) {
+  const durum = yeniYazmaDurumu();
+  let son = null;
+  for (const noktalar of hucreler) son = hucreyiIsle(durum, noktalar);
+  return son;
+}
+
+// NORMAL mod: her hücreyi tek tek etiketler — boşluk hücreleri ayıraç, dolu hücreler
+// ise altında anlamı (harf / rakam / işaret). Tek liste → hücreler doğal olarak alt satıra kayar.
+function birlesikEtiketler(hucreler) {
+  const durum = yeniYazmaDurumu();
+  return hucreler.map((noktalar) => {
+    const r = hucreyiIsle(durum, noktalar); // boşlukta da çağrılır → sayı/büyük harf modunu sıfırlar
+    if (!noktalar || noktalar.length === 0) return { tip: 'bosluk' };
+    if (r.tip === 'isaret') return { tip: 'hucre', hucre: noktalar, etiket: ISARET_GORSEL_ETIKET[r.anons] || r.anons, isaret: true };
+    if (r.tip === 'bilinmeyen' || r.deger === null) return { tip: 'hucre', hucre: noktalar, etiket: '?', isaret: false };
+    return { tip: 'hucre', hucre: noktalar, etiket: r.deger === ' ' ? '' : r.deger, isaret: false };
+  });
+}
+
+// KISALTMA mod: hücreleri kelime bloklarına böler; her bloğun altında TANINAN kısaltma/
+// kelime gösterilir (per-cell harf değil — Modül 10 ile aynı çözücü: hucreleriMetneCevirKisaltmali).
+function kisaltmaSegmentler(hucreler, sistemler) {
+  const segmentler = [];
+  let i = 0;
+  while (i < hucreler.length) {
+    if ((hucreler[i] || []).length === 0) { segmentler.push({ tip: 'bosluk' }); i++; continue; }
+    const grup = [];
+    while (i < hucreler.length && (hucreler[i] || []).length > 0) { grup.push(hucreler[i]); i++; }
+    const sonGrup = i >= hucreler.length; // hâlâ yazılmakta olan son kelime
+    const kelime = hucreleriMetneCevirKisaltmali(grup, sistemler, sonGrup ? { sonTekHarfBeklet: true } : {});
+    segmentler.push({ tip: 'grup', hucreler: grup, kelime });
+  }
+  return segmentler;
+}
+
 // Serbest yazma: kullanıcı istediğini yazar; her karakter anında seslendirilir.
 // Kısaltma modunda hece, bir harfli, iki harfli, kök ve parça kısaltmaları da tanınır.
 export default function YazmaSerbest() {
   const [metin, setMetin] = useState('');
-  const [aktifGorunum, setAktifGorunum] = useState('metin');
   const [brailleHucreleri, setBrailleHucreleri] = useState([]);
-  const durumRef = useRef(yeniYazmaDurumu());
-  const kisaltmaHucreleriRef = useRef([]);
-  const kisaltmaBasMetinRef = useRef('');
+  // Tek doğruluk kaynağı: yazılan tüm hücreler. Metin de, birleşik görünüm de
+  // bundan türer; böylece 2 satır sınırında son hücre temiz geri alınabilir.
+  const hucrelerRef = useRef([]);
+  const birlesikRef = useRef(null);
+  const [dolu, setDolu] = useState(false); // iki satır doldu — yeni girişi engelle
 
   // Kısaltma modu: localStorage'a kaydedilir
   const [kisaltmaModu, setKisaltmaModu] = useState(
     () => localStorage.getItem('serbestKisaltmaModu') === '1'
   );
-  const [bekleyenGoster, setBekleyenGoster] = useState(false);
 
   // Hangi kısaltma sistemleri aktif (localStorage'a kaydedilir)
   const SISTEM_VARSAYILAN = { hece: true, birHarf: true, ikiHarf: true, kok: true, parca: true };
@@ -75,7 +129,7 @@ export default function YazmaSerbest() {
     );
   };
 
-  const kisaltmaIsaretiAnonsu = (noktalar, hucreler = kisaltmaHucreleriRef.current, kisaltmali = kisaltmaModu) => {
+  const kisaltmaIsaretiAnonsu = (noktalar, hucreler = hucrelerRef.current, kisaltmali = kisaltmaModu) => {
     const anahtar = noktalariAnahtara(noktalar);
     if (anahtar === '5') return 'kelime kökü kısaltma işareti';
     if (anahtar === '4,5' || anahtar === '5,6') return 'kelime parçası kısaltma işareti';
@@ -99,7 +153,7 @@ export default function YazmaSerbest() {
     return null;
   };
 
-  const hucreAnlamAnonsu = (noktalar, hucreler = kisaltmaHucreleriRef.current, kisaltmali = kisaltmaModu) => {
+  const hucreAnlamAnonsu = (noktalar, hucreler = hucrelerRef.current, kisaltmali = kisaltmaModu) => {
     const cokHucreliAnons = cokHucreliOzelAnonsu(hucreler);
     if (cokHucreliAnons) return cokHucreliAnons;
     const kisaltmaAnonsu = kisaltmaIsaretiAnonsu(noktalar, hucreler, kisaltmali);
@@ -110,15 +164,16 @@ export default function YazmaSerbest() {
     return NOKTALAMA_ANONSLARI.get(anahtar) || TEK_HUCRE_OZEL_ANONSLARI.get(anahtar) || null;
   };
 
-  const kisaltmaMetniniGuncelle = (hucreler = kisaltmaHucreleriRef.current, sistemler = kisaltmaSistemler) => {
-    const cozum = hucreleriMetneCevirKisaltmali(hucreler, sistemler, { sonTekHarfBeklet: true });
-    const yeniMetin = kisaltmaBasMetinRef.current + cozum;
+  // Metni mevcut hücrelerden (tek kaynak) yeniden türetir; mod ve sistemlere göre.
+  const metniYenile = (hucreler = hucrelerRef.current, mod = kisaltmaModu, sistemler = kisaltmaSistemler) => {
+    const yeniMetin = mod
+      ? hucreleriMetneCevirKisaltmali(hucreler, sistemler, { sonTekHarfBeklet: true })
+      : normalModMetni(hucreler);
     setMetin(yeniMetin);
-    setBekleyenGoster(sonHucreBekliyorMu(hucreler, sistemler));
-    return { cozum, yeniMetin };
+    return yeniMetin;
   };
 
-  const sinirdaKisaltmaAnonsu = (hucreler = kisaltmaHucreleriRef.current) => {
+  const sinirdaKisaltmaAnonsu = (hucreler = hucrelerRef.current) => {
     if (!kisaltmaSistemler.birHarf) return null;
     const sonBosluk = hucreler.map((hucre) => hucre.length === 0).lastIndexOf(true);
     const sonKelimeHucreleri = hucreler.slice(sonBosluk + 1).filter((hucre) => hucre.length > 0);
@@ -127,9 +182,10 @@ export default function YazmaSerbest() {
     return kelime ? `${kelime} kelimesi kısaltma olarak algılandı.` : null;
   };
 
+  // Mod / kısaltma sistemleri değişince, AYNI hücreler yeni moda göre yeniden yorumlanır.
   useEffect(() => {
-    if (!kisaltmaModu) return;
-    kisaltmaMetniniGuncelle(kisaltmaHucreleriRef.current, kisaltmaSistemler);
+    metniYenile(hucrelerRef.current, kisaltmaModu, kisaltmaSistemler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kisaltmaSistemler, kisaltmaModu]);
 
   // Panel dışına tıklandığında kapat
@@ -147,27 +203,8 @@ export default function YazmaSerbest() {
     const yeni = !kisaltmaModu;
     localStorage.setItem('serbestKisaltmaModu', yeni ? '1' : '0');
     konus(yeni ? 'Kısaltma modu açık.' : 'Kısaltma modu kapalı.', { kesintiyle: true });
-    kisaltmaHucreleriRef.current = [];
-    kisaltmaBasMetinRef.current = yeni ? metin : '';
-    durumRef.current = yeniYazmaDurumu();
-    setBekleyenGoster(false);
+    // Yazılan hücreler korunur; mod değişince effect onları yeni moda göre çözer.
     setKisaltmaModu(yeni);
-  };
-
-  // Normal (kısaltmasız) hücre işleme
-  const normalIsle = (noktalar) => {
-    const anlamAnonsu = hucreAnlamAnonsu(noktalar, [noktalar], false);
-    const r = hucreyiIsle(durumRef.current, noktalar);
-    if (r.tip === 'isaret') {
-      konus(anlamAnonsu || r.anons, { kesintiyle: true });
-      return;
-    }
-    if (r.tip === 'bilinmeyen' || r.deger === null) {
-      konus(anlamAnonsu || 'tanımsız hücre', { kesintiyle: true });
-      return;
-    }
-    setMetin((m) => m + r.deger);
-    konus(anlamAnonsu || r.anons, { kesintiyle: true });
   };
 
   useEffect(() => {
@@ -190,88 +227,104 @@ export default function YazmaSerbest() {
     };
   }, []);
 
+  const doluUyar = () => konus('İki satır doldu, silerek devam edin.', { kesintiyle: true });
+
   const onHucre = (noktalar) => {
-    setBrailleHucreleri((hucreler) => [...hucreler, noktalar]);
+    if (dolu) { doluUyar(); return; }
+    const hucreler = [...hucrelerRef.current, noktalar];
+    hucrelerRef.current = hucreler;
+    setBrailleHucreleri(hucreler);
+    metniYenile(hucreler);
+
     if (kisaltmaModu) {
-      const hucreler = [...kisaltmaHucreleriRef.current, noktalar];
-      kisaltmaHucreleriRef.current = hucreler;
-      const { cozum } = kisaltmaMetniniGuncelle(hucreler);
       const anlamAnonsu = hucreAnlamAnonsu(noktalar, hucreler, true);
       if (sonHucreBekliyorMu(hucreler, kisaltmaSistemler)) {
         konus(anlamAnonsu || 'ikinci hücreyi bekliyor', { kesintiyle: true });
       } else if (anlamAnonsu) {
         konus(anlamAnonsu, { kesintiyle: true });
       } else {
+        const cozum = hucreleriMetneCevirKisaltmali(hucreler, kisaltmaSistemler, { sonTekHarfBeklet: true });
         const sonKelime = cozum.trim().split(/\s+/).filter(Boolean).at(-1);
         konus(sonKelime || 'hücre işlendi', { kesintiyle: true });
       }
       return;
     }
 
-    // Normal mod
-    normalIsle(noktalar);
+    // Normal mod: son hücrenin bağlam içindeki çözümünü seslendir
+    const r = normalSonHucreBilgisi(hucreler);
+    const anlamAnonsu = hucreAnlamAnonsu(noktalar, [noktalar], false);
+    if (r && r.tip === 'isaret') {
+      konus(anlamAnonsu || r.anons, { kesintiyle: true });
+    } else if (!r || r.tip === 'bilinmeyen' || r.deger === null) {
+      konus(anlamAnonsu || 'tanımsız hücre', { kesintiyle: true });
+    } else {
+      konus(anlamAnonsu || r.anons, { kesintiyle: true });
+    }
   };
 
   const onBosluk = () => {
-    setBrailleHucreleri((hucreler) => [...hucreler, []]);
-    if (kisaltmaModu) {
-      const kisaltmaAnonsu = sinirdaKisaltmaAnonsu(kisaltmaHucreleriRef.current);
-      const hucreler = [...kisaltmaHucreleriRef.current, []];
-      kisaltmaHucreleriRef.current = hucreler;
-      kisaltmaMetniniGuncelle(hucreler);
-      konus(kisaltmaAnonsu || 'boşluk', { kesintiyle: true });
-      return;
-    }
-    setMetin((m) => m + ' ');
-    konus('boşluk', { kesintiyle: true });
+    if (dolu) { doluUyar(); return; }
+    const kisaltmaAnonsu = kisaltmaModu ? sinirdaKisaltmaAnonsu(hucrelerRef.current) : null;
+    const hucreler = [...hucrelerRef.current, []];
+    hucrelerRef.current = hucreler;
+    setBrailleHucreleri(hucreler);
+    metniYenile(hucreler);
+    konus((kisaltmaModu && kisaltmaAnonsu) || 'boşluk', { kesintiyle: true });
   };
 
   const onSil = () => {
-    setBrailleHucreleri((hucreler) => hucreler.slice(0, -1));
-    if (kisaltmaModu) {
-      if (kisaltmaHucreleriRef.current.length > 0) {
-        const hucreler = kisaltmaHucreleriRef.current.slice(0, -1);
-        kisaltmaHucreleriRef.current = hucreler;
-        kisaltmaMetniniGuncelle(hucreler);
-        konus('silindi', { kesintiyle: true });
-        return;
-      }
-      if (kisaltmaBasMetinRef.current.length > 0) {
-        kisaltmaBasMetinRef.current = kisaltmaBasMetinRef.current.slice(0, -1);
-        setMetin(kisaltmaBasMetinRef.current);
-        konus('silindi', { kesintiyle: true });
-        return;
-      }
+    if (hucrelerRef.current.length === 0) {
       konus('metin boş', { kesintiyle: true });
       return;
     }
-    setMetin((m) => {
-      if (m.length === 0) {
-        konus('metin boş', { kesintiyle: true });
-        return m;
-      }
-      konus('silindi', { kesintiyle: true });
-      return m.slice(0, -1);
-    });
+    const hucreler = hucrelerRef.current.slice(0, -1);
+    hucrelerRef.current = hucreler;
+    setBrailleHucreleri(hucreler);
+    metniYenile(hucreler);
+    setDolu(false); // bir hücre silindi: yeniden yer açıldı
+    konus('silindi', { kesintiyle: true });
   };
 
   const tumunuOku = () => {
-    if (metin.trim().length === 0) {
+    // metin state'i değil, senkron hucrelerRef'ten türet: Onay'a basıldığında bekleyen
+    // tıklama hücresi yeni commit edildiyse (setMetin henüz uygulanmadan) güncel metin okunsun.
+    const guncelMetin = kisaltmaModu
+      ? hucreleriMetneCevirKisaltmali(hucrelerRef.current, kisaltmaSistemler, { sonTekHarfBeklet: true })
+      : normalModMetni(hucrelerRef.current);
+    if (guncelMetin.trim().length === 0) {
       konus('Henüz hiçbir şey yazmadınız.', { kesintiyle: true });
       return;
     }
-    konus(metin, { kesintiyle: true });
+    konus(guncelMetin, { kesintiyle: true });
   };
 
   const temizle = () => {
-    setMetin('');
+    hucrelerRef.current = [];
     setBrailleHucreleri([]);
-    durumRef.current = yeniYazmaDurumu();
-    kisaltmaHucreleriRef.current = [];
-    kisaltmaBasMetinRef.current = '';
-    setBekleyenGoster(false);
+    setMetin('');
+    setDolu(false);
     konus('Metin temizlendi.', { kesintiyle: true });
   };
+
+  // İki satır sınırı: yeni hücre üçüncü satıra taşarsa son girişi geri al ve kilitle.
+  useLayoutEffect(() => {
+    const el = birlesikRef.current;
+    if (!el) return;
+    const cocuklar = [...el.children].filter(
+      (c) => c.offsetParent !== null && !c.classList.contains('kalan')
+    );
+    if (cocuklar.length === 0) return;
+    const satirSayisi = new Set(cocuklar.map((c) => Math.round(c.offsetTop))).size;
+    if (satirSayisi > 2 && hucrelerRef.current.length > 0) {
+      const hucreler = hucrelerRef.current.slice(0, -1);
+      hucrelerRef.current = hucreler;
+      setBrailleHucreleri(hucreler);
+      metniYenile(hucreler);
+      setDolu(true);
+      doluUyar();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brailleHucreleri]);
 
   return (
     <div className="page yazma-page serbest-yazma-page">
@@ -284,68 +337,62 @@ export default function YazmaSerbest() {
 
       <div className="yazma-bolum yazma-bolum-orta">
         <div className="yazma-gorunum-panel" style={gorunumPanelStyle}>
-          <div className="belge-tab-bar yazma-tab-bar" role="tablist" aria-label="Yazma görünümü">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={aktifGorunum === 'metin'}
-              className={`btn ${'belge-tab' + (aktifGorunum === 'metin' ? ' aktif' : '')}`}
-              onClick={() => setAktifGorunum('metin')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                   strokeLinecap="round" strokeLinejoin="round" width="15" height="15" aria-hidden="true">
-                <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/>
-              </svg>
-              Metin
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={aktifGorunum === 'braille'}
-              className={`btn ${'belge-tab' + (aktifGorunum === 'braille' ? ' aktif' : '')}`}
-              onClick={() => setAktifGorunum('braille')}
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="15" height="15" aria-hidden="true">
-                <circle cx="8" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="8" cy="18" r="2"/>
-                <circle cx="16" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>
-              </svg>
-              Braille
-            </button>
+          {/* Okuma kutusu görünmez; ekran okuyucu / tarayıcı seslendirmesi için canlı metin. */}
+          <div
+            className="sr-only"
+            aria-live="polite"
+            aria-label={`Yazılan metin: ${metin || 'boş'}`}
+          >
+            {metin || 'boş'}
           </div>
 
-          {aktifGorunum === 'metin' ? (
-            <div
-              className="yazma-metin yazma-serbest-cikti"
-              aria-live="polite"
-              aria-label={`Yazılan metin: ${metin || 'boş'}`}
-            >
-              {metin || <span className="kalan">(yazmaya başlayın)</span>}
-              {bekleyenGoster && <span className="kisaltma-bekleyen">&#8230;</span>}
-            </div>
-          ) : (
-            <div
-              className="yazma-braille-gorunum"
-              aria-live="polite"
-              aria-label="Yazılan braille hücreleri"
-            >
-              {brailleHucreleri.length === 0 ? (
-                <span className="kalan">(braille hücresi yok)</span>
-              ) : brailleHucreleri.map((hucre, index) => (
-                hucre.length === 0 ? (
-                  <span key={index} className="yazma-braille-bosluk" aria-label="boşluk">boşluk</span>
+          {/* Braille hücreleri + anlamı. NORMAL mod: her hücrenin altında harf/rakam/işaret.
+              KISALTMA mod: her kelime bloğunun altında TANINAN kısaltma/kelime.
+              Görsel; ekran okuyucu yukarıdaki canlı metni okur. En fazla iki satır. */}
+          <div className="yazma-braille-gorunum yazma-birlesik" aria-hidden="true" ref={birlesikRef}>
+            {brailleHucreleri.length === 0 ? (
+              <span className="kalan yazma-baslangic-yonerge">Braille tuşlarına tıklayarak yazınız.</span>
+            ) : kisaltmaModu ? (
+              kisaltmaSegmentler(brailleHucreleri, kisaltmaSistemler).map((seg, index) =>
+                seg.tip === 'bosluk' ? (
+                  <div key={index} className="yazma-birlesik-bosluk" />
                 ) : (
-                  <BrailleCell
-                    key={index}
-                    aktifNoktalar={hucre}
-                    baslik={noktalariAnahtara(hucre).replace(/,/g, '')}
-                    baslikAriaLabel={`Hücre ${index + 1}, nokta ${hucre.join(' ')}`}
-                    tiklanabilir={false}
-                    kesfedilebilir={false}
-                  />
+                  <div key={index} className="yazma-grup">
+                    <div className="yazma-grup-satir">
+                      {seg.hucreler.map((hucre, j) => (
+                        <BrailleCell
+                          key={j}
+                          aktifNoktalar={hucre}
+                          tiklanabilir={false}
+                          kesfedilebilir={false}
+                        />
+                      ))}
+                    </div>
+                    <span className="yazma-grup-etiket">{seg.kelime || ' '}</span>
+                  </div>
                 )
-              ))}
-            </div>
-          )}
+              )
+            ) : (
+              birlesikEtiketler(brailleHucreleri).map((e, index) =>
+                e.tip === 'bosluk' ? (
+                  <div key={index} className="yazma-birlesik-bosluk" />
+                ) : (
+                  <div key={index} className="yazma-hucre-kutu">
+                    <BrailleCell
+                      aktifNoktalar={e.hucre}
+                      tiklanabilir={false}
+                      kesfedilebilir={false}
+                    />
+                    <span
+                      className={`yazma-hucre-etiket${e.isaret ? ' yazma-hucre-etiket-isaret' : ''}`}
+                    >
+                      {e.etiket || ' '}
+                    </span>
+                  </div>
+                )
+              )
+            )}
+          </div>
         </div>
 
         {/* Dikeyde klavye burada inline; yatayda CSS ile gizlenir */}
@@ -368,7 +415,7 @@ export default function YazmaSerbest() {
           <div className="kisaltma-btn-grup" ref={sistemPaneliRef}>
             <button
               type="button"
-              className={`btn ${kisaltmaModu ? 'aktif' : ''}`}
+              className={`btn kisaltma-mod-btn ${kisaltmaModu ? 'aktif' : ''}`}
               aria-pressed={kisaltmaModu}
               onClick={kisaltmaModuToggle}
               title="Kısaltmaları tanı ve kısaltma kullanarak yaz"
@@ -406,7 +453,9 @@ export default function YazmaSerbest() {
         </div>
       </div>
 
-      {/* Yatayda tam ekran şeffaf popup klavye */}
+      {/* Yatayda tam ekran şeffaf popup klavye (dokunmatik).
+          klavyeAcik={false}: fiziksel klavye olaylarını yalnız inline klavye yakalasın
+          (iki klavye de window dinlerse her tuş iki kez işlenip metin ikileniyordu). */}
       <div className="klavye-popup" role="dialog" aria-label="Braille ekran klavyesi">
         <BrailleKlavye
           onHucre={onHucre}
@@ -414,6 +463,7 @@ export default function YazmaSerbest() {
           onSil={onSil}
           onEnter={tumunuOku}
           anindaDokunma
+          klavyeAcik={false}
         />
       </div>
     </div>

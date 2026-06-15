@@ -2097,6 +2097,70 @@ h1, h2, h3 { color: var(--fg); }
 }
 @keyframes kisaltma-yanip-sone { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
+/* Serbest yazma: sekmesiz birleşik görünüm — braille + altında harf/kısaltma */
+/* Boşken görünen yönerge (okuma kutusu yok; yönerge buraya taşındı) */
+.yazma-birlesik .yazma-baslangic-yonerge {
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--muted);
+}
+/* En fazla iki satır; içerik dikeyde ortalanır (tek satırda hücreler bir alta kayar) */
+.yazma-birlesik {
+  align-items: flex-start;
+  align-content: center;
+  min-height: 150px;
+  max-height: 190px;
+  overflow: hidden;
+}
+.yazma-birlesik .yazma-hucre-kutu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+/* KISALTMA mod: kelime bloğu — hücreler bir satır, altında tanınan kelime */
+.yazma-birlesik .yazma-grup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 8px;
+}
+.yazma-birlesik .yazma-grup-satir {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 4px;
+}
+.yazma-birlesik .yazma-grup-etiket {
+  max-width: 150px;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--accent-2, #1e9e5f);
+  text-align: center;
+  word-break: break-word;
+}
+.yazma-birlesik .yazma-hucre-etiket {
+  min-height: 1.1em;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent-2, #1e9e5f);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.yazma-birlesik .yazma-hucre-etiket-isaret {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.yazma-birlesik .yazma-birlesik-bosluk {
+  align-self: stretch;
+  min-width: 20px;
+}
+
 /* Kısaltma sistemi dropdown */
 .kisaltma-btn-grup {
   position: relative;
@@ -2107,6 +2171,13 @@ h1, h2, h3 { color: var(--fg); }
 .kisaltma-btn-grup > button:first-child {
   white-space: nowrap;
   border-radius: var(--radius) 0 0 var(--radius);
+}
+/* Kısaltma modu KAPALIYKEN buton gri (mavi değil); açıkken .btn mavisi kalır */
+.kisaltma-mod-btn:not(.aktif) {
+  background: var(--panel-border);
+  color: var(--muted);
+  border-color: var(--panel-border);
+  box-shadow: none;
 }
 .kisaltma-sistem-acilis-btn {
   border-radius: 0 var(--radius) var(--radius) 0 !important;
@@ -2683,6 +2754,7 @@ h1, h2, h3 { color: var(--fg); }
     --cell-gap: 2px;
     --cell-pad: 4px;
   }
+  .yazma-page .yazma-birlesik { min-height: 112px; max-height: 124px; }
   .yazma-page .yazma-braille-gorunum .cell-title { display: none; }
   .yazma-page .yazma-ipucu { padding: 4px 8px; font-size: 0.8em; margin: 0; }
 
