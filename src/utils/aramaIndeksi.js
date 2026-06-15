@@ -473,8 +473,11 @@ export function sozlukAra(girdi) {
     } else if (!eslesti && q.length >= 2) {
       const birlesik = metinNormalle(`${giris.etiket} ${giris.altEtiket} ${(giris.esler || []).join(' ')}`);
       const kelimeler = birlesik.split(KELIME_AYIRAC).filter(Boolean);
-      eslesti = kelimeler.some((w) => w === q)
-        || (q.length >= 3 && (kelimeler.some((w) => w.startsWith(q)) || birlesik.includes(q)));
+      // Önek (startsWith) eşleşmesi 2+ harfte: "au" → "auch/auf/aus" de gelsin (kısa sorgu,
+      // uzun sorgunun üst kümesi olsun). Geniş alt-dizi (includes) eşleşmesi gürültüyü
+      // önlemek için 3+ harfte kalır.
+      eslesti = kelimeler.some((w) => w === q || w.startsWith(q))
+        || (q.length >= 3 && birlesik.includes(q));
     }
     if (eslesti) sonuclar.push({ ...giris, eslesenIndeksler: [] });
   }

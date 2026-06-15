@@ -80,6 +80,11 @@ const FR_KURAL_CH = [
   'Tireli bileşik kelimelerde köprü oluşturmaz.',
 ];
 
+const FR_KURAL_FINALE = [
+  'Finale/dizi kısaltması yalnızca ilgili konumda (genelde kelime sonunda) kullanılır.',
+  'Aynı hücre başka konumda farklı anlama gelebilir.',
+];
+
 /* ─────────────────────────  Alfabe (a–z)  ───────────────────────────────── */
 export const FRANSIZCA_ALFABE_AJ = [
   R('a', ['1'], undefined, FR_KURAL_A_SAYI),
@@ -126,7 +131,7 @@ export const FRANSIZCA_ALFABE_AKSAN = [
   R('ê', ['1-2-6'], 'e accent circonflexe', FR_KURAL_AKSAN),
   R('î', ['1-4-6'], 'i accent circonflexe', FR_KURAL_AKSAN),
   R('ô', ['1-4-5-6'], 'o accent circonflexe', FR_KURAL_AKSAN),
-  R('û', ['1-2-5-6'], 'u accent circonflexe', FR_KURAL_AKSAN),
+  R('û', ['1-5-6'], 'u accent circonflexe', FR_KURAL_AKSAN),
   R('ë', ['1-2-4-6'], 'e tréma', FR_KURAL_AKSAN),
   R('ï', ['1-2-4-5-6'], 'i tréma', FR_KURAL_AKSAN),
   R('ç', ['1-2-3-4-6'], 'c cédille', FR_KURAL_AKSAN),
@@ -166,7 +171,7 @@ export const FRANSIZCA_BIR_HARF_GRUP2 = [
   R('quoi', ['1-2-3-4-5-6'], '(ne)', FR_KURAL_TEK_KELIME),
   R('sans', ['2-3-4-6'], '(-sız / -siz)', FR_KURAL_TEK_KELIME),
   R('et', ['2-3-4-5-6'], '(ve)', FR_KURAL_TEK_KELIME),
-  R('per', ['1-2-3-4'], '(per- öneki / par)', FR_KURAL_TEK_KELIME),
+  R('par', ['1-2-3-4'], '(ile / aracılığıyla)', FR_KURAL_TEK_KELIME),
   R('en', ['2-6'], '(içinde / ondan)', [...FR_KURAL_TEK_KELIME, ...FR_KURAL_EN]),
   R('puis', ['2-3-5'], '(sonra)', FR_KURAL_TEK_KELIME),
   R('été', ['2-3-5-6'], '(yaz / olmuş)', FR_KURAL_TEK_KELIME),
@@ -183,7 +188,7 @@ export const FRANSIZCA_BIR_HARF_GRUP3 = [
   R('dès', ['2-5-6'], '(-den itibaren)', FR_KURAL_TEK_KELIME),
   R('si', ['3-5'], '(eğer / bu kadar)', FR_KURAL_TEK_KELIME),
   R('sous', ['3-5-6'], '(altında)', FR_KURAL_TEK_KELIME),
-  R('la', ['6'], '(belirteç, kadın)', FR_KURAL_TEK_KELIME),
+  R('la', ['3'], '(belirteç, kadın)', FR_KURAL_TEK_KELIME),
   R('celui', ['3-6'], '(o, kişi)', FR_KURAL_TEK_KELIME),
   R('lui', ['3-4-5-6'], '(ona)', FR_KURAL_TEK_KELIME),
   R('on', ['3-4-6'], '(birisi / insan, genel)', [...FR_KURAL_TEK_KELIME, ...FR_KURAL_ON]),
@@ -206,6 +211,17 @@ export const FRANSIZCA_KELIME_PARCA = [
   R('ieu', ['6'], 'Kelime parçası', FR_KURAL_PARCA),
   R('or', ['5-6'], 'Kelime parçası', FR_KURAL_PARCA),
   R('ai', ['3-4'], 'Kelime parçası', FR_KURAL_PARCA),
+  // ── Finaller / diziler (séquences) — yalnız ilgili konumda ──
+  R('able', ['4-5'], 'Finale (-able)', FR_KURAL_FINALE),
+  R('ait', ['1-4-6'], 'Finale (-ait)', FR_KURAL_FINALE),
+  R('ant', ['1-4-5-6'], 'Finale (-ant)', FR_KURAL_FINALE),
+  R('ation', ['1-6'], 'Finale (-ation)', FR_KURAL_FINALE),
+  R('ent', ['1-2-6'], 'Finale (-ent)', FR_KURAL_FINALE),
+  R('ez', ['1-3-5-6'], 'Finale (-ez)', FR_KURAL_FINALE),
+  R('ien', ['2-5-6'], 'Dizi (-ien)', FR_KURAL_FINALE),
+  R('om', ['2-4-5-6'], 'Dizi (om)', FR_KURAL_FINALE),
+  R('qu', ['1-2-3-4-5'], 'Dizi (qu)', FR_KURAL_FINALE),
+  R('bl', ['4-5'], 'Dizi (bl)', FR_KURAL_FINALE),
 ];
 
 export const FRANSIZCA_BOLUMLER = [

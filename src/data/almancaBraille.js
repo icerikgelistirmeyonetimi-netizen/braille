@@ -54,6 +54,16 @@ const DE_KURAL_TEK_KELIME = [
   'Bir harfli kelime kısaltması: harf, iki boşluk arasında tek başına yazıldığında bu kelime anlamına gelir.',
 ];
 
+const DE_KURAL_ONEK = [
+  'Önek (Vorsilbe) kısaltması yalnızca kelimenin başında kullanılır.',
+  'Aynı hücre başka konumda farklı anlama gelebilir.',
+];
+
+const DE_KURAL_SONEK = [
+  'Sonek (Nachsilbe) kısaltması yalnızca kelimenin sonunda kullanılır.',
+  'Aynı hücre başka konumda farklı anlama gelebilir.',
+];
+
 /* ─────────────────────  1. Alfabe ve özel harfler  ─────────────────────── */
 export const ALMANCA_ALFABE = [
   R('a', ['1'], undefined, DE_KURAL_A_SAYI),
@@ -85,6 +95,9 @@ export const ALMANCA_ALFABE = [
   R('ä', ['3-4-5'], 'a umlaut'),
   R('ö', ['2-4-6'], 'o umlaut'),
   R('ü', ['1-2-5-6'], 'u umlaut'),
+  R('ß', ['2-3-4-6'], 'eszett', [
+    'ß yalnızca baskıda ß kullanıldığında yazılır; baskıda "ss"/"sz" varsa braillede de öyle yazılır.',
+  ]),
 ];
 
 /* ─────────────  2. Lautgruppen / kelime parçası kısaltmaları  ───────────── */
@@ -122,6 +135,20 @@ export const ALMANCA_KELIME_PARCA = [
   R('ach', ['5-6'], 'Kelime parçası', DE_KURAL_LAUTGRUPPE),
   R('ich', ['3-4-5-6'], 'Kelime parçası', DE_KURAL_LAUTGRUPPE),
   R('lich', ['4-5-6'], 'Son ek', DE_KURAL_LAUTGRUPPE),
+  // ── Önekler (Vorsilben) — yalnız kelime başında ──
+  R('aus', ['3-4'], 'Önek (aus-)', DE_KURAL_ONEK),
+  R('ent', ['2-3-4-6'], 'Önek (ent-)', DE_KURAL_ONEK),
+  R('ex', ['1-3-4-6'], 'Önek (ex-)', DE_KURAL_ONEK),
+  R('pro', ['1-2-3-4-5'], 'Önek (pro-)', DE_KURAL_ONEK),
+  // ── Sonekler (Nachsilben) — yalnız kelime sonunda ──
+  R('heit', ['1-2-5'], 'Son ek (-heit)', DE_KURAL_SONEK),
+  R('keit', ['1-3'], 'Son ek (-keit)', DE_KURAL_SONEK),
+  R('nis', ['1-3-4-6'], 'Son ek (-nis)', DE_KURAL_SONEK),
+  R('sam', ['2-3-4-6'], 'Son ek (-sam)', DE_KURAL_SONEK),
+  R('schaft', ['1-5-6'], 'Son ek (-schaft)', DE_KURAL_SONEK),
+  R('ung', ['1-3-6'], 'Son ek (-ung)', DE_KURAL_SONEK),
+  R('wärts', ['2-4-5-6'], 'Son ek (-wärts)', DE_KURAL_SONEK),
+  R('mal', ['1-3-4'], 'Son ek (-mal)', DE_KURAL_SONEK),
 ];
 
 /* ────────  3. Bir harfli kelime kısaltmaları — 1. grup (a–j hücreleri)  ──── */

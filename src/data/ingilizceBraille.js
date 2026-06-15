@@ -50,9 +50,6 @@ const ING_KURAL_ING = [
   'Kelime ortasında ve sonunda kullanılır.',
 ];
 
-const ING_KURAL_BLE = [
-  'Yalnızca kelime sonunda kullanılır.',
-];
 
 const ING_KURAL_EA = [
   '“ea” yalnızca iki harf arasında kullanılır.',
@@ -95,10 +92,6 @@ const ING_KURAL_SON_46 = [
 
 const ING_KURAL_SON_56 = [
   'Son harf grup işareti: nokta 5-6 + bir harf, kelime sonunda kullanılır.',
-];
-
-const ING_KURAL_SON_6 = [
-  'Son harf grup işareti: nokta 6 + bir harf, kelime sonunda kullanılır.',
 ];
 
 /* ───────────────────────────  1. Temel alfabe  ─────────────────────────── */
@@ -145,18 +138,15 @@ export const INGILIZCE_BASIT_KISALTMA = [
   R('st', ['3-4'], 'Grup işareti veya tek başına “still”', ING_KURAL_GUCLU_GRUP),
   R('ar', ['3-4-5'], 'Güçlü grup işareti, her konumda', ING_KURAL_GUCLU_GRUP),
   R('ing', ['3-4-6'], 'Başta yok; ortada ve sonda', ING_KURAL_ING),
-  R('ble', ['3-4-5-6'], 'Yalnız kelime sonunda', ING_KURAL_BLE),
   R('be', ['2-3'], 'Alt grup, yalnız kelime başında', ING_KURAL_ALT_BAS),
   R('con', ['2-5'], 'Alt grup, yalnız kelime başında', ING_KURAL_ALT_BAS),
   R('dis', ['2-5-6'], 'Alt grup, yalnız kelime başında', ING_KURAL_ALT_BAS),
-  R('com', ['3-6'], 'Alt grup, yalnız kelime başında', ING_KURAL_ALT_BAS),
   R('en', ['2-6'], 'Grup işareti; tek başına “enough”'),
   R('in', ['3-5'], 'Grup işareti; tek başına “in”'),
   R('ea', ['2'], 'Yalnız kelime ortasında', ING_KURAL_EA),
   R('bb', ['2-3'], 'Yalnız ortada; hücre aynı: “be”', ING_KURAL_ORTADA),
   R('cc', ['2-5'], 'Yalnız ortada; hücre aynı: “con”', ING_KURAL_ORTADA),
   R('ff', ['2-3-5'], 'Yalnız ortada', ING_KURAL_ORTADA),
-  R('dd', ['2-5-6'], 'Yalnız ortada; hücre aynı: “dis”', ING_KURAL_ORTADA),
   R('gg', ['2-3-5-6'], 'Yalnız ortada; hücre aynı: “were”', ING_KURAL_ORTADA),
 ];
 
@@ -208,11 +198,6 @@ export const INGILIZCE_TEK_HARF_VE_EKLER = [
   R('his', ['2-3-6'], '(onun) · alt kelime işareti', ING_KURAL_ALT_KELIME),
   R('was', ['3-5-6'], '(idi) · alt kelime işareti', ING_KURAL_ALT_KELIME),
   R('were', ['2-3-5-6'], '(çoğul idi) · alt kelime işareti', ING_KURAL_ALT_KELIME),
-  R('to', ['2-3-5'], '(-e / -a) · alt kelime işareti', [
-    ...ING_KURAL_ALT_KELIME,
-    '“to/into” takip eden kelimeye bitişik (boşluksuz) yazılır.',
-  ]),
-  R('into', ['3-5', '2-3-5'], '(içine) · in + to', ING_KURAL_ALT_KELIME),
 ];
 
 /* ─────────────────  4. Çoklu sembol kelime işaretleri  ─────────────────── */
@@ -318,7 +303,6 @@ export const INGILIZCE_BIRLESIK_OZEL = [
   R('necessary', ['1-3-4-5', '1-5', '1-4'], '(gerekli) · kısaltma: nec'),
   R('neither', ['1-3-4-5', '1-5', '2-4'], '(hiçbiri) · kısaltma: nei'),
 
-  R("o'clock", ['1-3-5', '3', '1-4'], '(saat) · kısaltma: o’c · 3 = kesme'),
   R('oneself', ['5', '1-3-5', '1-2-4'], '(kişi kendisi) · 5 + o + f'),
   R('ourselves', ['1-2-5-6', '1-2-3-5', '1-2-3-6', '2-3-4'], '(kendimiz) · kısaltma: oursvs'),
 
@@ -370,10 +354,6 @@ export const INGILIZCE_KELIME_SONU = [
   R('ness', ['5-6', '2-3-4'], '5-6 + s, kelime sonunda', ING_KURAL_SON_56),
   R('ment', ['5-6', '2-3-4-5'], '5-6 + t, kelime sonunda', ING_KURAL_SON_56),
   R('ity', ['5-6', '1-3-4-5-6'], '5-6 + y, kelime sonunda', ING_KURAL_SON_56),
-
-  // Nokta 6 + harf
-  R('ation', ['6', '1-3-4-5'], '6 + n, kelime sonunda', ING_KURAL_SON_6),
-  R('ally', ['6', '1-3-4-5-6'], '6 + y, kelime sonunda', ING_KURAL_SON_6),
 ];
 
 export const INGILIZCE_BOLUMLER = [
