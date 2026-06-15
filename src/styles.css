@@ -327,6 +327,8 @@ h1, h2, h3 { color: var(--fg); }
 
   /* PageHeader'daki butonlar shell header'da zaten var — fs-btn dahil gizle */
   .ds-wrapper .header-bar .gorunum-btn { display: none; }
+  /* Arama da shell banner'da var → masaüstünde PageHeader'daki kopyayı gizle (mobilde gösterilir) */
+  .ds-wrapper .header-bar .arama-btn { display: none; }
 }
 
 /* ---------- Layout ---------- */
@@ -844,15 +846,22 @@ h1, h2, h3 { color: var(--fg); }
     min-width: 36px;
     min-height: 36px;
   }
-  .header-bar .ayarlar-btn {
+  .header-bar .ayarlar-btn,
+  .header-bar .arama-btn {
     width: 36px;
     height: 36px;
     min-width: 36px;
     min-height: 36px;
   }
   .header-bar .ayarlar-ikon { width: 18px; height: 18px; }
+  .header-bar .arama-ikon { width: 18px; height: 18px; }
   .header-bar .gorunum-ikon,
   .header-bar .back-ikon { width: 18px; height: 18px; }
+  /* Başlık SOLA yaslı — ortalı başlık (inline textAlign:center) sağdaki absolute aksiyon
+     butonlarının altında kalıp görünmüyordu (arama butonu eklenince daha da daraldı).
+     Sola yaslanınca başlığın başı (sayfa adı) geri-butonundan hemen sonra görünür;
+     sağ uç aksiyon gradyanının altında solar. !important inline center'ı ezmek için gerekli. */
+  .header-bar .banner-baslik { text-align: left !important; }
 }
 
 /* Karışık yazma seçim butonları progress bar yerine */

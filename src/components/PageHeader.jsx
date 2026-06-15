@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import GorunumGecisi from './GorunumGecisi.jsx';
 import KarisikYazmaButonu from './KarisikYazmaButonu.jsx';
 import FullscreenButonu from './FullscreenButonu.jsx';
+import { Ikon } from '../data/moduller.jsx';
 
 export default function PageHeader({ baslik }) {
   const navigate = useNavigate();
@@ -42,6 +43,17 @@ export default function PageHeader({ baslik }) {
         {baslik}
       </h1>
       <div className="header-aksiyon">
+        {/* Braille arama — mobilde shell banner gizli olduğundan arama buraya da gelir;
+            masaüstünde banner'da zaten var → CSS ile (.ds-wrapper .header-bar .arama-btn) gizlenir. */}
+        <button
+          type="button"
+          className="btn arama-btn"
+          onClick={() => navigate('/arama')}
+          aria-label="Braille arama — nokta numarasına göre sembol ara"
+          title="Braille arama"
+        >
+          <span aria-hidden="true" className="arama-ikon">{Ikon.arama}</span>
+        </button>
         <KarisikYazmaButonu />
         <FullscreenButonu />
         <GorunumGecisi />
