@@ -11,6 +11,7 @@ import {
   muzikAyniVurusMu,
   muzikTimeSigBeatUnit16,
 } from './musicDuration.js';
+import { gorselVurusIndexAl } from '../music-brf/musicVisualBeamHelpers.js';
 
 // Grup içinde ilk-olmayan notalar için pitch-only hücre
 export function muzikNotaSadePitchHucresi(notaAd) {
@@ -63,6 +64,14 @@ export function muzikGrupTespit(
     ? options.itemToBrailleLineIndex
     : null;
 
+  // Vuruş eşitliği: timeSignature verilmişse DESEN tabanlı (aksak metreler + seçilebilir
+  // gruplamaDeseni dahil — gorselVurusIndexAl), yoksa eski sabit beatUnit (Araclar legacy yolu).
+  // Düzenli metrelerde ikisi özdeştir (4/4 deseni [4,4,4,4] ⇔ beatUnit 4).
+  const ts = options.timeSignature || null;
+  const ayniVurusMu = (pa, pb) => (ts
+    ? gorselVurusIndexAl(pa, ts) === gorselVurusIndexAl(pb, ts)
+    : muzikAyniVurusMu(pa, pb, beatUnit));
+
   const bas = ogeler[baslangic];
   if (!bas) return 0;
 
@@ -109,7 +118,7 @@ export function muzikGrupTespit(
 
     if (aktifSatir !== basSatir) break;
 
-    if (!muzikAyniVurusMu(pozCache[baslangic], pozCache[i], beatUnit)) break;
+    if (!ayniVurusMu(pozCache[baslangic], pozCache[i])) break;
 
     i += 1;
   }
@@ -139,7 +148,8 @@ export function muzikGruplariTespit(ogeler, header = null, tupletNotaIdMap = nul
     return harita;
   }
 
-  const beatUnit = muzikTimeSigBeatUnit16(header?.timeSignature?.ad || header?.timeSignature?.gorunum);
+  const ts = header?.timeSignature || null;
+  const beatUnit = muzikTimeSigBeatUnit16(ts?.ad || ts?.gorunum);
   const beatPos = muzikBeatPozisyonlari(ogeler, tupletNotaIdMap);
 
   for (let i = 0; i < ogeler.length; i += 1) {
@@ -151,7 +161,9 @@ export function muzikGruplariTespit(ogeler, header = null, tupletNotaIdMap = nul
       beatPos,
       beatUnit,
       tupletNotaIdMap,
-      options,
+      // timeSignature (gruplamaDeseni dahil) ile DESEN tabanlı vuruş eşitliği — tek kaynak
+      // gorselZamanImzasiVurusDeseniAl. Görsel kiriş + ekran-altı + indir hep aynı deseni kullanır.
+      { ...options, timeSignature: ts },
     );
 
     if (grupBoyu > 0) {

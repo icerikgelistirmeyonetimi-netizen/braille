@@ -14,7 +14,11 @@ import {
   SURE_GOSTERGELERI as MUZIK_SURE_GOSTERGELERI,
   MUZIK_SUSLEMELER,
   MUZIK_DINAMIKLER,
+  MUZIK_NUANS_ONCE,
+  MUZIK_NUANS_SONRA,
+  MUZIK_ZAMAN_IMZASI,
 } from '../../data/muzik.js';
+import { MUZIK_GRUPLAMA_SECENEKLERI } from '../../utils/music/musicConstants.js';
 import {
   brailleLejantKeyAl,
 } from '../../utils/music-brf/brailleMeasureHelpers.js';
@@ -35,6 +39,7 @@ import {
   skorSatirSagXHesapla,
   SCORE_ROW_RIGHT_INSET,
 } from '../../utils/music-brf/musicVisualLayoutHelpers.js';
+import { notaGraceMi } from '../../utils/music-brf/musicMeasureHelpers.js';
 import {
   BRAILLE_HUCRE_TEMA,
   DONANIM_LISTESI,
@@ -50,6 +55,7 @@ import {
   suslemeGraceMi,
   dinamikModifierMi,
   dinamikSmuflGlyph,
+  dinamikHairpinGlyph,
   dinamikEtiketAl,
   nuansSmuflGlyph,
   nuansModifierMi,
@@ -62,9 +68,35 @@ import { konus } from '../../utils/ses.js';
 const KEY_SHARP = glyphChar(ACCIDENTAL_CP.sharp);
 const KEY_FLAT = glyphChar(ACCIDENTAL_CP.flat);
 
+// Tuplet rakamı → SMuFL Bravura tuplet glyph'i. SMuFL "Tuplets" aralığı:
+// tuplet0 = U+E880 … tuplet9 = U+E889 (porte üstüne özel çizilen rakamlar).
+const TUPLET_RAKAM_GLYPH = (sayi) => String(sayi ?? '')
+  .split('')
+  .map((ch) => (/[0-9]/.test(ch) ? String.fromCodePoint(0xE880 + Number(ch)) : ch))
+  .join('');
+
+// Tuplet 'played' sayısı → Türkçe ad (ekran okuyucu için).
+const TUPLET_TURKCE_AD = { 2: 'ikileme', 3: 'üçleme', 4: 'dörtleme', 5: 'beşleme', 6: 'altılama', 7: 'yedileme' };
+
+// Ölçü sayıları TEK KAYNAK: data/muzik.js MUZIK_ZAMAN_IMZASI (Türk/aksak 5/8, 7/8, 9/8 dahil).
+// 'ad' sayısal forma indirgenir ('2/2 (sebare)' → '2/2'); motorun desteklediği ekstra bileşik metreler
+// (10/8, 12/8) + C/𝄵 kısayolları korunur. Dedup.
+const _tsSayisalFormu = (ad = '') => {
+  const m = String(ad).match(/(\d+)\s*\/\s*(\d+)/);
+  return m ? `${m[1]}/${m[2]}` : null;
+};
 const HEADER_TS_OPTIONS = [
-  '2/4', '3/4', '4/4', '3/8', '6/8', '7/8', '9/8', '10/8', '12/8', 'common', 'cut common',
+  ...new Set([
+    ...MUZIK_ZAMAN_IMZASI.map((z) => _tsSayisalFormu(z.ad)).filter(Boolean),
+    '10/8', '12/8', 'common', 'cut common',
+  ]),
 ];
+
+// Aksak metrenin gruplama seçenekleri (yoksa null) — staff header TS menüsünde gruplama seçtirmek için.
+const headerGruplamaSecenekleriAl = (ad) => {
+  const m = String(ad || '').match(/(\d+)\s*\/\s*(\d+)/);
+  return m ? (MUZIK_GRUPLAMA_SECENEKLERI[`${m[1]}/${m[2]}`] || null) : null;
+};
 
 const slurMu = (bag) => {
   const tip = String(bag?.tip || bag?.kayit?.tip || '').toLowerCase();
@@ -185,8 +217,6 @@ export default function MuzikScoreSvg({
   sonKullanilanOktav,
   setSonKullanilanOktav,
   notaSuresiniCiftTiklaDegistir,
-  notaSuresiniScrollDegistir,
-  skorUstuHeaderSatirlari,
   svgGlobalIndexBul,
   svgYerlesimHaritasi,
   svgCizilecekOgeler,
@@ -219,8 +249,6 @@ export default function MuzikScoreSvg({
   setPopupAcik,
   setAnahtarPopupAcik,
   mevcutAnahtar,
-  anahtarGlyphAl,
-  anahtarYAl,
   anahtarFontClassAl,
   muzikOgeleri,
   notaTiklandi,
@@ -232,8 +260,6 @@ export default function MuzikScoreSvg({
   gorunenSatirBrailleLejantMaplari,
   gorunenSatirBrailleLejantlari,
   baslangicBrailleBilgisi,
-  baslangicBrailleLejantlari,
-  baslangicBrailleLejantMapi,
   seciliBagiSil,
   setTimeSignature,
   donanimiDegistir,
@@ -263,9 +289,9 @@ export default function MuzikScoreSvg({
   seciliNotaModifierSil,
   seciliNotaModifierGuncelle,
   bekleyenModifier = null,
-  onHeaderPopupAc,
   setMuzikHeader,
   tempoListesi = [],
+  onPerkinsAc,
 }) {
   const [tempoDropdownPos, setTempoDropdownPos] = useState(null); // {x, y} | null
   // Satır içi düzenleme: title | composer | tempo
@@ -327,6 +353,8 @@ export default function MuzikScoreSvg({
   // Düzenleme modu alt-modu: 'ekleme' (harf=yeni nota ekler) | 'duzeltme' (harf=seçili
   // notanın PERDESİNİ, 1-7=SÜRESİNİ değiştirir). F2 ile geçilir. Ref'ten okunur (stabil).
   const altModRef = useRef('ekleme');
+  // Çift Enter algılaması: son Enter zaman damgası. İki Enter < 450ms → Perkins modu.
+  const sonEnterZamaniRef = useRef(0);
   // Çoklu seçim (Shift+ok, Ctrl+A): seçili öğe id dizisi + aralık çapası (anchor).
   const [cokluSecimIds, setCokluSecimIds] = useState([]);
   const cokluSecimSet = useMemo(() => new Set(cokluSecimIds), [cokluSecimIds]);
@@ -657,13 +685,6 @@ export default function MuzikScoreSvg({
 
     const satirIdx = Number(sonEklenenOgeSatirIdx);
 
-    console.warn('AUTO SCROLL DEBUG', {
-      sonEklenenOgeId,
-      sonEklenenOgeSatirIdx,
-      satirVarMi: satirRefMap.current.has(satirIdx),
-      satirSayisi: muzikSatirlar.length,
-    });
-
     sonEklenenScrollIdRef.current = sonEklenenOgeId;
 
     const scrollEt = () => {
@@ -738,6 +759,7 @@ export default function MuzikScoreSvg({
     cokluSecimIds, setCokluSecimIds,
     bagAraclari, manuelOlcuCizgisiEkle,
     setHoverBrailleOgeId, notaOdakPiyano,
+    onPerkinsAc,
   };
 
   // ── Global klavye düzenleme modu — tek capture-listener, kbRef'ten okur ────
@@ -852,7 +874,8 @@ export default function MuzikScoreSvg({
         return;
       }
 
-      // Enter: düzenleme modunu aç/kapa — sayfanın HER YERİNDEN algılanır.
+      // Enter: TEK Enter → düzenleme modunu aç/kapa. ÇİFT Enter (arka arkaya, <450ms)
+      // → Perkins (Braille yazım) modunu aç. Sayfanın HER YERİNDEN algılanır.
       // İstisna: gerçek buton/link/form öğeleri (orada Enter = onay/etkinleştir).
       // (input/textarea/select zaten handler başında atlanıyor.)
       if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
@@ -861,6 +884,26 @@ export default function MuzikScoreSvg({
         // (mod değiştirme yerine). Bu öğeler kendi onKeyDown'larıyla açılır.
         if (ae && ae.closest && ae.closest('.muzik-anahtar-grup, .muzik-zaman-imza-grup, .muzik-barline-hit-area')) return;
         e.preventDefault(); e.stopPropagation();
+
+        // Çift Enter → Perkins (Braille yazım) modu. İlk Enter düzenleme modunu
+        // açmış olabilir; geri alıp Perkins'e gir (focus textarea'ya kayacak).
+        const simdi = Date.now();
+        if (simdi - sonEnterZamaniRef.current < 450) {
+          sonEnterZamaniRef.current = 0;
+          if (duzenlemeModuRef.current) {
+            duzenlemeModuRef.current = false;
+            setDuzenlemeModu(false);
+            altModRef.current = 'ekleme';
+          }
+          if (k.onPerkinsAc) {
+            k.onPerkinsAc();
+          } else {
+            k.duyur('Braille yazım modu kullanılamıyor');
+          }
+          return;
+        }
+        sonEnterZamaniRef.current = simdi;
+
         const yeni = !duzenlemeModuRef.current;
         duzenlemeModuRef.current = yeni;
         setDuzenlemeModu(yeni);
@@ -869,7 +912,7 @@ export default function MuzikScoreSvg({
           const hedef = (k.seciliOgeId && items.find((el) => el.getAttribute('data-oge-id') === k.seciliOgeId)) || items[0];
           if (hedef) navOgeSec(hedef, { duyurEt: false, piyanoCal: false });
           else yazmaYakalayiciyiOdakla();
-          k.duyur('Klavye düzenleme modu açıldı, nota yazmaya hazır');
+          k.duyur('Klavye düzenleme modu açıldı, nota yazmaya hazır. İki kez Enter ile Braille yazım moduna geçebilirsiniz');
         } else {
           duzenlemeModunuKapat();
         }
@@ -2445,6 +2488,11 @@ export default function MuzikScoreSvg({
                   const hookH = 12;   // dikey uç çizgisi yüksekliği
                   const numGap = 9;   // sayı etrafında boşluk
                   const num = String(tuplet.ratio?.played ?? '');
+                  const numGlyph = TUPLET_RAKAM_GLYPH(num);
+                  const tupletAd = (() => {
+                    const kayitAd = String(tuplet.kayit?.ad || '').split('(')[0].trim();
+                    return kayitAd || TUPLET_TURKCE_AD[Number(num)] || `${num}'li grup`;
+                  })();
                   const isHover = hoverTupletId === tuplet.id;
                   const color = isHover ? '#6d28d9' : '#7c3aed';
                   const sw = isHover ? 2.2 : 1.6;
@@ -2453,7 +2501,7 @@ export default function MuzikScoreSvg({
                       key={`tuplet-${tuplet.id}-satir-${satirIdx}`}
                       role="button"
                       tabIndex={0}
-                      aria-label={`${num}leme — kaldırmak için tıkla`}
+                      aria-label={`${tupletAd} — kaldırmak için tıkla`}
                       style={{ cursor: 'pointer' }}
                       onMouseEnter={() => setHoverTupletId(tuplet.id)}
                       onMouseLeave={() => setHoverTupletId((prev) => prev === tuplet.id ? null : prev)}
@@ -2479,14 +2527,14 @@ export default function MuzikScoreSvg({
                       <line x1={midX + numGap} y1={bracketY} x2={x2} y2={bracketY} stroke={color} strokeWidth={sw} strokeLinecap="round" />
                       {/* Sağ düşey uç */}
                       <line x1={x2} y1={bracketY} x2={x2} y2={bracketY + hookH} stroke={color} strokeWidth={sw} strokeLinecap="round" />
-                      {/* Sayı — müzik notasyonu standardı: italic serif, orta büyüklük */}
+                      {/* Sayı — SMuFL Bravura tuplet rakam glyph'i (porte üstü engraving standardı) */}
                       <text
                         x={midX} y={bracketY + 2}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        style={{ fontSize: 14, fontFamily: "'Bravura Text', 'Cambria Math', Georgia, serif", fill: color, fontStyle: 'italic', fontWeight: '600' }}
+                        style={{ fontSize: 18, fontFamily: "'Bravura Text', 'Bravura', serif", fill: color }}
                       >
-                        {num}
+                        {numGlyph}
                       </text>
                       {/* Hover: silme göstergesi */}
                       {isHover && (
@@ -2537,6 +2585,46 @@ export default function MuzikScoreSvg({
                   const clampEdildi = notaGorselYClampEdildiMi(oge, mevcutAnahtar);
                   const sure = MUZIK_SURE_GOSTERGELERI[oge.sureIndeksi ?? 0];
                   const bayrak = Number.isFinite(sure?.bayrak) ? sure.bayrak : 0;
+                  // Süsleme (tril/turn/mordan) Y'si: kirişli grupta kirişin YÖNÜne göre.
+                  // BeamGroup mantığı (orta çizgi 88): üstte çoğunluk → sap-AŞAĞI (kiriş ALTTA) →
+                  // süsleme en yüksek nota kafasının üstünde; altta çoğunluk → sap-YUKARI (kiriş
+                  // ÜSTTE, ≈highestNoteY−34) → süsleme onun ~6px üstünde. Böylece NE kirişe biner
+                  // NE de abartılı yukarıda kalır (kullanıcı: "abartılı yukarıda kaldılar").
+                  const grupSusGy = (() => {
+                    if (!gruptaMi || typeof svgGlobalIndexBul !== 'function') return null;
+                    const gi = svgGlobalIndexBul(oge.id);
+                    const grup = svgBeamGruplari.find((g) => Array.isArray(g.indices) && g.indices.includes(gi));
+                    if (!grup) return null;
+                    const ys = grup.indices.map((idx) => svgCizilecekOgeler[idx])
+                      .filter((it) => it && it.tip === 'nota')
+                      .map((it) => notaGorselYHesapla(it, mevcutAnahtar))
+                      .filter(Number.isFinite);
+                    if (!ys.length) return null;
+                    const enYuksek = Math.min(...ys);
+                    let ust = 0, alt = 0;
+                    ys.forEach((y) => { if (y < 88) ust += 1; else if (y > 88) alt += 1; });
+                    const dir = ust > alt ? 'down' : alt > ust ? 'up'
+                      : (ys.reduce((a, b) => a + b, 0) / ys.length <= 88 ? 'down' : 'up');
+                    return dir === 'up' ? (enYuksek - 40) : (enYuksek - 16);
+                  })();
+                  // GRACE BEAM: ardışık 2+ apejetür (grace) notası PDF'te BİRLİKTE kirişlenir
+                  // (kullanıcı: "apajur notalar birleştirilmiyor, ayrık duruyor"). Aynı satırdaki
+                  // ardışık grace dizisini bul → hepsi bayraksız çizilir, ilk grace küçük kirişi çizer.
+                  const graceRunBilgi = (() => {
+                    if (!notaGraceMi(oge) || typeof svgGlobalIndexBul !== 'function') return null;
+                    const gi = svgGlobalIndexBul(oge.id);
+                    if (gi < 0) return null;
+                    const ayniSatir = (o) => {
+                      const yer = svgYerlesimHaritasi.get(o?.id);
+                      return yer && yer.satirIdx === satirIdx;
+                    };
+                    const graceKomsu = (o) => o && o.tip === 'nota' && notaGraceMi(o) && ayniSatir(o);
+                    const run = [{ oge, idx: gi }];
+                    for (let i = gi - 1; i >= 0 && graceKomsu(svgCizilecekOgeler[i]); i -= 1) run.unshift({ oge: svgCizilecekOgeler[i], idx: i });
+                    for (let i = gi + 1; i < svgCizilecekOgeler.length && graceKomsu(svgCizilecekOgeler[i]); i += 1) run.push({ oge: svgCizilecekOgeler[i], idx: i });
+                    if (run.length < 2) return null;
+                    return { run, isFirst: run[0].oge.id === oge.id };
+                  })();
                   const playbackAktif = playbackOgeId === oge.id;
                   const noteHoverAktif = hoverBrailleOgeId === oge.id || playbackAktif;
                   const noteSeciliAktif = secili || cokluSecili || playbackAktif;
@@ -2654,15 +2742,50 @@ export default function MuzikScoreSvg({
                           />
                         );
                       })()}
-                      <MusicNoteGlyph
-                        item={oge}
-                        x={x}
-                        y={noteY}
-                        sure={sure}
-                        grouped={gruptaMi}
-                        beamCount={bayrak}
-                        glyphScaleY={glyphScaleY}
-                      />
+                      {(() => {
+                        const graceMi = notaGraceMi(oge);
+                        // Grace dizisindeyse bayrak çizme (grouped=true) — kiriş elle çizilir.
+                        const inRun = graceMi && graceRunBilgi != null;
+                        const glyph = (
+                          <MusicNoteGlyph
+                            item={oge}
+                            x={x}
+                            y={noteY}
+                            sure={sure}
+                            grouped={graceMi ? inRun : gruptaMi}
+                            beamCount={bayrak}
+                            glyphScaleY={glyphScaleY}
+                          />
+                        );
+                        // Grace (apejetür) notası ~%60 ölçekle, kendi konumu (x,noteY) etrafında küçült.
+                        if (!graceMi) return glyph;
+                        return (
+                          <>
+                            <g transform={`translate(${x} ${noteY}) scale(0.6) translate(${-x} ${-noteY})`}>
+                              {glyph}
+                            </g>
+                            {/* Grace run kirişi: ilk grace, dizinin küçük sap+ince kirişini çizer. */}
+                            {graceRunBilgi?.isFirst && (() => {
+                              const pts = graceRunBilgi.run.map(({ oge: o }) => ({
+                                x: ogeXHesapla(o.id),
+                                y: notaGorselYHesapla(o, mevcutAnahtar),
+                              }));
+                              const stemDx = 3.4;                                  // 0.6 × nota kafası yarı-genişlik
+                              const beamY = Math.min(...pts.map((p) => p.y)) - 17; // 0.6 × ~28 sap (yukarı)
+                              return (
+                                <g aria-hidden="true">
+                                  {pts.map((p, k) => (
+                                    <line key={`gstem-${oge.id}-${k}`} x1={p.x + stemDx} y1={p.y} x2={p.x + stemDx} y2={beamY}
+                                      className="stroke-zinc-900" strokeWidth={1} strokeLinecap="round" />
+                                  ))}
+                                  <line x1={pts[0].x + stemDx} y1={beamY} x2={pts[pts.length - 1].x + stemDx} y2={beamY}
+                                    className="stroke-zinc-900" strokeWidth={3} strokeLinecap="butt" />
+                                </g>
+                              );
+                            })()}
+                          </>
+                        );
+                      })()}
                       {/* Aksidental (♯ ♭ ♮) — ayrı seçilebilir */}
                       {oge.accidental && (() => {
                         const accHoverAktif = hoverModifier?.ogeId === oge.id
@@ -2777,7 +2900,7 @@ export default function MuzikScoreSvg({
                         const dinamikSayisi = oncesiMods.filter((m) => dinamikModifierMi(m.kayit)).length;
                         let dinIndex = 0;
 
-                        const modifierAc = (m, e, type) => {
+                        const modifierAc = (m, e, type, yon = 'oncesi') => {
                           e.stopPropagation();
                           setModifierEditMenu({
                             x: e.clientX,
@@ -2785,14 +2908,14 @@ export default function MuzikScoreSvg({
                             ogeId: oge.id,
                             type,
                             modId: m.id,
-                            yon: 'oncesi',
+                            yon,
                             ad: type === 'dinamik' ? dinamikEtiketAl(m.kayit) : (m.kayit?.ad || ''),
                             etiket: m.kayit?.ad || '',
                           });
                         };
 
                         // Tek bir modifier element'i çizer (oncesi veya sonrasi).
-                        const modifierEl = (m, mi, gx, gy, type, isim, className) => {
+                        const modifierEl = (m, mi, gx, gy, type, isim, className, yon = 'oncesi') => {
                           const ad = String(m.kayit?.ad || '');
                           const eslesir = (h) => h?.ogeId === oge.id && h?.type === type
                             && (h?.modId ? h.modId === m.id
@@ -2807,7 +2930,7 @@ export default function MuzikScoreSvg({
                               style={{ cursor: 'pointer' }}
                               onMouseEnter={(e) => { e.stopPropagation(); setHoverModifier({ ogeId: oge.id, type, modId: m.id, etiket: ad }); }}
                               onMouseLeave={() => { setHoverModifier((prev) => (eslesir(prev) ? null : prev)); }}
-                              onClick={(e) => modifierAc(m, e, type)}
+                              onClick={(e) => modifierAc(m, e, type, yon)}
                             >
                               <rect x={gx - 12} y={gy - 20} width={24} height={28} rx={5}
                                 fill={modSecili ? `rgba(${vurguRenk},0.18)` : modHover ? `rgba(${vurguRenk},0.10)` : 'transparent'}
@@ -2816,7 +2939,17 @@ export default function MuzikScoreSvg({
                                 strokeDasharray={modHover && !modSecili ? '4 3' : undefined}
                                 pointerEvents="all"
                               />
-                              <text x={gx} y={gy} textAnchor="middle" className={className}>{isim}</text>
+                              {(() => {
+                                const txt = <text x={gx} y={gy} textAnchor="middle" className={className}>{isim}</text>;
+                                const cp = String(isim || '').codePointAt(0);
+                                // SMuFL hairpin glyph'i (U+E53E/E53F) DEVASA bbox'lu (~88px) → porte
+                                // İÇİNE taşıp nota üstüne biniyor (kullanıcı: Weber "nota altında kalmış").
+                                // %38 ölçekle (gx,gy çapa) → porte altında küçük kreşendo işareti kalır.
+                                if (cp !== 0xE53E && cp !== 0xE53F) return txt;
+                                return (
+                                  <g transform={`translate(${gx} ${gy}) scale(0.38) translate(${-gx} ${-gy})`}>{txt}</g>
+                                );
+                              })()}
                             </g>
                           );
                         };
@@ -2825,6 +2958,9 @@ export default function MuzikScoreSvg({
                           <g>
                             {oncesiMods.map((m, mi) => {
                               const ad = String(m.kayit?.ad || '');
+                              // Apejetür (grace) modifier'ı AYRI glyph çizilmez — nota zaten küçük
+                              // grace notası olarak çiziliyor (yoksa çift görünür).
+                              if (/apejet[üu]r|appoggiatura|acciaccatura/i.test(ad)) return null;
                               const dinamik = dinamikModifierMi(m.kayit);
                               const nuans   = !dinamik && nuansModifierMi(m.kayit);
                               const type    = dinamik ? 'dinamik' : nuans ? 'nuans' : 'susleme';
@@ -2832,7 +2968,9 @@ export default function MuzikScoreSvg({
                               let isim;
                               let grace = false;
                               if (dinamik) {
-                                const dglif = dinamikSmuflGlyph(m.kayit?.sembol);
+                                // Harf dinamiği (p/mf/ff…) → SMuFL glyph; keskin kreşendo/dekreşendo
+                                // → hairpin İKONU (U+E53E '<' / U+E53F '>'); kalanlar italik metin.
+                                const dglif = dinamikSmuflGlyph(m.kayit?.sembol) || dinamikHairpinGlyph(ad);
                                 isim = dglif || dinamikEtiketAl(m.kayit);
                               } else if (nuans) {
                                 isim = nuansSmuflGlyph(ad) || m.kayit?.sembol || ad.split(' ')[0].split('(')[0].trim();
@@ -2864,7 +3002,13 @@ export default function MuzikScoreSvg({
                                 cls = 'muzik-grace-note';
                               } else {
                                 gx = x - ((oncesiMods.length - 1) * 7) + ustX;
-                                gy = 52;
+                                // Süsleme (tril/turn/mordan) porte ÜSTÜnde. Sabit y=52 kirişli notalarda
+                                // (özellikle düşük nota → sap-yukarı → kiriş notanın ÜSTÜnde) kirişe biniyordu
+                                // (kullanıcı: "ikincisi grup çizgisinin üzerine gelmiş"). Kirişli notada
+                                // süslemeyi kirişin de üstüne al (kiriş ~y39-51); kirişsizde notaya yakın tut.
+                                gy = (grupSusGy != null)
+                                  ? Math.max(-12, Math.min(52, grupSusGy))
+                                  : Math.min(52, noteY - 16);
                                 ustX += 14;
                                 cls = 'muzik-ornament-glyph';
                               }
@@ -2891,7 +3035,7 @@ export default function MuzikScoreSvg({
                                 gy = Math.min(noteY - 22, SCORE_STAFF_TOP_Y - 12);
                               }
 
-                              return modifierEl(m, `s${mi}`, gx, gy, type, isim, 'muzik-ornament-glyph');
+                              return modifierEl(m, `s${mi}`, gx, gy, type, isim, 'muzik-ornament-glyph', 'sonrasi');
                             })}
                           </g>
                         );
@@ -3359,7 +3503,29 @@ export default function MuzikScoreSvg({
 
                 const bagTieMi = bag?.tip === 'tie' || bagTipiTieMi(bag);
                 const type = bagTieMi ? 'tie' : 'slur';
-                const direction = bagYonunuHesapla(basOge, sonOge, mevcutAnahtar);
+                let direction = bagYonunuHesapla(basOge, sonOge, mevcutAnahtar);
+                // "Üstten" yay aradaki nota/grace'i (kirişi yukarıda) KESİYORSA "alttan" bağla
+                // (kullanıcı: "tie ile bağladığında çizimi kesmesin, kesecekse alttan bağlasın").
+                if (direction === 'above' && basOge?.tip === 'nota' && sonOge?.tip === 'nota' && typeof ogeXHesapla === 'function') {
+                  const bx = ogeXHesapla(basOge.id);
+                  const ex = ogeXHesapla(sonOge.id);
+                  const loX = Math.min(bx, ex);
+                  const hiX = Math.max(bx, ex);
+                  const ucTepe = Math.min(
+                    notaGorselYHesapla(basOge, mevcutAnahtar),
+                    notaGorselYHesapla(sonOge, mevcutAnahtar),
+                  );
+                  const kesiyor = svgCizilecekOgeler.some((o) => {
+                    if (!o || o.tip !== 'nota' || o.id === basOge.id || o.id === sonOge.id) return false;
+                    const yer = svgYerlesimHaritasi.get(o.id);
+                    if (!yer || yer.satirIdx !== satirIdx) return false;
+                    const ox = ogeXHesapla(o.id);
+                    if (ox <= loX || ox >= hiX) return false;
+                    // ara öğe uçlardan yüksek/eşit VEYA grace (kirişi yukarıda) → üstten yay keser
+                    return notaGorselYHesapla(o, mevcutAnahtar) <= ucTepe + 2 || notaGraceMi(o);
+                  });
+                  if (kesiyor) direction = 'below';
+                }
                 const { start, end } = bagCizimNoktalari(
                   basOge,
                   sonOge,
@@ -3553,6 +3719,8 @@ export default function MuzikScoreSvg({
               setHoverCizgiBagId={setHoverCizgiBagId}
               hoverBrailleCellKey={hoverBrailleCellKey}
               setHoverBrailleCellKey={setHoverBrailleCellKey}
+              hoverTupletId={hoverTupletId}
+              setHoverTupletId={setHoverTupletId}
               seciliOgeId={seciliOgeId}
               setSeciliOgeId={setSeciliOgeId}
               seciliBagId={seciliBagId}
@@ -3590,10 +3758,10 @@ export default function MuzikScoreSvg({
           onClick={() => setModifierEditMenu(null)}
         >
           <div
-            className={`absolute rounded-xl border border-slate-200 bg-white shadow-xl p-3 flex flex-col gap-2 ${(modifierEditMenu.type === 'susleme' || modifierEditMenu.type === 'dinamik') ? 'w-64' : 'w-52'}`}
+            className={`absolute rounded-xl border border-slate-200 bg-white shadow-xl p-3 flex flex-col gap-2 ${(modifierEditMenu.type === 'susleme' || modifierEditMenu.type === 'dinamik' || modifierEditMenu.type === 'nuans') ? 'w-64' : 'w-52'}`}
             style={{
-              left: Math.min(modifierEditMenu.x, window.innerWidth - ((modifierEditMenu.type === 'susleme' || modifierEditMenu.type === 'dinamik') ? 272 : 224)),
-              top: Math.min(modifierEditMenu.y + 8, window.innerHeight - ((modifierEditMenu.type === 'susleme' || modifierEditMenu.type === 'dinamik') ? 280 : 148)),
+              left: Math.min(modifierEditMenu.x, window.innerWidth - ((modifierEditMenu.type === 'susleme' || modifierEditMenu.type === 'dinamik' || modifierEditMenu.type === 'nuans') ? 272 : 224)),
+              top: Math.min(modifierEditMenu.y + 8, window.innerHeight - ((modifierEditMenu.type === 'susleme' || modifierEditMenu.type === 'dinamik' || modifierEditMenu.type === 'nuans') ? 280 : 148)),
             }}
             role="dialog"
             aria-modal="true"
@@ -3601,6 +3769,7 @@ export default function MuzikScoreSvg({
               modifierEditMenu.type === 'accidental' ? 'Aksidental'
               : modifierEditMenu.type === 'susleme' ? 'Süsleme'
               : modifierEditMenu.type === 'dinamik' ? 'Dinamik'
+              : modifierEditMenu.type === 'nuans' ? 'Nüans'
               : 'Nokta'
             }
             onClick={(e) => e.stopPropagation()}
@@ -3613,6 +3782,8 @@ export default function MuzikScoreSvg({
                   ? `Süsleme: ${modifierEditMenu.ad || ''}`
                   : modifierEditMenu.type === 'dinamik'
                   ? `Dinamik: ${modifierEditMenu.ad || ''}`
+                  : modifierEditMenu.type === 'nuans'
+                  ? `Nüans: ${modifierEditMenu.ad || ''}`
                   : '· Noktalı uzatma'}
               </span>
               <button
@@ -3633,7 +3804,7 @@ export default function MuzikScoreSvg({
                   seciliNotayiGuncelle?.({ accidental: null });
                 } else if (modifierEditMenu.type === 'dot') {
                   seciliNotayiGuncelle?.({ dotted: false });
-                } else if (modifierEditMenu.type === 'susleme' || modifierEditMenu.type === 'dinamik') {
+                } else if (modifierEditMenu.type === 'susleme' || modifierEditMenu.type === 'dinamik' || modifierEditMenu.type === 'nuans') {
                   seciliNotaModifierSil?.(modifierEditMenu.modId, modifierEditMenu.yon || 'oncesi', modifierEditMenu.ogeId);
                 }
                 setModifierEditMenu(null);
@@ -3670,13 +3841,42 @@ export default function MuzikScoreSvg({
                 </div>
               </div>
             )}
+            {modifierEditMenu.type === 'nuans' && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-slate-500 px-0.5">Değiştir</span>
+                <div className="grid grid-cols-5 gap-1.5 max-h-44 overflow-y-auto pr-0.5">
+                  {((modifierEditMenu.yon === 'sonrasi' ? MUZIK_NUANS_SONRA : MUZIK_NUANS_ONCE) || []).map((nu) => {
+                    const glif = nuansSmuflGlyph(nu.ad);
+                    const aktif = String(nu.ad).toLowerCase() === String(modifierEditMenu.ad || '').toLowerCase();
+                    return (
+                      <button
+                        key={nu.ad}
+                        type="button"
+                        title={nu.ad + (nu.aciklama ? '\n' + nu.aciklama : '')}
+                        className={`h-9 rounded-md border flex items-center justify-center leading-none transition-colors ${aktif ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'}`}
+                        style={glif ? { fontFamily: "'Bravura Text', 'Cambria Math', 'Noto Music', serif", fontSize: '17px' } : { fontSize: '13px' }}
+                        onClick={() => {
+                          if (!aktif) {
+                            const yeniKayit = { ...nu, tip: 'isaret', gorunum: nu.sembol || nu.ad };
+                            seciliNotaModifierGuncelle?.(modifierEditMenu.modId, yeniKayit, modifierEditMenu.yon || 'oncesi', modifierEditMenu.ogeId);
+                          }
+                          setModifierEditMenu(null);
+                        }}
+                      >
+                        {glif || nu.sembol || nu.ad.split(' ')[0]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {modifierEditMenu.type === 'dinamik' && (
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-semibold text-slate-500 px-0.5">Değiştir</span>
                 <div className="grid grid-cols-4 gap-1.5 max-h-44 overflow-y-auto pr-0.5">
                   {(Array.isArray(MUZIK_DINAMIKLER) ? MUZIK_DINAMIKLER : [])
                     .map((din) => {
-                      const dglif = dinamikSmuflGlyph(din.sembol);
+                      const dglif = dinamikSmuflGlyph(din.sembol) || dinamikHairpinGlyph(din.ad);
                       const etiket = dinamikEtiketAl(din);
                       const hedef = String(modifierEditMenu.ad || '').toLowerCase();
                       const aktif = etiket.toLowerCase() === hedef || String(din.ad).toLowerCase() === hedef;
@@ -3783,7 +3983,7 @@ export default function MuzikScoreSvg({
           >
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
               <span className="text-sm font-bold text-slate-800">
-                {bagEditMenu.tip === 'tie' ? '🎵 Uzatma (Tie)' : '🎼 Bağ (Slur)'}
+                {bagEditMenu.tip === 'tie' ? '🎵 Uzatma bağı' : '🎼 Hece bağı'}
               </span>
               <button
                 type="button"
@@ -3890,6 +4090,49 @@ export default function MuzikScoreSvg({
                 );
               })}
             </div>
+
+            {/* Aksak/düzensiz metre VURUŞ GRUPLAMASI — yalnız 5/8, 7/8, 9/8, 10/8 gibi metrelerde görünür.
+                Seçim görsel kiriş + ekran-altı braille + indirileni belirler (gruplamaDeseni). */}
+            {(() => {
+              const mevcutTs = muzikHeader?.timeSignature?.ad || muzikHeader?.timeSignature?.gorunum || '';
+              const secenekler = headerGruplamaSecenekleriAl(mevcutTs);
+              if (!secenekler) return null;
+              const aktifAnahtar = Array.isArray(muzikHeader?.timeSignature?.gruplamaDeseni)
+                ? muzikHeader.timeSignature.gruplamaDeseni.join('+')
+                : secenekler[0].join('+');
+              return (
+                <div className="mt-2 border-t border-slate-200 pt-2">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 pb-1">
+                    Vuruş gruplaması
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {secenekler.map((desen) => {
+                      const anahtar = desen.join('+');
+                      const aktifMi = anahtar === aktifAnahtar;
+                      return (
+                        <button
+                          key={anahtar}
+                          type="button"
+                          className={[
+                            'rounded-lg border px-2 py-1.5 text-sm font-bold tabular-nums transition-colors',
+                            aktifMi
+                              ? 'border-amber-400 bg-amber-50 text-amber-800'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-amber-100 hover:border-amber-400',
+                          ].join(' ')}
+                          onClick={() => {
+                            setTimeSignature?.(mevcutTs, desen);
+                            setHeaderTsMenuPos(null);
+                          }}
+                        >
+                          {anahtar}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             <button
               type="button"
               className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 transition-colors"

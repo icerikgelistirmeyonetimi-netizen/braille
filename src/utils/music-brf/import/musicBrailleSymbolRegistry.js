@@ -129,7 +129,8 @@ export const MUSIC_BRAILLE_SYMBOLS = [
     category: 'barline',
     tokenType: 'endRepeat',
     label: 'Tekrar sonu',
-    cells: [[1, 2, 6], [2, 3, 5, 6]],
+    // PDF "End Repeat (double bar preceded by dots)" = dots 1 2 6, dots 2 3.
+    cells: [[1, 2, 6], [2, 3]],
   },
   {
     id: 'sectional-barline',

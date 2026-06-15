@@ -7,6 +7,21 @@ function sureMetniTemizle(value = '') {
     .trim();
 }
 
+// Notaya/susa bağlı modifier (dinamik/nüans/süsleme) adlarını sırayla döndürür.
+function modAdlari(liste) {
+  return (Array.isArray(liste) ? liste : [])
+    .map((m) => String(m?.kayit?.ad || m?.ad || '').trim())
+    .filter(Boolean);
+}
+
+// öncesi modifier'ları gövdenin ÖNÜNE, sonrası modifier'ları SONUNA ekler:
+//   forte 4. oktav do diyez dörtlük  /  4. oktav sol bemol dörtlük fermata (durak)
+function modifierliMetin(item, govde) {
+  const once = modAdlari(item?.modifiers?.oncesi);
+  const sonra = modAdlari(item?.modifiers?.sonrasi);
+  return [once.join(' '), govde, sonra.join(' ')].filter(Boolean).join(' ').trim();
+}
+
 function readableItem(item) {
   if (!item) return '';
 
@@ -16,17 +31,35 @@ function readableItem(item) {
     const acc = accRaw === 'sharp' ? ' diyez' : accRaw === 'flat' ? ' bemol' : accRaw === 'natural' ? ' natürel' : '';
     const sure = sureMetniTemizle(item.sureAd || sureAdiAl(item.sureIndeksi));
     const dotted = item.dotted ? ' noktalı' : '';
-    return `${oktav}${item.notaAd || item.ad || ''}${acc}${sure ? `${dotted} ${sure}` : dotted}`.trim();
+    const govde = `${oktav}${item.notaAd || item.ad || ''}${acc}${sure ? `${dotted} ${sure}` : dotted}`.trim();
+    return modifierliMetin(item, govde);
   }
 
   if (item.tip === 'sus') {
     const sure = sureMetniTemizle(item.sureAd || sureAdiAl(item.sureIndeksi));
     const dotted = item.dotted ? 'noktalı ' : '';
-    return `${dotted}${sure || ''} sus`.trim();
+    const govde = `${dotted}${sure || ''} sus`.trim();
+    return modifierliMetin(item, govde);
   }
 
   if (item.tip === 'beginRepeat') return 'başlangıç tekrarı';
   if (item.tip === 'endRepeat') return 'bitiş tekrarı';
+  // Lesson 10 tekrar yönergesi — okunur özet braille'i AYNADIĞINDAN tekrarı GENİŞLETMEZ, TARİF eder
+  // (örn. ⠼5 = "önceki 5 ölçünün tekrarı"). Aksi halde ölçü boş ("ölçü çizgisi") görünürdü.
+  if (item.tip === 'repeatInstruction') {
+    if (item.repeatTuru === 'backward-numeral') {
+      const geri = Number(item.geriSayisi || item.geriOlcuSayisi);
+      const cal = Number(item.calinanOlcu);
+      if (geri > 0 && cal > 0 && cal !== geri) return `${geri} ölçü geri, ${cal} ölçü tekrar`;
+      if (geri > 0) return `önceki ${geri} ölçünün tekrarı`;
+    }
+    if (item.repeatTuru === 'bar-number') {
+      const b = Number(item.mutlakBaslangic); const s = Number(item.mutlakBitis);
+      if (b > 0 && s > 0 && s !== b) return `${b}–${s}. ölçülerin tekrarı`;
+      if (b > 0) return `${b}. ölçünün tekrarı`;
+    }
+    return `ölçü-numarası tekrarı (${item.gorunum || ''})`.trim();
+  }
   if (item.tip === 'sectionalBarline') return 'bölüm sonu çizgisi';
   if (item.tip === 'finalBarline') return 'bitiş çizgisi';
   if (item.tip === 'barline') return 'ölçü çizgisi';

@@ -111,6 +111,11 @@ export function muzikAutoBarRepeatHaritasi(olculer, baglar = []) {
     const curFirst = olculer[i]?.items?.[0];
     if (prevFirst?.tip === 'brailleShorthand' || curFirst?.tip === 'brailleShorthand') continue;
 
+    // YALNIZCA içe aktarılan tekrar kopyalarını (`_repeatCopy`) otomatik ⠶ yap. EXPLICIT/yazılan özdeş
+    // ölçüleri AUTO-collapse ETME — kullanıcı: "direk ne ise o yazsın", BRF'de açık yazılan ölçüler
+    // (örn. Let Me Call'ın 3 özdeş G ölçüsü) verbatim kalsın; içe aktarılan ⠶/⠼N zaten açık işaretle yazılır.
+    if (!olculer[i]?.items?.some((o) => o?._repeatCopy)) continue;
+
     if (muzikBarRepeatUygunMu(olculer[i - 1], olculer[i], baglar)) {
       harita.set(i, true);
     }

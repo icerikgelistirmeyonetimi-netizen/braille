@@ -11,7 +11,7 @@ import { keySignatureAccidentalsAl, muzikNotaPiyanoSesUrlAl } from '../../utils/
 import { SUS_KISA } from '../../utils/music-brf/musicConstants.js';
 import { MUZIK_TEMPO_ISARETLERI } from '../../data/muzik.js';
 
-const SUS_SURE_ADLARI = ['sekizlik', 'dörtlük', 'yarım', 'tam', "16'lık", "32'lik", "64'lük"];
+const SUS_SURE_ADLARI = ['sekizlik', 'dörtlük', 'ikilik', 'birlik', "16'lık", "32'lik", "64'lük"];
 
 export default function MuzikBrfScoreEditor({
   aktifArac,
@@ -76,13 +76,10 @@ export default function MuzikBrfScoreEditor({
   setAnahtarPopupAcik,
   seciliOge,
   mevcutAnahtar,
-  anahtarGlyphAl,
-  anahtarYAl,
   anahtarFontClassAl,
   muzikOgeleri,
   notaTiklandi,
   notaSuresiniCiftTiklaDegistir,
-  notaSuresiniScrollDegistir,
   seciliOgeyiGuncelle,
   bagTipiTieMi,
   bagYonunuHesapla,
@@ -114,7 +111,6 @@ export default function MuzikBrfScoreEditor({
   brfDosyasiYukle,
   muzikTupletler,
   tupletSil,
-  playMeasure,
   olcuSayisi,
   voltaEkleModu,
   voltaEkleBaslangicId,
@@ -124,6 +120,7 @@ export default function MuzikBrfScoreEditor({
   voltaMeasureEkle,
   voltaSil,
   voltaGuncelle,
+  onPerkinsAc,
 }) {
   const [headerPopupAcik, setHeaderPopupAcik] = useState(false);
   // Header braille bölümü yalnızca sol anahtar altındaki "B" butonundan açılınca gösterilir.
@@ -427,12 +424,10 @@ export default function MuzikBrfScoreEditor({
 
       <MuzikScoreSvg
         onHeaderBrailleAc={() => setHeaderBraillePopupAcik(true)}
-        onHeaderPopupAc={() => { setHeaderPopupBrailleGoster(false); setHeaderPopupAcik(true); }}
         setMuzikHeader={setMuzikHeader}
         tempoListesi={MUZIK_TEMPO_ISARETLERI}
         muzikSatirlar={muzikSatirlar}
         olcuBrailleSonuclari={olcuBrailleSonuclari}
-        skorUstuHeaderSatirlari={skorUstuHeaderSatirlari}
         svgGlobalIndexBul={svgGlobalIndexBul}
         svgYerlesimHaritasi={svgYerlesimHaritasi}
         svgCizilecekOgeler={svgCizilecekOgeler}
@@ -471,13 +466,10 @@ export default function MuzikBrfScoreEditor({
         setPopupAcik={setPopupAcik}
         setAnahtarPopupAcik={setAnahtarPopupAcik}
         mevcutAnahtar={mevcutAnahtar}
-        anahtarGlyphAl={anahtarGlyphAl}
-        anahtarYAl={anahtarYAl}
         anahtarFontClassAl={anahtarFontClassAl}
         muzikOgeleri={muzikOgeleri}
         notaTiklandi={notaTiklandi}
         notaSuresiniCiftTiklaDegistir={notaSuresiniCiftTiklaDegistir}
-        notaSuresiniScrollDegistir={notaSuresiniScrollDegistir}
         bagTipiTieMi={bagTipiTieMi}
         bagYonunuHesapla={bagYonunuHesapla}
         bagCizimNoktalari={bagCizimNoktalari}
@@ -486,8 +478,6 @@ export default function MuzikBrfScoreEditor({
         gorunenSatirBrailleLejantMaplari={gorunenSatirBrailleLejantMaplari}
         gorunenSatirBrailleLejantlari={gorunenSatirBrailleLejantlari}
         baslangicBrailleBilgisi={baslangicBrailleBilgisi}
-        baslangicBrailleLejantlari={baslangicBrailleLejantlari}
-        baslangicBrailleLejantMapi={baslangicBrailleLejantMapi}
         seciliBagiSil={seciliBagiSil}
         setTimeSignature={setTimeSignature}
         donanimiDegistir={donanimiDegistir}
@@ -515,6 +505,7 @@ export default function MuzikBrfScoreEditor({
         seciliNotaModifierSil={seciliNotaModifierSil}
         seciliNotaModifierGuncelle={seciliNotaModifierGuncelle}
         bekleyenModifier={bekleyenModifier}
+        onPerkinsAc={onPerkinsAc}
       />
       <MuzikNotaEditModal
         popupAcik={popupAcik}

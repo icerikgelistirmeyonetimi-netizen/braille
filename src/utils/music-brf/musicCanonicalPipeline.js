@@ -67,6 +67,15 @@ function canonicalNormalBarlineMetaMi(meta = {}, hucre = []) {
   return false;
 }
 
+// Çok-hücreli barline (finalBarline ⠣⠅ / sectionalBarline ⠣⠅⠄) tek bir öğedir; SADECE son
+// hücresinde ölçü kapanmalı. Aksi halde her hücre ayrı ölçüye düşer ve join('⠀') araya boşluk
+// koyar → ⠣⠀⠅ (bozuk). hucreSira/hucreSayisi export meta'sından gelir.
+function canonicalBarlineSonHucreMi(meta = {}) {
+  const sayi = Number(meta?.hucreSayisi);
+  if (!Number.isFinite(sayi) || sayi <= 1) return true;
+  return Number(meta?.hucreSira) === sayi - 1;
+}
+
 function canonicalIcerikMetaMi(meta = {}) {
   const kaynak = metaKaynak(meta);
 
@@ -212,7 +221,7 @@ function canonicalOlcuGruplariOlustur(hucreler = [], metaList = []) {
       continue;
     }
 
-    if (canonicalNormalBarlineMetaMi(meta, hucre) && aktifIcerikVar) {
+    if (canonicalNormalBarlineMetaMi(meta, hucre) && aktifIcerikVar && canonicalBarlineSonHucreMi(meta)) {
       kapat();
     }
   }

@@ -1,6 +1,5 @@
 import React from 'react';
 import BrfMusicCellDebugTable from './BrfMusicCellDebugTable.jsx';
-import { MUSIC_CANONICAL_BRF } from '../../utils/music-brf/musicCanonicalFlags.js';
 
 // Ham BRF'yi basılı (embosser) görünümüne yaklaştır: her satır en çok 40 braille
 // hücresi; satır sonları ölçü sınırlarında (boşluk) verilir, ölçü ortadan bölünmez.
@@ -72,19 +71,6 @@ export default function MuzikBrailleOutput({
     aktifBrfKaynakMetni ||
     brfHamMetin ||
     '';
-
-  if (MUSIC_CANONICAL_BRF?.debug) {
-    console.log('BRF COPY DEBUG', {
-      hamBrfMetni,
-      tekBrfMetni,
-      canonicalBrfText,
-      brfExportMetni,
-      exportBrfMetni,
-      copyBrfMetni,
-      kopyalanacakBrfMetni,
-      sameAsHam: kopyalanacakBrfMetni === gosterilecekBrfMetni,
-    });
-  }
 
   return (
     <div className="w-full min-w-0 flex flex-col gap-3" role="tabpanel" id="muzik-panel-braille" aria-labelledby="muzik-tab-braille" tabIndex={0} aria-label="Braille çıktısı">

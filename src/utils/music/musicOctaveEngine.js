@@ -11,7 +11,7 @@ export function muzikDiatonikAralik(prev, cur) {
 }
 
 // Modül 8 Bölüm 3: oktav işareti gerekli mi?
-//  ilkNota / yeniSatır / time-key sonrası / sectional sonrası → her zaman
+//  ilkNota / yeniSatır / time-key sonrası / sectional sonrası / sözcük sonrası → her zaman
 //  2-3 aralık → asla
 //  4-5 aralık → yalnız oktav değiştiyse
 //  6+ aralık → her zaman
@@ -21,6 +21,7 @@ export function muzikOktavGerekliMi(prevNota, curNota, ctx = {}) {
   if (ctx.yeniBrailleSatiri) return true;
   if (ctx.timeKeyDegisimiSonrasi) return true;
   if (ctx.sectionalDoubleBarlineSonrasi) return true;
+  if (ctx.sozcukSonrasi) return true; // L6 Kural 4: bir sözcük-dinamikten sonraki ilk nota
   if (!prevNota) return true;
   const aralik = muzikDiatonikAralik(prevNota, curNota);
   const oktavDegisti = (prevNota.oktav ?? 4) !== (curNota.oktav ?? 4);

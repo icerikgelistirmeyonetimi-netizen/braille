@@ -27,6 +27,8 @@ export default function MuzikScoreBrailleOverlay({
   setHoverCizgiBagId,
   hoverBrailleCellKey,
   setHoverBrailleCellKey,
+  hoverTupletId,
+  setHoverTupletId,
   seciliOgeId,
   setSeciliOgeId,
   seciliBagId,
@@ -114,14 +116,18 @@ export default function MuzikScoreBrailleOverlay({
       ? null
       : gorunenSatirBrailleLejantMaplari[satirIdx]?.get(key);
     const bagId = brailleAnlamBagIdAl(anlam);
+    const tupletMu = kategori === 'tuplet';
+    const tupletId = tupletMu ? (anlam?.tupletId || null) : null;
     const ogeId = bagId ? null : brailleAnlamOgeIdAl(anlam);
     const cellHoverKey = `overlay:${satirIdx}:${olcuIdx}:${item.index ?? i}`;
 
     const bagAktif = bagId && (
       bagId === hoverBrailleBagId || bagId === seciliBagId
     );
-    // Dinamik birden çok hücredir (ör. "f" = söz işareti + f). Etiket SADECE
-    // grubun ilk hücresinde gösterilsin; sonraki hücrelerde tekrarlanmasın.
+    // Tuplet hücresi ↔ skordaki bracket çapraz vurgusu (çift yönlü).
+    const tupletAktif = tupletMu && tupletId && tupletId === hoverTupletId;
+    // Dinamik/nüans/süsleme birden çok hücre olabilir (ör. "f" = söz işareti + f;
+    // fermata = 2 hücre). Etiket/ikon SADECE grubun ilk hücresinde gösterilsin.
     let dinamikEtiketGizle = false;
     if (kategori === 'dynamic') {
       const cells = olcuCellsAl(olcu);
@@ -129,6 +135,20 @@ export default function MuzikScoreBrailleOverlay({
       // Önceki hücre de dinamikse, bu hücre aynı dinamik grubunun devamıdır
       // → etiketi tekrarlama (yalnızca ilk hücrede göster).
       if (onceki && brailleKategoriAl(onceki.anlam) === 'dynamic') {
+        dinamikEtiketGizle = true;
+      }
+    } else if (
+      kategori === 'nuans-once' || kategori === 'nuans-sonra' || kategori === 'susleme'
+      || String(anlam?.kaynak || '').startsWith('modifier-')
+    ) {
+      // Nüans/süsleme çok hücreli olabilir (fermata 2, sezür 2 hücre). Önceki hücre
+      // aynı kategori + aynı etiket (modId varsa aynı modId) ise devam hücresidir.
+      const cells = olcuCellsAl(olcu);
+      const onceki = cells[i - 1];
+      if (onceki
+        && brailleKategoriAl(onceki.anlam) === kategori
+        && String(onceki.anlam?.etiket || '') === String(anlam?.etiket || '')
+        && (!anlam?.modId || !onceki.anlam?.modId || onceki.anlam.modId === anlam.modId)) {
         dinamikEtiketGizle = true;
       }
     }
@@ -151,13 +171,22 @@ export default function MuzikScoreBrailleOverlay({
       && (ogeId === hoverBrailleOgeId || ogeId === seciliOgeId)
       && !cellTipi;
     const activeByCell = hoverBrailleCellKey === cellHoverKey;
-    const aktif = bagAktif || modifierEslesti || ogeMainAktif || activeByCell;
+    const aktif = bagAktif || modifierEslesti || ogeMainAktif || activeByCell || tupletAktif;
     const selectedByBag = bagId && seciliBagId === bagId;
     const selectedByOge = !bagId && ogeId && seciliOgeId === ogeId && !cellTipi;
     const notaHoverSesCalabilir = kategori === 'nota' && !bagId && ogeId;
 
     const handleEnter = () => {
       setHoverBrailleCellKey?.(cellHoverKey);
+      if (tupletMu && tupletId) {
+        // Tuplet hücresi → skordaki bracket'ı vurgula (çapraz bağ).
+        setHoverTupletId?.(tupletId);
+        setHoverBrailleOgeId?.(null);
+        setHoverBrailleBagId?.(null);
+        setHoverCizgiBagId?.(null);
+        setHoverModifier?.(null);
+        return;
+      }
       if (bagId) {
         setHoverCizgiBagId?.(bagId);
         setHoverBrailleBagId?.(bagId);
@@ -192,6 +221,10 @@ export default function MuzikScoreBrailleOverlay({
 
     const handleLeave = () => {
       setHoverBrailleCellKey?.(null);
+      if (tupletMu && tupletId) {
+        setHoverTupletId?.((prev) => (prev === tupletId ? null : prev));
+        return;
+      }
       if (bagId) {
         setHoverCizgiBagId?.((prev) => (prev === bagId ? null : prev));
         setHoverBrailleBagId?.((prev) => (prev === bagId ? null : prev));
@@ -283,6 +316,7 @@ export default function MuzikScoreBrailleOverlay({
           yerlesim={null}
           hoverAktif={Boolean(aktif)}
           seciliAktif={Boolean(selectedByBag || selectedByOge)}
+          solidHover={tupletMu}
           etiketGizle={dinamikEtiketGizle}
           index={i}
         />
@@ -327,10 +361,29 @@ export default function MuzikScoreBrailleOverlay({
           {satirOlcuBrailleleri.map((olcu, olcuIdx) => {
             const olcuCells = olcuCellsAl(olcu);
             const { kutuWidth, gapBefore } = olcuLayoutlar[olcuIdx];
-            if (olcuCells.length <= 0) return null;
 
             const kutuWidthPct = (kutuWidth / SKOR_BRAILLE_KOORDINAT_GENISLIK) * 100;
             const gapPct = (gapBefore / SKOR_BRAILLE_KOORDINAT_GENISLIK) * 100;
+
+            // BOŞ ÖLÇÜ (tekrar nedeniyle braille'i kalmayan kopya ölçü): hücre yok AMA staff'ta çizili.
+            // null DÖNME — yoksa genişliği kaybolur ve sonraki ölçülerin braille'i sola kayıp staff ile
+            // HİZASIZ kalır (kullanıcı: "kendi ölçüsü altında olsun"). Genişliği koruyan BOŞ spacer bırak.
+            if (olcuCells.length <= 0) {
+              return (
+                <div
+                  key={`olcu-braille-bos-${satirIdx}-${olcu.index}`}
+                  aria-hidden="true"
+                  style={{
+                    position: 'static',
+                    flex: '0 0 auto',
+                    minWidth: `${kutuWidthPct}%`,
+                    marginLeft: gapPct > 0 ? `${gapPct}%` : 0,
+                    padding: 0,
+                    pointerEvents: 'none',
+                  }}
+                />
+              );
+            }
 
             // Görünür hücre node'ları (barline'lar elenir).
             const tumNodes = olcuCells

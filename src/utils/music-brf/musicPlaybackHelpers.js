@@ -5,6 +5,7 @@ import {
   keySignatureAccidentalsAl,
   muzikNotaMidiAl,
 } from './musicPianoAudioHelpers.js';
+import { notaGraceMi } from './musicMeasureHelpers.js';
 
 // ─── Süsleme yardımcıları ────────────────────────────────────────────────────
 
@@ -64,11 +65,13 @@ function ornamentEventleriGenislet(baseEvent, velocity) {
   const oncesiMods = Array.isArray(oge?.modifiers?.oncesi) ? oge.modifiers.oncesi : [];
   if (oncesiMods.length === 0) return [baseEvent];
 
-  // İlk süsleme modifier'ı al (birden fazla varsa birincisi)
+  // İlk süsleme modifier'ı al (birden fazla varsa birincisi).
+  // Adlar Türkçeleştirildi (apejetür, tril, mordan, grupeto, glisando);
+  // eski adlar (appoggiatura, trill, mordent, turn, glissando) da desteklenir.
   const ornMod = oncesiMods.find((m) => {
     const ad = String(m?.kayit?.ad || '').toLowerCase();
     return (
-      /appoggiatura|acciaccatura|trill|mordent|turn|glissando/.test(ad)
+      /appoggiatura|acciaccatura|apejetür|tril|mord(ent|an)|turn|grupeto|glis+ando/.test(ad)
     );
   });
   if (!ornMod) return [baseEvent];
@@ -103,20 +106,47 @@ function ornamentEventleriGenislet(baseEvent, velocity) {
   // Ana nota event'inin süresini kısaltan kopyası — normal sustain (cutOff yok)
   const anaKopya = (durationBeats) => ({ ...baseEvent, durationBeats });
 
-  // ── Kısa appoggiatura / acciaccatura ──────────────────────────────────────
-  if (/kısa appoggiatura|acciaccatura/.test(ad)) {
+  // ── İMPORT GRACE MODELİ ───────────────────────────────────────────────────
+  // Nota ZATEN ayrı bir grace (apejetür) notasıysa, KENDİ perdesinden (baseMidi) KISA çalınır.
+  // "note-above" (ustMidi) ornament mantığı UYGULANMAZ — o, grace'i ana notanın bir üstündeki
+  // perde sanardı; oysa apejetür notasının perdesi KENDİSİDİR ve ana nota AYRI (sonraki) öğedir.
+  // Grace kendi süresinin bir kısmı kadar çalar (uzun ~%55, kısa ~%35) → doğal süsleme hissi.
+  if (notaGraceMi(oge)) {
+    const graceKisaltma = /uzun/.test(ad) ? 0.55 : 0.35;
+    return [{ ...baseEvent, durationBeats: Math.max(0.06, total * graceKisaltma), velocity: ornamentVelocity }];
+  }
+
+  // ── ÇOKLU apejetür (grace zinciri) — bir notadan önce birden çok grace
+  // müzikal olarak geçerlidir (çift apejetür / slide). Her kısa grace ≈ %12,
+  // uzun grace ≈ %30; toplam ana notanın %60'ını aşarsa orantılı kısaltılır.
+  const graceRe = /apejetür|appoggiatura|acciaccatura/;
+  const graceMods = oncesiMods.filter((m) => graceRe.test(String(m?.kayit?.ad || '').toLowerCase()));
+  if (graceMods.length >= 2) {
+    let durs = graceMods.map((m) => (
+      /uzun/.test(String(m?.kayit?.ad || '').toLowerCase()) ? total * 0.30 : total * 0.12
+    ));
+    const toplam = durs.reduce((a, b) => a + b, 0);
+    const maksToplam = total * 0.6;
+    if (toplam > maksToplam) durs = durs.map((d) => (d * maksToplam) / toplam);
+    const events = durs.map((d, i) => sanal(ustMidi, d, i));
+    events.push({ ...anaKopya(total - durs.reduce((a, b) => a + b, 0)), velocity });
+    return events;
+  }
+
+  // ── Kısa apejetür (appoggiatura) / acciaccatura ───────────────────────────
+  if (/kısa appoggiatura|acciaccatura|kısa apejetür/.test(ad)) {
     const grace = total * 0.12;
     return [sanal(ustMidi, grace, 0), anaKopya(total - grace)];
   }
 
-  // ── Uzun appoggiatura ─────────────────────────────────────────────────────
-  if (/uzun appoggiatura/.test(ad)) {
+  // ── Uzun apejetür (appoggiatura) ──────────────────────────────────────────
+  if (/uzun appoggiatura|uzun apejetür/.test(ad)) {
     const half = total * 0.5;
     return [sanal(ustMidi, half, 0), anaKopya(half)];
   }
 
-  // ── Trill ─────────────────────────────────────────────────────────────────
-  if (/^trill|bemollü trill|diyezli trill/.test(ad)) {
+  // ── Tril (trill) — '^tril' hem 'tril' hem 'trill' ile eşleşir ─────────────
+  if (/^tril|bemollü tril|diyezli tril/.test(ad)) {
     // Her çift (ana + üst) için süre: ~16'lık çiftler, max 8 çift (yoğunluk sınırı)
     const ciftSayisi = Math.min(8, Math.max(2, Math.round(total * 4)));
     const birimSure  = total / (ciftSayisi * 2);
@@ -131,8 +161,8 @@ function ornamentEventleriGenislet(baseEvent, velocity) {
     return events;
   }
 
-  // ── Üst mordent (asıl → üst → asıl) ─────────────────────────────────────
-  if (/üst mordent/.test(ad)) {
+  // ── Üst mordan/mordent (asıl → üst → asıl) ──────────────────────────────
+  if (/üst mord(ent|an)/.test(ad)) {
     // short: notanın %16-20'si, ama maksimum 0.15 beat (kısa tutulması için)
     const short = Math.min(total * 0.20, 0.15);
     return [
@@ -142,8 +172,8 @@ function ornamentEventleriGenislet(baseEvent, velocity) {
     ];
   }
 
-  // ── Alt mordent (asıl → alt → asıl) ─────────────────────────────────────
-  if (/alt mordent/.test(ad)) {
+  // ── Alt mordan/mordent (asıl → alt → asıl) ──────────────────────────────
+  if (/alt mord(ent|an)/.test(ad)) {
     const short = Math.min(total * 0.20, 0.15);
     return [
       sanal(baseMidi, short, 0),
@@ -152,8 +182,8 @@ function ornamentEventleriGenislet(baseEvent, velocity) {
     ];
   }
 
-  // ── Ters turn: alt → asıl → üst → asıl ──────────────────────────────────
-  if (/ters turn/.test(ad)) {
+  // ── Ters grupeto/turn: alt → asıl → üst → asıl ──────────────────────────
+  if (/ters (turn|grupeto)/.test(ad)) {
     const q = total / 4;
     return [
       sanal(altMidi,  q, 0),
@@ -163,8 +193,8 @@ function ornamentEventleriGenislet(baseEvent, velocity) {
     ];
   }
 
-  // ── Turn: üst → asıl → alt → asıl ───────────────────────────────────────
-  if (/turn/.test(ad)) {
+  // ── Grupeto/turn: üst → asıl → alt → asıl ───────────────────────────────
+  if (/turn|grupeto/.test(ad)) {
     const q = total / 4;
     return [
       sanal(ustMidi,  q, 0),
@@ -590,13 +620,15 @@ export function muzikDinamikVelocityAl(sembol = '') {
   return DINAMIK_VELOCITY[s] ?? null;
 }
 
-/** Sembolden cresc/decresc modu algılar: 'cresc' | 'decresc' | null */
+/** Sembolden cresc/decresc modu algılar: 'cresc' | 'decresc' | null
+ * Veri Türkçe (kreşendo/dekreşendo/diminiendo) + sembol (cr/decr/dim) — İngilizce terimler de tutulur.
+ * DECRESC ÖNCE kontrol edilir: "dekreşendo" string'i "kreşendo" içerir → cresc-önce yanlış yakalardı. */
 function dinamikGradyanModuAl(sembol = '', ad = '') {
-  const s = String(sembol || '').toLowerCase();
-  const a = String(ad || '').toLowerCase();
+  const s = String(sembol || '').toLocaleLowerCase('tr');
+  const a = String(ad || '').toLocaleLowerCase('tr');
   const text = s + ' ' + a;
-  if (/cresc|crescendo/.test(text)) return 'cresc';
-  if (/decresc|decrescendo|dim\b|diminuendo/.test(text)) return 'decresc';
+  if (/decresc|decrescendo|dekreşendo|dekresendo|diminiendo|diminuendo|\bdim\b|\bdecr\b/.test(text)) return 'decresc';
+  if (/cresc|crescendo|kreşendo|kresendo|\bcr\b/.test(text)) return 'cresc';
   return null;
 }
 
@@ -650,24 +682,26 @@ function notaArticulationBilgisiAl(oge) {
     caesura:       false,
   };
 
+  // Adlar muzik.js'te Türkçeleştirildi (Stakato, Simo, mezzo-stakato, tonuto,
+  // aksent, İfadeli/ters aksent, Şişirme, sezür); eski adlar da desteklenir.
   for (const mod of oncesi) {
     const ad = String(mod?.kayit?.ad || '').toLocaleLowerCase('tr');
-    if (/staccatissimo/.test(ad))               { art.staccatissimo = true; }
-    else if (/mezzo.staccato/.test(ad))          { art.mezzoStaccato = true; }
-    else if (/staccato accent/.test(ad))         { art.staccatoAccent = true; art.accent = true; }
-    else if (/^staccato$/.test(ad))              { art.staccato = true; }
-    else if (/tenuto/.test(ad))                  { art.tenuto = true; }
-    else if (/martellato/.test(ad))              { art.martellato = true; art.accent = true; }
-    else if (/expressive accent|reversed accent/.test(ad)) { art.accent = true; }
-    else if (/^accent$/.test(ad))                { art.accent = true; }
-    else if (/swell/.test(ad))                   { art.swell = true; }
+    if (/staccatissimo|^simo$/.test(ad))               { art.staccatissimo = true; }
+    else if (/mezzo.sta[ck]{1,2}ato/.test(ad))         { art.mezzoStaccato = true; }
+    else if (/staccato accent|stakato aksent/.test(ad)) { art.staccatoAccent = true; art.accent = true; }
+    else if (/^sta[ck]{1,2}ato$/.test(ad))             { art.staccato = true; }
+    else if (/tenuto|tonuto/.test(ad))                 { art.tenuto = true; }
+    else if (/martellato/.test(ad))                    { art.martellato = true; art.accent = true; }
+    else if (/expressive accent|reversed accent|ifadeli aksent|ters aksent/.test(ad)) { art.accent = true; }
+    else if (/^accent$|^aksent$/.test(ad))             { art.accent = true; }
+    else if (/swell|şişirme/.test(ad))                 { art.swell = true; }
   }
 
   for (const mod of sonrasi) {
     const ad = String(mod?.kayit?.ad || '').toLocaleLowerCase('tr');
     if (/fermata/.test(ad))       { art.fermata = true; }
     else if (/nefes işareti/.test(ad)) { art.breath = true; }
-    else if (/caesura/.test(ad))  { art.caesura = true; }
+    else if (/caesura|sezür/.test(ad))  { art.caesura = true; }
   }
 
   return art;
@@ -766,7 +800,10 @@ export function muzikPlaybackEventListesiOlustur({ ogeler = [], baglar = [], muz
       continue;
     }
 
-    if (oge.tip === 'barline' || oge.tip === 'sectionalBarline' || oge.tip === 'finalBarline') {
+    // Aksidental kalıcılığı HER ölçü çizgisinde sıfırlanır — tekrar çubukları (begin/end repeat)
+    // da ölçü sınırıdır. (Eskiden begin/endRepeat eksikti → aksidental ölçü taşıyordu = bug.)
+    if (oge.tip === 'barline' || oge.tip === 'sectionalBarline' || oge.tip === 'finalBarline'
+        || oge.tip === 'beginRepeat' || oge.tip === 'endRepeat') {
       measureAccidentals.clear();
       continue;
     }

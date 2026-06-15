@@ -10,7 +10,23 @@ import {
   muzikBarNumberHucreleri,
 } from './musicRepeatEngine.js';
 import { muzikHeaderSatirlariUret } from './musicHeaderEngine.js';
+import { MUZIK_UST_RAKAM } from './musicConstants.js';
 import { MUZIK_BAGLAR } from '../../data/muzik.js';
+
+// Bölüm 13.3 — aynı notada birden çok NÜANS (slot 8) iç-sırası:
+// ① arpej → ② staccato/staccatissimo/mezzo-staccato → ③ accent (+ifadeli/ters/martellato)
+// → ④ tenuto → ⑤ swell. (8 + .x ile slot 7<8.x<9 korunur.)
+function muzikNuansSlotSira(ad = '') {
+  const a = String(ad).toLocaleLowerCase('tr');
+  if (/arpej|arpeggio/.test(a)) return 8.1;
+  if (/simo|staccatissimo/.test(a)) return 8.2;        // staccatissimo
+  if (/mezzo|mezo/.test(a)) return 8.2;                 // mezzo-staccato
+  if (/stakato|staccato/.test(a)) return 8.2;           // staccato
+  if (/martellato|aksent|aksan|accent/.test(a)) return 8.3;
+  if (/tonuto|tenuto/.test(a)) return 8.4;
+  if (/şişirme|sisirme|swell/.test(a)) return 8.5;
+  return 8;
+}
 
 // Modül 8 Bölüm 4A — Bir notadan ÖNCE gelen işaretlerin kesin sırası (1-10)
 export function muzikModifierOncesiSira(kayit) {
@@ -19,14 +35,29 @@ export function muzikModifierOncesiSira(kayit) {
   const tip = String(kayit.gorselTip || kayit.kategori || '');
   if (/forward|ileri.*tekrar/.test(ad)) return 1;
   if (/volta|\bev\b|dolap/.test(ad)) return 2;
-  if (tip === 'bag' && /(açılış|aç\b|köşeli.*aç|opening)/.test(ad)) return 3;
+  // Cümle bağı (bracket slur) açılışı — veri adı "cümle bağı başlangıcı". PDF Lesson 11: slot 3
+  // (dinamikten ÖNCE). Eski regex 'açılış' arıyordu, 'başlangıç' eşleşmiyordu → slot 6'ya düşüyordu.
+  if (tip === 'bag' && /(başlangıç|başlangıcı|açılış|aç\b|köşeli.*aç|opening)/.test(ad)) return 3;
   if (tip === 'dinamik') return 4;
   if (tip === 'tuplet' || /üçleme|leme|tuplet/.test(ad)) return 5;
   if (tip === 'susleme') return 7;
-  if (tip === 'nuans') return 8;
+  if (tip === 'nuans') return muzikNuansSlotSira(ad); // slot 8 + iç-sıra (13.3)
   if (tip === 'degistirici' || tip === 'donanim') return 9;
   if (tip === 'oktav') return 10;
   return 6;
+}
+
+// Lesson 6 Kural 4 — Müzik içine giren bir SÖZCÜK/kısaltma (dinamik: p/f/mf/cresc/rit…)
+// kendisinden SONRAKİ ilk notaya — aralık ne olursa olsun — oktav işareti zorlar.
+// Hairpin'ler (keskin kreşendo/dekreşendo) grafik işaret olduğundan sözcük değildir → zorlamaz.
+// Ayırt edici: sözcük-dinamiklerin `sembol`'ü vardır (p/f/mf/cr/rit…); hairpin'lerin yoktur.
+export function muzikModifierSozcukMu(kayit) {
+  if (!kayit) return false;
+  const tip = String(kayit.gorselTip || kayit.kategori || '');
+  if (tip !== 'dinamik') return false;
+  const ad = String(kayit.ad || '').toLowerCase();
+  if (/keskin|hairpin|çatal|kama/.test(ad)) return false; // hairpin = grafik işaret, sözcük değil
+  return Boolean(kayit.sembol);
 }
 
 // Modül 8 Bölüm 4B — Bir notadan SONRA gelen işaretlerin kesin sırası
@@ -34,12 +65,27 @@ export function muzikModifierSonrasiSira(kayit) {
   const ad = String(kayit.ad || '').toLowerCase();
   const tip = String(kayit.gorselTip || kayit.kategori || '');
   if (/fermata/.test(ad)) return 2;
-  if (tip === 'bag' && /(kapanış|kapa\b|köşeli.*kapa|closing)/.test(ad)) return 4;
-  if (tip === 'bag' && /(tie|^bağ\b)/.test(ad)) return 5;
-  if (tip === 'bag') return 3;
+  // Veri adları: bracket kapanış "cümle bağı bitişi", tie "uzatma bağı". Eski regex bunlara
+  // uymuyordu (kapanış/tie); 'bitiş'/'uzatma' eklendi (tip==='bag' içinde güvenli).
+  if (tip === 'bag' && /(bitiş|bitişi|kapanış|kapa\b|köşeli.*kapa|closing)/.test(ad)) return 4; // bracket close
+  if (tip === 'bag' && /(uzatma|tie)/.test(ad)) return 5;                                        // tie
+  if (tip === 'bag') return 3;                                                                   // tekli/çift slur
   if (/nefes|kesme|caesura|break|breath/.test(ad)) return 7;
   if (/backward|geri/.test(ad)) return 8;
   return 9;
+}
+
+// Bir barline öğesi (özellikle tekrar) hucreler taşımıyorsa türüne göre standart işareti döndür.
+// Aksi halde engine boş hücre ([[]]) yazar → tekrar/bitiş çizgisi braille'de görünmez (boşluk gibi).
+// (muzik.js MUZIK_OLCU_CIZGILERI ile aynı: begin ⠣⠶, end ⠣⠆, final ⠣⠅, sectional ⠣⠅⠄.)
+function barlineVarsayilanHucreleri(kaynak) {
+  switch (kaynak) {
+    case 'beginRepeat': return [[1, 2, 6], [2, 3, 5, 6]];
+    case 'endRepeat': return [[1, 2, 6], [2, 3]];
+    case 'finalBarline': return [[1, 2, 6], [1, 3]];
+    case 'sectionalBarline': return [[1, 2, 6], [1, 3], [3]];
+    default: return null;
+  }
 }
 
 export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, tupletler = [], options = {}) {
@@ -215,6 +261,20 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
         metaEkle({ ogeId, kaynak: `modifier-${yon}`, etiket: kayit.ad, modId: mod.id });
       }
       kaynakIndeksi += etiket.length;
+      // Sözcük-dinamik yazıldı → takip eden ilk nota oktav işareti almalı (L6 Kural 4).
+      if (muzikModifierSozcukMu(kayit)) sozcukSonrasiBayragi = true;
+    }
+  };
+
+  // §14: eser içi zaman/donanım değişimi öncesi boşluk — önceki hücre zaten boşluk
+  // (ölçü çizgisi) değilse ekle (çift boşluk olmasın).
+  const degisimOncesiBoslukEkle = (ogeId, etiket) => {
+    const oncekiHucre = hucreler[hucreler.length - 1];
+    const oncekiBoslukMu = Array.isArray(oncekiHucre) && oncekiHucre.length === 0;
+    if (hucreler.length > 0 && !oncekiBoslukMu) {
+      hucreler.push([]);
+      esleme.push(kaynakIndeksi);
+      metaEkle({ ogeId, kaynak: 'spacer', etiket });
     }
   };
 
@@ -275,35 +335,39 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       ? bag.kayit.hucreler
       : (Array.isArray(bag?.hucreler) ? bag.hucreler : null);
 
+    // NOT: bagKayitBul regex'leri GERÇEK veri adlarına (muzik.js MUZIK_BAGLAR) uymalı — kayıt adları
+    // "hece bağı" / "çift hece bağı" / "cümle bağı başlangıcı/bitişi" / "uzatma bağı". Eski regex'ler
+    // ("slur (legato)" / "köşeli slur" / "çift slur") HİÇBİRİNE uymuyordu → startHucreleri null kalıyordu
+    // ve çağıran döngü (line ~458) bag'ı ATLIYORDU (bağ braille'i overlay'de hiç görünmüyordu). Veri
+    // bulunamasa bile standart hücreler hardcoded fallback olarak verilir (bağlar daima yazılır).
     if (bagTieMi(bag)) {
       return {
-        startHucreleri: kayitHucreleri,
+        startHucreleri: kayitHucreleri || [[4], [1, 4]],
         endHucreleri: null,
       };
     }
 
     if (mode === 'bracket') {
-      const acKayit = bagKayitBul(/köşeli\s*slur\s*\(aç\)|bracket\s*slur\s*\(aç\)|bracket\s*slur\s*start/i);
-      const kapaKayit = bagKayitBul(/köşeli\s*slur\s*\(kapa\)|bracket\s*slur\s*\(kapa\)|bracket\s*slur\s*end/i);
+      const acKayit = bagKayitBul(/cümle\s*bağı\s*başlangıc|köşeli\s*slur\s*\(aç\)|bracket\s*slur\s*start/i);
+      const kapaKayit = bagKayitBul(/cümle\s*bağı\s*bitiş|köşeli\s*slur\s*\(kapa\)|bracket\s*slur\s*end/i);
 
       return {
-        startHucreleri: Array.isArray(acKayit?.hucreler) ? acKayit.hucreler : kayitHucreleri,
-        endHucreleri: Array.isArray(kapaKayit?.hucreler) ? kapaKayit.hucreler : null,
+        startHucreleri: (Array.isArray(acKayit?.hucreler) ? acKayit.hucreler : kayitHucreleri) || [[5, 6], [1, 2]],
+        endHucreleri: (Array.isArray(kapaKayit?.hucreler) ? kapaKayit.hucreler : null) || [[4, 5], [2, 3]],
       };
     }
 
     if (mode === 'double') {
-      const doubleKayit = bagKayitBul(/çift\s*slur|double\s*slur/i);
+      const doubleKayit = bagKayitBul(/çift\s*hece\s*bağı|çift\s*slur|double\s*slur/i);
       return {
-        startHucreleri: Array.isArray(doubleKayit?.hucreler) ? doubleKayit.hucreler : kayitHucreleri,
+        startHucreleri: (Array.isArray(doubleKayit?.hucreler) ? doubleKayit.hucreler : kayitHucreleri) || [[1, 4], [1, 4]],
         endHucreleri: null,
       };
     }
 
-    // TODO: Single slur bitiş hücresi PDF'ye göre doğrulanacak.
-    const singleKayit = bagKayitBul(/slur\s*\(legato\)|single\s*slur/i);
+    const singleKayit = bagKayitBul(/^hece\s*bağı|slur\s*\(legato\)|single\s*slur/i);
     return {
-      startHucreleri: Array.isArray(singleKayit?.hucreler) ? singleKayit.hucreler : kayitHucreleri,
+      startHucreleri: (Array.isArray(singleKayit?.hucreler) ? singleKayit.hucreler : kayitHucreleri) || [[1, 4]],
       endHucreleri: null,
     };
   };
@@ -382,6 +446,52 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
   );
   const autoRepeatHaritasi = muzikAutoBarRepeatHaritasi(olculer, baglar);
 
+  const muzikSayiHucreleri = (n) => {
+    const hucreler = [[3, 4, 5, 6]]; // sayı işareti ⠼
+    for (const ch of String(n)) {
+      const h = MUZIK_UST_RAKAM[ch];
+      if (h) hucreler.push([...h]);
+    }
+    return hucreler;
+  };
+
+  // Bölüm 10 — SAYISAL TEKRAR BLOKLARI (geri-sayısal ⠼N/⠼N⠼M veya bar-number ⠼<alt>N-M):
+  // editör adaptörü "önceki N/M ölçüyü tekrarla"yı GÖRSEL porte için kopyalara açar (_repeatCopy) ve blok
+  // başı ilk notayı `_geriTekrarSayisi=N`(blok ölçü) + `_tekrarHucreleri`(ORİJİNAL braille) ile işaretler.
+  // Braille (skor altı + indir) kopyaları YAZMAZ, tek orijinal işareti yazar (BRF aynen). Bu HESAP
+  // autoRepeatHaritasi'ndan ÖNCE yapılır: çünkü blok-içi kopyalar (örn. Jingle bars 9-14'teki bar10=bar9)
+  // autoRepeat tarafından YANLIŞ ⠶ olarak yazılırdı (kullanıcı: "jingle'daki tekrar işareti nereden geldi").
+  const geriTekrarBlokBaslangic = new Map(); // olcuIdx → { N, hucreler }
+  const geriTekrarBlokOlculeri = new Set();  // bloktaki TÜM ölçü idx'leri (atlananIndeksler'e eklenir)
+  for (let oi = 0; oi < olculer.length; oi++) {
+    const ilkIdx = olculer[oi]?.indices?.[0];
+    const N = ilkIdx != null ? Number(ogeler[ilkIdx]?._geriTekrarSayisi) : 0;
+    if (N > 0) {
+      const hucreler = Array.isArray(ogeler[ilkIdx]?._tekrarHucreleri) ? ogeler[ilkIdx]._tekrarHucreleri : null;
+      geriTekrarBlokBaslangic.set(oi, { N, hucreler });
+      for (let k = 0; k < N && oi + k < olculer.length; k++) geriTekrarBlokOlculeri.add(oi + k);
+    }
+  }
+  // Sayısal-tekrar bloğundaki ölçüleri autoRepeat'ten ÇIKAR — blok-içi özdeş kopyalar fazladan ⠶ ÜRETMESİN.
+  for (const oi of geriTekrarBlokOlculeri) autoRepeatHaritasi.delete(oi);
+
+  // Bölüm 10 — ardışık ÖZDEŞ ölçü tekrarları: 3+ ölçü ⠶⠼N (kompakt sayı) ile yazılır;
+  // 1-2 ölçü her biri ayrı ⠶ ile. `autoRepeatHaritasi.get(i)` = i. ölçü (i-1). ölçüyle aynı.
+  // Bir RUN (ardışık true dizisi) tek kaynağa zincirleme aynılık demektir → run uzunluğu = N (kopya
+  // sayısı, orijinal hariç). Run başında ⠶⠼N yaz, devam ölçülerini atla (kompakt). 39 PDF fixture
+  // örneği bar-repeat ×8'i ⠶⠼8 ile yazıyordu — round-trip için indir tarafı da kompakt olmalı.
+  const barRepeatKompaktBaslangic = new Map(); // olcuIdx → N (yalnız N>=3 run başı)
+  const barRepeatKompaktAtla = new Set();      // kompakt run'ın devam ölçüleri (⠶ yazma)
+  for (let oi = 1; oi < olculer.length; oi++) {
+    if (!autoRepeatHaritasi.get(oi) || autoRepeatHaritasi.get(oi - 1)) continue; // run başı değil
+    let runLen = 1;
+    while (autoRepeatHaritasi.get(oi + runLen)) runLen += 1;
+    if (runLen >= 3) {
+      barRepeatKompaktBaslangic.set(oi, runLen);
+      for (let k = 1; k < runLen; k++) barRepeatKompaktAtla.add(oi + k);
+    }
+  }
+
   const notaSonrasiBagHaritasi = new Map();
   const notaOncesiBagHaritasi = new Map();
 
@@ -431,6 +541,28 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       const ids = bagNotaIdleriAl(bag);
       if (ids.length < 2) continue;
 
+      // KÖŞELİ (bracket) slur: slurModeOtomatikAl bunu bilmez (yalnız single/double-for-long döner →
+      // bracket'i yanlışlıkla double yapardı). Ayrı ele al: açılış ⠰⠃ ilk notadan ÖNCE, kapanış ⠘⠆
+      // son notadan SONRA (PDF Lesson 11; bagHucrePaketleriAl start/end hücrelerini verir).
+      if (String(bagModeAl(bag) || '').toLowerCase() === 'bracket') {
+        const paket = bagHucrePaketleriAl(bag);
+        notaOncesineBagEkle(ids[0], {
+          bag,
+          kaynak: 'bracket-slur-start',
+          etiket: 'Bracket slur başlangıç',
+          rol: 'bracket-slur-start',
+          hucreler: paket.startHucreleri,
+        });
+        notaSonrasinaBagEkle(ids[ids.length - 1], {
+          bag,
+          kaynak: 'bracket-slur-end',
+          etiket: 'Bracket slur bitiş',
+          rol: 'bracket-slur-end',
+          hucreler: paket.endHucreleri,
+        });
+        continue;
+      }
+
       const mode = slurModeOtomatikAl(bag, ids);
       const singleSlurCells = [[1, 4]];
       const doubleSlurCells = [[1, 4], [1, 4]];
@@ -468,8 +600,18 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
     }
   }
 
+  // Bölüm 13.2: bir notada birden çok bag varsa sıra — tekli slur(3) → bracket-kapanış(4) → tie(5).
+  const bagSonrasiSlot = (kaynak) => {
+    if (kaynak === 'slur' || kaynak === 'double-slur-start' || kaynak === 'double-slur-end') return 3;
+    if (kaynak === 'bracket-slur-end') return 4;
+    if (kaynak === 'tie') return 5;
+    return 6;
+  };
+
   const notaSonrasiBagHucreleriEkle = (notaId) => {
-    const bagListesi = notaSonrasiBagHaritasi.get(notaId) || [];
+    const bagListesi = (notaSonrasiBagHaritasi.get(notaId) || [])
+      .slice()
+      .sort((a, b) => bagSonrasiSlot(a.kaynak) - bagSonrasiSlot(b.kaynak));
 
     for (const bagInfo of bagListesi) {
       if (!Array.isArray(bagInfo.hucreler)) continue;
@@ -528,6 +670,10 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
   for (const [oi] of autoRepeatHaritasi) {
     for (const idx of (olculer[oi]?.indices || [])) atlananIndeksler.add(idx);
   }
+  // Geri-sayısal tekrar blokları: tüm ölçü öğeleri (nota + ölçü çizgileri) atlanır; başta ⠼N yazılır.
+  for (const oi of geriTekrarBlokOlculeri) {
+    for (const idx of (olculer[oi]?.indices || [])) atlananIndeksler.add(idx);
+  }
   // brailleShorthand ölçüleri: kısaltma öğesi dışındaki tüm öğeleri atla
   for (let oi = 0; oi < olculer.length; oi++) {
     const olcu = olculer[oi];
@@ -544,6 +690,8 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
   let yeniBrailleSatiriBayragi = false;
   let timeKeyDegisimiBayragi = false;
   let sectionalBarlineBayragi = false;
+  // Lesson 6 Kural 4 — bir sözcük-dinamik yazıldığında, takip eden ilk nota oktav işareti zorlanır.
+  let sozcukSonrasiBayragi = false;
   let yazilanOlculer = new Set();
 
   for (let idx = 0; idx < ogeler.length; idx++) {
@@ -556,7 +704,7 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       const yeniSatir = !!olcu.startsNewBrailleLine;
       const firstItemShorthand = ogeler[olcu.indices[0]]?.tip === 'brailleShorthand';
       const shorthandContinuation = firstItemShorthand && ogeler[olcu.indices[0]]?._repeatContinuation === true;
-      if (yeniSatir && !autoRepeatHaritasi.get(olcuIdx) && !shorthandContinuation) {
+      if (yeniSatir && !autoRepeatHaritasi.get(olcuIdx) && !shorthandContinuation && !geriTekrarBlokOlculeri.has(olcuIdx)) {
         yeniBrailleSatiriBayragi = true;
         if (includeBarNumbers) {
           const barNo = header?.pickupMeasure ? olcuIdx : olcuIdx + 1;
@@ -573,15 +721,86 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
           }
         }
       }
-      if (autoRepeatHaritasi.get(olcuIdx)) {
+      if (barRepeatKompaktAtla.has(olcuIdx)) {
+        // Kompakt run'ın devam ölçüsü: ⠶⠼N run başında yazıldı, burada hiçbir şey yazma.
+        timeKeyDegisimiBayragi = true;
+      } else if (autoRepeatHaritasi.get(olcuIdx)) {
         if (kaynakParcalar.length) kaynakIndeksi += 1;
         kaynakParcalar.push('𝄎');
+        // 3+ ardışık özdeş ölçü: ⠶'dan sonra sayı işareti + N (kopya sayısı) ekle (⠶⠼N).
+        const kompaktN = barRepeatKompaktBaslangic.get(olcuIdx);
         hucreler.push([2, 3, 5, 6]);
         esleme.push(kaynakIndeksi);
-        metaEkle({ ogeId: null, olcuIdx, kaynak: 'bar-repeat', etiket: `Ölçü ${olcuIdx + 1}: bar repeat (önceki ölçüyle aynı)` });
+        // tekrarSayisi: legendde "braille tekrar ×N" göstermek için (kompakt run sayısı).
+        metaEkle({ ogeId: null, olcuIdx, kaynak: 'bar-repeat', tekrarSayisi: kompaktN || null, etiket: kompaktN ? `Ölçü ${olcuIdx + 1}: bar repeat ×${kompaktN}` : `Ölçü ${olcuIdx + 1}: bar repeat (önceki ölçüyle aynı)` });
         kaynakIndeksi += 1;
-        // Ölçü sonu boşluğu: skip edilen barline'ın yerine — son ölçü değilse ekle
-        if (olcuIdx < olculer.length - 1) {
+        let sonRepeatOlcuIdx = olcuIdx;
+        if (kompaktN) {
+          // muzikSayiHucreleri → [⠼, rakam1, rakam2, ...]; hepsini ⠶'dan sonra yaz.
+          // olcuIdx ZORUNLU: ekran-altı overlay dağıtımı bar-repeat-sayı hücrelerini ⠶ ile AYNI
+          // ölçüye yerleştirsin (yoksa ogeId'siz hücreler düşer → overlay'de ⠼N kaybolur, indir ≠ overlay).
+          for (const h of muzikSayiHucreleri(kompaktN)) {
+            hucreler.push([...h]);
+            esleme.push(kaynakIndeksi);
+            // tekrarSayisi ZORUNLU: legend key = kategori+etiket; ⠶ hücresi "braille tekrar ×N" alırken
+            // sayı hücreleri "braille tekrar" alırsa AYRI legend girdisi oluşur (çift "braille tekrar").
+            // Aynı tekrarSayisi → aynı etiket → aynı key → tek girdi.
+            metaEkle({ ogeId: null, olcuIdx, kaynak: 'bar-repeat-sayi', tekrarSayisi: kompaktN, etiket: `bar repeat ×${kompaktN}` });
+            kaynakIndeksi += 1;
+          }
+          sonRepeatOlcuIdx = olcuIdx + kompaktN - 1;
+        }
+        // Ölçü sonu boşluğu: skip edilen barline'ın yerine — son (kompakt) ölçü son değilse ekle
+        if (sonRepeatOlcuIdx < olculer.length - 1) {
+          hucreler.push([]);
+          esleme.push(kaynakIndeksi);
+          metaEkle({ ogeId: null, kaynak: 'spacer', etiket: 'ölçü sonu boşluğu' });
+        }
+        timeKeyDegisimiBayragi = true;
+      } else if (geriTekrarBlokBaslangic.has(olcuIdx)) {
+        // SAYISAL TEKRAR (⠼N / ⠼N⠼M / ⠼<alt>N-M): blok başında ORİJİNAL tekrar hücreleri yazılır
+        // (adaptör `_tekrarHucreleri` ile taşır → braille AYNEN orijinal BRF). Blok ölçüleri
+        // atlananIndeksler ile zaten skip; burada sadece işaret + ölçü sonu boşluğu yazılır.
+        const { N: geriN, hucreler: tekrarHucreleri } = geriTekrarBlokBaslangic.get(olcuIdx);
+        if (kaynakParcalar.length) kaynakIndeksi += 1;
+        const yazilacak = (Array.isArray(tekrarHucreleri) && tekrarHucreleri.length)
+          ? tekrarHucreleri
+          : muzikSayiHucreleri(geriN); // yedek: tek-sayı geri-sayısal
+        // İlk hücre ⠶ (2-3-5-6) ise BAR-REPEAT (önceki ölçü), değilse sayısal tekrar (⠼N) — legend ayrımı.
+        const ilkH = yazilacak[0] || [];
+        const barRepeatBlok = ilkH.length === 4 && [2, 3, 5, 6].every((d) => ilkH.includes(d));
+        const blokKaynak = barRepeatBlok ? 'bar-repeat' : 'backward-repeat';
+        const blokEtiket = barRepeatBlok ? `bar repeat ×${geriN}` : `sayısal tekrar (${geriN} ölçü)`;
+        kaynakParcalar.push(barRepeatBlok ? '𝄎' : '⠼tekrar');
+        for (const h of yazilacak) {
+          hucreler.push([...h]);
+          esleme.push(kaynakIndeksi);
+          metaEkle({ ogeId: null, olcuIdx, kaynak: blokKaynak, tekrarSayisi: geriN, etiket: blokEtiket });
+          kaynakIndeksi += 1;
+        }
+        // BAR-ÜSTÜ TIE/SLUR: tekrar bloğunun SON ölçüsünün son notası bir sonraki ölçüye
+        // bağlıysa (örn. ⠶⠈⠉ — kullanıcı: "tekrarlarda bağ brailleri görünmüyor"), bağ
+        // hücrelerini tekrar işaretinden SONRA yaz. Kaynak nota _repeatCopy (collapsed)
+        // olduğundan normal nota-sonrası emisyon onu atlar; burada olcuIdx ile yazılır →
+        // overlay dağıtımı bunu kopya ölçüye eşler (ogeId yerine olcuIdx).
+        const blokSonOlcuObj = olculer[olcuIdx + geriN - 1];
+        let blokSonNotaId = null;
+        for (const gi of (blokSonOlcuObj?.indices || [])) {
+          if (ogeler[gi]?.tip === 'nota') blokSonNotaId = ogeler[gi].id;
+        }
+        for (const bagInfo of (blokSonNotaId ? (notaSonrasiBagHaritasi.get(blokSonNotaId) || []) : [])) {
+          if (!Array.isArray(bagInfo.hucreler) || !bagInfo.hucreler.length) continue;
+          if (kaynakParcalar.length) kaynakIndeksi += 1;
+          kaynakParcalar.push(bagInfo.kaynak || 'tie');
+          for (const h of bagInfo.hucreler) {
+            hucreler.push(Array.isArray(h) ? [...h] : []);
+            esleme.push(kaynakIndeksi);
+            metaEkle({ ogeId: null, olcuIdx, kaynak: bagInfo.kaynak || 'tie', etiket: bagInfo.etiket, rol: bagInfo.rol, bagId: bagInfo.bag?.id });
+            kaynakIndeksi += 1;
+          }
+        }
+        const sonBlokOlcu = olcuIdx + geriN - 1;
+        if (sonBlokOlcu < olculer.length - 1) {
           hucreler.push([]);
           esleme.push(kaynakIndeksi);
           metaEkle({ ogeId: null, kaynak: 'spacer', etiket: 'ölçü sonu boşluğu' });
@@ -631,6 +850,10 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       if (kaynakParcalar.length) kaynakIndeksi += 1;
       kaynakParcalar.push(etiket);
 
+      // §14: eser İÇİ zaman imzası değişimi İKİ YANINDA da boşluk. Önceki hücre boşluk değilse
+      // öncesine boşluk ekle (ölçü sınırındaysa barline zaten boşluk verir → tekrar ekleme).
+      degisimOncesiBoslukEkle(oge.id, 'Zaman değişimi öncesi boşluk');
+
       const ogeHucreleri = Array.isArray(oge.hucreler) && oge.hucreler.length ? oge.hucreler : [];
       for (const hucre of ogeHucreleri) {
         hucreler.push(Array.isArray(hucre) ? [...hucre] : []);
@@ -641,6 +864,10 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
           etiket: `Zaman değişimi: ${etiket}`,
         });
       }
+      // değişim sonrası boşluk (sonraki notadan ayır)
+      hucreler.push([]);
+      esleme.push(kaynakIndeksi);
+      metaEkle({ ogeId: oge.id, kaynak: 'spacer', etiket: 'Zaman değişimi sonrası boşluk' });
       timeKeyDegisimiBayragi = true;
       kaynakIndeksi += etiket.length;
       continue;
@@ -651,6 +878,9 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
 
       const etiket = oge.gorunum || oge.ad || 'donanım değişimi';
       kaynakParcalar.push(etiket);
+
+      // §14: eser içi donanım değişimi de iki yanında boşluk.
+      degisimOncesiBoslukEkle(oge.id, 'Donanım değişimi öncesi boşluk');
 
       const ogeHucreleri = Array.isArray(oge.hucreler) && oge.hucreler.length
         ? oge.hucreler
@@ -666,6 +896,11 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
         });
       }
 
+      // değişim sonrası boşluk
+      hucreler.push([]);
+      esleme.push(kaynakIndeksi);
+      metaEkle({ ogeId: oge.id, kaynak: 'spacer', etiket: 'Donanım değişimi sonrası boşluk' });
+
       // PDF kuralı: donanım/zaman değişiminden sonraki ilk nota oktav alır.
       timeKeyDegisimiBayragi = true;
 
@@ -673,11 +908,17 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       continue;
     }
 
+    // Tuplet (tupletler array yolu) slot 5'tir: dinamik(4)'ten SONRA, süsleme(7)/nüans(8)'ten ÖNCE
+    // yazılmalı. Array-tuplet aşağıda (etiket sonrası) emit edildiğinden, oncesi modifier'ları
+    // slot<5 (önce) ve slot>=5 (tuplet sonrası) diye bölüyoruz.
+    let oncesiSonraModifierler = [];
     if (oge.tip === 'nota') {
       const oncesiSirali = (Array.isArray(oge.modifiers?.oncesi) ? oge.modifiers.oncesi : [])
         .slice()
         .sort((a, b) => muzikModifierOncesiSira(a.kayit) - muzikModifierOncesiSira(b.kayit));
-      modHucrelerEkle(oncesiSirali, oge.id, 'oncesi');
+      const oncesiOnce = oncesiSirali.filter((m) => muzikModifierOncesiSira(m.kayit) < 5);
+      oncesiSonraModifierler = oncesiSirali.filter((m) => muzikModifierOncesiSira(m.kayit) >= 5);
+      modHucrelerEkle(oncesiOnce, oge.id, 'oncesi');
       notaOncesiBagHucreleriEkle(oge.id);
     }
 
@@ -692,9 +933,11 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
         for (const h of tupletInfo.tuplet.kayit.hucreler) {
           hucreler.push([...h]);
           esleme.push(kaynakIndeksi);
-          metaEkle({ ogeId: oge.id, kaynak: 'tuplet', etiket: tupletInfo.tuplet.kayit.ad });
+          metaEkle({ ogeId: oge.id, kaynak: 'tuplet', tupletId: tupletInfo.tuplet.id, etiket: tupletInfo.tuplet.kayit.ad });
         }
       }
+      // Tuplet'ten SONRAKİ oncesi modifier'lar (süsleme slot7 / nüans slot8) — tuplet slot5'ten sonra.
+      modHucrelerEkle(oncesiSonraModifierler, oge.id, 'oncesi');
       const accHucreleri = muzikAccidentalHucreleri(oge.accidental);
       for (const h of accHucreleri) {
         hucreler.push([...h]);
@@ -707,6 +950,7 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
         yeniBrailleSatiri: yeniBrailleSatiriBayragi,
         timeKeyDegisimiSonrasi: timeKeyDegisimiBayragi,
         sectionalDoubleBarlineSonrasi: sectionalBarlineBayragi,
+        sozcukSonrasi: sozcukSonrasiBayragi,
       };
       if (muzikOktavGerekliMi(sonNota, oge, ctx)) {
         const oktHucre = muzikOktavHucresi(oge.oktav);
@@ -717,6 +961,7 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       yeniBrailleSatiriBayragi = false;
       timeKeyDegisimiBayragi = false;
       sectionalBarlineBayragi = false;
+      sozcukSonrasiBayragi = false; // nota tükettiyse sıfırla (sadece ilk nota etkilenir)
       sonNota = oge;
     }
 
@@ -725,10 +970,12 @@ export function muzikSkorunuBrailleyeCevir(ogeler, baglar = [], header = null, t
       !strictDurationCells &&
       grupBilgisi &&
       grupBilgisi.konum > 0;
+    const kaynak = brfMetaKaynakAl(oge, grupPitchOnly);
     const ogeHucreleri = grupPitchOnly
       ? [muzikNotaSadePitchHucresi(oge.notaAd)]
-      : (Array.isArray(oge.hucreler) && oge.hucreler.length ? oge.hucreler : [[]]);
-    const kaynak = brfMetaKaynakAl(oge, grupPitchOnly);
+      : (Array.isArray(oge.hucreler) && oge.hucreler.length
+          ? oge.hucreler
+          : (barlineVarsayilanHucreleri(kaynak) || [[]]));
     const ogeHucreSayisi = Array.isArray(ogeHucreleri) ? ogeHucreleri.length : 0;
 
     for (let hucreIdx = 0; hucreIdx < ogeHucreleri.length; hucreIdx += 1) {

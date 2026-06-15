@@ -102,7 +102,8 @@ console.log(`fa/bass: ${bassY}`);
 console.log(`do/alto: ${altoY}`);
 
 assert(trebleY === 124, `Expected do4 y=124 in sol/treble, got ${trebleY}`);
-assert(bassY === 76, `Expected do4 y=76 in fa/bass, got ${bassY}`);
+// bass: C4 üst çizgi A3(64)'ün 1 ek-çizgi üstü = 52 (anahtar glifi F3=76 ile tutarlı).
+assert(bassY === 52, `Expected do4 y=52 in fa/bass, got ${bassY}`);
 assert(altoY === 88, `Expected do4 y=88 in do/alto, got ${altoY}`);
 
 const octaveYs = [
@@ -123,15 +124,17 @@ assert(
   `Expected do1 > do2 > do3 > do4 > do7, got ${octaveYs.map((o) => `${o.note}:${o.y}`).join(', ')}`,
 );
 
+// Porte çizgileri [64,76,88,100,112] = bass'ta A3,F3,D3,B2,G2. C3 = 2. boşluk (D3-B2 arası, 94),
+// G2 = alt çizgi (112), C4 = üst çizgi A3'ün 1 ek-çizgi üstü (52). PDF #28 ile teyitli.
 const bassNotes = [
-  { notaAd: 'do', oktav: 3, expectedY: 118 },
-  { notaAd: 're', oktav: 3, expectedY: 112 },
-  { notaAd: 'mi', oktav: 3, expectedY: 106 },
-  { notaAd: 'fa', oktav: 3, expectedY: 100 },
-  { notaAd: 'sol', oktav: 3, expectedY: 94 },
-  { notaAd: 'la', oktav: 3, expectedY: 88 },
-  { notaAd: 'si', oktav: 3, expectedY: 82 },
-  { notaAd: 'do', oktav: 4, expectedY: 76 },
+  { notaAd: 'do', oktav: 3, expectedY: 94 },
+  { notaAd: 're', oktav: 3, expectedY: 88 },
+  { notaAd: 'mi', oktav: 3, expectedY: 82 },
+  { notaAd: 'fa', oktav: 3, expectedY: 76 },
+  { notaAd: 'sol', oktav: 3, expectedY: 70 },
+  { notaAd: 'la', oktav: 3, expectedY: 64 },
+  { notaAd: 'si', oktav: 3, expectedY: 58 },
+  { notaAd: 'do', oktav: 4, expectedY: 52 },
 ];
 
 console.log('\nFa anahtarı için bass note y değerleri:');

@@ -99,14 +99,40 @@ function brailleHucreleriniSkorOlculerineDagit({
         itemOgeIds(oge).forEach((id) => itemIds.add(id));
       });
 
+      // KOPYA ÖLÇÜ (geri-sayısal/bar tekrarın görsel kopyası): tüm nota/sus öğeleri `_repeatCopy`.
+      // Bu ölçülerin braille'i SADECE tekrar işaretidir (⠶/⠼N); kopya notaların hücresi YAZILMAZ.
+      // ⚠ SVG ölçü itemIds'i kopya notanın `_sourceId`'sini (orijinal nota id'si) DE içerdiğinden,
+      // ogeId-eşlemesi orijinal ölçünün (bars 1-5) hücrelerini kopya ölçülere (bars 6-10) SIZDIRIR
+      // (kullanıcı: "tekrardan sonra tekrar edilenin brailini yazmamalıydın"). Kopya ölçüde nota-eşlemesi kapatılır.
+      const kopyaOlcuMu = Array.isArray(measure.items) && measure.items.length > 0
+        && measure.items.some((o) => o?._repeatCopy)
+        && measure.items.every((o) => o?._repeatCopy || /barline|çizgi|cizgi/i.test(String(o?.tip || '')));
+
       const measureCells = hucreItems.filter((item) => {
         if (overlaydeGosterme(item.anlam)) return false;
 
-        // Bar-repeat cell: match by olcuIdx instead of ogeId
-        if (item.anlam?.kaynak === 'bar-repeat') {
+        // Bar-repeat cell (⠶) + onun sayı işareti/rakamları (⠶⠼N) + geri-sayısal tekrar (⠼N backward):
+        // ogeId yok → olcuIdx ile eşleştir. Sayı hücreleri de işaretle AYNI ölçüye gitmeli
+        // (indir ⠶⠼N/⠼N ⇔ overlay ⠶⠼N/⠼N — WYSIWYG; skor altı braille orijinal BRF'i aynalar).
+        if (
+          item.anlam?.kaynak === 'bar-repeat'
+          || item.anlam?.kaynak === 'bar-repeat-sayi'
+          || item.anlam?.kaynak === 'backward-repeat'
+        ) {
           const thisMeasureIdx = measure?.measureIndex ?? measureIdx;
           return typeof item.anlam?.olcuIdx === 'number' && item.anlam.olcuIdx === thisMeasureIdx;
         }
+
+        // Tekrar bloğundan SONRA yazılan bar-üstü tie/slur (örn. ⠶⠈⠉): kaynak notası collapsed
+        // (_repeatCopy) olduğundan ogeId yerine olcuIdx ile eşlenir → kopya ölçüde de gösterilir
+        // (kullanıcı: "tekrarlarda bağ brailleri görünmüyor, hepsi görünsün").
+        if (item.anlam?.bagId && typeof item.anlam?.olcuIdx === 'number') {
+          const thisMeasureIdx = measure?.measureIndex ?? measureIdx;
+          return item.anlam.olcuIdx === thisMeasureIdx;
+        }
+
+        // Kopya ölçü: nota/sus hücreleri gösterilmez (yalnız yukarıdaki tekrar işareti).
+        if (kopyaOlcuMu) return false;
 
         // brailleShorthand cell: match by olcuIdx (item is filtered out of SVG layout)
         if (item.anlam?.kaynak === 'braille-shorthand') {
@@ -147,16 +173,19 @@ export function useBrailleOutput({
   canonicalEditorBrfResult = null,
   canonicalEditorReaderResult = null,
 }) {
-  const cevirSonuc = useMemo(
-    () => muzikSkorunuBrailleyeCevir(
+  // Ekran-altı overlay braille, İNDİR (scoreToCanonicalBrf) ile birebir aynı motoru
+  // ve aynı seçenekleri kullanmalı — gruplama ayarı dahil. Aksi halde gruplama açıkken
+  // ekranda tam-süre hücreler görünüp indirilende pitch-only gruplar oluşur (WYSIWYG kırılır).
+  const cevirSonuc = useMemo(() => {
+    const useBrailleGrouping = Boolean(muzikHeader?.useBrailleGrouping);
+    return muzikSkorunuBrailleyeCevir(
       muzikOgeleriOlcuTamamlanmis,
       muzikBaglar,
       muzikHeader,
       muzikTupletler,
-      { includeBarNumbers },
-    ),
-    [muzikOgeleriOlcuTamamlanmis, muzikBaglar, muzikHeader, muzikTupletler, includeBarNumbers],
-  );
+      { includeBarNumbers, useBrailleGrouping, strictDurationCells: !useBrailleGrouping },
+    );
+  }, [muzikOgeleriOlcuTamamlanmis, muzikBaglar, muzikHeader, muzikTupletler, includeBarNumbers]);
 
   const hucreler = cevirSonuc.hucreler || [];
 
@@ -210,6 +239,9 @@ export function useBrailleOutput({
             ? (kaynakOge?.notaAd || temelAnlam.etiket)
             : temelAnlam.etiket,
         ...(typeof meta?.olcuIdx === 'number' ? { olcuIdx: meta.olcuIdx } : {}),
+        ...(meta?.tupletId ? { tupletId: meta.tupletId } : {}),
+        // Bar-repeat ×N: legendde tekrar türü/sayısı ("braille tekrar ×8") göstermek için taşı.
+        ...(meta?.tekrarSayisi ? { tekrarSayisi: meta.tekrarSayisi } : {}),
       };
 
       return normalizeBrailleMeaning(nord);

@@ -1,4 +1,5 @@
 import { SURE_GOSTERGELERI } from '../../data/muzik.js';
+import { notaGraceMi } from './musicMeasureHelpers.js';
 
 export function gorselBeamSureBilgisiAl(oge) {
   if (!oge || oge.tip !== 'nota') return null;
@@ -49,6 +50,26 @@ export function gorselZamanImzasiVurusDeseniAl(timeSignature) {
   const ad = String(timeSignature?.ad || timeSignature?.gorunum || timeSignature || '4/4')
     .toLowerCase()
     .trim();
+
+  // Aksak/düzensiz metrelerde kullanıcı bir gruplama deseni seçmişse (header.timeSignature.
+  // gruplamaDeseni — SEKİZLİK cinsinden, örn. [3,2,2]), sabit varsayılan yerine onu kullan.
+  // Desen alt-değer (16/alt) ile 16'lığa çevrilir. Geçersiz/uyumsuz desende varsayılana düşülür.
+  const ozelDesen = (timeSignature && typeof timeSignature === 'object')
+    ? timeSignature.gruplamaDeseni
+    : null;
+  if (Array.isArray(ozelDesen) && ozelDesen.length) {
+    const mm = /^([0-9]+)\s*\/\s*([0-9]+)$/.exec(ad);
+    if (mm) {
+      const ustD = parseInt(mm[1], 10);
+      const altD = parseInt(mm[2], 10);
+      const birim16 = Number.isFinite(altD) && altD > 0 ? 16 / altD : 2;
+      const toplamSekizlik = ozelDesen.reduce((a, b) => a + (Number(b) || 0), 0);
+      // Desen toplamı üst-rakamla tutarlıysa geçerli kabul et (örn. 7/8 → 2+2+3 = 7).
+      if (toplamSekizlik === ustD) {
+        return ozelDesen.map((k) => Math.max(1, Math.round((Number(k) || 0) * birim16)));
+      }
+    }
+  }
 
   if (ad === 'common' || ad === 'c') {
     return [4, 4, 4, 4];
@@ -188,6 +209,10 @@ export function gorselBeamGruplariOlustur({ ogeler = [], timeSignature = null })
       pozisyon16 = 0;
       return;
     }
+
+    // Grace (apejetür) notalar kirişe DAHİL DEĞİL ve aktif grubu BÖLMEZ: tamamen atlanır
+    // (asıl notalar grace üzerinden kirişlenir). Kendi küçük sapıyla ayrı çizilir.
+    if (notaGraceMi(oge)) return;
 
     const sure16 = gorselOgeSure16Al(oge);
 

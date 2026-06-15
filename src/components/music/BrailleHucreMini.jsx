@@ -1,5 +1,14 @@
 import React from 'react';
-import { BRAILLE_HUCRE_TEMA } from '../../utils/music-brf/musicConstants.js';
+import {
+  BRAILLE_HUCRE_TEMA,
+  nuansSmuflGlyph,
+  suslemeSmuflGlyph,
+  dinamikSmuflGlyph,
+  dinamikHairpinGlyph,
+  tupletSayiAdtan,
+  tupletRakamGlyph,
+} from '../../utils/music-brf/musicConstants.js';
+import { MUZIK_DINAMIKLER } from '../../data/muzik.js';
 import {
   brailleAnlamOgeIdAl,
   brailleBagKisaEtiketiAl,
@@ -18,6 +27,11 @@ import {
   brailleHexToRgba,
 } from '../../utils/music-brf/brailleColors.js';
 
+// Dinamik adı → sembol (forte → 'f') — braille hücre altı ikonları için.
+const DINAMIK_SEMBOL_BY_AD = new Map(
+  (MUZIK_DINAMIKLER || []).map((r) => [String(r.ad || '').toLocaleLowerCase('tr').trim(), r.sembol || ''])
+);
+
 const BrailleHucreMini = React.memo(function BrailleHucreMini({
   noktalar = [],
   anlam,
@@ -30,6 +44,7 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
   onClick,
   index = 0,
   etiketGizle = false,
+  solidHover = false,
 }) {
   const kategori = brailleKategoriAl(anlam);
   const notaMi = kategori === 'nota';
@@ -62,6 +77,26 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
   };
 
   const aktif = hoverAktif || seciliAktif;
+
+  // Hücre altı İKON (Bravura): dinamik → 𝒇/hairpin; nüans/süsleme → artikülasyon/süsleme glyph'i.
+  // Sözcük temelli dinamikler (cresc./dim./rit.) glyph'siz → metin etikete düşer.
+  const nuansMi = kategori === 'nuans-once' || kategori === 'nuans-sonra';
+  const suslemeMi = kategori === 'susleme' || String(anlam?.kaynak || '').startsWith('modifier-');
+  const tupletMu = kategori === 'tuplet';
+  let ikon = '';
+  if (!etiketGizle) {
+    const etiketHam = String(anlam?.etiket || '').trim();
+    if (dinamikMi) {
+      const sembol = DINAMIK_SEMBOL_BY_AD.get(etiketHam.toLocaleLowerCase('tr')) || '';
+      ikon = dinamikSmuflGlyph(sembol) || dinamikHairpinGlyph(etiketHam);
+    } else if (nuansMi || suslemeMi) {
+      ikon = nuansSmuflGlyph(etiketHam) || suslemeSmuflGlyph(etiketHam);
+    } else if (tupletMu) {
+      // Tuplet sayı işareti hücresi → grup sayısının Bravura tuplet glyph'i (3, 5…).
+      ikon = tupletRakamGlyph(tupletSayiAdtan(etiketHam));
+    }
+  }
+
   const label = etiketGizle
     ? ''
     : (notaMi
@@ -112,7 +147,7 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
             : hoverAktif ? hoverMavi
             : zeminRengi,
           boxShadow: aktif ? 'inset 0 0 0 1px rgba(255,255,255,0.4)' : 'none',
-          border: `${seciliAktif ? 1.6 : hoverAktif ? 1.4 : 1}px ${hoverAktif && !seciliAktif ? 'dashed' : 'solid'} ${
+          border: `${seciliAktif ? 1.6 : hoverAktif ? 1.4 : 1}px ${hoverAktif && !seciliAktif && !solidHover ? 'dashed' : 'solid'} ${
             hoverAktif || seciliAktif ? hoverStroke : brailleHexToRgba(stil.fill, 0.28)
           }`,
           transition: 'background-color 120ms ease, border-color 120ms ease',
@@ -151,7 +186,25 @@ const BrailleHucreMini = React.memo(function BrailleHucreMini({
       </svg>
       </div>
 
-      {label ? (
+      {ikon ? (
+        <div
+          aria-hidden="true"
+          style={{
+            marginTop: 1,
+            fontFamily: "'Bravura Text', 'Bravura', 'Cambria Math', 'Noto Music', serif",
+            fontSize: 15,
+            lineHeight: 1.1,
+            color: '#334155',
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            maxWidth: cfg.cellW,
+            overflow: 'visible',
+            userSelect: 'none',
+          }}
+        >
+          {ikon}
+        </div>
+      ) : label ? (
         <div
           style={{
             marginTop: 2,

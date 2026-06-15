@@ -4,9 +4,13 @@ import {
   muzikTimeSignatureHucreleri,
 } from '../music/index.js';
 import { MUZIK_VARSAYILAN_ZAMAN_IMZASI } from './musicConstants.js';
+import { ayarlariAl } from '../ayarlar.js';
 
 export function varsayilanMuzikHeaderOlustur() {
   const varsayilanZaman = MUZIK_VARSAYILAN_ZAMAN_IMZASI;
+  // Nota gruplaması varsayılanı kullanıcı ayarından (Ayarlar → Nota gruplaması). Yeni skor bunu alır.
+  let gruplamaVarsayilan = true;
+  try { gruplamaVarsayilan = ayarlariAl().muzikGruplama !== false; } catch { /* */ }
 
   return {
     title: '',
@@ -16,7 +20,7 @@ export function varsayilanMuzikHeaderOlustur() {
     keySignature: null,
     autoCompleteMeasures: true,
     pickupMeasure: false,
-    useBrailleGrouping: false,
+    useBrailleGrouping: gruplamaVarsayilan,
     timeSignature: {
       ad: varsayilanZaman,
       gorunum: varsayilanZaman,

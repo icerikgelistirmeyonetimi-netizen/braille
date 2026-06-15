@@ -12,6 +12,7 @@ const VARSAYILAN = {
   tonejsSes: false,    // müzik piyano sesini Tone.js motoruyla çal
   notaOdakPiyano: true, // notaya odaklanınca/tıklayınca piyanodan çal (erişilebilirlik)
   notaTusDuzeni: 'alfabetik', // müzik klavye: 'alfabetik' (a=la,b=si,c=do,d=re,e=mi,f=fa,g=sol) | 'piyano' (a=do,s=re,d=mi,f=fa,g=sol,h=la,j=si)
+  muzikGruplama: true, // BRF müzik: nota gruplaması (kiriş) varsayılanı — yeni skorlar bunu alır; yazarken Ayarlar'dan kapatılabilir
   gizliModuller: []    // gizlenen modüllerin id listesi
 };
 

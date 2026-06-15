@@ -285,6 +285,20 @@ export default function MuzikScoreToolbar({
                   />
                   Eksik Ölçü (anacrusis)
                 </label>
+                <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700" title="Nota gruplaması (Lesson 4): kapalıyken her nota tam-süre hücresiyle yazılır, açıkken vuruş-içi 16'lık+ notalar gruplanır (ilk nota gerçek değer, kalanı 8'lik hücre). Yazarken istenmezse kapatılabilir.">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(muzikHeader.useBrailleGrouping)}
+                    onChange={(e) => {
+                      const acik = e.target.checked;
+                      setMuzikHeader((h) => ({ ...h, useBrailleGrouping: acik }));
+                      // Tercihi kalıcı yap (yeni skorlar bu varsayılanı alır).
+                      try { ayarGuncelle({ muzikGruplama: acik }); } catch { /* */ }
+                    }}
+                    className="accent-amber-500"
+                  />
+                  Nota gruplaması (kiriş)
+                </label>
               </div>
 
               <div className="mt-2 mb-1.5 border-t border-zinc-100 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Nota tuş düzeni</div>
@@ -390,7 +404,7 @@ export default function MuzikScoreToolbar({
               {bekleyenBag?.tipModu === 'tie' ? '⌒' : '︵'}
             </span>
             <span className="text-xs text-zinc-700">
-              <strong className="text-zinc-900">{bekleyenBag?.tipModu === 'tie' ? 'Tie' : 'Slur'}</strong>
+              <strong className="text-zinc-900">{bekleyenBag?.tipModu === 'tie' ? 'Uzatma bağı' : 'Hece bağı'}</strong>
               {' '}— seçili nota: <strong>{bekleyenBag?.notaIdler?.length || 0}</strong>
             </span>
           </div>
@@ -419,7 +433,11 @@ export default function MuzikScoreToolbar({
               <strong className="text-zinc-900">{bekleyenModifier.kayit.ad}</strong>
               {bekleyenModifier.plasiyasyon === 'nota-arasi' && ' — fermatayı yerleştirmek istediğiniz yerin ÖNCESİNDEKİ notaya tıklayın'}
               {bekleyenModifier.plasiyasyon === 'olcu-cizgisi' && ' — fermatayı eklemek istediğiniz ölçü çizgisine tıklayın'}
-              {!bekleyenModifier.plasiyasyon && ' — uygulanacak notayı seçin'}
+              {!bekleyenModifier.plasiyasyon && (
+                /apejet[üuÜU]r|appoggiatura|acciaccatura/i.test(String(bekleyenModifier.kayit?.ad || ''))
+                  ? ' — grace (süsleme) notası: perdesini yazmak için bir nota tuşuna basın (ya da var olan bir notaya tıklayın)'
+                  : ' — uygulanacak notayı seçin'
+              )}
             </span>
           </div>
           <button type="button" onClick={modifierCancel} className="h-7 rounded-md border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 hover:bg-zinc-100">İptal</button>
@@ -483,8 +501,8 @@ export default function MuzikScoreToolbar({
         <div className="flex items-center gap-2 border-t border-zinc-200 px-3 py-1.5 text-[11px] text-zinc-600">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" aria-hidden="true" />
           <span>
-            {bekleyenBag?.tipModu === 'slur' ? 'Slur — notaları seçin'
-              : bekleyenBag?.tipModu === 'tie' ? 'Tie — iki aynı notayı seçin'
+            {bekleyenBag?.tipModu === 'slur' ? 'Hece bağı — notaları seçin'
+              : bekleyenBag?.tipModu === 'tie' ? 'Uzatma bağı — iki aynı notayı seçin'
               : bekleyenModifier ? `${bekleyenModifier.kayit.ad} — ${bekleyenModifier.plasiyasyon === 'nota-arasi' ? 'önceki notayı' : bekleyenModifier.plasiyasyon === 'olcu-cizgisi' ? 'ölçü çizgisini' : 'notayı'} seçin`
               : `Tuplet — notaları seçin (${bekleyenTuplet.notaIdler.length})`}
           </span>

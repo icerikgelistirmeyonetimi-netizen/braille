@@ -6,10 +6,11 @@ import PageHeader from '../components/PageHeader.jsx';
 import { useMuzikBrfEditor } from '../hooks/music-brf/useMuzikBrfEditor.jsx';
 import { konus } from '../utils/ses.js';
 import { ayarlariAl } from '../utils/ayarlar.js';
-import { anahtarYAl, anahtarFontClassAl, bagTipiTieMi, bagYonunuHesapla, bagCizimNoktalari, bagHitRectHesapla, ledgerCizgileri } from '../utils/music-brf/musicScoreHelpers.jsx';
+import { anahtarFontClassAl, bagTipiTieMi, bagYonunuHesapla, bagCizimNoktalari, bagHitRectHesapla, ledgerCizgileri } from '../utils/music-brf/musicScoreHelpers.jsx';
 import MuzikBrfViewTabs from '../components/music/MuzikBrfViewTabs.jsx';
 import MuzikBrfScoreEditor from '../components/music/MuzikBrfScoreEditor.jsx';
 import MuzikBrailleOutput from '../components/music/MuzikBrailleOutput.jsx';
+import PerkinsYazimPaneli from '../components/music/PerkinsYazimPaneli.jsx';
 import { brailleMetniOlustur } from '../utils/music-brf/brailleText.js';
 import { unicodeBrailleToBrfAscii } from '../utils/brailleAscii.js';
 
@@ -20,12 +21,14 @@ import { unicodeBrailleToBrfAscii } from '../utils/brailleAscii.js';
 export default function MuzikBrfYazim() {
   const [aktifSekme, setAktifSekme] = useState('skor'); // 'skor' | 'braille'
   const [brailleKopyalandi, setBrailleKopyalandi] = useState(false);
+  // Perkins (Braille yazım) modu — çift Enter ile açılır; aktif ölçü satırının
+  // altında portal ile gösterilir. State burada (stabil): focus + içerik korunur.
+  const [perkinsAcik, setPerkinsAcik] = useState(false);
   const {
     muzikHeader,
     muzikOgeleri,
     muzikBaglar,
     muzikTupletler,
-    aktifKategori,
     aktifArac,
     bekleyenModifier,
     bekleyenBag,
@@ -47,11 +50,9 @@ export default function MuzikBrfYazim() {
     hoverBrailleBagId,
     hoverCizgiBagId,
     muzikUyarilari,
-    muzikOgeleriOlcuTamamlanmis,
     mevcutAnahtar,
     svgCizilecekOgeler,
     svgBeamGruplari,
-    svgBeamGrupHaritasi,
     muzikSatirlar,
     muzikSatirOlculeri,
     svgYerlesimHaritasi,
@@ -68,15 +69,12 @@ export default function MuzikBrfYazim() {
     brfOkumaSonucu,
     brailleSatirlari,
     olcuBrailleSonuclari,
-    satirBrailleLejantlari,
-    satirBrailleLejantMaplari,
     skorUstuHeaderSatirlari,
     baslangicBrailleBilgisi,
     baslangicBrailleLejantlari,
     baslangicBrailleLejantMapi,
     gorunenSatirBrailleLejantlari,
     gorunenSatirBrailleLejantMaplari,
-    headerGosterimKartlari,
     canonicalBrfText,
     tekBrfMetni,
     hamBrfMetni,
@@ -88,8 +86,6 @@ export default function MuzikBrfYazim() {
     setMuzikHeader,
     setTimeSignature,
     donanimiDegistir,
-    setMuzikOgeleri,
-    setMuzikTupletler,
     setPopupAcik,
     setAnahtarPopupAcik,
     setBekleyenBag,
@@ -104,7 +100,6 @@ export default function MuzikBrfYazim() {
     setSeciliBagId,
     setHoverBrailleBagId,
     setHoverCizgiBagId,
-    setAdimSure,
     notaEkle,
     notaEkleKonuma,
     sureSecildi,
@@ -115,7 +110,6 @@ export default function MuzikBrfYazim() {
     anahtariDegistir,
     slurTamamla,
     notaSuresiniCiftTiklaDegistir,
-    notaSuresiniScrollDegistir,
     slurCancel,
     modifierCancel,
     tupletCancel,
@@ -131,16 +125,15 @@ export default function MuzikBrfYazim() {
     ogeleriSil,
     seciliNotaModifierSil,
     seciliNotaModifierGuncelle,
+    perkinsModifierEkle,
     seciliBagiSil,
     seciliNotayiSusaCevir,
     seciliSusuNotayaCevir,
     susEkleKonuma,
     manuelOlcuCizgisiEkle,
     bagAraclari,
-    anahtarGlyphAl,
     setAktifArac,
     setBekleyenModifier,
-    setAktifKategori,
     brfImportKirli,
     voltaEkleModu,
     voltaEkleBaslangicId,
@@ -312,13 +305,10 @@ export default function MuzikBrfYazim() {
             seciliNotayiGuncelle={seciliNotayiGuncelle}
             seciliOgeyiGuncelle={seciliOgeyiGuncelle}
             mevcutAnahtar={mevcutAnahtar}
-            anahtarGlyphAl={anahtarGlyphAl}
-            anahtarYAl={anahtarYAl}
             anahtarFontClassAl={anahtarFontClassAl}
             muzikOgeleri={gorselOgeler}
             notaTiklandi={notaTiklandi}
             notaSuresiniCiftTiklaDegistir={notaSuresiniCiftTiklaDegistir}
-            notaSuresiniScrollDegistir={notaSuresiniScrollDegistir}
             bagTipiTieMi={bagTipiTieMi}
             bagYonunuHesapla={bagYonunuHesapla}
             bagCizimNoktalari={bagCizimNoktalari}
@@ -343,7 +333,6 @@ export default function MuzikBrfYazim() {
             bagAraclari={bagAraclari}
             sonEklenenOgeId={sonEklenenOgeId}
             anahtariDegistir={anahtariDegistir}
-            setTimeSignature={setTimeSignature}
             donanimiDegistir={donanimiDegistir}
             olcuSayisi={olcuSayisi}
             voltaEkleModu={voltaEkleModu}
@@ -354,6 +343,7 @@ export default function MuzikBrfYazim() {
             voltaMeasureEkle={voltaMeasureEkle}
             voltaSil={voltaSil}
             voltaGuncelle={voltaGuncelle}
+            onPerkinsAc={() => setPerkinsAcik(true)}
           />
         )}
 
@@ -379,6 +369,27 @@ export default function MuzikBrfYazim() {
             setHoverBrailleOgeId={setHoverBrailleOgeId}
           />
         )}
+
+        {/* ── Perkins Braille Yazım Paneli (çift Enter ile açılır; aktif satır altına portal) ── */}
+        <PerkinsYazimPaneli
+          acik={perkinsAcik}
+          onKapat={() => setPerkinsAcik(false)}
+          muzikHeader={muzikHeader}
+          setMuzikHeader={setMuzikHeader}
+          setTimeSignature={setTimeSignature}
+          notaEkleKonuma={notaEkleKonuma}
+          susEkleKonuma={susEkleKonuma}
+          manuelOlcuCizgisiEkle={manuelOlcuCizgisiEkle}
+          ogeleriSil={ogeleriSil}
+          seciliNotayiGuncelle={seciliNotayiGuncelle}
+          perkinsModifierEkle={perkinsModifierEkle}
+          seciliOgeId={seciliOgeId}
+          setSeciliOgeId={setSeciliOgeId}
+          sonKullanilanOktav={sonKullanilanOktav}
+          sonEklenenOgeId={sonEklenenOgeId}
+          svgYerlesimHaritasi={svgYerlesimHaritasi}
+          muzikSatirSayisi={(muzikSatirlar || []).length}
+        />
 
         {/* ── Alt eylem çubuğu (Araclar deseni: .controls + .btn) ── */}
         <div className="controls muzik-alt-eylem">

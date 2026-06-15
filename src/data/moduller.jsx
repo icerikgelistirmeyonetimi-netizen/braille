@@ -56,6 +56,13 @@ export const Ikon = {
                M14 14 l6 6 M44 44 l6 6 M14 50 l6 -6 M44 20 l6 -6" />
     </svg>
   ),
+  arama: (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
+         strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="28" cy="28" r="16" />
+      <path d="M40 40 l16 16" />
+    </svg>
+  ),
   klavye: (
     <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" stroke="currentColor"
          strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">

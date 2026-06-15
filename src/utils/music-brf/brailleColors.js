@@ -208,6 +208,11 @@ export const BRAILLE_CATEGORY_COLORS = {
     soft: 'rgba(190, 18, 60, 0.14)',
     border: '#be123c', text: '#0f172a',
   },
+  'backward-repeat': {
+    fill: '#9333ea',                        // purple-600 — geri-sayısal tekrar (⠼N)
+    soft: 'rgba(147, 51, 234, 0.14)',
+    border: '#9333ea', text: '#0f172a',
+  },
 
   // ── Volta (1. ev / 2. ev) ─────────────────────────────────────────────────
   volta1: {
@@ -259,9 +264,9 @@ export const BRAILLE_CATEGORY_COLORS = {
     border: '#14b8a6', text: '#0f172a',
   },
   susleme: {
-    fill: '#7c3aed',                        // violet-600 — tüm süslemeler tek renk
-    soft: 'rgba(124, 58, 237, 0.13)',
-    border: '#7c3aed', text: '#0f172a',
+    fill: '#d946ef',                        // fuchsia-500 — oktav morundan (#8b5cf6) NET AYRI
+    soft: 'rgba(217, 70, 239, 0.13)',       // (legend'da süsleme ↔ oktav karışmasın)
+    border: '#d946ef', text: '#0f172a',
   },
 
   // ── Tempo / dinamik / ifade ───────────────────────────────────────────────

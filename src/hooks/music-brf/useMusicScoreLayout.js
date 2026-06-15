@@ -39,6 +39,7 @@ import {
   timeSignatureToplam64Al,
   sureBilgisiAl,
   ogeSure64Al,
+  notaGraceMi,
   keySignatureSayisiAl,
   olcuCizgisiMi,
   normalOlcuCizgisiMi,
@@ -735,6 +736,18 @@ export function useMusicScoreLayout({
       });
     }
 
+    // Aşırı dolu/yoğun ölçüde sola kaydırma ilk notayı safeStart'ın (clef + donanım +
+    // zaman imzası sınırı) SOLUNA itip başlığın üzerine bindirebiliyordu (Gigue: 6/8 ölçüde
+    // 9 sekizlik → ratio clamp → cascade → overflow). İlk nota safeStart'ın altına düştüyse
+    // tümünü geri sağa kaydır; son nota yine taşarsa aşağıdaki eşit-dağıtım yedeği devreye girer
+    // (note0 = safeStart). Böylece notalar ASLA anahtar/zaman imzası üzerine binmez.
+    if (blended[0].x < safeStart) {
+      const geriShift = safeStart - blended[0].x;
+      blended.forEach((item) => {
+        item.x += geriShift;
+      });
+    }
+
     if (blended[blended.length - 1].x > safeEnd + 0.1) {
       return rawPositions.map((p, index) => ({
         ...p,
@@ -829,6 +842,34 @@ export function useMusicScoreLayout({
         });
 
         const fixedMap = new Map(fixedPositions.map((p) => [p.id, p.x]));
+
+        // GRACE konumlama: apejetür (grace) notaları ORNAMENT ETTİKLERİ asıl notaya YAKIN
+        // ve (run ise) birbirine bitişik dizilir (kullanıcı: "grupladığında yakın çizsin" +
+        // "apajurlar bağlı olduğu notaya da yakın olmalı"). Tekli + run: SONRAKİ asıl notanın
+        // (yoksa ölçü sonunun) hemen soluna GRACE_ANA_BOSLUK, kendi aralarında GRACE_GAP.
+        const GRACE_GAP = 13;
+        const GRACE_LEAN = 0.62;       // önceki↔hedef arasında hedefe ne kadar yaklaşsın
+        for (let gi = 0; gi < visibleItems.length;) {
+          if (visibleItems[gi]?.tip === 'nota' && notaGraceMi(visibleItems[gi])) {
+            let gj = gi;
+            while (gj < visibleItems.length && visibleItems[gj]?.tip === 'nota' && notaGraceMi(visibleItems[gj])) gj += 1;
+            const sonraki = visibleItems[gj];            // grace'ten sonraki ilk asıl öğe (varsa)
+            const hedefX = sonraki ? fixedMap.get(sonraki.id) : measureEndX;  // ornament ettiği nota / ölçü sonu
+            const onceki = gi > 0 ? fixedMap.get(visibleItems[gi - 1].id) : innerStartX;
+            if (Number.isFinite(hedefX) && Number.isFinite(onceki)) {
+              // Run'ı önceki ↔ hedef ARASINA, hedefe doğru ORANSAL (%62) konumla. Böylece ölçü
+              // genişliğinden bağımsız TUTARLI: dar ölçüde notaya yakın, geniş ölçüde de orantılı
+              // (ne "aşırı yakın" ne "aşırı uzak" — kullanıcı). Run kendi içinde GRACE_GAP ile sıkı.
+              const merkez = onceki + (hedefX - onceki) * GRACE_LEAN;
+              const runGenislik = (gj - gi - 1) * GRACE_GAP;
+              const sonGraceX = Math.min(hedefX - 14, merkez + runGenislik / 2);
+              for (let k = gi; k < gj; k += 1) {
+                fixedMap.set(visibleItems[k].id, sonGraceX - (gj - 1 - k) * GRACE_GAP);
+              }
+            }
+            gi = gj;
+          } else gi += 1;
+        }
 
         measure.items.forEach((oge) => {
           let x;

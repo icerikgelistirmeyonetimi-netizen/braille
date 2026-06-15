@@ -200,6 +200,11 @@ export function brailleKategoriAl(anlam = {}) {
     return 'bar-number';
   }
 
+  // Geri-sayısal tekrar (⠼N) — bar-repeat'ten (⠶) AYRI kategori (ayrı legend girdisi/etiketi).
+  if (kaynak === 'backward-repeat' || tip === 'backward-repeat' || text.includes('geri-sayısal')) {
+    return 'backward-repeat';
+  }
+
   if (kaynak === 'bar-repeat' || tip === 'bar-repeat' || text.includes('braille repeat') || text.includes('repeat') || text.includes('tekrar')) {
     return 'bar-repeat';
   }
@@ -304,8 +309,17 @@ export function brailleLejantEtiketiAl(anlam = {}) {
   if (kategori === 'volta2') return '2. ev (volta)';
   if (kategori === 'dot') return 'noktalı uzatma';
   if (kategori === 'barline' || a.kaynak === 'barline') return 'ölçü çizgisi';
-  // Bar repeat: her ölçü için ayrı girdi açılmasın → tek "braille tekrar"
-  if (kategori === 'bar-repeat') return 'braille tekrar';
+  // Bar repeat: her ölçü için ayrı girdi açılmasın → tek "braille tekrar".
+  // Kompakt ⠶⠼N tekrarında türü/sayıyı da yaz ("braille tekrar ×8").
+  if (kategori === 'bar-repeat') {
+    const n = Number(a.tekrarSayisi);
+    return n > 1 ? `braille tekrar ×${n}` : 'braille tekrar';
+  }
+  // Sayısal ölçü tekrarı (⠼N / ⠼N⠼M / ⠼<alt>N-M) — geri-sayısal VEYA bar-number; ikisi de N ölçülük tekrar.
+  if (kategori === 'backward-repeat') {
+    const n = Number(a.tekrarSayisi);
+    return n > 0 ? `ölçü tekrarı (${n} ölçü)` : 'ölçü tekrarı';
+  }
   // Bar number: her ölçü numarası için ayrı girdi açılmasın
   if (kategori === 'bar-number') return 'ölçü numarası';
   // Nota: pitch ayırma (do/re/mi…) yerine tek "Nota" girdisi olsun
@@ -334,7 +348,14 @@ export function brailleLejantEtiketiAl(anlam = {}) {
   if (kategori === 'key-signature-change') return 'donanım değişimi';
   if (kategori === 'anahtar') return 'anahtar';
   if (kategori === 'bar-number') return 'ölçü numarası';
-  if (kategori === 'bar-repeat') return 'braille tekrar';
+  if (kategori === 'bar-repeat') {
+    const n = Number(a.tekrarSayisi);
+    return n > 1 ? `braille tekrar ×${n}` : 'braille tekrar';
+  }
+  if (kategori === 'backward-repeat') {
+    const n = Number(a.tekrarSayisi);
+    return n > 0 ? `ölçü tekrarı (${n} ölçü)` : 'ölçü tekrarı';
+  }
   if (kategori === 'tie') return 'tie';
   if (kategori === 'slur') {
     const noteName = /^(do|re|mi|fa|sol|la|si)\b/i;

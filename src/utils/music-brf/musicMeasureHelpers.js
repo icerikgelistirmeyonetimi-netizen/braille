@@ -184,7 +184,21 @@ export const sureBilgisiAl = (oge, sureGostergeleri = SURE_GOSTERGELERI) => {
   return null;
 };
 
+// Apejetür/grace (süsleme) notası mı? Grace notalar (uzun/kısa apejetür = long/short
+// appoggiatura, acciaccatura) ASIL notadan önce çalınan küçük süsleme notalarıdır; ölçü
+// süresine SAYILMAZ (yoksa ölçü taşar → yanlış kirişleme/yerleşim). Reader apejetür işaretini
+// notanın `modifiers.oncesi`'ne ekler → işaretli nota grace'tir.
+const APEJETUR_RE = /apejet[üuÜU]r|appoggiatura|acciaccatura/i;
+export const notaGraceMi = (oge) => {
+  if (!oge || oge.tip !== 'nota') return false;
+  const onc = oge?.modifiers?.oncesi;
+  return Array.isArray(onc) && onc.some((m) => APEJETUR_RE.test(String(m?.kayit?.ad || m?.ad || '')));
+};
+
 export const ogeSure64Al = (oge, sureGostergeleri = SURE_GOSTERGELERI) => {
+  // Grace (apejetür) notalar ölçü süresine katkı vermez.
+  if (notaGraceMi(oge)) return 0;
+
   const sure = sureBilgisiAl(oge, sureGostergeleri);
   if (!sure || !Number.isFinite(sure.realValue)) return 0;
 
@@ -488,11 +502,27 @@ export const muzikOgeleriOlcuTamamla = ({
     olcuSure64 += sure64;
 
     if (Math.abs(olcuSure64 - hedefOlcu64) < 0.0001) {
-      if (sonrakiSkorDevamEdiyorMu(muzikOgeleri, idx + 1)) {
-        otomatikOlcuCizgisiEkle('measure-complete');
+      // Ölçü doldu. AMA ardından gelen ilk müzikal nota GRACE (apejetür) ise ölçüyü
+      // KAPATMA: trailing apejetürler bir sonraki ölçüye giden süslemelerdir, MEVCUT
+      // ölçünün sonunda (gerçek ölçü çizgisinden önce) yazılır. Auto-barline onları
+      // sonraki ölçüye atmasın (kullanıcı: "apajürleri 2. ölçüye almış neden"). olcuSure64
+      // dolu KALIR → sonraki gerçek nota geldiğinde split-before-overflow (satır 479) veya
+      // gerçek ölçü çizgisi ölçüyü kapatır; graceler bu ölçüde kalır.
+      let sonrakiGrace = false;
+      for (let j = idx + 1; j < muzikOgeleri.length; j += 1) {
+        const sn = muzikOgeleri[j];
+        if (!sn) continue;
+        if (sn.tip === 'nota') { sonrakiGrace = notaGraceMi(sn); break; }
+        if (sn.tip === 'sus') break;
+        if (normalOlcuCizgisiMi(sn) || manuelNormalOlcuCizgisiMi(sn) || ozelOlcuCizgisiMi(sn)) break;
       }
-      olcuSure64 = 0;
-      olcuNo += 1;
+      if (!sonrakiGrace) {
+        if (sonrakiSkorDevamEdiyorMu(muzikOgeleri, idx + 1)) {
+          otomatikOlcuCizgisiEkle('measure-complete');
+        }
+        olcuSure64 = 0;
+        olcuNo += 1;
+      }
     }
   });
 

@@ -8,15 +8,17 @@ import {
 import { ayarlariAl, ayarlariDinle } from '../../utils/ayarlar.js';
 import { toneSesAyarlariAl, toneSesAyarlariDinle } from '../../utils/toneSesAyarlari.js';
 
+// Önizleme süreleri (sabit ≈100 BPM, dörtlük = 600 ms). Oranlar 2'şer kat:
+// her değer komşusunun yarısı/iki katı. (Tam playback BPM'e göre ayrıca hesaplar.)
 const sureMsAl = (sureIndeksi) => {
   switch (Number(sureIndeksi)) {
     case 0: return 300;   // sekizlik
     case 1: return 600;   // dörtlük
-    case 2: return 1200;  // yarım
-    case 3: return 2400;  // tam
-    case 4: return 150;   // 16'lık
-    case 5: return 90;    // 32'lik
-    case 6: return 60;    // 64'lük
+    case 2: return 1200;  // ikilik
+    case 3: return 2400;  // birlik
+    case 4: return 150;   // 16'lık  (dörtlüğün 1/4'ü)
+    case 5: return 75;    // 32'lik  (dörtlüğün 1/8'i)
+    case 6: return 38;    // 64'lük  (dörtlüğün 1/16'sı ≈ 37.5)
     default: return 600;
   }
 };

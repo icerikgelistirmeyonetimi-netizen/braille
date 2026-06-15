@@ -8,7 +8,7 @@ import {
 } from '../../data/muzik.js';
 import { MUZIK_NOTA_IKON } from '../music/index.js';
 
-// Süre seçici buton metinleri — nota sembolleri (sekizlik, dörtlük, yarım, tam, 16, 32, 64)
+// Süre seçici buton metinleri — nota sembolleri (sekizlik, dörtlük, ikilik, birlik, 16, 32, 64)
 export const SURE_KISA = ['♪', '♩', '𝅗𝅥', '𝅝', '𝅘𝅥𝅮', '𝅘𝅥𝅯', '𝅘𝅥𝅰'];
 
 // Sus (rest) sembolleri — SURE_KISA ile aynı index sırası
@@ -45,11 +45,18 @@ export const MUZIK_CLEF_VISUAL_Y_OFFSETS = {
   default: 0,
 };
 
+// Orta do'nun (C4) porte y'si. Porte çizgileri SABİT [64,76,88,100,112].
+// treble: C4 alttaki E4(112) çizgisinin 1 ek-çizgi altı = 124.
+// bass: anahtar glifi F3'ü 76'ya oturtur (bravuraMetrics CLEF_STAFF_Y.bass); F3 alttan
+//   4. çizgi → C4 üst çizgi A3(64)'ün 1 ek-çizgi ÜSTÜ = 52. (Eskiden 76 idi: notalar
+//   glif F3 çapasıyla tutarsız, 24px=4 diyatonik adım AŞAĞI çiziliyordu → portenin altına
+//   düşüyordu. CLEF_VISUAL_Y_OFFSETS.bass=-24 nota Y'sine hiç uygulanmıyordu.)
+// alto: C4 orta çizgi D3... C clef orta çizgide = 88. tenor: C4 alttan 4. çizgi = 76.
 export const MUZIK_CLEF_MIDDLE_C_Y = {
   treble: 124,
-  bass: 76,
+  bass: 52,
   alto: 88,
-  tenor: 88,
+  tenor: 76,
   default: 124,
 };
 
@@ -194,8 +201,8 @@ export const MUSIC_EDITOR_TOOLBAR = [
   { id: 'sure', icon: '♩', label: 'Süre' },
   { id: 'notalar', icon: '♪', label: 'Nota' },
   { id: 'sus', icon: '𝄽', label: 'Sus' },
-  { id: 'bag-tie', icon: '⌒', label: 'Tie' },
-  { id: 'bag-slur', icon: '︵', label: 'Slur' },
+  { id: 'bag-tie', icon: '⌒', label: 'Uzatma bağı' },
+  { id: 'bag-slur', icon: '︵', label: 'Hece bağı' },
   { id: 'nuans-once', icon: '·', label: 'Nüans (önce)' },
   { id: 'nuans-sonra', icon: '𝄐', label: 'Nüans (sonra)' },
   { id: 'dinamikler', icon: '𝒇', label: 'Dinamik', italic: true },
@@ -234,16 +241,38 @@ export const NUANS_SMUFL_GLYPH = {
   'caesura (break / //)':       '',  // caesura
 };
 
+// Türkçeleştirilmiş adlar → glyph haritası anahtarları (eski adlar).
+// muzik.js'te terimler Türkçeleştirildi (Stakato, tonuto, aksent, sezür…);
+// glyph haritaları eski anahtarlarla kurulu. Alias ile her iki ad da çalışır.
+const NUANS_AD_ALIAS = {
+  'stakato': 'staccato',
+  'simo': 'staccatissimo',
+  'mezzo-stakato': 'mezzo-staccato',
+  'tonuto': 'tenuto (agogic accent)',
+  'aksent': 'accent',
+  'ifadeli aksent': 'expressive accent',
+  'ters aksent': 'reversed accent',
+  'şişirme nüansı (<>)': 'swell (<>)',
+  'sezür  (kesinti / //)': 'caesura (break / //)',
+  'sezür (kesinti / //)': 'caesura (break / //)',
+  'sezür': 'caesura (break / //)',
+};
+
+// Türkçe locale ile küçült: 'İfadeli' → 'ifadeli' (düz toLowerCase 'i̇' üretir — combining dot!).
+const trKucult = (s) => String(s || '').toLocaleLowerCase('tr').trim();
+
 export function nuansSmuflGlyph(ad) {
   if (!ad) return '';
-  return NUANS_SMUFL_GLYPH[String(ad).toLowerCase().trim()] || '';
+  const key = trKucult(ad);
+  return NUANS_SMUFL_GLYPH[key] || NUANS_SMUFL_GLYPH[NUANS_AD_ALIAS[key]] || '';
 }
 
 // Bir modifier kaydı nüans mı (categoria === 'nuans' ya da NUANS_SMUFL_GLYPH'te var)?
 export function nuansModifierMi(kayit) {
   if (!kayit || typeof kayit !== 'object') return false;
   if (kayit.kategori === 'nuans') return true;
-  return Boolean(NUANS_SMUFL_GLYPH[String(kayit.ad || '').toLowerCase().trim()]);
+  const key = trKucult(kayit.ad);
+  return Boolean(NUANS_SMUFL_GLYPH[key] || NUANS_SMUFL_GLYPH[NUANS_AD_ALIAS[key]]);
 }
 
 // Süsleme (ornament) → SMuFL (Bravura Text) glyph eşlemesi.
@@ -265,15 +294,60 @@ export const SUSLEME_SMUFL_GLYPH = {
   'uzun alt mordent': '',
 };
 
+// Türkçeleştirilmiş süsleme adları → glyph haritası anahtarları (eski adlar).
+const SUSLEME_AD_ALIAS = {
+  'kısa apejetür': 'kısa appoggiatura',
+  'uzun apejetür': 'uzun appoggiatura',
+  'tril': 'trill',
+  'bemollü tril': 'bemollü trill',
+  'diyezli tril': 'diyezli trill',
+  'grupeto (notalar arası)': 'turn (notalar arası)',
+  'grupeto (nota üstünde)': 'turn (nota üstünde)',
+  'ters grupeto (notalar arası)': 'ters turn (notalar arası)',
+  'ters grupeto (nota üstünde)': 'ters turn (nota üstünde)',
+  'üst mordan': 'üst mordent',
+  'uzun üst mordan': 'uzun üst mordent',
+  'alt mordan': 'alt mordent',
+  'uzun alt mordan': 'uzun alt mordent',
+};
+
+// Glisando — SMuFL/Bravura'da tekil glissando glyph'i YOK (U+E585 vb. barok
+// süsleme parça vuruşlarıdır; iki ayrı çizgi gibi görünür — KULLANMA).
+// Baskıda glissando düz eğik çizgidir → '/' (muzik.js sembolüyle aynı).
+SUSLEME_SMUFL_GLYPH.glisando = '/';
+SUSLEME_SMUFL_GLYPH.glissando = '/';
+
 // Süsleme adından SMuFL glyph'i döndürür (yoksa boş string).
 export function suslemeSmuflGlyph(ad) {
   if (!ad) return '';
-  return SUSLEME_SMUFL_GLYPH[String(ad).toLowerCase().trim()] || '';
+  const key = trKucult(ad);
+  return SUSLEME_SMUFL_GLYPH[key] || SUSLEME_SMUFL_GLYPH[SUSLEME_AD_ALIAS[key]] || '';
 }
 
-// Appoggiatura/acciaccatura grace notası mı?
+// Appoggiatura/acciaccatura (apejetür) grace notası mı?
 export function suslemeGraceMi(ad) {
-  return /appoggiatura|acciaccatura/i.test(String(ad || ''));
+  return /appoggiatura|acciaccatura|apejetür/i.test(String(ad || ''));
+}
+
+// ─── Tuplet (düzensiz grup) ──────────────────────────────────────────────────
+// Tuplet adı → grup sayısı (üçleme→3 …). Türkçe + İngilizce.
+export const TUPLET_AD_SAYI = {
+  üçleme: 3, ikileme: 2, dörtleme: 4, beşleme: 5, altılama: 6, yedileme: 7,
+  triplet: 3, duplet: 2, quadruplet: 4, quintuplet: 5, sextuplet: 6, septuplet: 7,
+};
+
+// Tuplet adından grup sayısını çıkar ("üçleme (tek hücreli)" → 3).
+export function tupletSayiAdtan(etiket) {
+  const ilk = String(etiket || '').toLocaleLowerCase('tr').split(/[\s(]/)[0];
+  return TUPLET_AD_SAYI[ilk] ?? null;
+}
+
+// Sayı → SMuFL Bravura tuplet rakam glyph'i (tuplet0 = U+E880 … tuplet9 = U+E889).
+export function tupletRakamGlyph(sayi) {
+  return String(sayi ?? '')
+    .split('')
+    .map((ch) => (/[0-9]/.test(ch) ? String.fromCodePoint(0xE880 + Number(ch)) : ch))
+    .join('');
 }
 
 // ─── Dinamikler (SMuFL) ──────────────────────────────────────────────────────
@@ -300,6 +374,18 @@ export function dinamikSmuflGlyph(sembol) {
   return harfler.map((h) => DINAMIK_SMUFL_HARF[h.toLowerCase()]).join('');
 }
 
+// Hairpin (keskin kreşendo / keskin dekreşendo) → SMuFL glyph (Bravura).
+// Baskıda bu işaretler metin değil çatal/kama (wedge) İKONUDUR:
+// dynamicCrescendoHairpin U+E53E '<', dynamicDiminuendoHairpin U+E53F '>'.
+// NOT: 'keskin dekreşendo' adı 'kreşendo'yu içerir — önce dekreşendo kontrol edilir.
+export function dinamikHairpinGlyph(ad) {
+  const s = String(ad || '').toLowerCase();
+  if (!s.includes('keskin')) return '';
+  if (/dekre[şs]endo|diminuendo/.test(s)) return '';
+  if (/kre[şs]endo/.test(s)) return '';
+  return '';
+}
+
 // Dinamik kayıt adlarının kümesi (küçük harf).
 const DINAMIK_ADLAR = new Set(
   [...(MUZIK_DINAMIKLER || [])]
@@ -313,7 +399,13 @@ const DINAMIK_ADLAR = new Set(
 export function dinamikModifierMi(kayit) {
   if (!kayit || typeof kayit !== 'object') return false;
   if (kayit.kategori === 'susleme') return false;
-  return DINAMIK_ADLAR.has(String(kayit.ad || '').toLowerCase().trim());
+  const ad = String(kayit.ad || '').toLowerCase().trim();
+  // Hairpin (keskin kreşendo/dekreşendo) başlangıç/bitiş modifier'ları da DİNAMİKtir →
+  // porte ALTINda çizilsin. Yoksa `DINAMIK_ADLAR` tam adı içermediğinden (ad "…başlangıcı"/
+  // "…bitir") nuans/susleme dalına düşüp porte İÇİNde nota üstüne biniyordu (kullanıcı: Weber
+  // 13. ölçü "keskin kreşendo nota altında kalmış").
+  if (/keskin\s+(kreşendo|dekreşendo|diminuendo)/.test(ad)) return true;
+  return DINAMIK_ADLAR.has(ad);
 }
 
 // Dinamik kaydından kısa görsel etiketi döndürür.

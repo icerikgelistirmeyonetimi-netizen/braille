@@ -551,7 +551,7 @@ export const MUZIK_NUANS_SONRA = [
   R('ölçü çizgisi üstü fermata', ['4-5-6', '1-2-6', '1-2-3'], '(ölçü çizgisinde durak)', KURAL_NUANS_SONRA),
   R('kare fermata', ['5-6', '1-2-6', '1-2-3'], '(kare şekilli uzatma)', KURAL_NUANS_SONRA),
   R('üçgen fermata', ['4-5', '1-2-6', '1-2-3'], '(çadır şekilli uzatma)', KURAL_NUANS_SONRA),
-  R('nefes işareti', ['3-4'], '(kısa nefes molası) · ⠌', KURAL_NUANS_SONRA, undefined, ','),
+  R('nefes işareti', ['3-4-5', '2'], '(kısa nefes molası) · ⠜⠂', KURAL_NUANS_SONRA, undefined, ','),
   R('sezür  (kesinti / //)', ['6', '3-4'], '(genel mola, kesinti) · ⠠⠌', KURAL_NUANS_SONRA, undefined, '//'),
 ];
 
@@ -934,23 +934,23 @@ export const SURE_GOSTERGELERI = [
     noktalarEk: [6], realValue: 4, bayrak: 0,
   },
   {
-    ad: 'yarım nota', esAd: '32\'lik nota', sembol: '𝅗𝅥',
-    aciklama: 'Temel hücreye 3 noktası eklenir. Örn. yarım Do: 1-3-4-5. Yarım nota ile 32\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
+    ad: 'ikilik nota', esAd: '32\'lik nota', sembol: '𝅗𝅥',
+    aciklama: 'Temel hücreye 3 noktası eklenir. Örn. ikilik Do: 1-3-4-5. İkilik nota ile 32\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [3], realValue: 2, bayrak: 0,
   },
   {
-    ad: 'tam nota', esAd: '16\'lık nota', sembol: '𝅝',
-    aciklama: 'Temel hücreye 3 ve 6 noktaları eklenir. Örn. tam Do: 1-3-4-5-6. Tam nota ile 16\'lık nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
+    ad: 'birlik nota', esAd: '16\'lık nota', sembol: '𝅝',
+    aciklama: 'Temel hücreye 3 ve 6 noktaları eklenir. Örn. birlik Do: 1-3-4-5-6. Birlik nota ile 16\'lık nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [3, 6], realValue: 1, bayrak: 0,
   },
   {
-    ad: '16-lık nota', esAd: 'tam nota', sembol: '𝅘𝅥𝅮',
-    aciklama: 'Tam nota ile aynı braille hücresiyle yazılır; 3 ve 6 noktaları eklenir. 16\'lık nota ile tam nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
+    ad: '16-lık nota', esAd: 'birlik nota', sembol: '𝅘𝅥𝅮',
+    aciklama: 'Birlik nota ile aynı braille hücresiyle yazılır; 3 ve 6 noktaları eklenir. 16\'lık nota ile birlik nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [3, 6], realValue: 16, bayrak: 2,
   },
   {
-    ad: '32-lik nota', esAd: 'yarım nota', sembol: '𝅘𝅥𝅯',
-    aciklama: 'Yarım nota ile aynı braille hücresiyle yazılır; 3 noktası eklenir. 32\'lik nota ile yarım nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
+    ad: '32-lik nota', esAd: 'ikilik nota', sembol: '𝅘𝅥𝅯',
+    aciklama: 'İkilik nota ile aynı braille hücresiyle yazılır; 3 noktası eklenir. 32\'lik nota ile ikilik nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [3], realValue: 32, bayrak: 3,
   },
   {

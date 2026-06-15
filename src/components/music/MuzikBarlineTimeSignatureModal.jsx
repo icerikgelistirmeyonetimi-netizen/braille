@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DONANIM_LISTESI } from '../../utils/music-brf/musicConstants.js';
+import { MUZIK_ZAMAN_IMZASI } from '../../data/muzik.js';
 
+// Ölçü sayıları TEK KAYNAK: data/muzik.js MUZIK_ZAMAN_IMZASI (Modül 8 dersleriyle aynı liste —
+// Türk/aksak metreler 5/8, 7/8, 9/8 dahil). 'ad' sayısal forma indirgenir ('2/2 (sebare)' → '2/2').
+// Editörün derste olmayan ama motorun desteklediği ekstra bileşik metreleri (10/8, 12/8) ve C/𝄵
+// sembol kısayolları korunur. Dedup ile tekrar engellenir.
+const muzikZamanSayisalFormu = (ad = '') => {
+  const m = String(ad).match(/(\d+)\s*\/\s*(\d+)/);
+  return m ? `${m[1]}/${m[2]}` : null;
+};
 const TIME_SIGNATURE_OPTIONS = [
-  '2/4',
-  '3/4',
-  '4/4',
-  '3/8',
-  '6/8',
-  '7/8',
-  '9/8',
-  '10/8',
-  '12/8',
-  'common',
-  'cut common',
+  ...new Set([
+    ...MUZIK_ZAMAN_IMZASI.map((z) => muzikZamanSayisalFormu(z.ad)).filter(Boolean),
+    '10/8',
+    '12/8',
+    'common',
+    'cut common',
+  ]),
 ];
 
 export default function MuzikBarlineTimeSignatureModal({

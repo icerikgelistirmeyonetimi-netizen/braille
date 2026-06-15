@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { DONANIM_LISTESI } from '../../utils/music-brf/musicConstants.js';
+import { MUZIK_ZAMAN_IMZASI } from '../../data/muzik.js';
+import { MUZIK_GRUPLAMA_SECENEKLERI } from '../../utils/music/musicConstants.js';
+
+// Bir metre adından ('7/8', '2/2 (sebare)') aksak gruplama seçeneklerini al (yoksa null).
+function gruplamaSecenekleriAl(ad) {
+  const f = String(ad || '').match(/(\d+)\s*\/\s*(\d+)/);
+  return f ? (MUZIK_GRUPLAMA_SECENEKLERI[`${f[1]}/${f[2]}`] || null) : null;
+}
 
 /**
  * Standart müzik tempo işaretleri ve temsili BPM değerleri.
@@ -22,19 +30,23 @@ const TEMPO_ISARETLERI = [
   { ad: 'Prestissimo',  bpm: 208 },
 ];
 
+// Ölçü sayıları TEK KAYNAK: data/muzik.js MUZIK_ZAMAN_IMZASI (Modül 8 dersleriyle aynı; Türk/aksak
+// 5/8, 7/8, 9/8 dahil). 'ad' sayısal forma indirgenir ('2/2 (sebare)' → '2/2'). Motorun desteklediği
+// ekstra bileşik metreler (10/8, 12/8) ve C/𝄵 sembol kısayolları korunur. Dedup ile tekrar engellenir.
+const _zamanSayisalFormu = (ad = '') => {
+  const m = String(ad).match(/(\d+)\s*\/\s*(\d+)/);
+  return m ? `${m[1]}/${m[2]}` : null;
+};
 const TIME_SIGNATURE_LIST = [
-  { value: '4/4',         label: '4/4' },
-  { value: '3/4',         label: '3/4' },
-  { value: '2/4',         label: '2/4' },
-  { value: '3/8',         label: '3/8' },
-  { value: '6/8',         label: '6/8' },
-  { value: '7/8',         label: '7/8' },
-  { value: '9/8',         label: '9/8' },
-  { value: '10/8',        label: '10/8' },
-  { value: '12/8',        label: '12/8' },
+  ...new Set([
+    ...MUZIK_ZAMAN_IMZASI.map((z) => _zamanSayisalFormu(z.ad)).filter(Boolean),
+    '10/8',
+    '12/8',
+  ]),
+].map((value) => ({ value, label: value })).concat([
   { value: 'common',      label: '𝄴' },
   { value: 'cut common',  label: '𝄵' },
-];
+]);
 
 function enYakinTempoAdi(bpm) {
   if (!Number.isFinite(bpm)) return '';
@@ -184,6 +196,70 @@ function ZamanImzasiSecici({ value, onChange }) {
   );
 }
 
+// Aksak/düzensiz metrede VURUŞ GRUPLAMASI seçici — yalnız 5/8, 7/8, 9/8, 10/8 gibi metrelerde görünür.
+// Seçim görsel kiriş + ekran-altı braille + indirileni belirler (gruplamaDeseni timeSignature'a yazılır).
+function GruplamaSecici({ timeSignature, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const ad = timeSignature?.ad || timeSignature?.gorunum || '';
+  const secenekler = gruplamaSecenekleriAl(ad);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  if (!secenekler) return null; // düzenli metre → gruplama seçtirme
+
+  const aktifAnahtar = Array.isArray(timeSignature?.gruplamaDeseni)
+    ? timeSignature.gruplamaDeseni.join('+')
+    : secenekler[0].join('+'); // desen yoksa varsayılan = ilk seçenek
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="h-8 inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-800 hover:border-amber-400 hover:bg-amber-50/40 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+        aria-label="Vuruş gruplaması seçimi"
+        title="Aksak ölçüde vuruş gruplaması (kiriş + braille gruplama)"
+      >
+        <span className="text-zinc-400 text-[10px] uppercase tracking-wide">Gruplama</span>
+        <span className="text-zinc-900 font-semibold text-sm tabular-nums">{aktifAnahtar}</span>
+        <svg viewBox="0 0 20 20" className="h-3 w-3 text-zinc-400" fill="currentColor" aria-hidden="true">
+          <path d="M5 8l5 5 5-5H5z" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 w-40 rounded-lg border border-zinc-200 bg-white shadow-xl p-2" role="listbox">
+          <div className="grid grid-cols-1 gap-1">
+            {secenekler.map((desen) => {
+              const anahtar = desen.join('+');
+              const aktifMi = anahtar === aktifAnahtar;
+              return (
+                <button
+                  key={anahtar}
+                  type="button"
+                  onClick={() => { onChange(ad, desen); setOpen(false); }}
+                  className={`h-9 rounded-md border text-sm font-bold tabular-nums transition ${aktifMi
+                    ? 'border-amber-500 bg-amber-50 text-amber-900'
+                    : 'border-zinc-200 bg-white text-zinc-700 hover:border-amber-300 hover:bg-amber-50/30'}`}
+                >
+                  {anahtar}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MuzikScoreHeader({
   muzikHeader,
   setMuzikHeader,
@@ -301,6 +377,12 @@ export default function MuzikScoreHeader({
       {/* Zaman imzası — grid seçici */}
       <ZamanImzasiSecici
         value={muzikHeader.timeSignature?.ad || ''}
+        onChange={setTimeSignature}
+      />
+
+      {/* Aksak metre vuruş gruplaması — yalnız 5/8, 7/8, 9/8, 10/8 gibi metrelerde görünür */}
+      <GruplamaSecici
+        timeSignature={muzikHeader.timeSignature}
         onChange={setTimeSignature}
       />
 

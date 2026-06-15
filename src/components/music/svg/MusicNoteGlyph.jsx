@@ -16,8 +16,12 @@ function MusicNoteGlyph({ item, x, y, grouped, sure, glyphScaleY = 1 }) {
   const realValue = Number.isFinite(sureData.realValue) ? sureData.realValue : 4;
 
   const isSmallDuration = realValue >= 16;
-  const hollow = !isSmallDuration && /yarım|tam/i.test(sureData.ad || '');
-  const hasStem = !/tam/i.test(sureData.ad || '') || isSmallDuration;
+  // İçi boş kafa: ikilik (yarım) + birlik (tam). Sapsız: yalnız birlik (tam).
+  // realValue (1=birlik, 2=ikilik) birincil; ad ('ikilik/birlik' yeni, 'yarım/tam' eski) yedek.
+  const tamAd = /\b(tam|birlik)\b/i.test(sureData.ad || '');
+  const ikilikAd = /\b(yarım|ikilik)\b/i.test(sureData.ad || '');
+  const hollow = !isSmallDuration && (realValue === 1 || realValue === 2 || tamAd || ikilikAd);
+  const hasStem = !(realValue === 1 || tamAd) || isSmallDuration;
 
   const direction = getStemDirection(y);
   const flagCount = Number.isFinite(sureData.bayrak) ? sureData.bayrak : 0;

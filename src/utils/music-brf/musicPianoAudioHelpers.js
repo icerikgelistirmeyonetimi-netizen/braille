@@ -1,4 +1,5 @@
-const _base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+// import.meta.env yalnız Vite/tarayıcıda tanımlı; node (QA scriptleri) için güvenli erişim.
+const _base = ((import.meta.env && import.meta.env.BASE_URL) || '/').replace(/\/+$/, '');
 export const PIANO_AUDIO_FOLDER = `${_base}/piano%20ses`;
 export const PIANO_AUDIO_EXTENSION = 'mp3';
 

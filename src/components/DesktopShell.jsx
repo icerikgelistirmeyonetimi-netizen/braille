@@ -126,6 +126,15 @@ export default function DesktopShell({ children }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             type="button"
+            className="btn arama-btn"
+            onClick={() => navigate('/arama')}
+            aria-label="Braille arama — nokta numarasına göre sembol ara"
+            title="Braille arama"
+          >
+            <span aria-hidden="true" className="arama-ikon">{Ikon.arama}</span>
+          </button>
+          <button
+            type="button"
             className="btn ayarlar-btn hayalet"
             onClick={() => navigate('/ayarlar')}
             aria-label="Ayarlar — ilk ayarlarınızı yapın"

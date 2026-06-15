@@ -52,7 +52,9 @@ export function skorBarlineTipiAl(oge = {}) {
     gorunum === '𝄂' ||
     ad.includes('final') ||
     ad.includes('son çizgi') ||
-    ad.includes('son cizgi')
+    ad.includes('son cizgi') ||
+    ad.includes('bitiş çizg') ||  // "bitiş çizgisi" (final eki olmadan da) = eserin sonu
+    ad.includes('bitis cizg')
   ) {
     return 'final';
   }

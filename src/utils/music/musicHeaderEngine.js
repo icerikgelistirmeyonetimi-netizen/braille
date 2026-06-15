@@ -9,13 +9,8 @@ export function muzikTimeSignatureHucreleri(sig) {
   if (!ad) return [];
   if (ad === 'common' || ad === 'c') return [[4, 6], [1, 4]];
   if (ad === 'cut common' || ad === 'cut c' || ad === '𝄵') return [[4, 5, 6], [1, 4]];
-  if (ad === '10/8') {
-    return [
-      [3, 4, 5, 6],
-      [2, 4, 5],
-      [2, 3, 5],
-    ];
-  }
+  // (10/8 özel-durumu KALDIRILDI — ⠼⠚⠖="0/6" yanlıştı; genel durum çok-haneli numerator'ı
+  //  doğru üretir: 10/8 = ⠼⠁⠚⠦ = numara + üst-1 + üst-0 + alt-8.)
   const m = /^(\d+)\s*\/\s*(\d+)$/.exec(ad);
   if (!m) return [];
   const ust = m[1].split('').map((d) => MUZIK_UST_RAKAM[d] || []).filter((h) => h.length);
@@ -26,11 +21,22 @@ export function muzikTimeSignatureHucreleri(sig) {
 // Modül 8 Bölüm 6 — Kontraksiyonsuz Grade 1 braille.
 // Büyük harfler MEB büyük harf işareti [6] ön ekiyle yazılır (round-trip için).
 const MUZIK_BUYUK_HARF_ISARETI = [6];
+const MUZIK_SAYI_ISARETI = [3, 4, 5, 6];
+// Rakam = sayı işareti + a–j (1→a … 0→j). Başlık/besteci/tempo'da opus no, yıl vb. korunur.
+const MUZIK_RAKAM_HARF = { 0: 'j', 1: 'a', 2: 'b', 3: 'c', 4: 'd', 5: 'e', 6: 'f', 7: 'g', 8: 'h', 9: 'i' };
 
 export function muzikKontraksiyonsuzMetinHucreleri(metin) {
   const hucreler = [];
+  let sayiModu = false; // ardışık rakamlarda sayı işareti yalnız bir kez
 
   for (const c of String(metin || '')) {
+    if (c >= '0' && c <= '9') {
+      if (!sayiModu) { hucreler.push([...MUZIK_SAYI_ISARETI]); sayiModu = true; }
+      hucreler.push(MUZIK_HARF_NOKTALARI[MUZIK_RAKAM_HARF[c]]);
+      continue;
+    }
+    sayiModu = false; // rakam-dışı her karakter sayı modunu kapatır
+
     if (c === ' ') {
       hucreler.push([]);
       continue;
@@ -48,6 +54,11 @@ export function muzikKontraksiyonsuzMetinHucreleri(metin) {
 
     if (c === '-') {
       hucreler.push([3, 6]);
+      continue;
+    }
+
+    if (c === "'" || c === '’') {
+      hucreler.push([3]);
       continue;
     }
 
@@ -188,7 +199,8 @@ export function muzikHeaderSatirlariUret(header) {
       etiket: keyLabel,
       sonrakiIlkHucre: timeCells[0] || null,
       dot3AyiriciKontrol: false,
-      boslukSonrasi: Boolean(timeCells.length),
+      // §14: Donanım ↔ zaman imzası BİTİŞİK (boşluk YOK) → ⠣⠼⠙⠲ (⠣⠀⠼⠙⠲ değil).
+      boslukSonrasi: false,
     });
     if (ks) parcalar.push(keyLabel);
   }

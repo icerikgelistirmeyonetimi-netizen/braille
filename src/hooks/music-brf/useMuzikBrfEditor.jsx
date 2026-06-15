@@ -5,14 +5,11 @@ import {
 } from '../../data/muzik.js';
 import {
   MUZIK_EDITOR_VARSAYILAN_ANAHTAR,
+  MUZIK_EDITOR_ANAHTARLAR,
   MUZIK_VARSAYILAN_ZAMAN_IMZASI,
   veriBolumAl,
   anahtarEkliMi,
 } from '../../utils/music-brf/musicConstants.js';
-import {
-  muzikBrailleCellsToScore,
-  muzikBrailleTokensToScore,
-} from '../../utils/music-brf/musicBrailleImportEngine.js';
 import {
   muzikOgeleriOlcuOlcuOkunurMetinAl,
 } from '../../utils/music-brf/musicReadableSummary.js';
@@ -31,6 +28,7 @@ import {
   muzikKeySignatureHucreleri,
   muzikTimeSignatureHucreleri,
   muzikKontraksiyonsuzMetinHucreleri,
+  muzikGruplamaDeseniGecerliMi,
 } from '../../utils/music/index.js';
 import { muzikOgeleriOlcuTamamla, normalOlcuCizgisiMi, bosOlculeriTemizle } from '../../utils/music-brf/musicMeasureHelpers.js';
 import { muzikOlcuyeBol } from '../../utils/music/musicMeasureEngine.js';
@@ -39,6 +37,24 @@ import { varsayilanOktavAnahtaraGoreAl } from '../../utils/music-brf/musicScoreH
 import { nuansSmuflGlyph } from '../../utils/music-brf/musicConstants.js';
 import { useMusicScoreLayout } from './useMusicScoreLayout.js';
 import { useBrailleOutput } from './useBrailleOutput.js';
+
+// BRF anahtar (clef) kodlamaz → varsayılan SOL (treble). Düşük perdeli parçalarda
+// (örn. PDF s. — fa anahtarı kullanan parçalar) bu yanlış olur. İçe aktarmada
+// notaların ortalama perdesinden anahtarı çıkar: orta do'nun (do4) altındaysa FA (bass).
+const ANAHTAR_DIATONIK = { do: 0, re: 1, mi: 2, fa: 3, sol: 4, la: 5, si: 6 };
+const ANAHTAR_FA = MUZIK_EDITOR_ANAHTARLAR.find((a) => /fa|bass/i.test(a.ad)) || null;
+const ANAHTAR_ORTA_DO = 4 * 7; // do4 = orta do = 28 (perde birimi: oktav*7 + diatonik)
+
+// Notaların ortalama perdesinden uygun anahtarı seç. Orta do'nun altındaysa FA, değilse SOL.
+function anahtarPerdeyeGoreCikar(ogeler) {
+  if (!ANAHTAR_FA) return MUZIK_EDITOR_VARSAYILAN_ANAHTAR;
+  const perdeler = (Array.isArray(ogeler) ? ogeler : [])
+    .filter((o) => o?.tip === 'nota' && o.notaAd in ANAHTAR_DIATONIK)
+    .map((o) => (Number(o.oktav) || 4) * 7 + ANAHTAR_DIATONIK[o.notaAd]);
+  if (!perdeler.length) return MUZIK_EDITOR_VARSAYILAN_ANAHTAR;
+  const ortalama = perdeler.reduce((a, b) => a + b, 0) / perdeler.length;
+  return ortalama < ANAHTAR_ORTA_DO ? ANAHTAR_FA : MUZIK_EDITOR_VARSAYILAN_ANAHTAR;
+}
 
 export function useMuzikBrfEditor() {
   const idRef = useRef(0);
@@ -271,6 +287,18 @@ export function useMuzikBrfEditor() {
       dotted: !!dotted,
     });
 
+    // Bekleyen apejetür (grace) işareti varsa: YAZILAN YENİ nota GRACE olarak eklenir —
+    // kullanıcı grace notasının perdesini nota tuşuyla (ve oktav seçiciyle) belirler
+    // (kullanıcı: "apejetür için nota belirlemek gerekiyor ama araç çubuğundan yapamıyoruz").
+    const apejeturBekliyor = bekleyenModifier
+      && /apejet[üuÜU]r|appoggiatura|acciaccatura/i.test(String(bekleyenModifier.kayit?.ad || ''));
+    if (apejeturBekliyor) {
+      oge.modifiers = {
+        ...(oge.modifiers || {}),
+        oncesi: [...(oge.modifiers?.oncesi || []), { id: `mod-${idRef.current++}`, kayit: bekleyenModifier.kayit }],
+      };
+    }
+
     setMuzikOgeleri((onceki) => [
       ...onceAnahtarGarantiEt(onceki),
       oge,
@@ -280,6 +308,7 @@ export function useMuzikBrfEditor() {
     setSeciliOgeId(oge.id);
     setSonEklenenOgeId(oge.id);
     setAdimSure(true);
+    if (apejeturBekliyor) setBekleyenModifier(null);
     editorDegisti();
   };
 
@@ -304,6 +333,16 @@ export function useMuzikBrfEditor() {
       oktav: kullanilacakOktav,
       dotted: !!dotted,
     });
+
+    // Bekleyen apejetür (grace): klavye/imleç ile yazılan nota da GRACE olur (notaEkle ile aynı).
+    const apejeturBekliyor = bekleyenModifier
+      && /apejet[üuÜU]r|appoggiatura|acciaccatura/i.test(String(bekleyenModifier.kayit?.ad || ''));
+    if (apejeturBekliyor) {
+      oge.modifiers = {
+        ...(oge.modifiers || {}),
+        oncesi: [...(oge.modifiers?.oncesi || []), { id: `mod-${idRef.current++}`, kayit: bekleyenModifier.kayit }],
+      };
+    }
 
     setMuzikOgeleri((onceki) => {
       const garantiListe = onceAnahtarGarantiEt(onceki);
@@ -346,6 +385,7 @@ export function useMuzikBrfEditor() {
     setSeciliOgeId(oge.id);
     setSonEklenenOgeId(oge.id);
     setAdimSure(true);
+    if (apejeturBekliyor) setBekleyenModifier(null);
     editorDegisti();
 
     return oge;
@@ -925,6 +965,22 @@ export function useMuzikBrfEditor() {
     if (!bekleyenModifier) return;
     const { kayit, yon } = bekleyenModifier;
     const adLower = String(kayit.ad || '').toLowerCase();
+    // Aynı işaret aynı notaya İKİ KEZ eklenmesin (tril ×2 anlamsız). İstisna:
+    // apejetür (grace) — bir notadan önce birden çok grace nota müzikal olarak
+    // geçerlidir (çift apejetür / slide).
+    const graceMi = /apejetür|appoggiatura|acciaccatura/i.test(String(kayit.ad || ''));
+    if (!graceMi) {
+      const mevcutMods = Array.isArray(notaOgesi?.modifiers?.[yon]) ? notaOgesi.modifiers[yon] : [];
+      const adKucuk = String(kayit.ad || '').toLocaleLowerCase('tr');
+      if (mevcutMods.some((m) => String(m?.kayit?.ad || '').toLocaleLowerCase('tr') === adKucuk)) {
+        setMuzikUyarilari((onceki) => [
+          ...(Array.isArray(onceki) ? onceki : []),
+          { type: 'modifier-tekrar', message: `"${kayit.ad}" bu notada zaten var — ikinci kez eklenmedi.` },
+        ]);
+        setBekleyenModifier(null);
+        return;
+      }
+    }
     // Süslemeler (ör. "bemollü trill", "diyezli trill") aksidental/oktav
     // kısayollarına TAKILMADAN, kendi hücreleriyle modifier olarak eklenir.
     const suslemeMi = kayit.kategori === 'susleme';
@@ -1689,7 +1745,7 @@ export function useMuzikBrfEditor() {
         tip: 'endRepeat',
         ad: 'Tekrar sonu',
         gorunum: '𝄇',
-        hucreler: [[1, 2, 6], [2, 3, 5, 6]],
+        hucreler: [[1, 2, 6], [2, 3]], // ⠣⠆ geriye doğru tekrar (önceden yanlışlıkla begin ⠣⠶ idi)
       },
     };
 
@@ -2046,6 +2102,42 @@ export function useMuzikBrfEditor() {
     editorDegisti();
   };
 
+  /**
+   * Perkins yazımı: bir notaya doğrudan modifier (dinamik/nüans/süsleme) kaydı iliştirir.
+   * Reader'ın attachModifierToNote'u ile aynı veri şeklini kullanır (modifiers.oncesi/sonrasi).
+   * yon: 'oncesi' (notadan önce) | 'sonrasi' (notadan sonra).
+   */
+  const perkinsModifierEkle = (notaId, kayit, yon = 'oncesi') => {
+    const hedefId = notaId || seciliEditorOgeId || seciliOgeId;
+    if (!hedefId || !kayit) return;
+    const yer = yon === 'sonrasi' ? 'sonrasi' : 'oncesi';
+    // Aynı işaret iki kez eklenmesin — apejetür (grace) hariç (çoklu grace geçerli).
+    const graceMi = /apejetür|appoggiatura|acciaccatura/i.test(String(kayit.ad || ''));
+    const adKucuk = String(kayit.ad || '').toLocaleLowerCase('tr');
+    setMuzikOgeleri((onceki) => onceki.map((og) => {
+      if (og.id !== hedefId || og.tip !== 'nota') return og;
+      const mods = (og.modifiers && typeof og.modifiers === 'object')
+        ? og.modifiers : { oncesi: [], sonrasi: [] };
+      const mevcut = Array.isArray(mods[yer]) ? mods[yer] : [];
+      if (!graceMi && mevcut.some((m) => String(m?.kayit?.ad || '').toLocaleLowerCase('tr') === adKucuk)) {
+        return og; // zaten var — değişiklik yok
+      }
+      const yeniMod = {
+        id: `pk-mod-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        kayit,
+      };
+      return {
+        ...og,
+        modifiers: {
+          oncesi: Array.isArray(mods.oncesi) ? mods.oncesi : [],
+          sonrasi: Array.isArray(mods.sonrasi) ? mods.sonrasi : [],
+          [yer]: [...mevcut, yeniMod],
+        },
+      };
+    }));
+    editorDegisti();
+  };
+
   /** Seçili notanın belirtilen modifier'ını yeni bir kayıtla değiştirir (süsleme değiştirme). */
   const seciliNotaModifierGuncelle = (modId, yeniKayit, yon = 'oncesi', explicitOgeId = null) => {
     const hedefId = explicitOgeId || seciliEditorOgeId || seciliOgeId;
@@ -2353,6 +2445,13 @@ export function useMuzikBrfEditor() {
       || readerHeader.timeSignature?.ad
       || MUZIK_VARSAYILAN_ZAMAN_IMZASI;
 
+    // Aksak metre gruplama auto-çözümü: reader düzensiz metrede vuruş desenini veriden çözmüşse
+    // (header.timeSignature.gruplamaDeseni) editör header'ına taşı → görsel kiriş + ekran-altı + indir
+    // hep o desenle çalışır (WYSIWYG round-trip korunur).
+    const cozulenGruplamaDeseni = Array.isArray(readerHeader.timeSignature?.gruplamaDeseni)
+      ? [...readerHeader.timeSignature.gruplamaDeseni]
+      : null;
+
     return {
       title: readerHeader.title || '',
       composer: readerHeader.composer || '',
@@ -2364,6 +2463,7 @@ export function useMuzikBrfEditor() {
         gorunum: timeSignatureAd,
         expectedDuration16: muzikTimeSigExpected16(timeSignatureAd),
         hucreler: muzikTimeSignatureHucreleri(timeSignatureAd),
+        ...(cozulenGruplamaDeseni ? { gruplamaDeseni: cozulenGruplamaDeseni } : {}),
       },
       autoCompleteMeasures: false,
       pickupMeasure: false,
@@ -2373,6 +2473,10 @@ export function useMuzikBrfEditor() {
   };
 
   const brfReaderSureIndeksiAl = (item) => {
+    // NOTA GRUPLAMA: grup devamı notaları braille'de 8'lik-hücre yazılır ama MÜZİKAL değerleri liderin
+    // değeridir (16'lık vb.). Reader bunu `grupSureIndeksi` ile etiketler → skor modelinde gerçek değeri
+    // kullan ki ÇİZİM (16'lık çift-kiriş/beam), ÇALMA ve EXPORT doğru olsun. (reader.sureIndeksi 8'lik kalır.)
+    if (Number.isInteger(item?.grupSureIndeksi)) return item.grupSureIndeksi;
     if (Number.isInteger(item?.sureIndeksi)) return item.sureIndeksi;
 
     const realValue = Number(item?.realValue || item?.sureRealValue || item?.durationRealValue);
@@ -2541,33 +2645,150 @@ export function useMuzikBrfEditor() {
     const olcuKapanisBarlineId = [];          // measureIndex -> kapanış barline öğe id
     const voltaKayitlari = [];                 // { oge, measureIndex }
     let oncekiOlcuIcerik = [];                 // bir önceki ölçünün nota/sus öğeleri (kopya kaynağı)
+    // GERİ-SAYISAL TEKRAR (backward-numeral, ⠼N üst-rakam — PDF s.97-98): "önceki N ölçüyü tekrarla".
+    // Tüm ÇIKTI ölçülerinin içeriğini sırayla tut; ⠼N gelince son N ölçüyü kopyala (bars 6-10 = 1-5).
+    const olcuIcerikGecmisi = [];              // çıktı ölçü içerikleri (kopyalar dahil), sıralı
+    const olcuIcerikKlonla = (kaynakIcerik, etiket) => kaynakIcerik.map((kaynak) => ({
+      ...kaynak,
+      id: `${kaynak.id}-${etiket}`,
+      modifiers: kaynak.modifiers
+        ? {
+            oncesi: Array.isArray(kaynak.modifiers.oncesi) ? [...kaynak.modifiers.oncesi] : [],
+            sonrasi: Array.isArray(kaynak.modifiers.sonrasi) ? [...kaynak.modifiers.sonrasi] : [],
+          }
+        : undefined,
+      _repeatCopy: true,
+      // _sourceId TRANSİTİF olmalı: kaynak ölçü ZATEN bir kopyaysa (ardışık ⠶ ⠶ → bar3 = bar2'nin
+      // kopyası) ORİJİNAL kaynağa (bar1) işaret et — yoksa tie zinciri bar3'ü bulamayıp bar2→bar4 atlar
+      // (kullanıcı: "3.ölçü bağlantısını yapmıyor 4.ölçüye bağlanıyor direkt").
+      _sourceId: kaynak._sourceId || kaynak.id,
+      importKaynak: 'brf-reader',
+      // Tekrar işaretlerini KOPYAYA TAŞIMA: bir tekrar bloğu, içinde tekrar-işaretli bir ölçüyü
+      // (örn. Jingle ⠼8⠼6 bars 1-6 kopyalarken bar2'nin ⠶'sini) kopyalarsa, kopya FAZLADAN tekrar
+      // işareti üretirdi. İşaretler yalnız blok başında, kopyalama SONRASI eklenir.
+      _geriTekrarSayisi: undefined,
+      _tekrarHucreleri: undefined,
+    }));
 
     measures.forEach((measure, measureIndex) => {
       const measureItems = Array.isArray(measure?.items) ? measure.items : [];
       const olcuTekrariMi = measureItems.some((it) => it?.tip === 'brailleRepeat');
+      // SAYISAL TEKRAR YÖNERGESİ (PDF s.95-98): geri-sayısal (⠼N / ⠼N⠼M) VEYA bar-number (⠼<alt>N / N-M).
+      // İkisi de skor için GENİŞLETİLİR (eksiksiz çizilsin); engine braille'de orijinal işareti tek yazar.
+      const tekrarYonergesi = measureItems.find(
+        (it) => it?.tip === 'repeatInstruction'
+          && (it.repeatTuru === 'backward-numeral' || it.repeatTuru === 'bar-number'),
+      );
       let sonBarlineOge = null;
       let buOlcuIcerik = [];
 
-      if (olcuTekrariMi && oncekiOlcuIcerik.length) {
-        // Braille ölçü tekrarı (⠶): önceki ölçünün nota/sus öğelerini kopyalayarak
-        // skoru eksiksiz göster. (Export tarafı özdeş ölçüleri tekrar ⠶'ya çevirir.)
-        oncekiOlcuIcerik.forEach((kaynak) => {
-          const klon = {
-            ...kaynak,
-            id: `${kaynak.id}-rpt-${measureIndex}`,
-            modifiers: kaynak.modifiers
-              ? {
-                  oncesi: Array.isArray(kaynak.modifiers.oncesi) ? [...kaynak.modifiers.oncesi] : [],
-                  sonrasi: Array.isArray(kaynak.modifiers.sonrasi) ? [...kaynak.modifiers.sonrasi] : [],
-                }
-              : undefined,
-            _repeatCopy: true,
-            _sourceId: kaynak.id,
-            importKaynak: 'brf-reader',
-          };
-          ogeler.push(klon);
-          buOlcuIcerik.push(klon);
+      if (tekrarYonergesi && olcuIcerikGecmisi.length) {
+        const len = olcuIcerikGecmisi.length;
+        let baslangic;
+        let adet;
+        if (tekrarYonergesi.repeatTuru === 'backward-numeral') {
+          // "N ölçü geri say, M ölçü çal" (tek sayıda M=N).
+          const geri = Math.max(1, Number(tekrarYonergesi.geriSayisi) || 0);
+          adet = Math.max(1, Number(tekrarYonergesi.calinanOlcu) || geri);
+          baslangic = len - geri;
+        } else {
+          // bar-number: MUTLAK ölçü no(ları) N..M (1-tabanlı).
+          baslangic = (Math.max(1, Number(tekrarYonergesi.mutlakBaslangic) || 1)) - 1;
+          adet = Math.max(1, Number(tekrarYonergesi.calinanOlcu) || 1);
+        }
+        baslangic = Math.max(0, Math.min(baslangic, len - 1));
+        adet = Math.max(1, Math.min(adet, len - baslangic));
+        const kaynakOlculer = olcuIcerikGecmisi.slice(baslangic, baslangic + adet).map((arr) => arr.slice());
+        kaynakOlculer.forEach((kaynakIcerik, ki) => {
+          const kopyaIcerik = olcuIcerikKlonla(kaynakIcerik, `rpt-${measureIndex}-${ki}`);
+          // Blok BAŞI ilk notası: engine braille'de tekrar işaretini (ORİJİNAL hücreler) yazıp blok
+          // ölçülerini ATLASIN (skor altı braille = orijinal BRF, tıpkı bar-repeat ⠶⠼N).
+          // Görsel porte kopyaları yine çizer (_repeatCopy); SADECE braille kompakttır.
+          if (ki === 0 && kopyaIcerik[0]) {
+            kopyaIcerik[0]._geriTekrarSayisi = kaynakOlculer.length; // blok ölçü sayısı (engine atlaması)
+            kopyaIcerik[0]._tekrarHucreleri = Array.isArray(tekrarYonergesi.hucreler)
+              ? tekrarYonergesi.hucreler.map((h) => [...h])
+              : null; // engine bu hücreleri aynen yazar (⠼N / ⠼N⠼M / ⠼<alt>N-M)
+          }
+          kopyaIcerik.forEach((klon) => ogeler.push(klon));
+          olcuIcerikGecmisi.push(kopyaIcerik);
+          buOlcuIcerik = kopyaIcerik;
+          // Kopyalar ARASINA ölçü çizgisi (son kopyadan sonrasını aşağıdaki barline mantığı halleder —
+          // çift çizgi/bitiş çizgisi varsa onu kullanır, yoksa measure-end auto-barline ekler).
+          if (ki < kaynakOlculer.length - 1) {
+            ogeler.push(brfReaderBarlineOgesiOlustur({ tip: 'barline' }, ogeler.length));
+          }
         });
+        // Reader-ölçüsündeki tekrar-yönergesi DIŞI öğeler (finalBarline/sectional/çift çizgi) son kopyadan
+        // sonra eklenir — yoksa eser sonu bitiş çizgisi kaybolurdu (Soon Soon Soon ⠼⠃⠣⠅).
+        measureItems.forEach((item) => {
+          if (item?.tip === 'repeatInstruction') return;
+          if (item?.tip === 'nota' || item?.tip === 'sus') return; // saf tekrar ölçüsünde olmaz
+          const oge = brfReaderIteminiSkorOgesineCevir(item, ogeler.length);
+          if (!oge) return;
+          ogeler.push(oge);
+          if (BARLINE_TIPLERI.includes(oge.tip)) sonBarlineOge = oge;
+        });
+        // Son ölçü değilse ve son öğe bir çizgi değilse: kopyalar ile sonraki ölçüyü ayır.
+        if (
+          measureIndex < measures.length - 1
+          && !BARLINE_TIPLERI.includes(ogeler[ogeler.length - 1]?.tip)
+        ) {
+          const bl = brfReaderBarlineOgesiOlustur({ tip: 'barline' }, ogeler.length);
+          ogeler.push(bl);
+          sonBarlineOge = bl;
+        }
+        olcuKapanisBarlineId[measureIndex] = sonBarlineOge?.id || null;
+        if (buOlcuIcerik.length) oncekiOlcuIcerik = buOlcuIcerik;
+        return;
+      }
+
+      if (olcuTekrariMi && oncekiOlcuIcerik.length) {
+        // Braille ölçü tekrarı (⠶): önceki ölçünün nota/sus öğelerini kopyalayarak skoru eksiksiz göster.
+        // ⠶⠼N (bar-repeat ×N) → tekrarSayisi=N → önceki ölçüyü N KEZ kopyala (N ayrı ölçü, aralarında
+        // ölçü çizgisi). buOlcuIcerik = SON kopya (sonraki tekrar tek ölçü kopyalasın). (Export özdeş
+        // ölçüleri ⠶/⠶⠼N'e çevirir.)
+        const repeatOge = measureItems.find((it) => it?.tip === 'brailleRepeat');
+        const tekrarSayisi = Math.max(1, Number(repeatOge?.tekrarSayisi || 1));
+        for (let kopya = 0; kopya < tekrarSayisi; kopya += 1) {
+          const kopyaIcerik = [];
+          oncekiOlcuIcerik.forEach((kaynak) => {
+            const klon = {
+              ...kaynak,
+              id: `${kaynak.id}-rpt-${measureIndex}-${kopya}`,
+              modifiers: kaynak.modifiers
+                ? {
+                    oncesi: Array.isArray(kaynak.modifiers.oncesi) ? [...kaynak.modifiers.oncesi] : [],
+                    sonrasi: Array.isArray(kaynak.modifiers.sonrasi) ? [...kaynak.modifiers.sonrasi] : [],
+                  }
+                : undefined,
+              _repeatCopy: true,
+              // TRANSİTİF kaynak: ardışık ⠶ ⠶'de bar3 = bar2'nin kopyası; orijinal bar1'e işaret et ki
+              // tie zinciri tüm kopyaları bulsun (kullanıcı: "3.ölçü bağlanmıyor, 4.ölçüye atlıyor").
+              _sourceId: kaynak._sourceId || kaynak.id,
+              importKaynak: 'brf-reader',
+              _geriTekrarSayisi: undefined, // tekrar işaretini kopyaya taşıma (blok başında ayrıca eklenir)
+              _tekrarHucreleri: undefined,
+            };
+            ogeler.push(klon);
+            kopyaIcerik.push(klon);
+          });
+          // Blok BAŞI ilk notası: engine braille'de ⠶/⠶⠼N (ORİJİNAL tekrar hücreleri) yazıp blok ölçülerini
+          // ATLASIN — auto-tespite (autoRepeatHaritasi) GÜVENME. Kopya bar1'in bağını (tie vb.) kaybedince
+          // re-tespit başarısız oluyordu (Jingle bar2 ⠶ kayboluyordu); açık işaret bunu çözer (BRF aynen).
+          if (kopya === 0 && kopyaIcerik[0]) {
+            kopyaIcerik[0]._geriTekrarSayisi = tekrarSayisi; // blok ölçü sayısı (engine atlaması)
+            kopyaIcerik[0]._tekrarHucreleri = Array.isArray(repeatOge?.hucreler)
+              ? repeatOge.hucreler.map((h) => [...h])
+              : [[2, 3, 5, 6]]; // yedek: ⠶
+          }
+          // Kopyalar arası ölçü çizgisi (son kopya sonrası ölçü-döngüsü auto-barline ekler).
+          if (kopya < tekrarSayisi - 1) {
+            ogeler.push(brfReaderBarlineOgesiOlustur({ tip: 'barline' }, ogeler.length));
+          }
+          buOlcuIcerik = kopyaIcerik; // son kopyanın içeriği sonraki tekrar için kaynak
+          olcuIcerikGecmisi.push(kopyaIcerik); // geri-sayısal tekrar geçmişi (her kopya ayrı ölçü)
+        }
       } else {
         measureItems.forEach((item) => {
           const oge = brfReaderIteminiSkorOgesineCevir(item, ogeler.length);
@@ -2605,6 +2826,8 @@ export function useMuzikBrfEditor() {
       olcuKapanisBarlineId[measureIndex] = sonBarlineOge?.id || null;
       // Sonraki ölçü-tekrarı için içerik referansını güncelle (boş ölçüde koru).
       if (buOlcuIcerik.length) oncekiOlcuIcerik = buOlcuIcerik;
+      // Geri-sayısal tekrar geçmişi: NORMAL ölçüleri (bar-repeat dışı) ekle (bar-repeat kendi içinde ekler).
+      if (!olcuTekrariMi && buOlcuIcerik.length) olcuIcerikGecmisi.push(buOlcuIcerik);
     });
 
     // ── Volta kapsamı (braille'de bitiş verilmez; kuraldan türetilir) ──────────
@@ -2740,6 +2963,60 @@ export function useMuzikBrfEditor() {
 
   const gorselKaynakReaderMi = canonicalReaderSkorOgeleri.length > 0;
 
+  // TEKRAR KOPYALARINA BAĞ (tie/slur) YANSITMA (kullanıcı: "tekrarlarda tie böyle bağlanmalı").
+  // Reader bağları KAYNAK nota id'lerini taşır; bar-repeat/backward kopyaları yeni id alır → bağsız kalır.
+  // Ölçü-üstü tie ise reader onu kaynak SON nota → hedef İLK nota tek dev yay yapar (kopyaları atlayarak).
+  // Kopya id'si `${kaynak}-rpt-${m}-${k}` / `-bwd-${m}-${ki}` ile kaynağı+ölçüyü kodlar; bundan:
+  //  - İÇ bağ (iki uç aynı kaynak ölçüde, kopyalı) → her kopya ölçüye remap'le kopyala.
+  //  - ÖLÇÜ-ÜSTÜ bağ (bas kopyalı, son hedef) → kopyalar üzerinden ZİNCİRLE; orijinal dev yayı KALDIR.
+  const tekrarKopyaBaglariUret = (ogeler, baglar) => {
+    const notalar = ogeler.filter((o) => o.tip === 'nota');
+    const measureKeyOf = (id) => { const mm = String(id).match(/-(rpt|bwd)-(\d+)-(\d+)$/); return mm ? `${mm[1]}|${mm[2]}|${mm[3]}` : null; };
+    const kopyaLookup = new Map();    // `${sourceId}@${mk}` → copyId
+    const olcuKaynaklari = new Map(); // mk → [sourceId, sıralı]
+    const mkSira = [];
+    for (const o of notalar) {
+      if (!o._repeatCopy || !o._sourceId) continue;
+      const mk = measureKeyOf(o.id);
+      if (!mk) continue;
+      kopyaLookup.set(`${o._sourceId}@${mk}`, o.id);
+      if (!olcuKaynaklari.has(mk)) { olcuKaynaklari.set(mk, []); mkSira.push(mk); }
+      olcuKaynaklari.get(mk).push(o._sourceId);
+    }
+    const ek = [];
+    const kaldir = new Set();
+    if (!mkSira.length) return { ek, kaldir };
+    let sayac = 0;
+    const yid = () => `bag-rpt-${idRef.current}-${sayac++}`;
+    for (const bag of baglar) {
+      const bas = bag.basId; const son = bag.sonId;
+      if (!bas || !son) continue;
+      const basMk = mkSira.filter((mk) => kopyaLookup.has(`${bas}@${mk}`));
+      const sonMk = mkSira.filter((mk) => kopyaLookup.has(`${son}@${mk}`));
+      if (basMk.length && sonMk.length) {
+        // İÇ bağ: her ortak kopya ölçüsünde remap'li bağ.
+        for (const mk of basMk.filter((m) => sonMk.includes(m))) {
+          const cBas = kopyaLookup.get(`${bas}@${mk}`);
+          const cSon = kopyaLookup.get(`${son}@${mk}`);
+          if (cBas && cSon) ek.push({ ...bag, id: yid(), basId: cBas, sonId: cSon, notaIdler: [cBas, cSon] });
+        }
+      } else if (basMk.length && !sonMk.length) {
+        // ÖLÇÜ-ÜSTÜ bağ: kaynak son nota → kopya ölçüler → hedef. Zincirle, dev yayı kaldır.
+        kaldir.add(bag.id);
+        let oncekiUc = bas;
+        for (const mk of basMk) {
+          const kaynaklar = olcuKaynaklari.get(mk);
+          const ilkKopya = kopyaLookup.get(`${kaynaklar[0]}@${mk}`);
+          const sonKopya = kopyaLookup.get(`${kaynaklar[kaynaklar.length - 1]}@${mk}`);
+          if (ilkKopya) ek.push({ ...bag, id: yid(), basId: oncekiUc, sonId: ilkKopya, notaIdler: [oncekiUc, ilkKopya] });
+          if (sonKopya) oncekiUc = sonKopya;
+        }
+        ek.push({ ...bag, id: yid(), basId: oncekiUc, sonId: son, notaIdler: [oncekiUc, son] });
+      }
+    }
+    return { ek, kaldir };
+  };
+
   // BRF metnini doğrudan (string) yükler — dosya ya da hazır parça farketmez.
   const brfMetniYukle = async (rawBrfText, ad = '') => {
     if (!rawBrfText) return;
@@ -2750,8 +3027,19 @@ export function useMuzikBrfEditor() {
     try {
       const readerResult = brfMuzikOku(rawBrfText);
       const header = brfReaderHeaderOlustur(readerResult.header || {}, ad);
+      // GRUPLAMA tespiti: reader gruplama devamı notalarını `grupSureIndeksi` ile etiketler. Kaynak BRF
+      // gruplama yazımı kullanıyorsa (8'lik-hücre devamları), indir/overlay'in AYNI grup formunu üretmesi
+      // için useBrailleGrouping AÇIK olmalı — yoksa skor modeli 16'lık olduğundan tam-hücre yazılır = round-trip kırılır.
+      if ((readerResult.items || []).some((it) => Number.isInteger(it?.grupSureIndeksi))) {
+        header.useBrailleGrouping = true;
+      }
       const skorOgeleri = brfReaderSonucundanSkorOgeleriAl(readerResult);
-      const importedOgeler = onceAnahtarGarantiEt(skorOgeleri);
+      // BRF anahtar (clef) kodlamaz → notaların ortalama perdesinden çıkar: düşük perdeli
+      // parça (orta do altı) FA anahtarı (bas) alır; aksi halde varsayılan SOL (treble).
+      const cikarilanAnahtar = anahtarPerdeyeGoreCikar(skorOgeleri);
+      const importedOgeler = anahtarEkliMi(skorOgeleri)
+        ? skorOgeleri
+        : [{ id: yeniId(), tip: 'anahtar', ad: cikarilanAnahtar.ad, gorunum: cikarilanAnahtar.gorunum, hucreler: cikarilanAnahtar.hucreler }, ...skorOgeleri];
       const skorIdSet = new Set(importedOgeler.map((o) => o.id));
       const baglar = Array.isArray(readerResult.baglar) ? readerResult.baglar : [];
       const temizBaglar = baglar.filter((bag) => {
@@ -2770,6 +3058,23 @@ export function useMuzikBrfEditor() {
           notaIdler: bag.notaIdler,
         })));
       }
+      // Reader tuplet bilgisinden editör tupletler array'i kur: reader nota id'lerini editör oge
+      // id'lerine eşle (kaynakReaderItem.id üzerinden), ratio'yu tupletOranTahmin ile hesapla.
+      const readerTupletler = Array.isArray(readerResult.tupletler) ? readerResult.tupletler : [];
+      const importTupletler = readerTupletler.map((rt) => {
+        const readerIdSet = new Set(rt.notaIdler || []);
+        const notaIdler = importedOgeler
+          .filter((o) => o.tip === 'nota' && readerIdSet.has(o.kaynakReaderItem?.id))
+          .map((o) => o.id);
+        if (notaIdler.length < 2) return null;
+        return {
+          id: rt.id,
+          ratio: tupletOranTahmin(rt.ad),
+          notaIdler,
+          kayit: { hucreler: rt.hucreler, ad: rt.ad, gorselTip: 'tuplet', kategori: 'tuplet' },
+        };
+      }).filter(Boolean);
+
       const okunurMetin = readerResult.readableText || muzikOgeleriOlcuOlcuOkunurMetinAl(skorOgeleri, header);
       const parseBasarisiz = skorOgeleri.length === 0;
 
@@ -2778,9 +3083,13 @@ export function useMuzikBrfEditor() {
         ...header,
       }));
 
+      // Tekrar kopyalarına bağları (tie/slur) yansıt: iç bağları kopyala + ölçü-üstü tie'yi zincirle.
+      const { ek: kopyaBaglari, kaldir: kaldirilanBaglar } = tekrarKopyaBaglariUret(importedOgeler, temizBaglar);
+      const sonBaglar = [...temizBaglar.filter((b) => !kaldirilanBaglar.has(b.id)), ...kopyaBaglari];
+
       setMuzikOgeleri(importedOgeler);
-      setMuzikBaglar(temizBaglar);
-      setMuzikTupletler([]);
+      setMuzikBaglar(sonBaglar);
+      setMuzikTupletler(importTupletler);
       setBrfOkunurOzet(okunurMetin);
       setBrfOkumaSonucu(readerResult);
       setBrfOkumaDurumMesaji(parseBasarisiz
@@ -2819,16 +3128,21 @@ export function useMuzikBrfEditor() {
     await brfMetniYukle(rawBrfText, file.name || '');
   };
 
-  const setTimeSignature = (deger) => {
+  const setTimeSignature = (deger, gruplamaDeseni) => {
     const kullanilacakDeger = deger || MUZIK_VARSAYILAN_ZAMAN_IMZASI;
     const exp = muzikTimeSigExpected16(kullanilacakDeger);
     const hucreler = muzikTimeSignatureHucreleri(kullanilacakDeger);
+
+    // Aksak metrede seçilebilir vuruş gruplaması: geçerli bir desen verildiyse sakla
+    // (görsel kiriş + indir/ekran-altı hep onu kullanır). Geçersiz/yoksa varsayılana düşülür.
+    const gecerliDesen = muzikGruplamaDeseniGecerliMi(kullanilacakDeger, gruplamaDeseni);
 
     const yeniHeader = {
       ad: kullanilacakDeger,
       gorunum: kullanilacakDeger,
       expectedDuration16: exp,
       hucreler,
+      ...(gecerliDesen ? { gruplamaDeseni: gecerliDesen } : {}),
     };
 
     setMuzikHeader((h) => ({
@@ -3043,6 +3357,7 @@ export function useMuzikBrfEditor() {
     ogeleriSil,
     seciliNotaModifierSil,
     seciliNotaModifierGuncelle,
+    perkinsModifierEkle,
     seciliBagiSil,
     seciliNotayiSusaCevir,
     seciliSusuNotayaCevir,

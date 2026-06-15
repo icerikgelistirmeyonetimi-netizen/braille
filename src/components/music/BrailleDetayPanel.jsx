@@ -166,10 +166,22 @@ function dinamikKuralBilgisiAl(anlam = {}) {
     kurallar.push({ baslik: 'Ses ne yapar?', icerik: bilgi.ses });
   }
   // Braille yazım kuralı: dinamikler söz işareti (nokta 3-4-5) ile yazılır.
-  kurallar.push({
-    baslik: 'Braille\'de Yazım',
-    icerik: 'Dinamik/ifade işaretleri Braille\'de söz işareti (nokta 3-4-5) ile başlar ve harf harf yazılır. İşaretin ardından gelen ilk nota mutlaka oktav işareti alır.',
-  });
+  // L6 Kural 4 — yalnızca SÖZCÜK-dinamikler (p/f/mf/cr/rit…; sembol'ü olan) sonraki
+  // notaya oktav zorlar. Hairpin'ler (keskin kreşendo/dekreşendo) grafik işaret olduğundan
+  // zorlamaz — engine'deki muzikModifierSozcukMu ile birebir ayrım.
+  const ad = String(kayit.ad || '').toLowerCase();
+  const hairpin = /keskin|hairpin|çatal|kama/.test(ad) || !kayit.sembol;
+  if (hairpin) {
+    kurallar.push({
+      baslik: 'Braille\'de Yazım',
+      icerik: 'Keskin kreşendo/dekreşendo (genişleyen/daralan iki çizgi) grafik bir işarettir; Braille\'de söz işareti (nokta 3-4-5) ile başlar. Sözcük temelli dinamiklerin aksine, ardından gelen ilk notaya oktav işareti ZORLAMAZ — oktav yalnızca olağan kurallar (parça/satır başı, tekrar-volta sonrası, altıncı ve üzeri aralık vb.) gerektiriyorsa yazılır.',
+    });
+  } else {
+    kurallar.push({
+      baslik: 'Braille\'de Yazım',
+      icerik: 'Dinamik/ifade işaretleri Braille\'de söz işareti (nokta 3-4-5) ile başlar ve harf harf yazılır. Bu sözcük temelli işaretin ardından gelen ilk nota, aralıktan bağımsız olarak mutlaka oktav işareti alır.',
+    });
+  }
   (Array.isArray(kayit.kurallar) ? kayit.kurallar : []).forEach((k, i) => {
     kurallar.push({ baslik: `Kural ${i + 1}`, icerik: k });
   });
@@ -287,7 +299,7 @@ function nuansKuralBilgisiAl(anlam = {}) {
 }
 
 // ─── Süre indeksi → Türkçe ad ────────────────────────────────────────────────
-const SURE_ADLARI = ['sekizlik', 'dörtlük', 'yarım', 'tam', "on altılık", "otuz ikili", "altmış dörtlük"];
+const SURE_ADLARI = ['sekizlik', 'dörtlük', 'ikilik', 'birlik', "16'lık", "32'lik", "64'lük"];
 
 // ─── Kural veri tabanı (Türkçe, kapsamlı) ────────────────────────────────────
 const KURAL_DB = {
@@ -298,7 +310,7 @@ const KURAL_DB = {
       {
         baslik: 'Perde ve Süre Bir Arada',
         icerik:
-          'Her Braille nota hücresi hem perdeyi (hangi nota olduğunu) hem de süreyi (ne kadar süreceğini) aynı anda kodlar. Nokta 1-2-4-5 kombinasyonu perdeyi, nokta 3 ve 6 ise süreyi belirler. Sekizlik için ek nokta gerekmez; dörtlük için nokta 6; yarım için nokta 3; tam nota için nokta 3 ve 6 birlikte eklenir.',
+          'Her Braille nota hücresi hem perdeyi (hangi nota olduğunu) hem de süreyi (ne kadar süreceğini) aynı anda kodlar. Nokta 1-2-4-5 kombinasyonu perdeyi, nokta 3 ve 6 ise süreyi belirler. Sekizlik için ek nokta gerekmez; dörtlük için nokta 6; ikilik için nokta 3; birlik nota için nokta 3 ve 6 birlikte eklenir.',
       },
       {
         baslik: 'İkili Anlam (Dual Meaning)',
@@ -330,7 +342,7 @@ const KURAL_DB = {
       {
         baslik: 'Sus Değerleri',
         icerik:
-          'Her nota değerinin karşılık gelen bir sus sembolü vardır. Tam sus: nokta 1-3-4; yarım sus: nokta 1-3-6; dörtlük sus: nokta 1-2-3-6; sekizlik sus: nokta 1-3-4-6; on altılık sus: tam nota sembolüyle aynı hücre kodunu paylaşır; değeri zaman imzasına göre belirlenir.',
+          'Her nota değerinin karşılık gelen bir sus sembolü vardır. Birlik sus: nokta 1-3-4; ikilik sus: nokta 1-3-6; dörtlük sus: nokta 1-2-3-6; sekizlik sus: nokta 1-3-4-6; 16\'lık sus: birlik sus ile aynı hücre kodunu paylaşır; değeri zaman imzasına göre belirlenir.',
       },
       {
         baslik: 'Noktalı Sus',
@@ -485,6 +497,33 @@ const KURAL_DB = {
         baslik: 'Konumu',
         icerik:
           'Ölçü tekrarı, tekrarlanan ölçünün bulunduğu yere, diğer ölçüler gibi boşlukla ayrılarak yazılır. Birden fazla ardışık ölçü aynıysa her biri için ayrı tekrar işareti kullanılır.',
+      },
+    ],
+  },
+
+  backwardRepeat: {
+    baslik: 'Sayısal Tekrar',
+    renk: 'purple',
+    kurallar: [
+      {
+        baslik: 'Anlamı',
+        icerik:
+          'Sayısal tekrar işareti, daha önce çalınmış bir veya birden çok ölçünün yeniden çalınacağını gösterir. Notalar yeniden yazılmaz; sayı işareti (nokta 3-4-5-6) ve ardından gelen rakamlarla kısaca belirtilir. Bu, uzun tekrar bölümlerinde yer kazandırır.',
+      },
+      {
+        baslik: 'İki Türü',
+        icerik:
+          'Üst rakamla yazılan biçim (geri-sayısal) "şu kadar ölçü geriye git ve şu kadar ölçü çal" demektir: tek sayı (ör. #5) önceki 5 ölçüyü; çift sayı (ör. #8#6) "8 ölçü geriye git, 6 ölçü çal" anlamına gelir. Alt rakamla yazılan biçim (ölçü-numarası) ise hangi MUTLAK ölçü numaralarının (ör. #1-6 → 1.–6. ölçüler) tekrarlanacağını gösterir.',
+      },
+      {
+        baslik: 'Braille\'de Gösterim',
+        icerik:
+          'İşaret sayı işareti (nokta 3-4-5-6) ile başlar; ardından üst ya da alt konumda yazılmış rakam(lar) gelir. Bir ölçü aralığı belirtmek için tire (nokta 3-6) kullanılır (ör. 1-6). Tekrarlanan ölçüler tek bir işaretle temsil edildiğinden o ölçülerin nota hücreleri tekrar yazılmaz.',
+      },
+      {
+        baslik: 'Konumu',
+        icerik:
+          'Sayısal tekrar, tekrarlanan bölümün bulunduğu yere, diğer ölçüler gibi boşlukla ayrılarak yazılır. İşaretin temsil ettiği ölçüler görsel portede açıkça çizilir; Braille\'de ise yalnızca bu kısa işaret görünür.',
       },
     ],
   },
@@ -651,7 +690,7 @@ const KURAL_DB = {
       {
         baslik: 'Süre Etkisi',
         icerik:
-          'Nota veya susun yanına konulan augmentation dot (uzatma noktası), o değerin süresini yarısı kadar artırır. Dörtlük nota 1 vuruşsa, noktalı dörtlük 1 + ½ = 1,5 vuruştur. Yarım nota 2 vuruşsa, noktalı yarım 3 vuruştur.',
+          'Nota veya susun yanına konulan augmentation dot (uzatma noktası), o değerin süresini yarısı kadar artırır. Dörtlük nota 1 vuruşsa, noktalı dörtlük 1 + ½ = 1,5 vuruştur. İkilik nota 2 vuruşsa, noktalı ikilik 3 vuruştur.',
       },
       {
         baslik: 'Braille\'de Yazım',
@@ -822,7 +861,8 @@ function getKuralKey(anlam) {
   if (kaynak === 'endrepeat'   || tip === 'endrepeat')   return 'endRepeat';
   if (kaynak === 'finalbarline' || tip === 'finalbarline') return 'finalBarline';
   if (kaynak === 'sectionalbarline' || tip === 'sectionalbarline') return 'sectionalBarline';
-  if (kaynak === 'bar-repeat' || tip === 'bar-repeat') return 'barRepeat';
+  if (kaynak === 'bar-repeat' || tip === 'bar-repeat' || kaynak === 'bar-repeat-sayi') return 'barRepeat';
+  if (kaynak === 'backward-repeat' || tip === 'backward-repeat') return 'backwardRepeat';
 
   // Dot
   if (kaynak === 'dot' || tip === 'dot') return 'dot';
@@ -841,6 +881,7 @@ function getKuralKey(anlam) {
   if (kat === 'beginrepeat') return 'beginRepeat';
   if (kat === 'endrepeat') return 'endRepeat';
   if (kat === 'bar-repeat') return 'barRepeat';
+  if (kat === 'backward-repeat') return 'backwardRepeat';
   if (kat === 'barline') return 'barline';
   if (kat === 'volta1') return 'volta1';
   if (kat === 'volta2') return 'volta2';
@@ -879,6 +920,69 @@ function notaBilgisiAl(anlam, oge) {
   return null;
 }
 
+// ─── Yerleşim sırası (order-of-signs, Bölüm 13) ──────────────────────────────
+// Bir notaya birden çok işaret eklendiğinde kesin bir yazım sırası vardır. Bu kart
+// SADECE bu sıralamaya katılan (notaya eklenen) işaretlerin panelinde gösterilir;
+// ölçü çizgisi, zaman/donanım imzası, sus, ölçü/sayısal tekrar gibi bağımsız ya da
+// başlık-seviyesi işaretlerde gösterilmez. Slot numaraları engine'deki
+// muzikModifierOncesiSira / muzikModifierSonrasiSira ile birebir.
+const YERLESIM_GIRIS = 'Bir notaya birden çok işaret eklendiğinde kesin bir yazım sırası izlenir (Bölüm 13).';
+const YERLESIM_ONCE = 'Nota ÖNCESİ: ileri-tekrar → volta → cümle bağı açılışı → dinamik → tuplet → süsleme → nüans → aksidental → oktav → NOTA.';
+const YERLESIM_SONRA = 'Nota SONRASI: nokta → fermata → tekli slur → cümle bağı kapanışı → tie → nefes → geri-tekrar.';
+
+function yerlesimSlotMetni(kuralKey, anlam) {
+  switch (kuralKey) {
+    case 'nota':
+      return 'NOTA bu sıralamanın merkezidir; önce-işaretleri solunda, sonra-işaretleri sağında yazılır.';
+    case 'oktav':
+      return 'oktav nota ÖNCESİ son sıradadır (10) — notaya en yakın işaret; yalnızca aksidental daha önce gelebilir.';
+    case 'accidental':
+      return 'aksidental nota ÖNCESİ 9. sıradadır; dizilim aksidental → oktav → nota.';
+    case 'dynamic':
+      return 'dinamik nota ÖNCESİ 4. sıradadır (tuplet, süsleme, nüans, aksidental ve oktavdan önce).';
+    case 'susleme':
+      return 'süsleme nota ÖNCESİ 7. sıradadır (dinamik/tuplet sonrası, nüanstan önce).';
+    case 'tuplet':
+      return 'tuplet nota ÖNCESİ 5. sıradadır (dinamikten sonra, süslemeden önce).';
+    case 'tie':
+      return 'uzatma bağı (tie) nota SONRASI 5. sıradadır (cümle bağı kapanışından sonra, nefesten önce).';
+    case 'dot':
+      return 'uzatma noktası nota SONRASI 1. sıradadır — notadan sonra ilk yazılan işarettir.';
+    case 'volta1':
+    case 'volta2':
+      return 'volta nota ÖNCESİ 2. sıradadır (ileri-tekrardan sonra).';
+    case 'beginRepeat':
+      return 'ileriye doğru tekrar nota ÖNCESİ 1. sıradadır — en başta yazılır.';
+    case 'endRepeat':
+      return 'geriye doğru tekrar nota SONRASI en son sıradadır.';
+    case 'slur':
+      return 'cümle bağı açılışı nota ÖNCESİ 3. sırada; tekli slur ve cümle bağı kapanışı nota SONRASI 3.–4. sıradadır.';
+    case 'nuans': {
+      const ara = String(anlam?.etiket || anlam?.ad || anlam?.baslik || '').toLowerCase().trim();
+      if (NUANS_ONCE_ADLARI_SET.has(ara)) {
+        return 'nüans (artikülasyon) nota ÖNCESİ 8. sıradadır; birden çok nüansta iç sıra: arpej → staccato → aksan → tenuto → şişirme.';
+      }
+      if (/fermata/.test(ara)) return 'fermata nota SONRASI 2. sıradadır (noktadan sonra).';
+      return 'nefes/sezür nota SONRASI 7. sıradadır (tie’dan sonra).';
+    }
+    default:
+      return null;
+  }
+}
+
+function yerlesimSirasiKarti(kuralKey, anlam) {
+  // Tempo header satırındadır, nota işaret-yığınına girmez → kart gösterme.
+  const kaynak = String(anlam?.kaynak || '').toLowerCase();
+  const tip = String(anlam?.tip || '').toLowerCase();
+  if (kaynak === 'tempo' || tip === 'tempo') return null;
+  const slot = yerlesimSlotMetni(kuralKey, anlam);
+  if (!slot) return null;
+  return {
+    baslik: 'Yerleşim Sırası',
+    icerik: `${YERLESIM_GIRIS} ${YERLESIM_ONCE} ${YERLESIM_SONRA} ➤ Bu işaret: ${slot}`,
+  };
+}
+
 // ─── Panel Bileşeni ───────────────────────────────────────────────────────────
 export default function BrailleDetayPanel({ detay, onKapat, style }) {
   // ESC tuşu ile kapat
@@ -901,6 +1005,13 @@ export default function BrailleDetayPanel({ detay, onKapat, style }) {
   const nuansKurali   = kuralKey === 'nuans'   ? nuansKuralBilgisiAl(anlam)   : null;
   const kuralBilgisi = suslemeKurali || dinamikKurali || nuansKurali || (kuralKey && KURAL_DB[kuralKey]) || VARSAYILAN_KURAL;
   const renkler = RENK_MAP[kuralBilgisi.renk] || RENK_MAP.zinc;
+
+  // Yerleşim sırası (Bölüm 13) kartını yalnızca ilgili işaretlerin sonuna ekle.
+  // KURAL_DB shared olduğundan diziyi mutasyona uğratma; yeni dizi üret.
+  const yerlesimKarti = yerlesimSirasiKarti(kuralKey, anlam);
+  const gosterilenKurallar = yerlesimKarti
+    ? [...kuralBilgisi.kurallar, yerlesimKarti]
+    : kuralBilgisi.kurallar;
 
   const nota = notaBilgisiAl(anlam, oge);
   const etiket = anlam?.etiket || anlam?.baslik || anlam?.ad || kuralBilgisi.baslik;
@@ -975,7 +1086,7 @@ export default function BrailleDetayPanel({ detay, onKapat, style }) {
         className="flex gap-3 overflow-x-auto px-4 pb-3"
         style={{ scrollbarWidth: 'thin' }}
       >
-        {kuralBilgisi.kurallar.map((kural, idx) => (
+        {gosterilenKurallar.map((kural, idx) => (
           <div
             key={idx}
             className={`shrink-0 w-72 rounded-xl border ${renkler.border} bg-white p-3`}

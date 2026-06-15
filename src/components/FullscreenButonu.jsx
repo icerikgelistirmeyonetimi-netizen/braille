@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { IOS_TAM_EKRAN_IPUCU, tamEkranApiDestekleniyorMu } from '../utils/tamEkran.js';
+import { ekranOkuyucuBildir } from '../utils/ses.js';
 
 export default function FullscreenButonu() {
   const [destek, setDestek] = useState(() => tamEkranApiDestekleniyorMu());
@@ -32,6 +33,7 @@ export default function FullscreenButonu() {
   const tikla = () => {
     if (!destek) {
       setUyari(IOS_TAM_EKRAN_IPUCU);
+      ekranOkuyucuBildir(IOS_TAM_EKRAN_IPUCU);
       return;
     }
     if (durum) {
@@ -85,7 +87,7 @@ export default function FullscreenButonu() {
       <span id="fs-ios-aciklama" className="sr-only">{IOS_TAM_EKRAN_IPUCU}</span>
     )}
     {uyari && (
-      <div className="toast toast-fs-aciklama" role="status" aria-live="polite">{uyari}</div>
+      <div className="toast toast-fs-aciklama" aria-live="off">{uyari}</div>
     )}
     </>
   );

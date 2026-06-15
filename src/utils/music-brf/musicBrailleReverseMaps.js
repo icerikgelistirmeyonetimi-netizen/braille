@@ -92,9 +92,10 @@ export function musicBrailleReverseMapsOlustur() {
     restByCellKey.set(dashKey, candidates);
   });
 
+  // Etiketler muzik.js (MUZIK_DEGISTIRICI / MUZIK_OLCU_CIZGILERI / MUZIK_BAGLAR) ile aynı terminolojide.
   accidentalByCellKey.set('1-4-6', { accidental: 'sharp', label: 'diyez' });
   accidentalByCellKey.set('1-2-6', { accidental: 'flat', label: 'bemol' });
-  accidentalByCellKey.set('1-6', { accidental: 'natural', label: 'natürel' });
+  accidentalByCellKey.set('1-6', { accidental: 'natural', label: 'naturel' });
 
   Object.entries(OCTAVE_BY_CELL_KEY).forEach(([cellKey, octave]) => {
     const dashKey = keyToDash(cellKey);
@@ -102,12 +103,12 @@ export function musicBrailleReverseMapsOlustur() {
     octaveByCellKey.set(dashKey, Number(octave));
   });
 
-  barlineByCellKey.set('1-2-6-1-3-3', { tip: 'sectionalBarline', label: 'bölüm sonu çizgisi' });
+  barlineByCellKey.set('1-2-6-1-3-3', { tip: 'sectionalBarline', label: 'bölüm sonu çift çubuk' });
   barlineByCellKey.set('1-2-6-1-3', { tip: 'finalBarline', label: 'bitiş çizgisi' });
-  barlineByCellKey.set('1-2-6-2-3-5-6', { tip: 'beginRepeat', label: 'başlangıç tekrarı' });
-  barlineByCellKey.set('1-2-6-2-3', { tip: 'endRepeat', label: 'bitiş tekrarı' });
-  slurTieByCellKey.set('1-4', { tip: 'slur', label: 'slur' });
-  slurTieByCellKey.set('4', { tip: 'tieLead', label: 'tie başlangıcı' });
+  barlineByCellKey.set('1-2-6-2-3-5-6', { tip: 'beginRepeat', label: 'ileriye doğru tekrar' });
+  barlineByCellKey.set('1-2-6-2-3', { tip: 'endRepeat', label: 'geriye doğru tekrar' });
+  slurTieByCellKey.set('1-4', { tip: 'slur', label: 'hece bağı' });
+  slurTieByCellKey.set('4', { tip: 'tieLead', label: 'uzatma bağı' });
 
   const { byKey: modifierByCellKey, maxLen: modifierMaxLen } = buildModifierSequences();
 

@@ -31,6 +31,39 @@ export const MUZIK_ACCIDENTAL_HUCRELERI = {
   doubleFlat:  [[1, 2, 6], [1, 2, 6]],
 };
 
+// Modül 8 — Aksak/düzensiz ölçülerde VURUŞ GRUPLAMASI seçenekleri.
+// Araştırma (Music Braille Code 2015 + International Manual + nota teorisi): aksak metrelerde
+// (5/8, 7/8, 9/8, 10/8) vuruş bölünmesi SABİT DEĞİLDİR — bestecinin kiriş (beam) seçimine göre
+// değişir (örn. 7/8 = 2+2+3 / 3+2+2 / 2+3+2 — hepsi geçerli, en yaygın 2+2+3). Braille gruplama
+// "bir grup iki farklı vuruşa ait olamaz" kuralıyla bu bölünmeyi izler. Bu yüzden editörde
+// SEÇTİRİLİR, import'ta grup sınırlarından çözümlenir.
+// Desen SEKİZLİK vuruş cinsindendir (her sayı = kaç sekizlik); 16'lığa çevirmek için ×2.
+// Her metrenin İLK seçeneği VARSAYILANDIR (eski sabit gorselZamanImzasiVurusDeseniAl deseniyle birebir).
+export const MUZIK_GRUPLAMA_SECENEKLERI = {
+  '5/8':  [[2, 3], [3, 2]],
+  '7/8':  [[2, 2, 3], [3, 2, 2], [2, 3, 2]],
+  '9/8':  [[3, 3, 3], [2, 2, 2, 3], [2, 2, 3, 2], [2, 3, 2, 2], [3, 2, 2, 2]],
+  '10/8': [[3, 3, 2, 2], [2, 3, 2, 3], [3, 2, 3, 2], [2, 2, 3, 3]],
+};
+
+// Bir ölçü sayısının seçilebilir gruplaması var mı (aksak metre)?
+export function muzikGruplanabilirMetreMi(ad) {
+  const f = String(ad || '').match(/(\d+)\s*\/\s*(\d+)/);
+  return !!(f && MUZIK_GRUPLAMA_SECENEKLERI[`${f[1]}/${f[2]}`]);
+}
+
+// Verilen sekizlik-deseni (örn. [2,2,3]) o metrenin geçerli bir seçeneği mi? Geçerliyse normalize edip
+// döndürür (referans eşitliği yerine değer eşitliği), değilse null.
+export function muzikGruplamaDeseniGecerliMi(ad, desen) {
+  const f = String(ad || '').match(/(\d+)\s*\/\s*(\d+)/);
+  if (!f) return null;
+  const secenekler = MUZIK_GRUPLAMA_SECENEKLERI[`${f[1]}/${f[2]}`];
+  if (!secenekler || !Array.isArray(desen)) return null;
+  const anahtar = desen.join('+');
+  const eslesen = secenekler.find((s) => s.join('+') === anahtar);
+  return eslesen ? [...eslesen] : null;
+}
+
 // Modül 8 Bölüm 4 — Donanım standart sırası
 export const MUZIK_DIYEZ_SIRASI = ['fa', 'do', 'sol', 're', 'la', 'mi', 'si'];
 export const MUZIK_BEMOL_SIRASI = ['si', 'mi', 'la', 're', 'sol', 'do', 'fa'];

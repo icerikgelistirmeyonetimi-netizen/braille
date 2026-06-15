@@ -54,6 +54,7 @@ import IngilizceBrailleMenu from './pages/IngilizceBrailleMenu.jsx';
 import AlmancaBrailleMenu from './pages/AlmancaBrailleMenu.jsx';
 import FransizcaBrailleMenu from './pages/FransizcaBrailleMenu.jsx';
 import YabanciBrailleSayfa from './pages/YabanciBrailleSayfa.jsx';
+import AramaSayfasi from './pages/AramaSayfasi.jsx';
 import Araclar from './pages/Araclar.jsx';
 import BelgeBrf from './pages/BelgeBrf.jsx';
 import BrfOku from './pages/BrfOku.jsx';
@@ -156,6 +157,7 @@ export default function App() {
         <DesktopShell>
           <Routes>
           <Route path="/" element={<AnaMenu />} />
+          <Route path="/arama" element={<AramaSayfasi />} />
           <Route path="/hucre" element={<HucreTanima />} />
           <Route path="/harfler" element={<HarfEgitimi />} />
           <Route path="/rakamlar" element={<RakamEgitimi />} />

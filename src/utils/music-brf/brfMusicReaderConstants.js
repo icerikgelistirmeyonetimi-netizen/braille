@@ -2,13 +2,28 @@ import { SURE_GOSTERGELERI } from '../../data/muzik.js';
 
 export const BRAILLE_BLANK = '⠀';
 
-export const TIME_SIGNATURE_PATTERNS = {
-  '3456|12|256': '2/4',
-  '3456|14|256': '3/4',
-  '3456|145|256': '4/4',
-  '3456|124|235': '6/8',
-  '3456|245|235': '10/8',
-};
+// Zaman imzası deseni → "N/M" eşlemesi. Üst-rakam (numerator) + alt-rakam (denominator) hücre
+// tablolarından ÜRETİLİR (editör muzikTimeSignatureHucreleri ile aynı standart konvansiyon).
+// Eski hardcoded harita eksik+hataliydi (6/8 denominator lower-6 yazılmıştı; 9/8, 12/8, 2/2 vb. yoktu).
+const _TS_UPPER = { 1: '1', 2: '12', 3: '14', 4: '145', 5: '15', 6: '124', 7: '1245', 8: '125', 9: '24', 0: '245' };
+const _TS_LOWER = { 1: '2', 2: '23', 3: '25', 4: '256', 5: '26', 6: '235', 7: '2356', 8: '236', 9: '35', 0: '356' };
+function _tsKey(num, den) {
+  const numKeys = String(num).split('').map((d) => _TS_UPPER[d]).join('|');
+  const denKeys = String(den).split('').map((d) => _TS_LOWER[d]).join('|');
+  return `3456|${numKeys}|${denKeys}`;
+}
+export const TIME_SIGNATURE_PATTERNS = (() => {
+  const map = {};
+  for (let num = 1; num <= 16; num += 1) {
+    for (const den of [1, 2, 4, 8, 16, 32]) {
+      map[_tsKey(num, den)] = `${num}/${den}`;
+    }
+  }
+  // Common time ⠨⠉ ([4,6][1,4]) = 4/4, cut time ⠸⠉ ([4,5,6][1,4]) = 2/2. Sayı işaretsizdir.
+  map['46|14'] = 'common';
+  map['456|14'] = 'cut common';
+  return map;
+})();
 
 export const BRAILLE_LETTERS_TR = {
   '1': 'a',
