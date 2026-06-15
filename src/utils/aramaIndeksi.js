@@ -455,11 +455,22 @@ const KELIME_AYIRAC = /[^\p{L}\p{N}]+/u;
 export function sozlukAra(girdi) {
   const q = metinNormalle(girdi).trim();
   if (!q) return [];
+  // Sembol sorgusu (harf/rakam dışı karakter içerir, ör. ">", "+", "?", "="): sembolün
+  // KENDİSİ "yazılış" olarak etiket+altEtiket'te ham alt-dizi aranır. Normal kelime yolu
+  // bunları bulamaz çünkü (a) tek karakterli sorgu uzunluk eşiklerine (>=2/>=3) takılır,
+  // (b) KELIME_AYIRAC sembol karakterlerini söküp atar. Sembolün adı yine altEtiket'te.
+  const sembolSorgu = /[^\p{L}\p{N}\s]/u.test(q);
   const sonuclar = [];
   for (const giris of ARAMA_INDEKSI) {
     const etiket = metinNormalle(giris.etiket);
     let eslesti = etiket === q || (giris.esler && giris.esler.includes(q));
-    if (!eslesti && q.length >= 2) {
+    if (!eslesti && sembolSorgu) {
+      // Sembol "yazılış" olarak altEtiket'te tutulur (math/noktalama/müzik: altEtiket = s.sembol).
+      // Yalnız altEtiket'te ara: kök kısaltma etiketinin gösterim amaçlı "+"si ("5+ba") veya
+      // ifade etiketindeki "/" gibi notasyon getirilmesin. Sembol etiket'te tek karakterse
+      // zaten yukarıdaki etiket === q ile bulunur.
+      eslesti = metinNormalle(giris.altEtiket).includes(q);
+    } else if (!eslesti && q.length >= 2) {
       const birlesik = metinNormalle(`${giris.etiket} ${giris.altEtiket} ${(giris.esler || []).join(' ')}`);
       const kelimeler = birlesik.split(KELIME_AYIRAC).filter(Boolean);
       eslesti = kelimeler.some((w) => w === q)
