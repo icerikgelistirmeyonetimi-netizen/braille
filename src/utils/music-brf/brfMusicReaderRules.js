@@ -1198,6 +1198,12 @@ export function readMusicBrailleGroup(group = [], context) {
   // DEĞİLDİR (numarayı müzikten ayıran boşluk). Bar 1=⠁, bar 16=⠁⠋ gibi.
   if (satirBasi && tokens.length && tokens.every((t) => UPPER_DIGIT_BY_DASH.has(dotsToDashKey(t.dots)))) {
     const no = tokens.map((t) => UPPER_DIGIT_BY_DASH.get(dotsToDashKey(t.dots))).join('');
+    // Satır başı ölçü numarası = YENİ ölçünün başı → önceki ölçüyü KAPAT. handleLineEnd
+    // satır sonunu yalnız nota/sus ise kapatıyor; önceki satır ⠶ (bar-repeat) / özel işaretle
+    // bittiyse kapatmıyordu → sarılmış numaralı dosyada iki ölçü birleşiyordu. Buradaki
+    // separatorBarlineOlustur idempotent (zaten kapalıysa/ilk ölçüyse null döner) → güvenli;
+    // yalnız satır-başı numaralı (sarılmış) dosyaları etkiler.
+    separatorBarlineOlustur({ char: '⠀', dots: [], type: 'space' }, context);
     tokens.forEach((t) => pushDebug(context, t, {
       category: 'bar-number',
       meaning: `${no}. ölçü numarası`,

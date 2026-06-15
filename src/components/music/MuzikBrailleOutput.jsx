@@ -136,9 +136,9 @@ export default function MuzikBrailleOutput({
                       className="shrink-0 w-7 text-right text-[11px] font-sans tabular-nums text-slate-400 select-none"
                       aria-hidden="true"
                     >
-                      {s.no}
+                      {s.devam ? '' : s.no}
                     </span>
-                    <span><span className="text-sky-700" title={`${s.no}. ölçü`}>{altRakamYaz(s.no)}⠀</span>{s.metin}</span>
+                    <span>{s.devam ? s.metin : (<><span className="text-sky-700" title={`${s.no}. ölçü`}>{altRakamYaz(s.no)}⠀</span>{s.metin}</>)}</span>
                   </div>
                 ))}
               </div>
@@ -197,9 +197,9 @@ export default function MuzikBrailleOutput({
                       className="shrink-0 w-7 text-right text-[11px] font-sans tabular-nums text-slate-400 select-none"
                       aria-hidden="true"
                     >
-                      {s.no}
+                      {s.devam ? '' : s.no}
                     </span>
-                    <span><span className="text-sky-700" title={`${s.no}. ölçü`}>{altRakamYaz(s.no)}⠀</span>{s.metin}</span>
+                    <span>{s.devam ? s.metin : (<><span className="text-sky-700" title={`${s.no}. ölçü`}>{altRakamYaz(s.no)}⠀</span>{s.metin}</>)}</span>
                   </div>
                 ))}
               </div>

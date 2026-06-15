@@ -62,14 +62,11 @@ export function numaraliBrfMetni(metin, { genislik = 40 } = {}) {
   try { r = brfMuzikOku(metin, { source: 'numarali-export' }); } catch { return metin; }
   const g = brfNumaraliGorunum(metin, r, { genislik });
   if (!g || !Array.isArray(g.govde) || g.govde.length === 0) return metin;
-  // PDF s.40: numara (üst rakam) + BOŞLUK + müzik (numara kendi hücresinde, ardından ayraç).
-  const govdeSatir = g.govde.map((s) => `${ustRakamYaz(s.no)}⠀${s.metin}`);
-  const cikti = [...g.basliklar, ...govdeSatir].join('\n');
-  // GÜVENLİK: numaralı çıktı orijinalle AYNI müziği (nota dizisi + ölçü sayısı) veriyorsa
-  // kullan; vermiyorsa (zaman/donanım değişimi, tuplet-içi boşluk, sayısal tekrar gibi
-  // özel boşluk taşıyan kenar durumlar) orijinali döndür → indirilen dosya DAİMA aynen
-  // geri okunur. (Reader satır-başı numarayı zaten atlar; risk yalnız ölçü-sınırı kayması.)
-  return roundTripGuvenli(r, cikti) ? cikti : metin;
+  // GUARD brfNumaraliGorunum İÇİNDE (görünümle ortak) → fallback'te g.govde zaten ham
+  // satırlar (numarasız) olur, çıktı = orijinal. Burada yalnız metne çevir.
+  // PDF s.40: numara (üst rakam) + BOŞLUK + müzik; run-over (devam) satırı numarasız + girintili.
+  const govdeSatir = g.govde.map((s) => (s.devam ? s.metin : `${ustRakamYaz(s.no)}⠀${s.metin}`));
+  return [...g.basliklar, ...govdeSatir].join('\n');
 }
 
 function ogeImzasi(r) {
@@ -113,6 +110,76 @@ export function anakruzisVarMi(measures) {
   return ilk > 0 && ilk < baskin;
 }
 
+// Üst-rakam braille → ondalık (ustRakamYaz tersi). Görünüm gutter'ı + ayrıştırma için.
+const UST_RAKAM_TERS = Object.fromEntries(Object.entries(UST_RAKAM).map(([d, c]) => [c, d]));
+export function ustRakamCoz(braille) {
+  let s = '';
+  for (const ch of String(braille || '')) { const d = UST_RAKAM_TERS[ch]; if (d == null) break; s += d; }
+  return s ? parseInt(s, 10) : null;
+}
+
+const RUN_OVER_GIRINTI = 2; // taşma satırı girinti hücresi (Lesson 5/NFB: run-over indented)
+const hucreSay = (s) => Array.from(String(s || '')).length;
+
+// Tek bir ölçü satır genişliğini AŞIYORSA böl (run-over). Tercihen iç boşlukta
+// (≈ tam vuruş/grup sınırı); yoksa sert böl. Devam parçaları çağıran tarafından girintilenir.
+function runOverBol(olcu, ilkGen, devamGen) {
+  const chars = Array.from(String(olcu || ''));
+  const parcalar = [];
+  let bas = 0;
+  let limit = Math.max(4, ilkGen);
+  while (bas < chars.length) {
+    let son = Math.min(bas + limit, chars.length);
+    if (son < chars.length) {
+      let kes = -1;
+      for (let j = bas + 1; j < son; j += 1) if (chars[j] === '⠀' || chars[j] === ' ') kes = j;
+      if (kes > bas) son = kes; // son iç boşlukta böl (vuruş/grup)
+    }
+    parcalar.push(chars.slice(bas, son).join('').replace(/[⠀ ]+$/, ''));
+    bas = son;
+    while (bas < chars.length && (chars[bas] === '⠀' || chars[bas] === ' ')) bas += 1;
+    limit = Math.max(4, devamGen);
+  }
+  return parcalar;
+}
+
+// Ölçü dizisini (gerçek ölçüler) satır başına numaralı, ≤genislik satırlara paketler.
+// Ölçü bölünmez (sığmazsa alt satıra); tek ölçü tek satıra bile sığmazsa run-over (girintili).
+export function olculeriNumarali(olculer, { genislik = 40, ilkNo = 1 } = {}) {
+  const list = (olculer || []).filter((m) => typeof m === 'string' && m.length);
+  const satirlar = [];
+  let i = 0;
+  let no = ilkNo;
+  while (i < list.length) {
+    const satirNo = no;
+    const onEk = ustRakamYaz(satirNo).length + 1; // numara + 1 boşluk DAHİL (toplam ≤ genislik)
+    const kullanilabilir = Math.max(8, genislik - onEk);
+
+    if (hucreSay(list[i]) > kullanilabilir) {
+      // RUN-OVER: tek ölçü tek satıra sığmıyor → böl, devamı girintili
+      const parcalar = runOverBol(list[i], kullanilabilir, genislik - RUN_OVER_GIRINTI);
+      satirlar.push({ no: satirNo, metin: parcalar[0] });
+      for (let k = 1; k < parcalar.length; k += 1) {
+        satirlar.push({ no: null, devam: true, metin: '⠀'.repeat(RUN_OVER_GIRINTI) + parcalar[k] });
+      }
+      i += 1; no += 1;
+      continue;
+    }
+
+    const parcalar = [];
+    let uzunluk = 0;
+    while (i < list.length) {
+      const len = hucreSay(list[i]);
+      if (len > kullanilabilir) break; // sıradaki ölçü run-over gerektiriyor → bu satırı kapat
+      const eklenecek = (parcalar.length === 0 ? 0 : 1) + len;
+      if (parcalar.length > 0 && uzunluk + eklenecek > kullanilabilir) break;
+      parcalar.push(list[i]); uzunluk += eklenecek; i += 1; no += 1;
+    }
+    satirlar.push({ no: satirNo, metin: parcalar.join('⠀') });
+  }
+  return satirlar;
+}
+
 // Görüntülenecek BRF metnini + reader sonucunu alıp numaralı görünüm üretir.
 //   metin            : ekranda gösterilen ham BRF (başlık satırları + gövde)
 //   brfOkumaSonucu   : reader sonucu (cells → başlık/gövde sınırı, measures → anacrusis)
@@ -137,11 +204,20 @@ export function brfNumaraliGorunum(metin, brfOkumaSonucu, { genislik = 40 } = {}
   const ilkGovdeIdx = Math.min(...muzikSatirlari);
 
   const basliklar = satirlar.slice(0, ilkGovdeIdx);
-  // Gövde satırlarındaki MEVCUT satır-başı numaralarını sil → tekrar numaralarken çift
-  // numara oluşmaz ve numara hücresi yanlışlıkla "ölçü" gibi sayılmaz (yanlış ölçü no).
-  const govdeMetni = satirlar.slice(ilkGovdeIdx).map(satirBasiNumarasiniSil).join('⠀');
   const ilkNo = anakruzisVarMi(brfOkumaSonucu?.measures) ? 0 : 1;
+  // Gövde satırlarındaki MEVCUT satır-başı numaralarını sil → çift numara olmaz.
+  const govdeMetni = satirlar.slice(ilkGovdeIdx).map(satirBasiNumarasiniSil).join('⠀');
   const govde = muzikGovdesiniNumarali(govdeMetni, { genislik, ilkNo });
+
+  // ⚠ GUARD BURADA (görünüm + indir + kopya TEK noktadan geçer): numaralı/sarılı çıktı
+  // re-import'ta orijinalle aynı skoru (nota dizisi + ölçü) vermiyorsa → ORİJİNAL gövde
+  // satırlarını (numarasız, ham) döndür. Böylece güvenli-olmayan parçada GÖRÜNÜM de İNDİR
+  // de AYNI (ham) olur — asla biri sarılı biri ham olmaz.
+  const aday = [...basliklar, ...govde.map((s) => (s.devam ? s.metin : `${ustRakamYaz(s.no)}⠀${s.metin}`))].join('\n');
+  if (!roundTripGuvenli(brfOkumaSonucu, aday)) {
+    const hamGovde = satirlar.slice(ilkGovdeIdx).map((l) => ({ no: null, devam: true, metin: l }));
+    return { basliklar, govde: hamGovde, fallback: true };
+  }
 
   return { basliklar, govde };
 }
@@ -152,32 +228,7 @@ export function brfNumaraliGorunum(metin, brfOkumaSonucu, { genislik = 40 } = {}
 //   ilkNo     : ilk ölçünün numarası (anacrusis varsa 0, yoksa 1)
 // Döner: [{ no, metin }] — `metin` numarasız müzik içeriği; UI numarayı ayrı basar.
 export function muzikGovdesiniNumarali(govde, { genislik = 40, ilkNo = 1 } = {}) {
-  const olculer = olculereBol(govde);
-  if (olculer.length === 0) return [];
-
-  const satirlar = [];
-  let i = 0;
-  let no = ilkNo;
-  while (i < olculer.length) {
-    const satirNo = no;
-    const onEkUzunluk = altRakamYaz(satirNo).length + 1; // numara + 1 hücre boşluk
-    const kullanilabilir = Math.max(8, genislik - onEkUzunluk);
-
-    let parcalar = [];
-    let uzunluk = 0;
-    while (i < olculer.length) {
-      const olcu = olculer[i];
-      const ekle = (parcalar.length === 0 ? 0 : 1) + olcu.length; // ayraç + ölçü
-      if (parcalar.length > 0 && uzunluk + ekle > kullanilabilir) break;
-      parcalar.push(olcu);
-      uzunluk += ekle;
-      i += 1;
-      no += 1;
-    }
-    // Tek ölçü genişlikten uzunsa yine de bir satıra koy (bölme yok — ölçü bütün kalır)
-    if (parcalar.length === 0) { parcalar.push(olculer[i]); i += 1; no += 1; }
-
-    satirlar.push({ no: satirNo, metin: parcalar.join('⠀') });
-  }
-  return satirlar;
+  // Metin-tabanlı (naive boşluk-bölme) fallback yolu; ASIL yol cell-tabanlı
+  // olculeriNumarali'dir (bkz. brfNumaraliGorunum). Run-over dahil aynı paketleyici.
+  return olculeriNumarali(olculereBol(govde), { genislik, ilkNo });
 }
