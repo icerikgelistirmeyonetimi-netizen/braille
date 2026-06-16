@@ -5,8 +5,10 @@ import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
 import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle, dogruSesi, yanlisSesi } from '../utils/ses.js';
 import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
+import { ayarlariAl } from '../utils/ayarlar.js';
 import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
 import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js';
+import { sonrakiDers } from '../utils/dersAkisi.js';
 import { noktaListesi } from '../utils/noktaYardimci.js';
 
 // Genel amaçlı çok hücreli sıralı okuma bileşeni.
@@ -47,6 +49,8 @@ export default function CokHucreOkuyucu({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const yazmaKaynak = mevcutSayfaIcinKaynakAnahtar(pathname);
+  // Bitiş ekranında "Sonraki içerik" butonu için aynı modüldeki bir sonraki ders.
+  const sonrakiIcerik = sonrakiDers(pathname);
   const konusDil = useCallback((text, opts = {}) => konus(text, { dil: seslendirmeDili, ...opts }), [seslendirmeDili]);
   // Ekran okuyucu (NVDA) otomatik dil değiştirme: yabancı dil sayfalarında (Modül 9 de/fr/en)
   // yabancı içerik (harf/sözcük) lang ile işaretlenir → NVDA o kısmı o dilin sesiyle okur;
@@ -78,6 +82,11 @@ export default function CokHucreOkuyucu({
   const yonergeKilitTimerRef = useRef(null);
   const dotSentinelRef = useRef(null);
   const oncekiYonergeOkunuyorRef = useRef(false);
+  // Sayfa girişi (mount): ilk narration-bitti = giriş; sonrası öğe geçişi. NVDA'da girişte
+  // odağı yönergeye verip (dot'a değil) önce yönergeyi okutmak için (bkz. dot-odak effect'i).
+  const sayfaGirisiRef = useRef(true);
+  // Bitti (Tebrikler) ekranında ekran okuyucu mesaja odaklansın diye.
+  const bittiMesajRef = useRef(null);
 
   const [kayitlilarModu, setKayitlilarModu] = useState(false);
   const anahtar = bolumAnahtari || baslik || 'genel';
@@ -93,11 +102,30 @@ export default function CokHucreOkuyucu({
 
   const kelimeYonergeMetniAl = useCallback((oge) => {
     if (!oge) return '';
-    if (oge.tamYonergeMetni) return oge.tamYonergeMetni;
 
     const hucreler = Array.isArray(oge.hucreler) ? oge.hucreler : [];
     const cokHucre = hucreler.length > 1;
     const ilkHucre = Array.isArray(hucreler[0]) ? hucreler[0] : (hucreler[0] != null ? [hucreler[0]] : []);
+
+    // "1. ve 2. noktalardan oluşur." (çok hücreli: "1. hücre …, 2. hücre …")
+    const noktaKompozisyonMetni = () => {
+      const kompozisyon = hucreler.map((noktalar, i) => {
+        const nArr = noktalar || [];
+        if (!nArr.length) return '';
+        const liste = noktaListesi(nArr, 'dan', 'dan');
+        return cokHucre ? `${i + 1}. hücre ${liste}` : liste;
+      }).filter(Boolean).join(', ');
+      return kompozisyon ? `${kompozisyon} oluşur.` : '';
+    };
+
+    // tamYonergeMetni varsa onu kullan; ama noktalariSeslendir (kısaltma sayfaları) ise
+    // nokta kompozisyonunu SONA EKLE — yoksa yönerge yalnız açıklamayı söyleyip noktaları
+    // söylemeden bırakıyordu (kullanıcı: "kısaltmalarda ilk hücre söylenip bırakılıyor").
+    if (oge.tamYonergeMetni) {
+      if (!noktalariSeslendir) return oge.tamYonergeMetni;
+      const komp = noktaKompozisyonMetni();
+      return `${oge.tamYonergeMetni} ${komp} Lütfen bu noktalara sırayla dokunun.`.replace(/\s+/g, ' ').trim();
+    }
 
     // Sembol öğretme modu (kategoriAdi verilmişse — eski DesenOgretici davranışı)
     if (kategoriAdi) {
@@ -108,17 +136,23 @@ export default function CokHucreOkuyucu({
       const anlamKismi = oge.anlam ? ` ${oge.anlam}` : '';
       const aciklamaKismi = oge.aciklama ? ` ${oge.aciklama}` : '';
       if (noktalariSeslendir) {
-        const kompozisyon = hucreler.map((noktalar, i) => {
-          const nArr = noktalar || [];
-          if (!nArr.length) return '';
-          const liste = noktaListesi(nArr, 'dan', 'dan');
-          return cokHucre ? `${i + 1}. hücre ${liste}` : liste;
-        }).filter(Boolean).join(', ');
-        const komp = kompozisyon ? `${kompozisyon} oluşur.` : '';
+        const komp = noktaKompozisyonMetni();
         return `${adKategori},${anlamKismi}${aciklamaKismi} ${komp} Lütfen bu noktalara sırayla dokunun.`.replace(/\s+/g, ' ').trim();
       }
-      const detay = oge.yonergeDetay
-        || (ilkHucre.length ? `${noktaListesi(ilkHucre, 'dan', 'dan')} oluşur.` : '');
+      // detay: açıklama (yonergeDetay) + DAİMA okunabilir nokta kompozisyonu.
+      // ⚠ Çoğu sembol sayfasının açıklaması ya hiç nokta demiyor (ör. ölçü "mm harfleriyle
+      // yazılır") ya da KISA ÇİZGİ gösterimi ("4-5", "3-4-5") kullanıyor — ekran okuyucu için
+      // belirsiz/eksik (kullanıcı: "tüm modüllerde kontrol et, kısaltma dışında da var").
+      // Bu yüzden SÖZLÜ nokta ("4. ve 5. noktalardan oluşur") garanti edilir. Açıklama zaten
+      // SÖZLÜ nokta içeriyorsa ("nokta" + rakam → ör. fen-yunan/sira-sayıları) tekrar EKLENMEZ.
+      const noktaMetni = noktaKompozisyonMetni();
+      const detayHam = (oge.yonergeDetay || '').trim();
+      // Yalnız açıklama SÖZLÜ kompozisyonu ("…noktadan/noktalardan oluşur") içeriyorsa atla.
+      // ⚠ "Noktaları: 3-4-5-6" gibi ÇİZGİ gösterimi sözlü SAYILMAZ → sözlü biçim eklenir.
+      const zatenSozluNokta = /nokta(dan|lardan)\s+oluşur/i.test(detayHam);
+      const detay = detayHam
+        ? (zatenSozluNokta ? detayHam : `${detayHam} ${noktaMetni}`)
+        : noktaMetni;
       return `${adKategori},${anlamKismi}${aciklamaKismi} ${detay} Lütfen bu noktalara sırayla dokunun.`.replace(/\s+/g, ' ').trim();
     }
 
@@ -474,12 +508,39 @@ export default function CokHucreOkuyucu({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indeks, bitti]);
 
-  // Narrasyon bitince görünmez sentinel'e odaklan; Tab → ilk nokta.
+  // Narrasyon bitince odağı yönet: SAYFA GİRİŞİNDE (modülden VEYA refresh) önce yönerge,
+  // sonra braille; sayfa-içi öğe geçişinde ilk braille noktası.
   useEffect(() => {
     const onceki = oncekiYonergeOkunuyorRef.current;
     oncekiYonergeOkunuyorRef.current = yonergeOkunuyor;
     if (!(onceki && !yonergeOkunuyor)) return undefined;
     if (okumaModu || bitti) return undefined;
+
+    // İlk narration-bitti = SAYFA GİRİŞİ (mount). Sonraki tüm tetiklemeler öğe geçişidir.
+    const girisAni = sayfaGirisiRef.current;
+    sayfaGirisiRef.current = false;
+
+    const sesAcik = ayarlariAl().sesAcik;
+    const sesKaydiVar = typeof ogeSesiCal === 'function';
+
+    // SAYFA GİRİŞİ + App TTS KAPALI (NVDA) + ses kaydı YOK → önce YÖNERGE okunsun:
+    // odağı yönerge bölgesine ver (dot'a DEĞİL). App TTS kapalıyken "yönerge bitti" sinyali
+    // ANINDA gelir (onSon setTimeout(0)) → dot'a geçersek NVDA yönergeyi YARIDA keser.
+    // Kullanıcı: "modülden/refresh açınca önce yönerge okunsun sonra braille; dot direkt
+    // odaklanması hatalı". Hem modülden giriş hem REFRESH (SayfaOdakYonetimi ilk yüklemede
+    // odağı atlar → burada aktif odaklarız) bu yolla çalışır. Kullanıcı yönergeyi dinleyip
+    // Tab ile ilk noktaya geçer (DOM: yönerge bölgesi → braille hücresi).
+    // ⚠ Ses KAYITLI sayfalar HARİÇ (kullanıcı isteği) → onlar eski davranışta kalır.
+    if (!sesAcik && !sesKaydiVar && girisAni) {
+      const id = window.requestAnimationFrame(() => {
+        const kok = dotSentinelRef.current?.parentElement;
+        const yonergeEl = kok?.querySelector('[data-sayfa-odak="yonerge"]')
+          || document.querySelector('#main [data-sayfa-odak="yonerge"]');
+        if (yonergeEl) yonergeEl.focus();
+      });
+      return () => window.cancelAnimationFrame(id);
+    }
+
     // "Başla" _srBolge'ye YAZILMAZ (srAtla) — yoksa aria-live yönerge bölgesini ezerdi.
     // App TTS açıkken yine sesli söylenir; NVDA için yönerge bölgesi yeterli cue'dur.
     konusDil('Başla', { srAtla: true });
@@ -493,7 +554,17 @@ export default function CokHucreOkuyucu({
       (ilkNokta || dotSentinelRef.current)?.focus();
     });
     return () => window.cancelAnimationFrame(id);
-  }, [yonergeOkunuyor, okumaModu, bitti, konusDil]);
+  }, [yonergeOkunuyor, okumaModu, bitti, konusDil, ogeSesiCal]);
+
+  // Bitti (Tebrikler) ekranı açılınca odağı bitiş mesajına ver → ekran okuyucu mesajı okur
+  // (kullanıcı: "tebrikler sahnesinde ekran okuyucu tebriklere odaklanamıyor"). Bitti
+  // ekranına rota değişmeden (setIndeks ile) geçilir → SayfaOdakYonetimi devreye girmez,
+  // bu yüzden odağı burada veriyoruz.
+  useEffect(() => {
+    if (!bitti || okumaModu) return undefined;
+    const id = window.requestAnimationFrame(() => { bittiMesajRef.current?.focus(); });
+    return () => window.cancelAnimationFrame(id);
+  }, [bitti, okumaModu]);
 
   // Yönerge okunurken klavyeyle gezinme/etkileşim de kapalı: Tab, Shift+Tab,
   // ok tuşları, Enter ve Space engellenir; denenirse "bekleyiniz" uyarısı verir.
@@ -558,19 +629,35 @@ export default function CokHucreOkuyucu({
         <PageHeader baslik={baslik} />
         <div className="page-mid">
           <BrailleCell aktifNoktalar={[1, 2, 3, 4, 5, 6]} />
-          <div className="instruction success" role="status" aria-live="assertive" style={{ margin: 0 }}>
+          {/* Bitti mesajı odaklanabilir (tabIndex=-1) + bir effect mesaja odaklanır → ekran
+              okuyucu "Tebrikler"i okur (kullanıcı: "tebrikler sahnesinde ekran okuyucu
+              tebriklere odaklanamıyor"). aria-live YOK: odak-okuması ile çift duyuru olmasın
+              (mesaj odak alınca okunur; TTS açıksa bitti effect'i ayrıca konus ile söyler). */}
+          <div className="instruction success" ref={bittiMesajRef} tabIndex={-1} style={{ margin: 0 }}>
             {bosKayitli ? 'Bu bölümde henüz kaydedilmiş öğe yok.' : bittiMesaji}
           </div>
-          {yazmayaYonlendir && (
-            <div style={{ textAlign: 'center', color: 'var(--accent)', fontWeight: 700, fontSize: '1.1em', marginTop: 4 }}>
-              Şimdi yazma zamanı! Öğrendiklerinizi karışık yazma etkinliğinde uygulayın.
-            </div>
-          )}
         </div>
         <div className="controls">
-          {yazmayaYonlendir && (
+          {/* Sonraki içerik (aynı modülün bir sonraki dersi) — birincil eylem */}
+          {sonrakiIcerik && !kayitlilarModu && (
             <button
               className="btn aktif"
+              type="button"
+              onClick={() => {
+                konusmayiDurdur();
+                konusDil('Sonraki içeriğe geçiliyor.', { kesintiyle: true });
+                navigate(sonrakiIcerik.yol);
+              }}
+              aria-label={`Bir sonraki içerik için tıklayınız: ${sonrakiIcerik.baslik}`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+              <span className="btn-etiket">Sonraki İçerik</span>
+            </button>
+          )}
+          {/* Karışık yazma etkinliğine yönlendirme */}
+          {yazmayaYonlendir && (
+            <button
+              className={sonrakiIcerik && !kayitlilarModu ? 'btn' : 'btn aktif'}
               type="button"
               onClick={() => {
                 konusmayiDurdur();
@@ -768,15 +855,23 @@ export default function CokHucreOkuyucu({
             yönerge artık _srBolge yerine BURADAN duyurulur (lang span yabancı harfi o dilde
             okutur, kalan Türkçe tr kalır). nonce sonu görünmez karakter ile değişir → aynı
             metinde (Tekrar) bile NVDA yeniden okur. ALTINDA sıradaki nokta/dönüt AYRI canlı bölge. */}
-        {srYonergeMetni && (() => {
+        {(() => {
           // Yabancı dil sayfasında yönerge "ä işareti, …" gibi yabancı harfle BAŞLAR;
           // o token <span lang> ile sarılır → NVDA harfi o dilde okur, kalan Türkçe tr kalır.
+          const metin = srYonergeMetni || kelimeYonergeMetniAl(k);
+          if (!metin) return null;
           const token = k.ttsYazi || k.yazi || '';
           const nonceEk = yonergeNonce % 2 ? ' ' : '';
-          const govde = (yabanciDil && token && srYonergeMetni.startsWith(token))
-            ? (<><span lang={yabanciDil}>{token}</span>{srYonergeMetni.slice(token.length)}{nonceEk}</>)
-            : (<>{srYonergeMetni}{nonceEk}</>);
-          return <div className="sr-only" aria-live="polite" aria-atomic="true">{govde}</div>;
+          const govde = (yabanciDil && token && metin.startsWith(token))
+            ? (<><span lang={yabanciDil}>{token}</span>{metin.slice(token.length)}{nonceEk}</>)
+            : (<>{metin}{nonceEk}</>);
+          // data-sayfa-odak: modülden sayfaya girince SayfaOdakYonetimi başlık yerine BU
+          // bölgeye odaklanır → NVDA önce yönergeyi okur (başlık/gereksiz detay değil).
+          // tabIndex=-1: programatik odak alır, Tab sırasına girmez.
+          // ⚠ Ses KAYITLI sayfalarda (ogeSesiCal var) işaretlenmez (kullanıcı: "ses kaydı
+          // olanlar hariç") → o sayfalar eski giriş davranışında (başlık) kalır.
+          const sayfaOdakIsareti = typeof ogeSesiCal === 'function' ? undefined : 'yonerge';
+          return <div className="sr-only" data-sayfa-odak={sayfaOdakIsareti} tabIndex={-1} aria-live="polite" aria-atomic="true">{govde}</div>;
         })()}
         {/* ⚠ role="status" KULLANMA: role=status örtük POLITE'tir; aria-live=assertive ile
             çelişir → NVDA polite sayıp güncellemeleri KUYRUĞA alır (kesmez) → önceki öğenin

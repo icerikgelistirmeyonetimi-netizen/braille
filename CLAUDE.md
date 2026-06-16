@@ -120,7 +120,7 @@ yonergeBeklemeUyar()                        // show toast only — no focus, no 
 2. During narration: Tab/Arrow/Enter/Space → blocked by keydown capture → `yonergeBeklemeUyar()`
 3. `yonergeBeklemeUyar` → `gosterToast(...)` only (visual only, NVDA silent, TTS keeps playing)
 4. `onSon` fires → `yonergeKilidiAc(nesil)` → `setYonergeOkunuyor(false)`
-5. Narration ends → `konusDil('Başla', { srAtla: true })` (app TTS açıksa sesli; `_srBolge`'ye YAZMAZ → aria-live yönerge bölgesini EZMEZ) → odağı **İLK BRAILLE NOKTASINA** ver (`kok.querySelector('button.dot.target') || 'button.dot'`; yoksa sentinel'e düş). ⚠ ESKİDEN boş `dotSentinelRef` sentinel'e (aria-hidden, içeriksiz span) odaklanıyordu → NVDA bunu **"boş"** diye okuyordu (kullanıcı: "yönerge bitince boş diyor; orada braille noktalarını saymalı"). Artık basılacak nokta okunur ("1. nokta, boş, buton") + kullanıcı doğrudan noktaya konumlanır. Kelime (`{k.yazi}`) `tabIndex={0}` → Tab ile erişilir (üstüne gelince `lang` ile o dilde okunur). Sentinel hâlâ DOM'da (nokta yoksa yedek).
+5. Narration ends → `konusDil('Başla', { srAtla: true })` (app TTS açıksa sesli; `_srBolge`'ye YAZMAZ → aria-live yönerge bölgesini EZMEZ) → odağı **İLK BRAILLE NOKTASINA** ver (`kok.querySelector('button.dot.target') || 'button.dot'`; yoksa sentinel'e düş). ⚠ ESKİDEN boş `dotSentinelRef` sentinel'e (aria-hidden, içeriksiz span) odaklanıyordu → NVDA bunu **"boş"** diye okuyordu (kullanıcı: "yönerge bitince boş diyor; orada braille noktalarını saymalı"). Artık basılacak nokta okunur ("1. nokta, **basılacak nokta**, buton" — hedef noktanın durumu `boş` DEĞİL `basılacak nokta`; bkz. §4 BrailleCell Dot label rule, kullanıcı: "boş düğme gibi okuyor, hatalı") + kullanıcı doğrudan noktaya konumlanır. Kelime (`{k.yazi}`) `tabIndex={0}` → Tab ile erişilir (üstüne gelince `lang` ile o dilde okunur). Sentinel hâlâ DOM'da (nokta yoksa yedek). **⚠ SAYFA GİRİŞİNDE (modülden VEYA refresh) + app TTS KAPALI (NVDA) + ses kaydı YOK → önce YÖNERGE okunsun, odağı yönerge bölgesine VER (dot'a DEĞİL) (kullanıcı: "tüm sayfalarda — ses kaydı olanlar hariç — sayfa yenilenince ya da modülden gelince ilk yönerge okunsun, sonra braille; dot direkt odaklanması hatalı"):** Effect'in başında `const girisAni = sayfaGirisiRef.current; sayfaGirisiRef.current = false` (ilk narration-bitti = sayfa girişi, sonrası öğe geçişi). `if (!ayarlariAl().sesAcik && typeof ogeSesiCal !== 'function' && girisAni)` → rAF ile `[data-sayfa-odak="yonerge"]` bölgesine odaklan + `return` (dot'a geçme, "Başla" deme). Sebep: app TTS kapalıyken `konus` `onSon`'u **anında** (`setTimeout 0`) tetikler → narration "biter" → bu effect HEMEN çalışıp dot'a odaklanır → NVDA'nın yönerge bölgesini okumasını YARIDA keser. **REFRESH de kapsanır:** `SayfaOdakYonetimi` ilk yüklemede (`oncekiYol===null`) odağı ATLAR → eskiden refresh'te dot odaklanıyordu; artık bu effect aktif odaklar (modülden gelişte `SayfaOdakYonetimi` de aynı bölgeye odaklar → idempotent). Kullanıcı yönergeyi dinleyip Tab ile ilk noktaya geçer (DOM sırası: yönerge bölgesi → BrailleCell). **Yalnız GİRİŞ (mount) bu yolu alır:** sayfa-içi öğe geçişinde `girisAni=false` → dot'a geçilir (eski davranış); app TTS AÇIKKEN narration gerçek süre alır, bittiğinde dot'a geçilir; **ses KAYITLI sayfalar (`ogeSesiCal` fonksiyon: KuranHarf/KuranKelime/MuzikNota/MuzikBraille) HARİÇ** (kullanıcı isteği) → onlarda `data-sayfa-odak` da konmaz (bkz. §5) + bu dal atlanır → eski davranış. (Tarayıcı: cezm-sedde refresh→odak yönerge bölgesinde; TTS açık region→14s narration→dot; TTS kapalı odak yönergede kalır; bitti→Tebrikler mesajına odak.) **Yönerge sr-only bölgesi İLK render'da hazır olmalı** (`{(() => { const metin = srYonergeMetni || kelimeYonergeMetniAl(k); … })()}`): `srYonergeMetni` state bir effect'le bir render GEÇ set edilir → `SayfaOdakYonetimi` rAF'ı o frame'de bölgeyi bulamayıp başlığa düşüyordu; state yoksa yönerge anlık hesaplanır (AYNI metin → çift-okuma yok, polite değişmez). **BİTTİ (Tebrikler) ekranı: mesaj `tabIndex=-1`+`ref`, ayrı effect (`[bitti]`) rAF ile mesaja odaklanır → ekran okuyucu "Tebrikler"i okur (kullanıcı: "tebrikler sahnesinde ekran okuyucu tebriklere odaklanamıyor"); bitti ekranına rota değişmeden (setIndeks) geçildiğinden `SayfaOdakYonetimi` devreye girmez. `aria-live` KALDIRILDI (odak-okuması ile çift olmasın; TTS açıksa bitti effect'i `konus` ile ayrıca söyler).**
 
 **Toast JSX (always this exact pattern):**
 ```jsx
@@ -149,7 +149,7 @@ Single braille cell (6 dots). Used on every learning page.
   hucreAdi="1. hücre"              // multi-cell: group label announced by NVDA
 />
 ```
-**Dot label rule:** `"${n}. nokta, ${durum}"` — was "numaralı nokta", now just "X. nokta"
+**Dot label rule:** `"${n}. nokta, ${durum}"` — was "numaralı nokta", now just "X. nokta". **Durum ÜÇ DEĞER (kullanıcı: cezm-sedde ilk öğe [2,5] → yönerge bitince odak ilk hedef noktaya (dot 2) gelince "2. nokta, boş, düğme" okuyordu, NVDA'da "boş düğme" = etiketsiz/işlevsiz buton gibi duyuluyordu, hatalı):** `dolu` (aktif/doğru = basılı) → `basılacak nokta` (hedef ama henüz basılmamış = desene ait, basılacak) → `boş` (desene ait olmayan). ESKİDEN hedef noktalar da "boş" diyordu; artık hedef noktanın basılması gerektiği söylenir + kullanıcı `boş`/`basılacak nokta` farkıyla deseni de ayırt eder. (Mantık `hedefNoktalar.includes(n)` ile `BrailleCell.ariaLabel`'de; `tiklanabilir` öğrenme hücreleri + `HucreTanima` hedef noktayı bu şekilde duyurur; okuma-modu hücreleri `hedefNoktalar` geçmez → etkilenmez.)
 
 **Nokta sesi (`noktaUzerinde` hover/focus) `srAtla`:** dot butonunun `onFocus`/`onMouseEnter`'ı `konus(numara, { srAtla: true })` → app TTS sayıyı sesli söyler ama `_srBolge`'ye YAZMAZ; ekran okuyucu zaten aria-label'i (`"N. nokta, durum"`) okur. Yönerge-bitince odak ilk noktaya gittiğinde (bkz. §3 adım 5) NVDA için **çift "1" / araya girme** olmaz.
 
@@ -170,6 +170,14 @@ Links to the mixed writing exercise for the current lesson.
 - Normal: visible button in banner
 - `hayalet` prop: sr-only ghost button
 - Returns `null` when already on `/yazma-karisik/...`
+
+### Bitiş ekranı butonları — Karışık Yazma + Sonraki İçerik (CokHucreOkuyucu, TÜM modüllerde)
+**Kullanıcı: "bütün etkinliklerde en sonda karışık yazma yönlendirmesi + bir sonraki içerik için tıklayınız butonları, tüm 9 modülde".** `CokHucreOkuyucu` bitti ekranı iki birincil eylem gösterir:
+- **Sonraki İçerik** (accent, birincil): `sonrakiDers(pathname)` ([utils/dersAkisi.js](src/utils/dersAkisi.js)) AYNI modüldeki bir sonraki dersi döner → `navigate(yol)`. Son derste null → buton gizli. Akış: Modül 1-7 `MODULLER.ogeler` sırası (son adım = Test/Sınav); **Modül 8** `MUZIK_BOLUMLER`→`/muzik/:slug` + diziler + test; **Modül 9** İngilizce→Almanca→Fransızca `*_BOLUMLER`→`/{dil}/:slug` zinciri.
+- ⚠ **Tebrikler mesajı ALTINDA açıklama metni YOK** (kullanıcı: "tebrikler altındaki yazılara gerek yok"): eski "Şimdi yazma zamanı! …" ve "Sırada: {başlık}" satırları KALDIRILDI — yalnız bitiş mesajı + butonlar kalır.
+- **Karışık Yazma Etkinliği**: `mevcutSayfaIcinKaynakAnahtar(pathname)` varsa. (Sonraki İçerik varken `btn`, yoksa `btn aktif`.)
+
+**Karışık yazma kaynakları artık İÇ İÇE rotaları da kapsar** ([utils/karisikYazmaKaynaklari.js](src/utils/karisikYazmaKaynaklari.js)): eskiden yalnız düz rotalar (eksikti: kuran-isaretler, mat-sira-sayilari, müzik grup dersleri, yabancı diller). Programatik `iceKayit(yol, …)` ile eklendi. **⚠ `/yazma-karisik/:kaynak` TEK segment kabul eder** → iç içe rotaların `kaynak`'ı EĞİK ÇİZGİSİZ (`/`→`--`; ör. `/kuran-isaretler/cezm-sedde`→`kuran-isaretler--cezm-sedde`, `/muzik/notalar`→`muzik--notalar`). `mevcutSayfaIcinKaynakAnahtar` entry'nin `kaynak` alanını döner (düz rotalarda yol'dan türetilir = geriye uyumlu); `kaynagiAl` önce düz eşleşme, sonra `kaynak` alanına göre arar. Yazılabilir öğesi 0 ise (gecerliItem filtresi) buton gizlenir.
 
 ### `src/components/PageHeader.jsx`
 Page title component. Carries `.banner-baslik` class → targeted by `SayfaOdakYonetimi`.
@@ -295,9 +303,11 @@ Nokta-numarasıyla braille sembol araması. Tüm öğrenme modüllerini (Modül 
 
 ### `SayfaOdakYonetimi` component
 Manages NVDA focus on route change:
-- **Entering any page:** focus `.banner-baslik` or `h1/h2` inside `#main .ds-content`
+- **Entering any page:** focus `[data-sayfa-odak]` **if present**, else `.banner-baslik` or `h1/h2` inside `#main .ds-content`. ⚠ **Sayfa kendi giriş odağını belirtebilir (`data-sayfa-odak`):** `CokHucreOkuyucu` yönerge sr-only bölgesine `data-sayfa-odak="yonerge"` koyar → modülden derse girince NVDA **önce yönergeyi** okur (başlık/gereksiz detay DEĞİL). Kullanıcı: "modülden butona tıklayıp açınca yönerge ilk okumuyor, başlık vs gereksiz detaya odaklanıyor". ESKİDEN hep başlık (`.banner-baslik`) odaklanıyordu → NVDA başlığı okuyup +266ms sonra dot'a atlıyor, yönerge (polite bölge) iki odak olayı arasında **gömülüyordu**. (data-sayfa-odak bölgesi İLK render'da hazır olmalı — bkz. §3.) ⚠ **Ses KAYITLI sayfalarda (`ogeSesiCal` fonksiyon) `data-sayfa-odak` KONMAZ** (`CokHucreOkuyucu`: `typeof ogeSesiCal === 'function' ? undefined : 'yonerge'`) → o sayfalar başlığa düşer (kullanıcı: "ses kaydı olanlar hariç"). ⚠ **REFRESH (ilk yükleme) `SayfaOdakYonetimi`'nde ATLANIR** → giriş odağını orada VEREMEZ; `CokHucreOkuyucu` kendi dot-odak effect'inde aktif odaklar (bkz. §3 `girisAni`).
 - **Returning to `/`:** focus `.modul-yan .modul-sekme.aktif`
 - **First load** (`oncekiYol.current === null`): skip — prevents StrictMode double-fire
+- ⚠ **Yerleşik odaklanabilir hedeflere (`input/select/textarea/button/a`) `tabindex="-1"` EKLENMEZ** (`!yerlesikOdaklanabilir` guard) — aksi halde Tab sırasından çıkarlar. Başlık/`div` gibi öğelere -1 hâlâ eklenir (focus alabilsinler). Gerekçe: **Arama girdisi** `data-sayfa-odak="arama"` ile giriş odağı olur (aşağı) ama klavye Tab erişimi korunmalı.
+- ⚠ **Arama (`/arama`) girdiye odaklanır (kullanıcı: "aramada ekran okuyucu açıkken yazamıyorum"):** `AramaSayfasi` input'una `data-sayfa-odak="arama"` + mount effect'i (`requestAnimationFrame(() => girdiRef.current.focus())`) → sayfaya girince **VE yenilemede** (refresh: SayfaOdakYonetimi atlar → mount effect kapsar) odak girdiye gelir → NVDA **form/odak moduna** geçer, kullanıcı hemen yazar. ESKİDEN odak gövde/başlıktaydı → NVDA tarama (browse) modunda kalıyor, rakam tuşları (1-6) sonuç başlıklarına (`<h3>`) atlama yapıp girdiye YAZMIYORDU.
 
 ---
 
@@ -331,10 +341,11 @@ For warnings during narration: show a visual-only toast (`aria-live="off"`) — 
 **Completion screen pattern (bitti useEffect):**
 ```js
 ekranOkuyucuTemizle();               // clear _srBolge left by basariBildir('Tebrikler!')
-konus(bittiMesaji, { srAtla: true }); // TTS only; JSX <div role="status" aria-live> handles NVDA
+konus(bittiMesaji, { srAtla: true }); // TTS only (app TTS açıksa); NVDA için → bitti mesajına ODAK
 ```
 Without this pattern, the tebrikler text stays in `_srBolge` and NVDA reads it after the ghost
 "Ana sayfaya dön" button at the end of the virtual buffer (duplicate).
+**⚠ Bitti mesajı NVDA için ODAKLA okutulur (`aria-live` DEĞİL — kullanıcı: "tebrikler sahnesinde ekran okuyucu tebriklere odaklanamıyor"):** `.instruction.success` div'i `ref={bittiMesajRef}` + `tabIndex={-1}`; ayrı bir effect (`[bitti, okumaModu]`) rAF ile `bittiMesajRef.current.focus()` → ekran okuyucu mesajı okur. Bitti ekranına rota değişmeden (`setIndeks`) geçildiğinden `SayfaOdakYonetimi` devreye girmez → odak burada verilir. **`role="status" aria-live="assertive"` KALDIRILDI**: odak-okuması ile çift duyuru olmasın (yeni mount edilen assertive bölge bazı NVDA'larda okunur → odak + live = çift). TTS açıksa bitti effect'i `konus(bittiMesaji)` ile ayrıca söyler.
 
 ### `src/utils/ilerleme.js`
 ```js
@@ -423,6 +434,10 @@ KisaltmaHece         → bolumAnahtari="kisaltma-hece"
 KisaltmaKelimeKoku   → bolumAnahtari="kisaltma-kelime-koku"
 KisaltmaKelimeParcasi → bolumAnahtari="kisaltma-kelime-parcasi"
 ```
+
+**⚠ `tamYonergeMetni` + `noktalariSeslendir` → nokta kompozisyonu SONA EKLENİR (kullanıcı: "kısaltmalarda yönergede sadece ilk hücre söylenip bırakılıyor"):** 5 kısaltma sayfasının HEPSİ her öğeye `tamYonergeMetni` (özel açıklama, ör. `'"ba" hecesi.'` / `'A harfi tek başına… "aynı" okunur.'`) koyar. ESKİDEN `kelimeYonergeMetniAl` `if (oge.tamYonergeMetni) return ...` ile **erken dönüp** `noktalariSeslendir` nokta üretimini ATLIYORDU → yönerge noktaları söylemeden bırakıyordu (harfler/rakamlar noktaları söylerken kısaltmalar söylemiyordu). Fix: `tamYonergeMetni` varsa → `noktalariSeslendir` İSE `${tamYonergeMetni} ${noktaKompozisyonMetni()} Lütfen bu noktalara sırayla dokunun.` (tek/çok hücre `noktaKompozisyonMetni` helper'ı; çok hücrede "1. hücre …, 2. hücre …"), DEĞİLSE eski gibi düz `tamYonergeMetni` (rakamlar/müzik gibi noktalariSeslendir'siz sayfalar ETKİLENMEZ — kendi metni zaten noktalı). Tarayıcı: hece "…kullanılamaz. 2., 3. ve 5. noktalardan oluşur. Lütfen…", iki-harfli "…beden… 1. hücre 1. ve 2. noktalardan, 2. hücre 1., 4. ve 5. noktalardan oluşur…"; harfler/rakamlar değişmedi.
+
+**⚠ `kategoriAdi` dalı (noktalariSeslendir'siz sembol sayfaları) da SÖZLÜ nokta GARANTİ EDER (kullanıcı: "başka sayfalarda da var, tüm modüllerde kontrol et"):** `isarettenOgeye` kullanan sembol sayfaları (`NoktalamaIsaretleri`/`OzelIsaretler`/`MatematikSembolEgitimi`/`MatematikOlcuEgitimi`/`MatematikGeometriEgitimi`/`FenSembolEgitimi`/`MuzikSembolEgitimi`/`YabanciBrailleSayfa`/`KuranHarekeEgitimi`…) yönerge `detay`'ını `yonergeDetay` (= veri `aciklama`/`okumaOzeti`) ile kurar. Çoğu açıklama ya HİÇ nokta demiyor (mat-ölçü "mm harfleriyle yazılır") ya da **KISA ÇİZGİ** gösterimi ("4-5", "3-4-5", "Noktaları: 3-4-5-6") kullanıyor — ekran okuyucu için belirsiz. Fix (`kelimeYonergeMetniAl` kategoriAdi non-noktalariSeslendir dalı): `detay = yonergeDetay` + DAİMA `noktaKompozisyonMetni()` (sözlü "N. ve M. noktalardan oluşur"), **yalnız açıklama zaten `/nokta(dan|lardan)\s+oluşur/` içeriyorsa eklenmez** (fen-yunan/özel-işaret/müzik-nota — dup önlenir; çizgi gösterimi "3-4-5" sözlü SAYILMAZ → eklenir). `yonergeDetay` boşsa eski tek-hücre fallback yerine TAM çok-hücre kompozisyonu kullanılır. Tarayıcı denetimi (tüm modüller): **DÜZELEN** mat-ölçü/fen-sembol/mat-geometri/müzik-sembol/mat-sembol/kuran-hareke (sözlü nokta eklendi, 0 dup); **değişmeyen** harfler/noktalama/özel-işaret/fen-yunan/müzik-nota/yabancı-dil/sıra-sayıları/rakamlar/kuran-harf (kendi metni zaten sözlü-noktalı). `tamYonergeMetni` sayfaları (rakamlar/sıra-sayıları/kuran-harf) ayrı dal, kendi noktalı metnini korur.
 
 ---
 
@@ -752,7 +767,8 @@ src/
     ├── noktaYardimci.js         # noktaListesi(), nlDan() — dot description helpers
     ├── isaretCevir.js           # isarettenOgeye() — symbol data → CokHucreOkuyucu oge
     ├── diziYardimci.js          # karistir(), HUCRE_SIRA_SOZ — shuffle + ordinal words
-    ├── karisikYazmaKaynaklari.js # URL → mixed writing source mapping
+    ├── dersAkisi.js             # sonrakiDers(pathname) — bitti ekranı "Sonraki İçerik" akışı (modül içi)
+    ├── karisikYazmaKaynaklari.js # URL → mixed writing source mapping (düz + iç içe rotalar)
     ├── arduino.js               # Arduino hardware integration
     ├── brailleAscii.js          # Braille ASCII encoding
     ├── brailleCevir.js          # Braille conversion utilities

@@ -96,8 +96,18 @@ export default function BrailleCell({
   };
 
   const ariaLabel = (n) => {
-    const durum = aktifNoktalar.includes(n) || dogruNoktalar.includes(n) ? 'dolu' : 'boş';
-    return `${etiketGoster(n)}. nokta, ${durum}`;
+    if (aktifNoktalar.includes(n) || dogruNoktalar.includes(n)) {
+      return `${etiketGoster(n)}. nokta, dolu`;
+    }
+    // Hedef (basılması beklenen) nokta: "boş" yerine "basılacak nokta". Yönerge bitince odak
+    // ilk hedef noktaya gelir; "N. nokta, boş, düğme" NVDA'da "boş düğme" (etiketsiz/işlevsiz
+    // buton) gibi duyuluyordu (kullanıcı: cezm-sedde ilk öğe [2,5] → odak dot 2'ye gelince
+    // "2. nokta, boş" okuyordu, hatalı). Hedef nokta artık basılması gerektiğini söyler;
+    // desene ait olmayan boş noktalar yine "boş" kalır → kullanıcı deseni de ayırt eder.
+    if (hedefNoktalar.includes(n)) {
+      return `${etiketGoster(n)}. nokta, basılacak nokta`;
+    }
+    return `${etiketGoster(n)}. nokta, boş`;
   };
 
   // Üzerine gelindiğinde / parmak gezdirildiğinde numarayı seslendir + kısa titreşim

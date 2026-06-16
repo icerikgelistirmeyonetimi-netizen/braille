@@ -116,10 +116,19 @@ function SayfaOdakYonetimi() {
       // yalnızca sayfa içeriği (.ds-content) içindeki başlığı seçeriz.
       const icerik = document.querySelector('#main .ds-content') || document.getElementById('main');
       if (!icerik) return;
-      const baslik = icerik.querySelector('.banner-baslik') || icerik.querySelector('h1, h2');
-      if (!baslik) return;
-      if (!baslik.hasAttribute('tabindex')) baslik.setAttribute('tabindex', '-1');
-      baslik.focus();
+      // Sayfa kendi giriş odağını belirtmişse (ör. CokHucreOkuyucu yönerge bölgesi) ona
+      // odaklan — başlık yerine. Aksi halde ders sayfalarında modülden girince NVDA önce
+      // başlığı/gereksiz detayı okuyup yönergeyi gömüyordu (kullanıcı: "yönerge ilk okumuyor").
+      const hedef = icerik.querySelector('[data-sayfa-odak]')
+        || icerik.querySelector('.banner-baslik')
+        || icerik.querySelector('h1, h2');
+      if (!hedef) return;
+      // Yerleşik odaklanabilir öğelere (input/select/textarea/button/a) tabindex=-1 EKLEME —
+      // aksi halde Tab sırasından çıkarlar (ör. arama girdisi data-sayfa-odak ile odaklanır
+      // ama klavye Tab erişimi korunmalı). Başlık/div gibi öğelere -1 gerekir (focus alsın).
+      const yerlesikOdaklanabilir = /^(input|select|textarea|button|a)$/i.test(hedef.tagName);
+      if (!hedef.hasAttribute('tabindex') && !yerlesikOdaklanabilir) hedef.setAttribute('tabindex', '-1');
+      hedef.focus();
     });
 
     return () => window.cancelAnimationFrame(id);

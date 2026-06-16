@@ -14,18 +14,24 @@ import {
 } from '../data/braille.js';
 import {
   KURAN_HAREKELERI, KURAN_TECVID, KURAN_HARFLERI,
-  KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL
+  KURAN_HECELERI, KURAN_KELIMELERI, KURAN_KELIMELERI_TEMEL,
+  CEZM_SEDDE, TENVINLER, TA_I_MERBUTA, MED_HARFLERI, MUKADDER_MEDLER,
+  ELIF_ZAID, DIGER_UZATMA, HEMZELER, HEMZE_VASL
 } from '../data/kuran.js';
 import { KURAN_SURELERI } from '../data/kuranSureler.js';
 import {
   MATEMATIK_RAKAMLAR, MATEMATIK_SEMBOLLER, GEOMETRI_SEMBOLLERI,
-  MATEMATIK_OLCULER, MATEMATIK_IFADELER
+  MATEMATIK_OLCULER, MATEMATIK_IFADELER,
+  RAKAM_GOSTERGESI, SIRA_SAYISI_RAKAM_NOKTALARI
 } from '../data/matematik.js';
 import {
   YUNAN_HARFLERI, FEN_SEMBOLLER,
   KIMYASAL_FORMULLER, FIZIK_FORMULLERI
 } from '../data/fen.js';
-import { NOTALAR, MUZIK_SEMBOLLERI, MUZIK_DIZILERI } from '../data/muzik.js';
+import { NOTALAR, MUZIK_SEMBOLLERI, MUZIK_DIZILERI, MUZIK_BOLUMLER } from '../data/muzik.js';
+import { ALMANCA_BOLUMLER } from '../data/almancaBraille.js';
+import { FRANSIZCA_BOLUMLER } from '../data/fransizcaBraille.js';
+import { INGILIZCE_BOLUMLER } from '../data/ingilizceBraille.js';
 
 // Yardımcı: hücre dizilerinin geçerli (boş olmayan) olduğundan emin ol
 const gecerliHucre = (h) => Array.isArray(h) && h.length > 0;
@@ -358,18 +364,107 @@ const KAYNAKLAR = {
   }
 };
 
-// Pathname'e bakarak kaynak anahtarını döner. Bilinmiyorsa null.
+// ───────────────────────────────────────────────────────────────────────────
+// İÇ İÇE (parametreli) ROTALAR — programatik kayıt.
+// Bu rotalar `/kuran-isaretler/:slug`, `/muzik/:slug`, `/almanca|fransizca|ingilizce/:slug`
+// gibi alt-segment taşır. /yazma-karisik/:kaynak tek segment kabul ettiğinden, bu kayıtlar
+// EĞİK ÇİZGİSİZ bir `kaynak` anahtarı taşır (segmentler `--` ile birleşir). KAYNAKLAR yine
+// pathname ile anahtarlanır; `kaynak` alanı navigasyonda kullanılır.
+// ───────────────────────────────────────────────────────────────────────────
+
+// Hücre dizisini normalize et: flat ([2,5]) veya nested ([[2,5]]) gelebilir.
+const hucreNorm = (h) => {
+  if (!Array.isArray(h) || h.length === 0) return [];
+  return Array.isArray(h[0]) ? h : [h];
+};
+// Bölüm verisi (ad/sembol/hucreler) → yazma item'i
+const bolumItem = (it) => ({
+  etiket: it.sembol || it.ad || it.harf || it.yazi || '',
+  ariaAd: it.ad || it.okunus || it.sembol || '',
+  hucreler: hucreNorm(it.hucreler || it.noktalar),
+});
+
+// İç içe rota kaydı ekle (kaynak = pathname'in /'leri '--' ile değişmiş hali).
+const iceKayit = (yol, baslik, etiketTuru, items) => {
+  const temiz = (items || []).filter(gecerliItem);
+  if (temiz.length === 0) return; // yazılabilir öğesi yoksa ekleme (buton görünmesin)
+  KAYNAKLAR[yol] = {
+    yol,
+    kaynak: yol.replace(/^\//, '').replace(/\//g, '--'),
+    baslik,
+    etiketTuru,
+    items: temiz,
+  };
+};
+
+// Modül 5 — Kur'an işaretleri (/kuran-isaretler/:slug)
+const KURAN_ISARET_KAYNAKLARI = {
+  'cezm-sedde': { veri: CEZM_SEDDE, baslik: 'Cezim ve Şedde' },
+  'tenvinler': { veri: TENVINLER, baslik: 'Tenvinler' },
+  'ta-i-merbuta': { veri: TA_I_MERBUTA, baslik: 'Ta-i Merbûta' },
+  'med-harfleri': { veri: MED_HARFLERI, baslik: 'Med Harfleri' },
+  'mukadder-medler': { veri: MUKADDER_MEDLER, baslik: 'Mukadder Medler' },
+  'elif-zaid': { veri: ELIF_ZAID, baslik: 'Elif-i Zaid' },
+  'diger-uzatma': { veri: DIGER_UZATMA, baslik: 'Diğer Uzatma' },
+  'hemzeler': { veri: HEMZELER, baslik: 'Hemzeler' },
+  'hemze-vasl': { veri: HEMZE_VASL, baslik: 'Hemze-i Vasl ve Kat' },
+};
+Object.entries(KURAN_ISARET_KAYNAKLARI).forEach(([slug, { veri, baslik }]) => {
+  iceKayit(`/kuran-isaretler/${slug}`, baslik, 'işaret', (veri || []).map(bolumItem));
+});
+
+// Modül 6 — Sıra sayıları (/mat-sira-sayilari)
+const SIRALI_AD = {
+  '1': 'birinci', '2': 'ikinci', '3': 'üçüncü', '4': 'dördüncü', '5': 'beşinci',
+  '6': 'altıncı', '7': 'yedinci', '8': 'sekizinci', '9': 'dokuzuncu',
+};
+iceKayit(
+  '/mat-sira-sayilari', 'Sıra Sayıları', 'rakam',
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => ({
+    etiket: `${d}.`,
+    ariaAd: `${SIRALI_AD[d]} sıra sayısı`,
+    hucreler: [RAKAM_GOSTERGESI, SIRA_SAYISI_RAKAM_NOKTALARI[d] || []],
+  }))
+);
+
+// Modül 8 — Müzik grup dersleri (/muzik/:slug)
+MUZIK_BOLUMLER.forEach((b) => {
+  iceKayit(`/muzik/${b.slug}`, b.kisaBaslik, 'müzik', (b.veri || []).map(bolumItem));
+});
+
+// Modül 9 — Yabancı dil dersleri (/ingilizce|almanca|fransizca/:slug)
+const dilKaynaklariEkle = (bolumler, dilYol, dilAd, etiketTuru) => {
+  bolumler.forEach((b) => {
+    iceKayit(`/${dilYol}/${b.slug}`, `${dilAd} · ${b.kisaBaslik}`, etiketTuru, (b.veri || []).map(bolumItem));
+  });
+};
+dilKaynaklariEkle(INGILIZCE_BOLUMLER, 'ingilizce', 'İngilizce', 'harf');
+dilKaynaklariEkle(ALMANCA_BOLUMLER, 'almanca', 'Almanca', 'harf');
+dilKaynaklariEkle(FRANSIZCA_BOLUMLER, 'fransizca', 'Fransızca', 'harf');
+
+// Bir kaydın eğik-çizgisiz kaynak anahtarı (varsa kaynak alanı, yoksa yol'dan üretilir).
+const kayitAnahtari = (yolKey, entry) => entry.kaynak || yolKey.replace(/^\//, '');
+
+// Pathname'e bakarak kaynak anahtarını döner. Yazılabilir öğesi yoksa veya tanımsızsa null.
 export function mevcutSayfaIcinKaynakAnahtar(pathname) {
   if (!pathname) return null;
-  // Ham eşleşme yeterli; alt parametreli rotalar yok.
-  return KAYNAKLAR[pathname] ? pathname.replace(/^\//, '') : null;
+  const entry = KAYNAKLAR[pathname];
+  if (!entry || !entry.items || entry.items.length === 0) return null;
+  return kayitAnahtari(pathname, entry);
 }
 
-// Anahtardan kaynak nesnesini döner. Bilinmiyorsa null.
+// Anahtardan kaynak nesnesini döner. Bilinmiyorsa null. (Hem düz '/harfler' hem iç içe
+// 'muzik--notalar' biçimini çözer.)
 export function kaynagiAl(anahtar) {
   if (!anahtar) return null;
+  // Düz rota: doğrudan eşleşme
   const yol = anahtar.startsWith('/') ? anahtar : '/' + anahtar;
-  return KAYNAKLAR[yol] || null;
+  if (KAYNAKLAR[yol]) return KAYNAKLAR[yol];
+  // İç içe rota: kaynak alanına göre ara
+  for (const key in KAYNAKLAR) {
+    if (kayitAnahtari(key, KAYNAKLAR[key]) === anahtar) return KAYNAKLAR[key];
+  }
+  return null;
 }
 
 // Tüm kayıtların listesi (isteğe bağlı, ileride kullanılabilir)

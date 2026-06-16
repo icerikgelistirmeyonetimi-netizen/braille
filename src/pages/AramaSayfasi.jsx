@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader.jsx';
 import { aramaYap, sozlukAra, sorguHucreleri, noktaCumlesi, KONU_SIRASI } from '../utils/aramaIndeksi.js';
@@ -83,6 +83,13 @@ export default function AramaSayfasi() {
   const [filtre, setFiltre] = useState(null); // null = tüm bölümler
   const girdiRef = useRef(null);
 
+  // Sayfaya girişte (özellikle SAYFA YENİLEME — SayfaOdakYonetimi ilk yüklemede odağı atlar)
+  // girdiye odaklan → NVDA form moduna geçsin, kullanıcı hemen yazabilsin.
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => girdiRef.current?.focus());
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
   const sozlukModu = mod === 'sozluk';
   const qHucreler = sozlukModu ? [] : sorguHucreleri(sorgu);
   const aramaAktif = sozlukModu ? sorgu.trim().length > 0 : qHucreler.length > 0;
@@ -159,6 +166,11 @@ export default function AramaSayfasi() {
             <input
               ref={girdiRef}
               id="arama-girdi"
+              // Sayfaya girince odak girdiye gelir → ekran okuyucu (NVDA) FORM/odak moduna geçer
+              // ve kullanıcı hemen yazabilir. Eskiden odak başlık/gövdedeydi → NVDA tarama
+              // (browse) modunda kalıyor, rakam tuşları (1-6) başlığa atlama yapıp girdiye
+              // YAZMIYORDU (kullanıcı: "aramada ekran okuyucu açıkken yazamıyorum").
+              data-sayfa-odak="arama"
               className={'arama-girdi' + (sozlukModu ? ' metin' : '')}
               type="text"
               inputMode={sozlukModu ? 'text' : 'numeric'}
