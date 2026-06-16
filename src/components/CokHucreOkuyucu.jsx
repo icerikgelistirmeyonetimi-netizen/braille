@@ -68,7 +68,16 @@ export default function CokHucreOkuyucu({
   const tekrarSesiTimerRef = useRef(null);
   const sonHucreOgeRef = useRef(0); // hücre-noktası effect'inde öğe değişimini tespit için
   const [ogeSesiAktif, setOgeSesiAktif] = useState(Boolean(otomatikOgeSesi || ogeSesiHerZaman));
+  // Ses kaydı ÖNCE çalan sayfa mı (Kur'an harfleri, sesli müzik)? Bu sayfalarda NVDA'nın
+  // yönergeyi ses kaydıyla AYNI ANDA okumaması için yönerge bölgesi ses bitene kadar boş
+  // tutulur (bkz. srYonergeMetni'yi geç set etme + yonergeyiOku).
+  const sesKaydiOnce = ogeSesiOnceCal && (ogeSesiHerZaman || ogeSesiAktif) && typeof ogeSesiCal === 'function';
   const [okumaModu, setOkumaModu] = useState(false);
+  // Yönerge bölgesi ODAKLI mı? Odaklıyken aria-live KAPATILIR → NVDA yönergeyi yalnız ODAK
+  // ile okur (canlı bölge tekrar duyurusu eklemez). Odak başka yerdeyken (sayfa-içi öğe
+  // geçişi / Tekrar) polite kalır → değişiklik duyurulur. (kullanıcı: "yönergeleri bazen iki
+  // kere okuyor" — odaklı bir öğenin AYNI ZAMANDA canlı bölge olması = çift okuma anti-paterni.)
+  const [yonergeOdakta, setYonergeOdakta] = useState(false);
   // Yönerge seslendirilirken nokta etkileşimi kilitlenir (tıklama/hover/odak/klavye yok).
   const [yonergeOkunuyor, setYonergeOkunuyor] = useState(false);
   // Ekran okuyucu için: yönerge KALICI bölgede durur (kaybolmaz); "sıradaki nokta"
@@ -82,6 +91,8 @@ export default function CokHucreOkuyucu({
   const yonergeKilitTimerRef = useRef(null);
   const dotSentinelRef = useRef(null);
   const oncekiYonergeOkunuyorRef = useRef(false);
+  // Okuma modundan öğrenme moduna dönüşte odağı ilk içeriğe vermek için (en alta düşmesin).
+  const oncekiOkumaModuRef = useRef(false);
   // Sayfa girişi (mount): ilk narration-bitti = giriş; sonrası öğe geçişi. NVDA'da girişte
   // odağı yönergeye verip (dot'a değil) önce yönergeyi okutmak için (bkz. dot-odak effect'i).
   const sayfaGirisiRef = useRef(true);
@@ -296,6 +307,9 @@ export default function CokHucreOkuyucu({
     // Nesli artır ki önceki öğenin bekleyen kilit-açma zamanlayıcıları
     // yeni öğeyi yanlışlıkla açmasın.
     yonergeNesilRef.current += 1;
+    // Bu öğenin nesli — Tab ile "atla/sesi kes" yapılınca nesil artırılır; bekleyen ses/yönerge
+    // callback'leri (onEnded/safety) bu nesle bakıp İPTAL olur (geriden ses gelmesin).
+    const buNesil = yonergeNesilRef.current;
     if (yonergeKilitTimerRef.current) {
       clearTimeout(yonergeKilitTimerRef.current);
       yonergeKilitTimerRef.current = null;
@@ -305,7 +319,9 @@ export default function CokHucreOkuyucu({
     const metin = kelimeYonergeMetniAl(k);
     // Ekran okuyucu: yönergeyi KALICI bölgeye yaz (hep okunabilir kalır) + yeni öğe/hücreye
     // geçince "sıradaki nokta" bölgesini temizle (eski yönlendirme kalmasın).
-    setSrYonergeMetni(metin);
+    // ⚠ Ses kaydı ÖNCE çalan sayfada bölgeyi ŞİMDİ DOLDURMA (boş bırak) → NVDA ses kaydı
+    // çalarken yönergeyi okumasın (çakışma); yönerge ses bitince (yonergeyiOku) yazılır.
+    setSrYonergeMetni(sesKaydiOnce ? '' : metin);
     setSrSiradakiNokta('');
     const sesOncesiYonergeMetni = typeof k.sesOncesiYonergeMetni === 'string'
       ? k.sesOncesiYonergeMetni.trim()
@@ -333,7 +349,12 @@ export default function CokHucreOkuyucu({
       let konustu = false;
       const yonergeyiOku = () => {
         if (konustu) return;
+        // Tab ile atlandıysa (nesil arttı) bekleyen onEnded/safety bu yönergeyi YENİDEN
+        // başlatmasın (geriden ses/yeniden-kilit olmasın).
+        if (yonergeNesilRef.current !== buNesil) return;
         konustu = true;
+        // Ses kaydı bitti → yönergeyi NVDA bölgesine ŞİMDİ yaz (sıralı: önce kayıt, sonra yönerge).
+        if (sesKaydiOnce) setSrYonergeMetni(metin);
         yonergeyiKilitleyerekSeslendir(metin);
       };
 
@@ -362,6 +383,8 @@ export default function CokHucreOkuyucu({
       }
     } else {
       const anaYonergeyiOku = () => {
+        // Tab ile atlandıysa (nesil arttı) yönergeyi yeniden başlatma/kilitleme.
+        if (yonergeNesilRef.current !== buNesil) return;
         yonergeyiKilitleyerekSeslendir(metin);
       };
 
@@ -387,17 +410,19 @@ export default function CokHucreOkuyucu({
     const tekrar = () => {
       // Tekrar: yönerge metni AYNI kaldığından aria-live bölgesi kendiliğinden
       // yeniden okumaz; nonce'u değiştirerek NVDA'nın tekrar okumasını sağla.
-      setYonergeNonce((n) => n + 1);
       if (tekrarSesiTimerRef.current) {
         clearTimeout(tekrarSesiTimerRef.current);
         tekrarSesiTimerRef.current = null;
       }
 
       if (ogeSesiOnceCal && sesAktifMi && typeof ogeSesiCal === 'function') {
+        // Ses kaydı önce: yönergeyi (NVDA bölgesi) ses BİTİNCE yeniden duyur → çakışma yok.
         let tekrarKonustu = false;
         const tekrarOku = () => {
           if (tekrarKonustu) return;
           tekrarKonustu = true;
+          setSrYonergeMetni(metin);
+          setYonergeNonce((n) => n + 1);
           yonergeyiKilitleyerekSeslendir(metin, { kesintiyle: true });
         };
         const sesiCalSonraTekrarOku = () => {
@@ -416,6 +441,8 @@ export default function CokHucreOkuyucu({
         return;
       }
 
+      // Ses kaydı önce DEĞİL: yönergeyi HEMEN yeniden duyur (nonce); ses varsa sonra çalar.
+      setYonergeNonce((n) => n + 1);
       const anaYonergeyiTekrarOku = () => {
         yonergeyiKilitleyerekSeslendir(metin, { kesintiyle: true });
       };
@@ -523,6 +550,13 @@ export default function CokHucreOkuyucu({
     const sesAcik = ayarlariAl().sesAcik;
     const sesKaydiVar = typeof ogeSesiCal === 'function';
 
+    // SES KAYITLI sayfa (Kur'an harfleri / sesli müzik) + App TTS KAPALI (NVDA): yönerge
+    // bölgesi ses kaydı BİTİNCE doldurulur (sesKaydiOnce) → polite bölge yönergeyi o anda
+    // okur. Burada odağı dot'a kaydırırsak NVDA yönergeyi YARIDA keser → DOT'A GEÇME, hiçbir
+    // şey yapma; odak başlıkta kalır, kullanıcı yönergeyi dinleyip Tab ile noktaya geçer.
+    // (App TTS açıkken aşağı düşer → narration sonrası dot'a geçilir.)
+    if (!sesAcik && sesKaydiVar) return undefined;
+
     // SAYFA GİRİŞİ + App TTS KAPALI (NVDA) + ses kaydı YOK → önce YÖNERGE okunsun:
     // odağı yönerge bölgesine ver (dot'a DEĞİL). App TTS kapalıyken "yönerge bitti" sinyali
     // ANINDA gelir (onSon setTimeout(0)) → dot'a geçersek NVDA yönergeyi YARIDA keser.
@@ -536,7 +570,9 @@ export default function CokHucreOkuyucu({
         const kok = dotSentinelRef.current?.parentElement;
         const yonergeEl = kok?.querySelector('[data-sayfa-odak="yonerge"]')
           || document.querySelector('#main [data-sayfa-odak="yonerge"]');
-        if (yonergeEl) yonergeEl.focus();
+        // Zaten yönerge bölgesinde odak varsa (SayfaOdakYonetimi modülden gelişte odakladı)
+        // YENİDEN odaklama → gereksiz ikinci odak olayı/okuma olmasın.
+        if (yonergeEl && document.activeElement !== yonergeEl) yonergeEl.focus();
       });
       return () => window.cancelAnimationFrame(id);
     }
@@ -566,16 +602,68 @@ export default function CokHucreOkuyucu({
     return () => window.cancelAnimationFrame(id);
   }, [bitti, okumaModu]);
 
-  // Yönerge okunurken klavyeyle gezinme/etkileşim de kapalı: Tab, Shift+Tab,
-  // ok tuşları, Enter ve Space engellenir; denenirse "bekleyiniz" uyarısı verir.
+  // Okuma↔öğrenme modu geçişinde odağı İLK İÇERİĞE ver (rota değişmediğinden SayfaOdakYonetimi
+  // devreye girmez; geçiş butonları unmount olunca odak gövdeye/sayfa altına/başlığa düşüyordu).
+  //  • ÖĞRENME moduna dönüş → yönerge bölgesi (`.yonerge-sr`; ses-kayıtlı sayfalarda da bulunur).
+  //  • OKUMA moduna giriş → ilk kart (`.okuma-modu-kutu` = ilk içerik kutusu).
+  // (kullanıcı: "okuma modunda başlığa odaklanıyor / öğrenme moduna dönünce sayfa altına; ilk
+  // içerik kutusuna odaklanmalı".)
+  useEffect(() => {
+    const onceki = oncekiOkumaModuRef.current;
+    oncekiOkumaModuRef.current = okumaModu;
+    if (bitti) return undefined;
+    const ogrenmeyeDonus = onceki && !okumaModu;
+    const okumayaGiris = !onceki && okumaModu;
+    if (!ogrenmeyeDonus && !okumayaGiris) return undefined;
+    const sec = ogrenmeyeDonus
+      ? '#main .yonerge-sr'
+      : '#main .okuma-modu-grid button.okuma-modu-kutu';
+    let rafId = 0;
+    let deneme = 0;
+    // Odağı hedefe ver; OkumaModuListesi mount churn'ünde (kart yeniden oluşunca) odak
+    // düşebilir → odak oturana kadar birkaç frame yeniden dene (en çok ~6 frame).
+    const odakla = () => {
+      const el = document.querySelector(sec);
+      if (el) el.focus();
+      if ((!el || document.activeElement !== el) && deneme < 6) {
+        deneme += 1;
+        rafId = window.requestAnimationFrame(odakla);
+      }
+    };
+    rafId = window.requestAnimationFrame(odakla);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [okumaModu, bitti]);
+
+  // Yönerge/ses okunurken klavye: Enter, Space, oklar noktaya erken dokunmayı engeller
+  // (görsel uyarı). ⚠ Tab İSTİSNA: kullanıcı Tab ile İLERLEMEK isterse ses/yönerge KESİLİR
+  // (geriden ses gelmesin), kilit açılır, ilk braille noktasına konumlanır (kullanıcı: "tab
+  // ile ilerlersem ses kesilmeli ve sonradan devam etmemeli").
   useEffect(() => {
     if (!yonergeOkunuyor) return undefined;
     const engellenen = new Set([
-      'Tab', 'Enter', ' ', 'Spacebar',
+      'Enter', ' ', 'Spacebar',
       'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
       'Home', 'End', 'PageUp', 'PageDown'
     ]);
     const onKey = (e) => {
+      if (e.key === 'Tab') {
+        // Sesi/yönergeyi KES + bekleyen callback'leri (onEnded/safety) İPTAL (nesil artır) + kilidi aç.
+        yonergeNesilRef.current += 1;
+        if (yonergeKilitTimerRef.current) { clearTimeout(yonergeKilitTimerRef.current); yonergeKilitTimerRef.current = null; }
+        tumSesleriDurdur();
+        setYonergeOkunuyor(false);
+        if (!e.shiftKey) {
+          // İleri: noktalar (henüz kilitli=div) Tab sırasında DEĞİL → preventDefault + kilit
+          // açılınca (re-render) ilk noktaya programatik odak.
+          e.preventDefault();
+          window.requestAnimationFrame(() => {
+            const kok = dotSentinelRef.current?.parentElement;
+            (kok?.querySelector('button.dot.target') || kok?.querySelector('button.dot') || dotSentinelRef.current)?.focus();
+          });
+        }
+        // Shift+Tab: preventDefault YOK → tarayıcı geriye (kelime/önceki öğeye) götürür.
+        return;
+      }
       if (!engellenen.has(e.key)) return;
       e.preventDefault();
       e.stopPropagation();
@@ -858,8 +946,11 @@ export default function CokHucreOkuyucu({
         {(() => {
           // Yabancı dil sayfasında yönerge "ä işareti, …" gibi yabancı harfle BAŞLAR;
           // o token <span lang> ile sarılır → NVDA harfi o dilde okur, kalan Türkçe tr kalır.
-          const metin = srYonergeMetni || kelimeYonergeMetniAl(k);
-          if (!metin) return null;
+          // Ses kaydı ÖNCE çalan sayfada (sesKaydiOnce) yönerge bölgesi ses bitene kadar BOŞ
+          // ama DOM'da kalır → ses bitince srYonergeMetni set edilince polite bölge yönergeyi
+          // bir kez okur (çakışma yok). Diğer sayfalarda eskisi gibi fallback ile dolu.
+          const metin = srYonergeMetni || (sesKaydiOnce ? '' : kelimeYonergeMetniAl(k));
+          if (!metin && !sesKaydiOnce) return null;
           const token = k.ttsYazi || k.yazi || '';
           const nonceEk = yonergeNonce % 2 ? ' ' : '';
           const govde = (yabanciDil && token && metin.startsWith(token))
@@ -871,7 +962,21 @@ export default function CokHucreOkuyucu({
           // ⚠ Ses KAYITLI sayfalarda (ogeSesiCal var) işaretlenmez (kullanıcı: "ses kaydı
           // olanlar hariç") → o sayfalar eski giriş davranışında (başlık) kalır.
           const sayfaOdakIsareti = typeof ogeSesiCal === 'function' ? undefined : 'yonerge';
-          return <div className="sr-only" data-sayfa-odak={sayfaOdakIsareti} tabIndex={-1} aria-live="polite" aria-atomic="true">{govde}</div>;
+          // aria-live: bölge ODAKLIYKEN "off" (NVDA yalnız odakla okur; canlı bölge çift
+          // duyuru EKLEMEZ) — odak başkadayken "polite" (sayfa-içi geçiş/Tekrar duyurulur).
+          return (
+            <div
+              // yonerge-sr: ses-kayıtlı sayfalarda data-sayfa-odak yok ama bölge yine de
+              // programatik bulunabilsin (ör. okuma modundan dönüşte ilk içeriğe odak).
+              className="sr-only yonerge-sr"
+              data-sayfa-odak={sayfaOdakIsareti}
+              tabIndex={-1}
+              onFocus={() => setYonergeOdakta(true)}
+              onBlur={() => setYonergeOdakta(false)}
+              aria-live={yonergeOdakta ? 'off' : 'polite'}
+              aria-atomic="true"
+            >{govde}</div>
+          );
         })()}
         {/* ⚠ role="status" KULLANMA: role=status örtük POLITE'tir; aria-live=assertive ile
             çelişir → NVDA polite sayıp güncellemeleri KUYRUĞA alır (kesmez) → önceki öğenin
@@ -1008,6 +1113,9 @@ className="btn"           type="button"
                 }
 
                 tekrarSesiTimerRef.current = window.setTimeout(() => {
+                  // Ses bitti → yönergeyi NVDA bölgesine yaz + nonce ile yeniden duyur.
+                  setSrYonergeMetni(tekrarMetni);
+                  setYonergeNonce((n) => n + 1);
                   yonergeyiKilitleyerekSeslendir(tekrarMetni, { kesintiyle: true });
                   tekrarSesiTimerRef.current = null;
                 }, ogeSesiSonrasiKonusmaGecikmeMs);

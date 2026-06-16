@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
+import { nlDan } from '../utils/noktaYardimci.js';
 
 const HUCRE_SIRASI = [1, 4, 2, 5, 3, 6];
 
@@ -46,6 +47,24 @@ export const hucreNoktaMetni = (hucreler) => {
     .join('; ');
 };
 
+// Öğrenme modundaki yönerge gibi OKUNABİLİR nokta kompozisyonu: "2. ve 5. noktalardan oluşur"
+// (kullanıcı: "okuma modunda kutu üzerine gelince öğrenme modundaki gibi yönerge okumalı").
+// Ham "2, 5" yerine sıralı + "noktalardan oluşur" — çok hücrede "1. hücre …, 2. hücre …".
+export const hucreYonergeMetni = (hucreler) => {
+  const temiz = hucreleriNormalizeEt(hucreler);
+  if (temiz.length === 0) return '';
+  const cok = temiz.length > 1;
+  const komp = temiz
+    .map((h, i) => {
+      if (!Array.isArray(h) || h.length === 0) return cok ? `${i + 1}. hücre boş` : '';
+      const liste = nlDan(h); // "2. ve 5. noktalardan"
+      return cok ? `${i + 1}. hücre ${liste}` : liste;
+    })
+    .filter(Boolean)
+    .join(', ');
+  return komp ? `${komp} oluşur` : '';
+};
+
 export function OkumaModuButonu({ onClick }) {
   return (
     <button
@@ -86,6 +105,8 @@ export default function OkumaModuListesi({
   const sonOkumaOgesiRef = useRef({ oge: null, time: 0 });
   const okumaOgeSesiTimerRef = useRef(null);
   const aktifIstekRef = useRef(0); // her yeni öğe isteğinde artar; eski ses-bitti callback'lerini geçersiz kılar
+  // Okuma moduna girince odak İLK KART'a CokHucreOkuyucu'daki okumaModu effect'inden verilir
+  // (parent stabil; child StrictMode mount/unmount'unda rAF odağı tutmuyordu).
 
   const okumaOgeSesiTemizle = useCallback(() => {
     if (okumaOgeSesiTimerRef.current) {
@@ -144,7 +165,9 @@ export default function OkumaModuListesi({
           okumaOgeSesiTimerRef.current = null;
         }
         if (brailleMetni && !seslendirmeKapali) {
-          konus(brailleMetni, { kesintiyle: true });
+          // srAtla: app TTS söyler ama _srBolge'ye YAZMAZ → NVDA zaten kart aria-label'ini
+          // okur; çift okuma olmaz (odaklanan kart + _srBolge anti-paterni).
+          konus(brailleMetni, { kesintiyle: true, srAtla: true });
         }
       };
 
@@ -164,17 +187,9 @@ export default function OkumaModuListesi({
     const ttsGetEtiket = getTtsEtiket || getEtiket;
     const etiket = typeof ttsGetEtiket === 'function' ? ttsGetEtiket(oge) : oge.ad;
     const altEtiket = typeof getAltEtiket === 'function' ? getAltEtiket(oge) : '';
-    // Nokta bilgisini "X noktalarından oluşur" biçiminde ekle
+    // Nokta bilgisi öğrenme modundaki gibi: "2. ve 5. noktalardan oluşur" (sıralı + okunabilir).
     const hucreler = typeof getHucreler === 'function' ? hucreleriNormalizeEt(getHucreler(oge)) : [];
-    let noktaBilgisi = '';
-    if (hucreler.length === 1 && hucreler[0].length > 0) {
-      noktaBilgisi = `${hucreler[0].join(', ')} noktalarından oluşur`;
-    } else if (hucreler.length > 1) {
-      noktaBilgisi = hucreler
-        .map((h, i) => `${i + 1}. hücre ${h.join(', ')}`)
-        .join(', ');
-      noktaBilgisi += ' noktalarından oluşur';
-    }
+    const noktaBilgisi = hucreYonergeMetni(hucreler);
     // altEtiket varsa ve etiket'ten farklıysa (ör. "1" → "1 rakamı", "," → "virgül")
     // yalnızca altEtiket kullan; aksi hâlde etiket kullan.
     const anaEtiket = (altEtiket && altEtiket.trim() !== etiket.trim()) ? altEtiket : etiket;
@@ -193,7 +208,8 @@ export default function OkumaModuListesi({
     }
 
     if (metin) {
-      konus(metin, { kesintiyle: true });
+      // srAtla: app TTS söyler ama _srBolge'ye YAZMAZ → NVDA kart aria-label'ini okur (çift değil).
+      konus(metin, { kesintiyle: true, srAtla: true });
     }
 
     console.log('OKUMA MODU SES', {
@@ -285,7 +301,10 @@ export default function OkumaModuListesi({
                   okumaOgeSesiTemizle();
                 }}
                 onClick={() => onSec(index)}
-                aria-label={`${ariaEtiket}. Braille noktaları: ${hucreNoktaMetni(hucreler)}. Öğrenme modunda aç.`}
+                aria-label={(() => {
+                  const yon = hucreYonergeMetni(hucreler); // "2. ve 5. noktalardan oluşur"
+                  return `${ariaEtiket}${yon ? '. ' + yon : ''}. Öğrenme modunda açmak için etkinleştirin.`;
+                })()}
               >
                 {(() => {
                   const { ana, alt: parantezAlt } = etiketiAyristir(okumaEtiketiHazirla(etiket));

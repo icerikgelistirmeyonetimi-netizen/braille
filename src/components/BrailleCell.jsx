@@ -194,8 +194,12 @@ export default function BrailleCell({
       </div>
       <div
         className={'cell' + (statikKullan ? ' braille-cell-statik' : '')}
-        role="group"
-        aria-label={hucreAdi || 'Braille hücresi, altı nokta'}
+        /* Çok hücreli alıştırmada hücreyi adıyla grupla ("1. hücre"). TEK hücrede grup
+           etiketi KOYMA: NVDA noktalardan sonra grup sınırında "Braille hücresi, altı nokta"
+           okuyordu (kullanıcı: "noktaları sayıyor sonra braille hücresi diyor") — gereksiz;
+           yönerge + her noktanın kendi etiketi zaten bağlamı veriyor. */
+        role={hucreAdi ? 'group' : undefined}
+        aria-label={hucreAdi || undefined}
         onTouchStart={dokunusHareket}
         onTouchMove={dokunusHareket}
         onTouchEnd={dokunusBitti}
