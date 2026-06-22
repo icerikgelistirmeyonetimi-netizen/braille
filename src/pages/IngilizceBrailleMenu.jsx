@@ -50,6 +50,16 @@ export default function IngilizceBrailleMenu() {
               </button>
             );
           })}
+          {/* Modül 9 — bu dilin kendi içinde Test / Sınav (klavye + ses efekti) */}
+          <button
+            type="button"
+            className="btn menu-card"
+            onClick={() => navigate('/ingilizce/test')}
+            aria-label="İngilizce Test / Sınav"
+          >
+            <span className="menu-card-ikon" aria-hidden="true">{Ikon.test}</span>
+            <span className="menu-card-yazi">Test / Sınav</span>
+          </button>
         </nav>
       </div>
     </div>

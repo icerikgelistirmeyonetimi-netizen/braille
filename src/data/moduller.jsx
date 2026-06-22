@@ -541,17 +541,20 @@ export const MODULLER = [
     mobilEtiket: "Kur'an-ı Kerim",
     altBaslik: "Kur'an-ı Kerim",
     ikon: Ikon.modul5,
+    // Sıra kullanıcı isteğiyle düzenlendi (Modül 5 Kur'an): Harfler → Harekeler → Cezim/Şedde
+    // → Med → Mukadder → Elif-i Zaid → Hemzeler → Tenvinler → Ta-i Merbûta → Diğer Uzatma
+    // → Hemze-i Vasl/Kat → Uzatma(Vakf). Başlıklar/ikonlar/anahtarlar AYNI (yalnız sıra değişti).
     ogeler: [
-      { yol: '/kuran-harfler',                         baslik: "Kur'an-ı Kerim Harfleri", ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',          toplam: 31 },
+      { yol: '/kuran-harfler',                         baslik: "Kur'an-ı Kerim Harfleri", ikon: Ikon.kuranHarf, anahtar: 'kuran-harfler',          toplam: 29 },
       { yol: '/kuran-harekeler',                       baslik: 'Harekeler',               ikon: Ikon.harake,    anahtar: 'kuran-harekeler',        toplam: 3 },
       { yol: '/kuran-isaretler/cezm-sedde',            baslik: 'Cezim ve Şedde',          ikon: Ikon.cezmSedde,    anahtar: 'kuran-cezm-sedde',       toplam: 2 },
-      { yol: '/kuran-isaretler/tenvinler',             baslik: 'Tenvinler',               ikon: Ikon.tenvin,       anahtar: 'kuran-tenvinler',        toplam: 3 },
-      { yol: '/kuran-isaretler/ta-i-merbuta',          baslik: "Ta-i Merbûta",            ikon: Ikon.taMerbuta,    anahtar: 'kuran-ta-i-merbuta',     toplam: 1 },
-      { yol: '/kuran-isaretler/med-harfleri',          baslik: 'Med Harfleri',            ikon: Ikon.medHarf,      anahtar: 'kuran-med-harfleri',     toplam: 3 },
+      { yol: '/kuran-isaretler/med-harfleri',          baslik: 'Med (Uzatma) Harfleri',   ikon: Ikon.medHarf,      anahtar: 'kuran-med-harfleri',     toplam: 3 },
       { yol: '/kuran-isaretler/mukadder-medler',       baslik: 'Mukadder Medler',         ikon: Ikon.mukadderMed,  anahtar: 'kuran-mukadder-medler',  toplam: 4 },
       { yol: '/kuran-isaretler/elif-zaid',             baslik: 'Elif-i Zaid',             ikon: Ikon.elifZaid,     anahtar: 'kuran-elif-zaid',        toplam: 1 },
-      { yol: '/kuran-isaretler/diger-uzatma',          baslik: 'Diğer Uzatma',            ikon: Ikon.tecvid,       anahtar: 'kuran-diger-uzatma',     toplam: 2 },
       { yol: '/kuran-isaretler/hemzeler',              baslik: 'Hemzeler',                ikon: Ikon.hemze,        anahtar: 'kuran-hemzeler',         toplam: 4 },
+      { yol: '/kuran-isaretler/tenvinler',             baslik: 'Tenvinler',               ikon: Ikon.tenvin,       anahtar: 'kuran-tenvinler',        toplam: 3 },
+      { yol: '/kuran-isaretler/ta-i-merbuta',          baslik: "Ta-i Merbûta",            ikon: Ikon.taMerbuta,    anahtar: 'kuran-ta-i-merbuta',     toplam: 1 },
+      { yol: '/kuran-isaretler/diger-uzatma',          baslik: 'Diğer Uzatma',            ikon: Ikon.tecvid,       anahtar: 'kuran-diger-uzatma',     toplam: 2 },
       { yol: '/kuran-isaretler/hemze-vasl',            baslik: 'Hemze-i Vasl ve Kat',    ikon: Ikon.hemzeVasl,    anahtar: 'kuran-hemze-vasl',       toplam: 2 },
       { yol: '/kuran-uzatma',                           baslik: 'Uzatma İşaretleri',       ikon: Ikon.tecvid,    anahtar: 'kuran-tecvid',           toplam: 22 },
       // Hece Okuma ve Kelime Okuma gizlendi; veriler kuran.js'de duruyor.

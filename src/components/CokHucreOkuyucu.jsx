@@ -24,7 +24,10 @@ export default function CokHucreOkuyucu({
   bittiMesaji = 'Tebrikler! Tamamladınız.',
   rtl = false,
   bolumAnahtari,
-  ikiHucreYanYana = false,
+  // İki hücreli öğeler VARSAYILAN olarak yan yana gösterilir (tek tek adımlama YOK) —
+  // tüm modüller (Modül 10 hariç; o CokHucreOkuyucu kullanmaz) için (kullanıcı isteği).
+  // Bir sayfa eski tek-tek davranışı isterse ikiHucreYanYana={false} ile devre dışı bırakır.
+  ikiHucreYanYana = true,
   ogeSesiCal,
   ogeSesiDurdur,
   ogeSesiGecikmeMs = 2600,
@@ -141,7 +144,13 @@ export default function CokHucreOkuyucu({
     // Sembol öğretme modu (kategoriAdi verilmişse — eski DesenOgretici davranışı)
     if (kategoriAdi) {
       const ttsBaşlık = oge.ttsYazi || oge.yazi || '';
-      const adKategori = ttsBaşlık.trimEnd().endsWith(kategoriAdi)
+      // ⚠ "İşareti" tekrarı: veri adı "Büyük Harf İşareti" (büyük İ), kategoriAdi "işareti"
+      // (küçük i). endsWith büyük/küçük harfe DUYARLI → eşleşmeyip " işareti" ekliyordu →
+      // "Büyük Harf İşareti işareti" (kullanıcı: "işaret ifadesi tekrarlanıyor, bir kez yeterli").
+      // Türkçe locale ile küçük harfe çevirip karşılaştır (düz toLowerCase "İ"yi bozar).
+      const ttsKucuk = ttsBaşlık.trimEnd().toLocaleLowerCase('tr');
+      const kategoriKucuk = kategoriAdi.toLocaleLowerCase('tr');
+      const adKategori = ttsKucuk.endsWith(kategoriKucuk)
         ? ttsBaşlık
         : `${ttsBaşlık} ${kategoriAdi}`;
       const anlamKismi = oge.anlam ? ` ${oge.anlam}` : '';
@@ -565,15 +574,21 @@ export default function CokHucreOkuyucu({
     // odağı atlar → burada aktif odaklarız) bu yolla çalışır. Kullanıcı yönergeyi dinleyip
     // Tab ile ilk noktaya geçer (DOM: yönerge bölgesi → braille hücresi).
     // ⚠ Ses KAYITLI sayfalar HARİÇ (kullanıcı isteği) → onlar eski davranışta kalır.
-    if (!sesAcik && !sesKaydiVar && girisAni) {
-      const id = window.requestAnimationFrame(() => {
-        const kok = dotSentinelRef.current?.parentElement;
-        const yonergeEl = kok?.querySelector('[data-sayfa-odak="yonerge"]')
-          || document.querySelector('#main [data-sayfa-odak="yonerge"]');
-        // Zaten yönerge bölgesinde odak varsa (SayfaOdakYonetimi modülden gelişte odakladı)
-        // YENİDEN odaklama → gereksiz ikinci odak olayı/okuma olmasın.
-        if (yonergeEl && document.activeElement !== yonergeEl) yonergeEl.focus();
-      });
+    // ⚠⚠ STANDART — ASLA DEĞİŞTİRME (kullanıcı: "ilk tab tuşumda braille hücresinde 1. nokta
+    // HER ZAMAN"): SAYFA GİRİŞİNDE (ses kaydı YOK) odak YÖNERGE bölgesine gelir (dot'a DEĞİL,
+    // ilk hedef noktaya DEĞİL) → NVDA önce yönergeyi okur; kullanıcının İLK TAB'ı DOM sırasıyla
+    // braille hücresinin 1. (ilk) noktasına konumlanır. Hem NVDA hem app TTS açıkken aynı.
+    if (girisAni && !sesKaydiVar) {
+      // rAF-RETRY: kilit açılırken (yonergeOkunuyor false) noktalar div→button olur, bu
+      // re-render anında tek odak DÜŞEBİLİR → odak tutana kadar (en çok 12 frame) tekrar dene.
+      let deneme = 0;
+      let id = 0;
+      const odakla = () => {
+        const el = document.querySelector('#main .yonerge-sr');
+        if (el && document.activeElement !== el) el.focus();
+        if ((!el || document.activeElement !== el) && deneme < 12) { deneme += 1; id = window.requestAnimationFrame(odakla); }
+      };
+      id = window.requestAnimationFrame(odakla);
       return () => window.cancelAnimationFrame(id);
     }
 
@@ -586,11 +601,13 @@ export default function CokHucreOkuyucu({
     // doğrudan noktanın üzerine konumlanır. Nokta yoksa sentinel'e düş (eski davranış).
     const id = window.requestAnimationFrame(() => {
       const kok = dotSentinelRef.current?.parentElement;
-      const ilkNokta = kok?.querySelector('button.dot.target') || kok?.querySelector('button.dot');
+      // ⚠ STANDART: hücrenin 1. (İLK) noktası — `button.dot.target` (ilk hedef) DEĞİL.
+      const ilkNokta = kok?.querySelector('button.dot');
       (ilkNokta || dotSentinelRef.current)?.focus();
     });
     return () => window.cancelAnimationFrame(id);
   }, [yonergeOkunuyor, okumaModu, bitti, konusDil, ogeSesiCal]);
+
 
   // Bitti (Tebrikler) ekranı açılınca odağı bitiş mesajına ver → ekran okuyucu mesajı okur
   // (kullanıcı: "tebrikler sahnesinde ekran okuyucu tebriklere odaklanamıyor"). Bitti
@@ -658,7 +675,8 @@ export default function CokHucreOkuyucu({
           e.preventDefault();
           window.requestAnimationFrame(() => {
             const kok = dotSentinelRef.current?.parentElement;
-            (kok?.querySelector('button.dot.target') || kok?.querySelector('button.dot') || dotSentinelRef.current)?.focus();
+            // ⚠ STANDART: hücrenin 1. (İLK) noktası — hedef DEĞİL.
+            (kok?.querySelector('button.dot') || dotSentinelRef.current)?.focus();
           });
         }
         // Shift+Tab: preventDefault YOK → tarayıcı geriye (kelime/önceki öğeye) götürür.
@@ -990,7 +1008,9 @@ export default function CokHucreOkuyucu({
             {k.hucreler.map((noktalar, hucreIndex) => (
               <BrailleCell
                 key={hucreIndex}
-                baslik={`${hucreIndex + 1}`}
+                /* Hücre üstüne görsel "1"/"2" başlık YAZMA: braille noktaları da 1–6 numaralı
+                   olduğundan kullanıcı karıştırabilir (kullanıcı: "hücre başlarında 1 2 yazmasın").
+                   Ekran okuyucu hücre ayrımını hucreAdi ("1. hücre") grup etiketiyle yapar. */
                 hucreAdi={`${hucreIndex + 1}. hücre`}
                 hedefNoktalar={noktalar}
                 dogruNoktalar={hucreIndex < guvenliHucreIndeksi ? noktalar : hucreIndex === guvenliHucreIndeksi ? basilanlar : []}
@@ -999,7 +1019,6 @@ export default function CokHucreOkuyucu({
                 kilitli={yonergeOkunuyor}
                 onKilitliEtkilesim={yonergeBeklemeUyar}
                 onNoktaTikla={noktayaTikla}
-                baslikAriaLabel={`${hucreIndex + 1}. hücre, toplam ${hucreSayisi} hücreden`}
               />
             ))}
           </div>

@@ -1,20 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import PageHeader from '../components/PageHeader.jsx';
-import BrailleCell from '../components/BrailleCell.jsx';
+import React from 'react';
+import CokluTest from '../components/CokluTest.jsx';
 import { NOKTALAMA_ISARETLERI, OZEL_ISARETLER } from '../data/braille.js';
-import { konus, basariBildir, hataBildir, konusmayiDurdur } from '../utils/ses.js';
-import { karistir, HUCRE_SIRA_SOZ as HUCRE_ETIKET } from '../utils/diziYardimci.js';
 
-// Modül 4 (Noktalama ve Özel İşaretler) Test/Sınav etkinliği.
-// Modül 1'deki Test.jsx mantığıyla aynıdır; bazı işaretler 1, 2 veya 3
-// braille hücresinden oluşur. Sırayla her hücrenin noktaları basılır.
-
-// Bazı özel işaretlerin braille hücresi yoktur (sayfa numaralama, tarih
-// yazma vb. – kuralları anlatan bilgi kartları). Bunları teste dâhil etmiyoruz.
-const sadeceHucreliOzel = OZEL_ISARETLER.filter(
-  (o) => Array.isArray(o.hucreler) && o.hucreler.length > 0
-);
-
+// Modül 3 (Noktalama ve Özel İşaretler) Test/Sınav — ortak CokluTest bileşeni
+// (klavye girişi + ses efekti + Perkins/mobil klavye). Bazı özel işaretlerin
+// braille hücresi yoktur (bilgi kartları); CokluTest hucreler'i boş olanları eler.
 const KAYNAKLAR = {
   noktalama: {
     etiket: 'Noktalama İşaretleri',
@@ -23,277 +13,21 @@ const KAYNAKLAR = {
       ad: n.sembol,
       ariaAd: `${n.ad} işareti`,
       ipucu: n.ad,
-      hucreler: n.hucreler
-    }))
+      hucreler: n.hucreler,
+    })),
   },
   ozel: {
     etiket: 'Özel İşaretler',
     kategori: 'özel işaret',
-    veri: sadeceHucreliOzel.map((o) => ({
+    veri: OZEL_ISARETLER.map((o) => ({
       ad: o.sembol,
       ariaAd: o.ad,
       ipucu: o.ad,
-      hucreler: o.hucreler
-    }))
-  }
+      hucreler: o.hucreler,
+    })),
+  },
 };
 
-const SORU_SAYISI = 10;
-
 export default function TestNoktalama() {
-  const [kaynak, setKaynak] = useState(null);
-  const [kaynakAnahtar, setKaynakAnahtar] = useState(null);
-  const [sorular, setSorular] = useState([]);
-  const [indeks, setIndeks] = useState(0);
-  const [basilanlar, setBasilanlar] = useState([[]]);
-  const [hucreIndeksi, setHucreIndeksi] = useState(0);
-  const [yanlis, setYanlis] = useState({ hucre: -1, noktalar: [] });
-  const [puan, setPuan] = useState(0);
-  const [hataSayisi, setHataSayisi] = useState(0);
-  const [soruHata, setSoruHata] = useState(0);
-  const [aciklandi, setAciklandi] = useState(false);
-  const [bittimi, setBittimi] = useState(false);
-
-  const aktif = sorular[indeks];
-  const cokHucreli = aktif && aktif.hucreler.length > 1;
-
-  const basla = (anahtar) => {
-    const k = KAYNAKLAR[anahtar];
-    const seri = karistir(k.veri).slice(0, Math.min(SORU_SAYISI, k.veri.length));
-    setKaynak(k);
-    setKaynakAnahtar(anahtar);
-    setSorular(seri);
-    setIndeks(0);
-    setBasilanlar(seri[0] ? seri[0].hucreler.map(() => []) : [[]]);
-    setHucreIndeksi(0);
-    setYanlis({ hucre: -1, noktalar: [] });
-    setPuan(0);
-    setHataSayisi(0);
-    setSoruHata(0);
-    setAciklandi(false);
-    setBittimi(false);
-  };
-
-  useEffect(() => {
-    if (!aktif || bittimi || aciklandi) return;
-    const adi = aktif.ariaAd || aktif.ad;
-    const hucreSayisi = aktif.hucreler.length;
-    let metin;
-    if (hucreSayisi === 1) {
-      metin = `Soru ${indeks + 1}: ${adi}. Bu ${kaynak.kategori}ni oluşturan noktalara dokunun.`;
-    } else {
-      const sira = HUCRE_ETIKET[hucreIndeksi] || `${hucreIndeksi + 1}.`;
-      if (hucreIndeksi === 0) {
-        metin = `Soru ${indeks + 1}: ${adi}. ${hucreSayisi} hücreden oluşur. Önce ${sira} hücrenin noktalarına dokunun.`;
-      } else {
-        metin = `Şimdi ${sira} hücrenin noktalarına dokunun.`;
-      }
-    }
-    konus(metin);
-    const tekrar = () => konus(metin, { kesintiyle: true });
-    window.addEventListener('yonergeTekrar', tekrar);
-    return () => window.removeEventListener('yonergeTekrar', tekrar);
-  }, [indeks, hucreIndeksi, aktif, bittimi, kaynak, aciklandi]);
-
-  useEffect(() => () => konusmayiDurdur(), []);
-
-  const sonrakiSoruyaGec = () => {
-    if (indeks + 1 >= sorular.length) {
-      setBittimi(true);
-    } else {
-      const sira = sorular[indeks + 1];
-      setIndeks((i) => i + 1);
-      setBasilanlar(sira.hucreler.map(() => []));
-      setHucreIndeksi(0);
-      setYanlis({ hucre: -1, noktalar: [] });
-      setSoruHata(0);
-      setAciklandi(false);
-    }
-  };
-
-  const cevapSoyle = () => {
-    if (!aktif || aciklandi) return;
-    setAciklandi(true);
-    setYanlis({ hucre: -1, noktalar: [] });
-    setBasilanlar(aktif.hucreler.map((h) => [...h]));
-    setHucreIndeksi(aktif.hucreler.length - 1);
-    const ad = aktif.ariaAd || aktif.ad;
-    const noktaMetin = aktif.hucreler
-      .map((h, i) => `${HUCRE_ETIKET[i] || (i + 1) + '.'} hücre ${h.join(', ')}`)
-      .join('; ');
-    konus(`Doğru cevap: ${ad}. Noktalar: ${noktaMetin}.`, {
-      kesintiyle: true,
-      onSon: () => setTimeout(sonrakiSoruyaGec, 700)
-    });
-  };
-
-  const tikla = (hi, n) => {
-    if (!aktif || bittimi || aciklandi) return;
-    if (hi !== hucreIndeksi) {
-      const sira = HUCRE_ETIKET[hucreIndeksi] || `${hucreIndeksi + 1}.`;
-      hataBildir(`Önce ${sira} hücreyi tamamlayın.`);
-      return;
-    }
-    const mevcut = basilanlar[hi] || [];
-    if (mevcut.includes(n)) return;
-    const beklenen = aktif.hucreler[hi];
-    if (n !== beklenen[mevcut.length]) {
-      setYanlis({ hucre: hi, noktalar: [n] });
-      setHataSayisi((h) => h + 1);
-      const yeniSoruHata = soruHata + 1;
-      setSoruHata(yeniSoruHata);
-      konus(`${n} yanlış`, { kesintiyle: true });
-      setTimeout(() => setYanlis({ hucre: -1, noktalar: [] }), 700);
-      return;
-    }
-    const yeni = [...mevcut, n];
-    const yeniBasilanlar = basilanlar.map((b, i) => (i === hi ? yeni : b));
-    setBasilanlar(yeniBasilanlar);
-    const hucreTamam = yeni.length === beklenen.length;
-    if (hucreTamam) {
-      const sonHucre = hi + 1 >= aktif.hucreler.length;
-      if (sonHucre) {
-        setPuan((p) => p + 1);
-        const adi = aktif.ariaAd || aktif.ad;
-        konus(`${n} doğru. Tebrikler! ${adi} doğru.`, { kesintiyle: true });
-        setTimeout(sonrakiSoruyaGec, 3000);
-      } else {
-        const sira = HUCRE_ETIKET[hi + 1] || `${hi + 2}.`;
-        konus(`${n} doğru. Şimdi ${sira} hücreye geçin.`);
-        setTimeout(() => setHucreIndeksi(hi + 1), 400);
-      }
-    } else {
-      konus(`${n} doğru`, { kesintiyle: true });
-    }
-  };
-
-  if (!kaynak) {
-    return (
-      <div className="page">
-        <PageHeader baslik="Modül 4 Test / Sınav" />
-        <nav className="menu" aria-label="Noktalama ve özel işaret test kategorileri" style={{ margin: 0, gap: 10 }}>
-          {Object.entries(KAYNAKLAR).map(([k, v]) => (
-            <button
-className="btn"               key={k}
-              type="button"
-              onClick={() => basla(k)}
-              aria-label={`${v.etiket} testini başlat`}
-            >
-              {v.etiket} Testi
-            </button>
-          ))}
-        </nav>
-      </div>
-    );
-  }
-
-  if (bittimi) {
-    const yuzde = Math.round((puan / sorular.length) * 100);
-    return (
-      <div className="page">
-        <PageHeader baslik="Test Sonucu" />
-        <div className="page-mid">
-          <BrailleCell aktifNoktalar={[1, 2, 3, 4, 5, 6]} />
-          <div className="instruction success" role="status" aria-live="polite" style={{ margin: 0 }}>
-            <div style={{ fontSize: '1.2em', fontWeight: 800 }}>
-              Puanınız: {puan} / {sorular.length}  ({yuzde}%)
-            </div>
-            <div>Toplam yanlış basma: {hataSayisi}</div>
-          </div>
-        </div>
-        <div className="controls">
-          <button className="btn" type="button" onClick={() => basla(kaynakAnahtar)}>
-            Tekrar Dene
-          </button>
-          <button className="btn" type="button" onClick={() => { setKaynak(null); setKaynakAnahtar(null); }}>
-            Kategori Değiştir
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="page">
-      <div>
-        <PageHeader baslik={`Test: ${kaynak.etiket}`} />
-        <div className="progress" aria-hidden="true">
-          Soru {indeks + 1} / {sorular.length} • Doğru: {puan} • Yanlış: {hataSayisi}
-        </div>
-      </div>
-      <div
-        role="status"
-        aria-live="polite"
-        style={{
-          position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
-          overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0
-        }}
-      >
-        Soru {indeks + 1} / {sorular.length}. {aktif.ariaAd || aktif.ad}.
-        {cokHucreli
-          ? ` ${HUCRE_ETIKET[hucreIndeksi] || (hucreIndeksi + 1) + '.'} hücrenin noktalarına dokunun.`
-          : ` ${kaynak.kategori}ni oluşturan noktalara dokunun.`}
-      </div>
-
-      <div className="page-mid">
-        <div style={{
-          display: 'flex',
-          gap: 'var(--cell-gap)',
-          alignItems: 'flex-end',
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}>
-          {aktif.hucreler.map((_, hi) => {
-            const aktifHucreVurgu = cokHucreli && hi === hucreIndeksi
-              ? { outline: '3px solid var(--accent)', borderRadius: 12, padding: 6 }
-              : { padding: 6 };
-            return (
-              <div key={hi} style={aktifHucreVurgu}>
-                <BrailleCell
-                  baslik={hi === 0 ? aktif.ad : ''}
-                  baslikAriaLabel={cokHucreli
-                    ? `${HUCRE_ETIKET[hi] || (hi + 1) + '.'} hücre`
-                    : (aktif.ariaAd || aktif.ad)}
-                  tiklanabilir={!aciklandi}
-                  kesfedilebilir={!aciklandi}
-                  onNoktaTikla={(n) => tikla(hi, n)}
-                  dogruNoktalar={basilanlar[hi] || []}
-                  yanlisNoktalar={yanlis.hucre === hi ? yanlis.noktalar : []}
-                />
-              </div>
-            );
-          })}
-        </div>
-        {aktif.ipucu && (
-          <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.95em' }}>
-            İpucu: {aktif.ipucu}
-            {cokHucreli && ` (${aktif.hucreler.length} hücre)`}
-          </div>
-        )}
-      </div>
-
-      <div className="controls">
-        <button
-className="btn"           type="button"
-          onClick={() => {
-            const adi = aktif.ariaAd || aktif.ad;
-            if (cokHucreli) {
-              const sira = HUCRE_ETIKET[hucreIndeksi] || `${hucreIndeksi + 1}.`;
-              konus(`${adi}. ${sira} hücrenin noktalarına dokunun.`, { kesintiyle: true });
-            } else {
-              konus(`${adi}. ${kaynak.kategori}ni oluşturan noktalara dokunun.`, { kesintiyle: true });
-            }
-          }}
-        >
-          Soruyu Tekrarla
-        </button>
-        <button className="btn" type="button" onClick={cevapSoyle} disabled={aciklandi}>
-          Cevabı Söyle
-        </button>
-        <button className="btn" type="button" onClick={sonrakiSoruyaGec}>
-          Atla →
-        </button>
-      </div>
-    </div>
-  );
+  return <CokluTest baslik="Modül 3 Test / Sınav" kaynaklar={KAYNAKLAR} />;
 }

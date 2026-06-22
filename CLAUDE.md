@@ -79,7 +79,7 @@ When `kategoriAdi` is set it generates DesenOgretici-style instructions ("A harf
   // Reading mode:
   rtl
   sadeceHucreYonergesiOku     // skip word/meaning, only read "cell X: tap dots N"
-  ikiHucreYanYana
+  ikiHucreYanYana             // DEFAULT true — 2-cell items shown SIDE-BY-SIDE (cell-row.fit), NOT stepped one at a time. Module 10 excluded automatically (doesn't use CokHucreOkuyucu). Active cell is the only clickable one; hucre-onizleme preview hidden. Hücre üstüne GÖRSEL "1"/"2" başlık (baslik prop) KONMAZ — braille noktaları da 1–6 olduğundan karışırdı (kullanıcı: "hücre başlarında 1 2 yazmasın"); ekran okuyucu ayrımı hucreAdi ("1. hücre") grup etiketiyle. Pass false for legacy step-through. (kullanıcı: "iki hücre varsa tek tek değil yan yana göstersin")
   yonergeFormati="standart"   // 'standart' | 'sirayla'
 />
 ```
@@ -114,6 +114,8 @@ yonergeKilidiAc(nesil)                      // unlock dots (checks generation)
 yonergeyiKilitleyerekSeslendir(metin, opt)  // speak + lock; safety: Math.min(30000, 6000+len*200)
 yonergeBeklemeUyar()                        // show toast only — no focus, no NVDA announcement, TTS uninterrupted
 ```
+
+**⚠⚠ DEĞİŞMEZ STANDART — İLK TAB = HÜCRENİN 1. NOKTASI (kullanıcı: "ilk tab tuşumda braille hücresinde 1. nokta HER ZAMAN"; "asla ama asla bu standartı değiştirme; yanlış anlarsan sor"):** Öğrenme modunda SAYFA GİRİŞİNDE (ses kaydı YOK) odak YÖNERGE bölgesine (`.yonerge-sr`) gelir — bir dot'a/ilk HEDEF noktaya DEĞİL → NVDA önce yönergeyi okur; kullanıcının **İLK TAB'ı DOM sırasıyla braille hücresinin 1. (ilk) noktasına** konumlanır. Bu yüzden: (a) giriş dot-odak dalı `if (girisAni && !sesKaydiVar)` → `.yonerge-sr` odaklar (NVDA VE app TTS, **rAF-retry** ile — kilit-açma re-render'ında odak düşmesin), dot'a GEÇMEZ; (b) dot'a odaklanan TÜM yollar (sayfa-içi öğe geçişi, Tab-kes) `kok.querySelector('button.dot')` = **1. nokta** kullanır, `button.dot.target` (ilk hedef) DEĞİL. Ses kayıtlı sayfalar ayrı akış (region ses bitince dolar). **Bu standardı ASLA değiştirme; emin değilsen kullanıcıya sor.** (⚠ Headless preview programatik odağı sayfanın "aktif" döneminde tutmuyor → bu davranış yalnız gerçek tarayıcı/NVDA'da doğrulanır.)
 
 **Flow:**
 1. New item → increment generation, `setYonergeOkunuyor(true)`, call `yonergeyiKilitleyerekSeslendir`
@@ -201,20 +203,23 @@ Colored grid of braille cells. Color-codes cells by semantic type:
 - isaret → black (`#000000`)
 - birim → CSS var `--braille-noktalama-fill`
 
-### `src/components/CokluTest.jsx`
+### `src/components/CokluTest.jsx` — TÜM modüllerin TEK test/sınav bileşeni
 General-purpose multi-category quiz. Shuffles 10 random questions from a source.
+**⚠ GİRİŞ MODELİ = Karışık Yazma (kullanıcı: "test perkins klavye + mobil yatay klavye desteklemeli, karışık yazmada vardı"):** `BrailleKlavye` (inline `.klavye-inline` + mobil yatay `.klavye-popup`), akor (chord) girişi, `siralikTiklama`+`onTikla`/`onHucre` doğrulama, **ses efekti dönütleri** (doğru tamamlama→`dogruSesi()` ding; yanlış→`hataBildir` buzz), sesli yönerge + kilit/`yonergeTekrar`, Tablet Modu. ESKİ "hücre noktalarına tek tek dokun" (BrailleCell) modeli KALDIRILDI — YazmaKarisik modeline taşındı.
 ```jsx
 <CokluTest
-  baslik="Test Başlığı"
-  kaynaklar={{
-    anahtar: {
-      etiket: 'Görünen ad',
-      kategori: 'sembol/işaret/...',
-      veri: [{ ad, ariaAd?, ipucu?, hucreler: number[][] }]
-    }
-  }}
+  baslik="Modül N Test / Sınav"
+  kaynaklar={{ anahtar: { etiket, kategori, veri: [{ ad, ariaAd?, ipucu?, hucreler: number[][], ...sesAlanları }] } }}
+  ogeSesiCal={(item, { onEnded }) => …}  // opsiyonel ses kaydı (Kur'an harf/hece dosyası, Müzik piyano)
+  ogeSesiDurdur={() => …}                 // opsiyonel
+  ogeSesiVarMi={(item) => bool}           // yalnız sesi olan öğelerde ses çal/buton göster (Kur'an: harf/hece var, hareke/tecvid yok)
+  sesPrompt                                // soru gelince ses otomatik çalar (işitsel ipucu)
+  sesButonEtiketi="Sesi Dinle"            // "🔊 Sesi Dinle"/"Nota Sesi" butonu
+  sesIzin={{ aciklama, butonMetni, ilkSesUrl }}  // verilirse önce SesIzinEkrani (Kur'an)
 />
 ```
+**Arapça `ad`** (Kur'an testi) `yazma-metin`'de `/[؀-ۿ]/` ile Amasya fontu alır.
+**TÜM 9 modül test sayfası bu bileşeni kullanır** (ortak, kopya YOK): Modül 1 `Test.jsx`, M2 `TestKisaltma`, M3 `TestNoktalama`, M5 `TestKuran` (ses kaydı+izin), M6 `TestMatematik`, M7 `TestFen`, M8 `TestMuzik` (piyano sesi), M9 her dil için `TestYabanci` (dil prop). Hepsi yalnız `kaynaklar` (+Kur'an/Müzik'te ses props) geçen ince sarmalayıcıdır. **Modül 9 testi DİL BAZLI** (kullanıcı: "İngilizce kendi içinde, diğer diller kendi içinde"): rota `/ingilizce|almanca|fransizca/test` (App.jsx, `:slug`'dan ÖNCE) + her dil menüsünde (`*BrailleMenu.jsx`) "Test / Sınav" kartı; `TestYabanci` kategorileri = dilin `*_BOLUMLER` bölümleri. **Modül 4 (Yazma) testi YOK** (yazma etkinliklerinin kendisi değerlendirme; kasıtlı). **Modül 10 (BRF araçları) test kapsamı dışı.**
 
 ### `src/components/FullscreenButonu.jsx`
 Fullscreen API toggle button. Uses `tamEkranApiDestekleniyorMu()` from `utils/tamEkran.js`; shows iOS tip if API not supported.
@@ -451,6 +456,8 @@ KisaltmaKelimeParcasi → bolumAnahtari="kisaltma-kelime-parcasi"
 
 **⚠ `kategoriAdi` dalı (noktalariSeslendir'siz sembol sayfaları) da SÖZLÜ nokta GARANTİ EDER (kullanıcı: "başka sayfalarda da var, tüm modüllerde kontrol et"):** `isarettenOgeye` kullanan sembol sayfaları (`NoktalamaIsaretleri`/`OzelIsaretler`/`MatematikSembolEgitimi`/`MatematikOlcuEgitimi`/`MatematikGeometriEgitimi`/`FenSembolEgitimi`/`MuzikSembolEgitimi`/`YabanciBrailleSayfa`/`KuranHarekeEgitimi`…) yönerge `detay`'ını `yonergeDetay` (= veri `aciklama`/`okumaOzeti`) ile kurar. Çoğu açıklama ya HİÇ nokta demiyor (mat-ölçü "mm harfleriyle yazılır") ya da **KISA ÇİZGİ** gösterimi ("4-5", "3-4-5", "Noktaları: 3-4-5-6") kullanıyor — ekran okuyucu için belirsiz. Fix (`kelimeYonergeMetniAl` kategoriAdi non-noktalariSeslendir dalı): `detay = yonergeDetay` + DAİMA `noktaKompozisyonMetni()` (sözlü "N. ve M. noktalardan oluşur"), **yalnız açıklama zaten `/nokta(dan|lardan)\s+oluşur/` içeriyorsa eklenmez** (fen-yunan/özel-işaret/müzik-nota — dup önlenir; çizgi gösterimi "3-4-5" sözlü SAYILMAZ → eklenir). `yonergeDetay` boşsa eski tek-hücre fallback yerine TAM çok-hücre kompozisyonu kullanılır. Tarayıcı denetimi (tüm modüller): **DÜZELEN** mat-ölçü/fen-sembol/mat-geometri/müzik-sembol/mat-sembol/kuran-hareke (sözlü nokta eklendi, 0 dup); **değişmeyen** harfler/noktalama/özel-işaret/fen-yunan/müzik-nota/yabancı-dil/sıra-sayıları/rakamlar/kuran-harf (kendi metni zaten sözlü-noktalı). `tamYonergeMetni` sayfaları (rakamlar/sıra-sayıları/kuran-harf) ayrı dal, kendi noktalı metnini korur.
 
+**⚠ `kategoriAdi` SUFFIX TEKRARI — adı zaten kategoriyle biten öğede çift okuma önlenir (kullanıcı: "Diğer Özel İşaretler'de 'Büyük harf işareti işareti' diye tekrarlıyor; işaret ifadesi bir kez yeterli"):** `kelimeYonergeMetniAl` kategoriAdi dalı, başlık zaten `kategoriAdi` ile bitmiyorsa suffix ekler (`ttsBaşlık.endsWith(kategoriAdi) ? ttsBaşlık : '${ttsBaşlık} ${kategoriAdi}'`). ESKİDEN `endsWith` **büyük/küçük harfe DUYARLI** idi → veri adı "Büyük Harf **İşareti**" (büyük İ) ile `kategoriAdi="işareti"` (küçük i) EŞLEŞMEYİP " işareti" ekliyordu → "Büyük Harf İşareti **işareti**". Fix: karşılaştırma **Türkçe locale ile küçük harfe çevrilir** (`ttsBaşlık.trimEnd().toLocaleLowerCase('tr').endsWith(kategoriAdi.toLocaleLowerCase('tr'))`) — düz `toLowerCase()` Türkçe "İ"yi `i̇` (combining dot) yapıp eşleştiremezdi. Görünen/sesli metin yine orijinal büyük/küçük (`ttsBaşlık`). Merkezî → TÜM kategoriler ("işareti"/"sembolü"/"harfi"/"harekesi"…) için adı o kelimeyle biten her öğeyi (Noktalama İşaretleri, Tecvid, Yabancı dil, Fen sembol…) kapsar. Tarayıcı: /ozel-isaretler yönerge "Büyük Harf İşareti, Yalnız 6. noktadan…" (tek "İşareti").
+
 ---
 
 ## 9. Kuran Pages (`CokHucreOkuyucu` + audio)
@@ -461,10 +468,14 @@ KuranKelimeTemelSayfa → KuranKelimeOkuma(kaynakAnahtari="kelime-temel")
 KuranKelimeOkumaSayfa → KuranKelimeOkuma(kaynakAnahtari="kelime")
 KuranSureOkuma       → CokHucreOkuyucu directly
 KuranTecvidEgitimi   → route: /kuran-uzatma  bolumAnahtari="kuran-tecvid" (localStorage key — do NOT change)
+KuranIsaretEgitimi   → route: /kuran-isaretler/:slug (cezm-sedde, tenvinler, ta-i-merbuta, med-harfleri, mukadder-medler, elif-zaid, diger-uzatma, hemzeler, hemze-vasl)
 ```
 Audio files: `public/audio/kuran/`. `SesIzinEkrani` component handles first-tap unlock.
 
+**⚠ ARAPÇA AMASYA FONTU — Arapça `yazi` taşıyan TÜM Kur'an sayfaları `rtl` GEÇMELİ (kullanıcı: "Kur'an modülünde bazı sayfalarda Arapça Amasya fontu yok, okuma modlarını da kontrol et"):** `CokHucreOkuyucu` `yazi` div'i Amasya'yı YALNIZ `rtl` true iken uygular (`rtl ? "'Amasya',…" : "'Segoe UI',…"`); okuma modu kartları da Amasya'yı `.okuma-modu-panel.rtl .okuma-modu-etiket` CSS'i ile (panel `rtl` sınıfı = `rtl` prop'u) alır → `rtl` YOKSA hem öğrenme hem okuma modunda Arapça Segoe UI ile çıkar. **`KuranIsaretEgitimi` `rtl` GEÇMİYORDU** (`yazi: h.isaret` = Arapça diakritik/harf ör. `'ْ'`/`'ا'`) → 9 alt-sayfanın hepsinde Amasya eksikti; `rtl` eklendi (KuranHarf/Hareke/KelimeOkuma/Sure zaten geçiyordu). **AYRIM — `KuranTecvidEgitimi` `rtl` ALMAZ:** `yazi: t.ad` = TÜRKÇE (rtl+Amasya Latin'i bozar — bkz. §11 Amasya kuralı), Arapça yalnız `altMetin: t.sembol`'de → `altMetin` zaten `/[؀-ۿ]/.test(k.altMetin)` ile Amasya alır (rtl gerekmez). **Kural: Arapça içerik `yazi`'da ise → sayfa `rtl`; yalnız `altMetin`'de ise → rtl YOK (altMetin kendi Arapça-tespitiyle Amasya alır).** Tarayıcı: /kuran-isaretler/cezm-sedde öğrenme `yazi` (ْ) = Amasya+rtl, okuma modu kartları (◌ْ ◌ّ) = Amasya, panel.rtl.
+
 **Module 5 menu notes:**
+- **Ders sırası kullanıcı isteğiyle düzenlendi** (`moduller.jsx` modul5 ogeler; başlıklar/anahtarlar AYNI, yalnız sıra): Harfler → Harekeler → Cezim/Şedde → Med (Uzatma) Harfleri → Mukadder Medler → Elif-i Zaid → Hemzeler → Tenvinler → Ta-i Merbûta → Diğer Uzatma → Hemze-i Vasl/Kat → Uzatma İşaretleri → Test. `sonrakiDers` (dersAkisi.js) bu ogeler sırasını okur → "Sonraki İçerik" akışı otomatik bu sıradadır. Tüm Modül 5 dersleri (kuran-harfler/harekeler/uzatma + her `/kuran-isaretler/:slug`) **karışık yazma (klavye yazma) etkinliği** içerir (karisikYazmaKaynaklari.js'te kayıtlı; bitiş ekranında "Karışık Yazma Etkinliği" butonu görünür).
 - Hece Okuma ve Kelime Okuma items are **hidden from menu** (removed from `moduller.jsx` ogeler). Data still exists in `kuran.js` — do not delete it.
 - Route was renamed `/kuran-tecvid` → `/kuran-uzatma`. `bolumAnahtari` stays `"kuran-tecvid"` for localStorage compatibility.
 - User-facing strings in Module 5 use **â → a** (e.g. "Ta-i Merbuta", "Elif-i Zaid"). Audio slug files (`kuranSesHelpers.js`) are **excluded** — they contain `hı: 'hâ'` and a `.replace(/â/g, 'a')` regex that must stay intact.

@@ -28,7 +28,7 @@ const BOLUMLER = {
   'cezm-sedde':       { baslik: 'Cezim ve Şedde',           kategoriAdi: 'işareti', bolumAnahtari: 'kuran-cezm-sedde',      veri: CEZM_SEDDE },
   'tenvinler':        { baslik: 'Tenvinler',                 kategoriAdi: 'tenvini', bolumAnahtari: 'kuran-tenvinler',        veri: TENVINLER },
   'ta-i-merbuta':     { baslik: "Ta-i Merbûta",             kategoriAdi: 'işareti', bolumAnahtari: 'kuran-ta-i-merbuta',    veri: TA_I_MERBUTA },
-  'med-harfleri':     { baslik: 'Med Harfleri',              kategoriAdi: 'harfi',   bolumAnahtari: 'kuran-med-harfleri',    veri: MED_HARFLERI },
+  'med-harfleri':     { baslik: 'Med (Uzatma) Harfleri',    kategoriAdi: 'harfi',   bolumAnahtari: 'kuran-med-harfleri',    veri: MED_HARFLERI },
   'mukadder-medler':  { baslik: 'Mukadder Medler',           kategoriAdi: 'işareti', bolumAnahtari: 'kuran-mukadder-medler', veri: MUKADDER_MEDLER },
   'elif-zaid':        { baslik: 'Elif-i Zaid',               kategoriAdi: 'işareti', bolumAnahtari: 'kuran-elif-zaid',       veri: ELIF_ZAID },
   'diger-uzatma':     { baslik: 'Diğer Uzatma',             kategoriAdi: 'işareti', bolumAnahtari: 'kuran-diger-uzatma',   veri: DIGER_UZATMA },
@@ -48,6 +48,7 @@ export default function KuranIsaretEgitimi() {
       kategoriAdi={bolum.kategoriAdi}
       bolumAnahtari={bolum.bolumAnahtari}
       bittiMesaji={`Tebrikler! ${bolum.baslik} bölümünü tamamladınız.`}
+      rtl
     />
   );
 }

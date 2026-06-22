@@ -54,6 +54,7 @@ import IngilizceBrailleMenu from './pages/IngilizceBrailleMenu.jsx';
 import AlmancaBrailleMenu from './pages/AlmancaBrailleMenu.jsx';
 import FransizcaBrailleMenu from './pages/FransizcaBrailleMenu.jsx';
 import YabanciBrailleSayfa from './pages/YabanciBrailleSayfa.jsx';
+import TestYabanci from './pages/TestYabanci.jsx';
 import AramaSayfasi from './pages/AramaSayfasi.jsx';
 import Araclar from './pages/Araclar.jsx';
 import BelgeBrf from './pages/BelgeBrf.jsx';
@@ -220,14 +221,17 @@ export default function App() {
           <Route path="/almanca-braille" element={<Navigate to="/almanca" replace />} />
           <Route path="/almanca-braille/:slug" element={<AlmancaBrailleEskiYol />} />
           <Route path="/almanca" element={<AlmancaBrailleMenu />} />
+          <Route path="/almanca/test" element={<TestYabanci dil="de" />} />
           <Route path="/almanca/:slug" element={<YabanciBrailleSayfa dil="de" />} />
           <Route path="/fransizca-braille" element={<Navigate to="/fransizca" replace />} />
           <Route path="/fransizca-braille/:slug" element={<FransizcaBrailleEskiYol />} />
           <Route path="/fransizca" element={<FransizcaBrailleMenu />} />
+          <Route path="/fransizca/test" element={<TestYabanci dil="fr" />} />
           <Route path="/fransizca/:slug" element={<YabanciBrailleSayfa dil="fr" />} />
           <Route path="/ingilizce-braille" element={<Navigate to="/ingilizce" replace />} />
           <Route path="/ingilizce-braille/:slug" element={<IngilizceBrailleEskiYol />} />
           <Route path="/ingilizce" element={<IngilizceBrailleMenu />} />
+          <Route path="/ingilizce/test" element={<TestYabanci dil="en" />} />
           <Route path="/ingilizce/:slug" element={<YabanciBrailleSayfa dil="en" />} />
           <Route path="/araclar" element={<Araclar />} />
           <Route path="/belge-brf" element={<BelgeBrf />} />

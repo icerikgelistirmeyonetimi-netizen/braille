@@ -402,7 +402,7 @@ const KURAN_ISARET_KAYNAKLARI = {
   'cezm-sedde': { veri: CEZM_SEDDE, baslik: 'Cezim ve Şedde' },
   'tenvinler': { veri: TENVINLER, baslik: 'Tenvinler' },
   'ta-i-merbuta': { veri: TA_I_MERBUTA, baslik: 'Ta-i Merbûta' },
-  'med-harfleri': { veri: MED_HARFLERI, baslik: 'Med Harfleri' },
+  'med-harfleri': { veri: MED_HARFLERI, baslik: 'Med (Uzatma) Harfleri' },
   'mukadder-medler': { veri: MUKADDER_MEDLER, baslik: 'Mukadder Medler' },
   'elif-zaid': { veri: ELIF_ZAID, baslik: 'Elif-i Zaid' },
   'diger-uzatma': { veri: DIGER_UZATMA, baslik: 'Diğer Uzatma' },
