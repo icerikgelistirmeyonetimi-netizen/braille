@@ -128,18 +128,51 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
   let buyukHarfBekle = false;
   const noktalamaHucreMi = (hucre) => !!hucre && _NOKTA_TERS.has(noktalariAnahtara(hucre));
   const matematikSayiSinirAnahtarlari = new Set([
-    '1,2', '3,4,6', '3,5,6', '1,4,6', '2,3,6', '1,2,4', '1,5', '2,3,4,6', '2,4,5,6',
-    '1,2,6', '3,4,5', '3,4', '1,3,4,5,6', '1,3,5', '2,4,6', '2,3,5,6',
+    '1,2',
+    '1,2,6',
+    '3,4,5',
+    '3,4',
+    '1,3,4,5,6',
+    '1,3,5',
+    '2,4,6',
+    '2,3,5,6',
+    '3,4,6',
+    '3,5,6',
+    '1,4,6',
+    '2,3,6',
+    '1,2,4',
+    '1,5',
+    '2,3,4,6',
+    '2,4,5,6',
   ]);
-  const sayiIsaretiOncesiSinirMi = (hucre) => (
-    !hucre
-    || hucre.length === 0
-    || buyukHarfIsaretiMi(hucre)
-    || noktalamaHucreMi(hucre)
-    || matematikSayiSinirAnahtarlari.has(noktalariAnahtara(hucre))
-  );
-  const harfliSayiHarfOku = tekHarfIsaretiSonrasiHarfOkuma;
-  
+  const sayiIsaretiOncesiSinirMi = (hucre) => {
+    const a = !hucre || hucre.length === 0 ? '' : noktalariAnahtara(hucre);
+    return (
+      !hucre
+      || hucre.length === 0
+      || buyukHarfIsaretiMi(hucre)
+      || noktalamaHucreMi(hucre)
+      || matematikSayiSinirAnahtarlari.has(a)
+      || a === '1,2,3'
+      || a === '4,5,6'
+    );
+  };
+  const harfliSayiHarfOku = (hucreler, index) => {
+    if (index < 0 || index >= hucreler.length || !tekKucukHarfIsaretiMi(hucreler[index])) return null;
+    let harfIndex = index + 1;
+    let buyuk = false;
+    if (harfIndex < hucreler.length && buyukHarfIsaretiMi(hucreler[harfIndex])) {
+      buyuk = true;
+      harfIndex++;
+    }
+    if (harfIndex >= hucreler.length) return null;
+    const harf = hucreyiKarakteryap(hucreler[harfIndex]);
+    if (!harf || harf === ' ') return null;
+    return {
+      metin: buyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr'),
+      sonrakiIndex: harfIndex + 1,
+    };
+  };
   if (kisaltmali) {
     const sayfalar = icerik.split(/\f/);
     const sayfaCiktilari = [];
@@ -160,7 +193,7 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
       }
       if (blok.length) tumBloklar.push(blok);
 
-      const bloklariIsle = (bRaw, sonrakiIlkHucre, ikiYanindaBoslukluBlok = false) => {
+      const bloklariIsle = (bRaw, sonrakiIlkHucre) => {
         if (bRaw.length === 0) return;
         let bashCase = 'normal';
         let b = bRaw;
@@ -178,8 +211,18 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
         };
 
         const ilkKey = [...b[0]].sort((x, y) => x - y).join(',');
-        if (birHarfAktif && b.length === 1) {
-          if (_KISALTMA_TEK.has(ilkKey)) { cikis.push(kasala(_KISALTMA_TEK.get(ilkKey))); return; }
+        // Tek-harfli kısaltma: harf TEK BAŞINA kelime ise geçerli. Çıplak harf hücresinin
+        // ardından SADECE noktalama gelirse (ör. "var." / "ve?") kelime hâlâ tek başınadır →
+        // kısaltma + noktalama yaz. (Encoder tek harfi [5,6] önekiyle ayırır; çıplak hücre = kısaltma.)
+        if (birHarfAktif && _KISALTMA_TEK.has(ilkKey)) {
+          let kuyruk = '';
+          let hepsiNoktalama = true;
+          for (let k = 1; k < b.length; k++) {
+            const np = _NOKTA_TERS.get([...b[k]].sort((x, y) => x - y).join(','));
+            if (np == null) { hepsiNoktalama = false; break; }
+            kuyruk += np;
+          }
+          if (hepsiNoktalama) { cikis.push(kasala(_KISALTMA_TEK.get(ilkKey)) + kuyruk); return; }
         }
         if (ikiHarfAktif && b.length === 2 && ilkKey !== '5' && ilkKey !== '4,5' && ilkKey !== '5,6') {
           const a = ilkKey + '|' + [...b[1]].sort((x, y) => x - y).join(',');
@@ -246,21 +289,60 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             buyuk = true;
             harfIndex++;
           }
+          let isDuzeltmeli = false;
+          if (harfIndex < b.length && duzeltmeYabanciHarfIsaretiMi(b[harfIndex])) {
+            harfIndex++;
+            isDuzeltmeli = true;
+          }
+          if (harfIndex < b.length && buyukHarfIsaretiMi(b[harfIndex])) {
+            buyuk = true;
+            harfIndex++;
+          }
           if (harfIndex >= b.length) return null;
-          const harf = hucreyiKarakteryap(b[harfIndex]);
+          const harf = isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(b[harfIndex]) || hucreyiKarakteryap(b[harfIndex])) : hucreyiKarakteryap(b[harfIndex]);
           if (!harf || harf === ' ') return null;
           const sonraki = harfIndex + 1 < b.length ? b[harfIndex + 1] : null;
-          if (sonraki && !_NOKTA_TERS.has([...sonraki].sort((x, y) => x - y).join(','))) return null;
+          if (sonraki && !_NOKTA_TERS.has([...sonraki].sort((a, b) => a - b).join(','))) return null;
           return {
             metin: buyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr'),
             sonrakiIndex: harfIndex + 1,
           };
         };
+        // Tek-hücreli matematik sembolü (√=[1,4,6]=ş, %=[1,3,4,5,6]=y, (=[1,2,6]=ğ, |=[1,2,3]=l)
+        // Türk harfleriyle ÇAKIŞIR. KURAL (kullanıcı: "sayı yanında matematik kabul et, yoksa harf"):
+        // sayı modundaysak (sayı ÖNCE) VEYA sembolden hemen sonra rakam işareti geliyorsa (sayı SONRA)
+        // → matematik; aksi halde harfe/kısaltmaya düşür (ş, ile… düz yazıda bozulmasın).
         const isAmbiguousMath = (isaret) => !!isaret && isaret.hucreler.length === 1;
+        // KÜME işlemleri (∈ ∩ ∪ ⊂ ⊃ \) yalnız ardından SET ADI gelirse geçerli: büyük harf işareti [6]
+        // (tek harfli küme A,B…) veya küme-adı öneki [5,6] (N,Z,Q…). Aksi halde [3] = KESME İŞARETİ (')
+        // + ektir (kullanıcı: "kesme işaretinden sonra mat gelmez"): "1922'de"→"1922∩" / "5'e"→"5∈" /
+        // "Ahmet'e"→"Ahmet∈" YANLIŞ. "5∈A"/"x∈N" (gerçek küme) korunur — ardında [6]/[5,6] var.
+        // 'küme açma' { = (1,2,3,5,6)(3) — "ye" hecesi [1,2,3,5,6] + apostrof [3] ile çakışır
+        // ("Türkiye'nin"→"{nin"). Küme işlemleri gibi ardından SET ELEMANI (büyük harf/küme-adı/SAYI) ister.
+        const _KUME_ISLEMLERI = new Set(['alt küme', 'kapsar', 'birleşim', 'kesişim', 'fark', 'elemanıdır', 'küme açma']);
+        // GERÇEK sayı başlangıcı = rakam işareti [3,4,5,6] + ardından bir rakam (a–j). [3,4,5,6]
+        // kısaltmalarda da (kök/çift-rakam işareti) görünür → yalnız "işaret + rakam" gerçek sayıdır
+        // (belkili gibi kelimelerdeki [3,4,5,6]+l yanlış-pozitif olmasın).
+        const _RAKAM_KEYS = new Set(['1', '1,2', '1,4', '1,4,5', '1,5', '1,2,4', '1,2,4,5', '1,2,5', '2,4', '2,4,5']);
+        const _key = (h) => (h ? [...h].sort((a, b) => a - b).join(',') : '');
+        const gercekSayiBitisik = (h1, h2) => _key(h1) === '3,4,5,6' && _RAKAM_KEYS.has(_key(h2));
+        let kesmeBayrak = false;   // önceki hücre APOSTROF (') olarak yazıldı mı → sonraki ek literal
         while (ci < b.length) {
           const noktalar = b[ci];
+          const buKesme = kesmeBayrak; kesmeBayrak = false;   // tek-shot: yalnız apostroftan SONRAKİ hücre
+          // Kesme işaretinden sonra [5,6]+harf = LİTERAL ek (parça "leri"/"dır" DEĞİL; kullanıcı:
+          // "Ahmet'e" → kesme + tek-harf "e"; [5,6][1,5] hem "leri" parça hem tek-harf "e" — apostrof ayırır).
+          if (buKesme && _key(noktalar) === '5,6' && ci + 1 < b.length) {
+            const _h = hucreyiKarakteryap(b[ci + 1]);
+            if (_h && _h !== ' ') { harfYaz(_h); ci += 2; continue; }
+          }
           const islemIsareti = matematikSembolHucreEslesmesi(b, ci);
-          if (islemIsareti && (!isAmbiguousMath(islemIsareti) || sM)) {
+          const sonrakiSayiBitisik = islemIsareti
+            && (sM || gercekSayiBitisik(b[ci + islemIsareti.hucreler.length], b[ci + islemIsareti.hucreler.length + 1]));
+          const _setAdiSonra = () => { const h = islemIsareti && b[ci + islemIsareti.hucreler.length];
+            const kk = h ? [...h].sort((a, b) => a - b).join(',') : ''; return kk === '6' || kk === '5,6' || kk === '3,4,5,6'; };
+          const kumeReddi = islemIsareti && _KUME_ISLEMLERI.has(islemIsareti.ad) && !_setAdiSonra();
+          if (islemIsareti && !kumeReddi && (!isAmbiguousMath(islemIsareti) || sonrakiSayiBitisik)) {
             buf.push(islemIsareti.sembol);
             sM = sM && matematikIsaretiSayiModunuKorurMu(islemIsareti);
             siraSM = false;
@@ -343,13 +425,25 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             }
             const r = hucreyiRakamayap(noktalar);
             if (!siraSM && r) { buf.push(r); ci++; continue; }
+            const bolukMu = [...noktalar].sort((x, y) => x - y).join(',') === '3';
+            if (!siraSM && bolukMu && ci + 1 < b.length && hucreyiRakamayap(b[ci + 1])) {
+              buf.push('.');
+              ci++;
+              continue;
+            }
             const kVirgulMu = [...noktalar].sort((x, y) => x - y).join(',') === '2';
             if (!siraSM && kVirgulMu && ciftListeVirgulle) {
               buf.push(',');
               ci++;
               continue;
             }
-            if (!siraSM && kVirgulMu && !ciftListeVirgulle && ci + 1 < b.length && hucreyiRakamayap(b[ci + 1])) {
+            if (
+              !siraSM
+              && kVirgulMu
+              && !ciftListeVirgulle
+              && ci + 1 < b.length
+              && hucreyiRakamayap(b[ci + 1])
+            ) {
               buf.push(',');
               ci++;
               continue;
@@ -373,24 +467,17 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
               continue;
             }
             if (tarihAyirmaIsaretiMi(noktalar) && tarihHucreAraligi(b, ci)) { buf.push('.'); ci++; continue; }
-            if (!siraSM && tarihAyirmaIsaretiMi(noktalar) && ci + 1 < b.length && hucreyiRakamayap(b[ci + 1])) {
+            if (
+              !siraSM
+              && tarihAyirmaIsaretiMi(noktalar)
+              && ci + 1 < b.length
+              && hucreyiRakamayap(b[ci + 1])
+            ) {
               buf.push('-');
               ci++;
               continue;
             }
-            const nA = noktalariAnahtara(noktalar);
-            if (!siraSM && nA === '3') {
-              if (ci + 1 < b.length && hucreyiRakamayap(b[ci + 1])) {
-                buf.push('.');
-                ci++;
-                continue;
-              } else {
-                buf.push("'");
-                ci++;
-                continue;
-              }
-            }
-            const sayiIciNoktalama = !siraSM ? _NOKTA_TERS.get(nA) : null;
+            const sayiIciNoktalama = !siraSM ? _NOKTA_TERS.get(noktalariAnahtara(noktalar)) : null;
             if (sayiIciNoktalama) {
               buf.push(sayiIciNoktalama);
               ci++;
@@ -403,7 +490,7 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
               ciftListeVirgulle = false;
             }
           }
-          if (parcaAktif && ci > 0 && ci + 1 < b.length) {
+          if (parcaAktif && ci + 1 < b.length) {
             const nKey = [...noktalar].sort((x, y) => x - y).join(',');
             if (nKey === '4,5' || nKey === '5,6') {
               const sagKey = [...b[ci + 1]].sort((x, y) => x - y).join(',');
@@ -412,18 +499,6 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             }
           }
           const hA = [...noktalar].sort((a, b) => a - b).join(',');
-          if (birHarfAktif && ci === 0 && ci + 1 < b.length && _KISALTMA_TEK.has(hA)) {
-            let kalanHepsiNoktalama = true;
-            for (let kk = ci + 1; kk < b.length; kk++) {
-              const kkA = [...b[kk]].sort((a, b) => a - b).join(',');
-              if (!_NOKTA_TERS.has(kkA)) { kalanHepsiNoktalama = false; break; }
-            }
-            if (kalanHepsiNoktalama) {
-              harfYaz(_KISALTMA_TEK.get(hA));
-              ci++;
-              continue;
-            }
-          }
           const np = _NOKTA_TERS.get(hA);
           const heceKarsiligi = heceAktif && !sM ? _HECE_TERS.get(hA) : undefined;
           if (np && heceKarsiligi) {
@@ -438,16 +513,16 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             if (ilkHucre && hA === '2,3,6') noktalamaKullan = true;
             else if (sonHucre || kalanHepsiNoktalama) {
               if (hA === '2,6' && sonHucre) {
-                noktalamaKullan = !(ikiYanindaBoslukluBlok && b.length === 1)
-                  && (sonrakiIlkHucre == null || buyukHarfIsaretiMi(sonrakiIlkHucre));
+                noktalamaKullan = sonrakiIlkHucre == null || buyukHarfIsaretiMi(sonrakiIlkHucre);
               } else {
                 noktalamaKullan = true;
               }
             }
-            if (noktalamaKullan) buf.push(np);
+            if (noktalamaKullan) { buf.push(np); if (hA === '3') kesmeBayrak = true; }
             else harfYaz(heceKarsiligi);
           } else if (np) {
             buf.push(np);
+            if (hA === '3') kesmeBayrak = true;   // apostrof yazıldı → sonraki ek literal okunsun
           } else if (heceKarsiligi) {
             harfYaz(heceKarsiligi);
           } else {
@@ -470,7 +545,7 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
       for (let bi = 0; bi < tumBloklar.length; bi++) {
         if (bi > 0) cikis.push(' ');
         const sonrakiIlkHucre = bi + 1 < tumBloklar.length ? (tumBloklar[bi + 1][0] ?? null) : null;
-        bloklariIsle(tumBloklar[bi], sonrakiIlkHucre, bi > 0 && bi + 1 < tumBloklar.length);
+        bloklariIsle(tumBloklar[bi], sonrakiIlkHucre);
       }
       sayfaCiktilari.push(cikis.join(''));
     }
@@ -499,8 +574,17 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
         buyuk = true;
         harfIndex++;
       }
+      let isDuzeltmeli = false;
+      if (harfIndex < satirHucreleri.length && duzeltmeYabanciHarfIsaretiMi(satirHucreleri[harfIndex])) {
+        harfIndex++;
+        isDuzeltmeli = true;
+      }
+      if (harfIndex < satirHucreleri.length && buyukHarfIsaretiMi(satirHucreleri[harfIndex])) {
+        buyuk = true;
+        harfIndex++;
+      }
       if (harfIndex >= satirHucreleri.length) return null;
-      const harf = hucreyiKarakteryap(satirHucreleri[harfIndex]);
+      const harf = isDuzeltmeli ? (duzeltmeliHucreyiMetneCevir(satirHucreleri[harfIndex]) || hucreyiKarakteryap(satirHucreleri[harfIndex])) : hucreyiKarakteryap(satirHucreleri[harfIndex]);
       if (!harf || harf === ' ') return null;
       return {
         metin: buyuk ? harf.toLocaleUpperCase('tr') : harf.toLocaleLowerCase('tr'),
@@ -517,7 +601,19 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
       }
       const islemIsareti = matematikSembolHucreEslesmesi(satirHucreleri, hi);
       const isAmbiguousMath2 = (isaret) => !!isaret && isaret.hucreler.length === 1;
-      if (islemIsareti && (!isAmbiguousMath2(islemIsareti) || sayiModu)) {
+      // "sayı yanında matematik kabul et": sayı modu (önce) VEYA ardından GERÇEK sayı (rakam işareti + a–j rakamı)
+      const sayiBitisik2 = islemIsareti && (sayiModu || (() => {
+        const _R = new Set(['1', '1,2', '1,4', '1,4,5', '1,5', '1,2,4', '1,2,4,5', '1,2,5', '2,4', '2,4,5']);
+        const k = (h) => (h ? [...h].sort((a, b) => a - b).join(',') : '');
+        const o = hi + islemIsareti.hucreler.length;
+        return k(satirHucreleri[o]) === '3,4,5,6' && _R.has(k(satirHucreleri[o + 1]));
+      })());
+      // küme işlemi (∈∩∪⊂⊃\) ancak ardından set adı ([6]/[5,6]) gelirse geçerli; yoksa kesme işareti (')
+      const kumeReddi2 = islemIsareti
+        && new Set(['alt küme', 'kapsar', 'birleşim', 'kesişim', 'fark', 'elemanıdır', 'küme açma']).has(islemIsareti.ad)
+        && (() => { const h = satirHucreleri[hi + islemIsareti.hucreler.length];
+            const kk = h ? [...h].sort((a, b) => a - b).join(',') : ''; return kk !== '6' && kk !== '5,6' && kk !== '3,4,5,6'; })();
+      if (islemIsareti && !kumeReddi2 && (!isAmbiguousMath2(islemIsareti) || sayiBitisik2)) {
         metin += islemIsareti.sembol;
         hi += islemIsareti.hucreler.length - 1;
         sayiModu = sayiModu && matematikIsaretiSayiModunuKorurMu(islemIsareti);
@@ -596,12 +692,23 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
         }
         const rakam = hucreyiRakamayap(noktalar);
         if (!siraSayiModu && rakam) { metin += rakam; continue; }
+        const bolukMu = [...noktalar].sort((a, b) => a - b).join(',') === '3';
+        if (!siraSayiModu && bolukMu && hi + 1 < satirHucreleri.length && hucreyiRakamayap(satirHucreleri[hi + 1])) {
+          metin += '.';
+          continue;
+        }
         const kVirgulMu = [...noktalar].sort((a, b) => a - b).join(',') === '2';
         if (!siraSayiModu && kVirgulMu && ciftListeVirgulle) {
           metin += ',';
           continue;
         }
-        if (!siraSayiModu && kVirgulMu && !ciftListeVirgulle && hi + 1 < satirHucreleri.length && hucreyiRakamayap(satirHucreleri[hi + 1])) {
+        if (
+          !siraSayiModu
+          && kVirgulMu
+          && !ciftListeVirgulle
+          && hi + 1 < satirHucreleri.length
+          && hucreyiRakamayap(satirHucreleri[hi + 1])
+        ) {
           metin += ',';
           continue;
         }
@@ -624,21 +731,16 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
           continue;
         }
         if (tarihAyirmaIsaretiMi(noktalar) && tarihHucreAraligi(satirHucreleri, hi)) { metin += '.'; continue; }
-        if (!siraSayiModu && tarihAyirmaIsaretiMi(noktalar) && hi + 1 < satirHucreleri.length && hucreyiRakamayap(satirHucreleri[hi + 1])) {
+        if (
+          !siraSayiModu
+          && tarihAyirmaIsaretiMi(noktalar)
+          && hi + 1 < satirHucreleri.length
+          && hucreyiRakamayap(satirHucreleri[hi + 1])
+        ) {
           metin += '-';
           continue;
         }
-        const nA = noktalariAnahtara(noktalar);
-        if (!siraSayiModu && nA === '3') {
-          if (hi + 1 < satirHucreleri.length && hucreyiRakamayap(satirHucreleri[hi + 1])) {
-            metin += '.';
-            continue;
-          } else {
-            metin += "'";
-            continue;
-          }
-        }
-        const sayiIciNoktalama = !siraSayiModu ? _NOKTA_TERS.get(nA) : null;
+        const sayiIciNoktalama = !siraSayiModu ? _NOKTA_TERS.get(noktalariAnahtara(noktalar)) : null;
         if (sayiIciNoktalama) {
           metin += sayiIciNoktalama;
           continue;

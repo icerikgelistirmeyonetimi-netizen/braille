@@ -1858,8 +1858,18 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
         };
 
         const ilkKey = [...b[0]].sort((x, y) => x - y).join(',');
-        if (birHarfAktif && b.length === 1) {
-          if (_KISALTMA_TEK.has(ilkKey)) { cikis.push(kasala(_KISALTMA_TEK.get(ilkKey))); return; }
+        // Tek-harfli kısaltma: harf TEK BAŞINA kelime ise geçerli. Çıplak harf hücresinin
+        // ardından SADECE noktalama gelirse (ör. "var." / "ve?") kelime hâlâ tek başınadır →
+        // kısaltma + noktalama yaz. (Encoder tek harfi [5,6] önekiyle ayırır; çıplak hücre = kısaltma.)
+        if (birHarfAktif && _KISALTMA_TEK.has(ilkKey)) {
+          let kuyruk = '';
+          let hepsiNoktalama = true;
+          for (let k = 1; k < b.length; k++) {
+            const np = _NOKTA_TERS.get([...b[k]].sort((x, y) => x - y).join(','));
+            if (np == null) { hepsiNoktalama = false; break; }
+            kuyruk += np;
+          }
+          if (hepsiNoktalama) { cikis.push(kasala(_KISALTMA_TEK.get(ilkKey)) + kuyruk); return; }
         }
         if (ikiHarfAktif && b.length === 2 && ilkKey !== '5' && ilkKey !== '4,5' && ilkKey !== '5,6') {
           const a = ilkKey + '|' + [...b[1]].sort((x, y) => x - y).join(',');
@@ -1945,10 +1955,41 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
             sonrakiIndex: harfIndex + 1,
           };
         };
+        // Tek-hücreli matematik sembolü (√=[1,4,6]=ş, %=[1,3,4,5,6]=y, (=[1,2,6]=ğ, |=[1,2,3]=l)
+        // Türk harfleriyle ÇAKIŞIR. KURAL (kullanıcı: "sayı yanında matematik kabul et, yoksa harf"):
+        // sayı modundaysak (sayı ÖNCE) VEYA sembolden hemen sonra rakam işareti geliyorsa (sayı SONRA)
+        // → matematik; aksi halde harfe/kısaltmaya düşür (ş, ile… düz yazıda bozulmasın).
+        const isAmbiguousMath = (isaret) => !!isaret && isaret.hucreler.length === 1;
+        // KÜME işlemleri (∈ ∩ ∪ ⊂ ⊃ \) yalnız ardından SET ADI gelirse geçerli: büyük harf işareti [6]
+        // (tek harfli küme A,B…) veya küme-adı öneki [5,6] (N,Z,Q…). Aksi halde [3] = KESME İŞARETİ (')
+        // + ektir (kullanıcı: "kesme işaretinden sonra mat gelmez"): "1922'de"→"1922∩" / "5'e"→"5∈" /
+        // "Ahmet'e"→"Ahmet∈" YANLIŞ. "5∈A"/"x∈N" (gerçek küme) korunur — ardında [6]/[5,6] var.
+        // 'küme açma' { = (1,2,3,5,6)(3) — "ye" hecesi [1,2,3,5,6] + apostrof [3] ile çakışır
+        // ("Türkiye'nin"→"{nin"). Küme işlemleri gibi ardından SET ELEMANI (büyük harf/küme-adı/SAYI) ister.
+        const _KUME_ISLEMLERI = new Set(['alt küme', 'kapsar', 'birleşim', 'kesişim', 'fark', 'elemanıdır', 'küme açma']);
+        // GERÇEK sayı başlangıcı = rakam işareti [3,4,5,6] + ardından bir rakam (a–j). [3,4,5,6]
+        // kısaltmalarda da (kök/çift-rakam işareti) görünür → yalnız "işaret + rakam" gerçek sayıdır
+        // (belkili gibi kelimelerdeki [3,4,5,6]+l yanlış-pozitif olmasın).
+        const _RAKAM_KEYS = new Set(['1', '1,2', '1,4', '1,4,5', '1,5', '1,2,4', '1,2,4,5', '1,2,5', '2,4', '2,4,5']);
+        const _key = (h) => (h ? [...h].sort((a, b) => a - b).join(',') : '');
+        const gercekSayiBitisik = (h1, h2) => _key(h1) === '3,4,5,6' && _RAKAM_KEYS.has(_key(h2));
+        let kesmeBayrak = false;   // önceki hücre APOSTROF (') olarak yazıldı mı → sonraki ek literal
         while (ci < b.length) {
           const noktalar = b[ci];
+          const buKesme = kesmeBayrak; kesmeBayrak = false;   // tek-shot: yalnız apostroftan SONRAKİ hücre
+          // Kesme işaretinden sonra [5,6]+harf = LİTERAL ek (parça "leri"/"dır" DEĞİL; kullanıcı:
+          // "Ahmet'e" → kesme + tek-harf "e"; [5,6][1,5] hem "leri" parça hem tek-harf "e" — apostrof ayırır).
+          if (buKesme && _key(noktalar) === '5,6' && ci + 1 < b.length) {
+            const _h = hucreyiKarakteryap(b[ci + 1]);
+            if (_h && _h !== ' ') { harfYaz(_h); ci += 2; continue; }
+          }
           const islemIsareti = matematikSembolHucreEslesmesi(b, ci);
-          if (islemIsareti) {
+          const sonrakiSayiBitisik = islemIsareti
+            && (sM || gercekSayiBitisik(b[ci + islemIsareti.hucreler.length], b[ci + islemIsareti.hucreler.length + 1]));
+          const _setAdiSonra = () => { const h = islemIsareti && b[ci + islemIsareti.hucreler.length];
+            const kk = h ? [...h].sort((a, b) => a - b).join(',') : ''; return kk === '6' || kk === '5,6' || kk === '3,4,5,6'; };
+          const kumeReddi = islemIsareti && _KUME_ISLEMLERI.has(islemIsareti.ad) && !_setAdiSonra();
+          if (islemIsareti && !kumeReddi && (!isAmbiguousMath(islemIsareti) || sonrakiSayiBitisik)) {
             buf.push(islemIsareti.sembol);
             sM = sM && matematikIsaretiSayiModunuKorurMu(islemIsareti);
             siraSM = false;
@@ -2124,10 +2165,11 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
                 noktalamaKullan = true;
               }
             }
-            if (noktalamaKullan) buf.push(np);
+            if (noktalamaKullan) { buf.push(np); if (hA === '3') kesmeBayrak = true; }
             else harfYaz(heceKarsiligi);
           } else if (np) {
             buf.push(np);
+            if (hA === '3') kesmeBayrak = true;   // apostrof yazıldı → sonraki ek literal okunsun
           } else if (heceKarsiligi) {
             harfYaz(heceKarsiligi);
           } else {
@@ -2205,7 +2247,20 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
         buyukHarfBekle = false; tumKelimeBuyuk = false; duzeltmeBekle = false; continue;
       }
       const islemIsareti = matematikSembolHucreEslesmesi(satirHucreleri, hi);
-      if (islemIsareti) {
+      const isAmbiguousMath2 = (isaret) => !!isaret && isaret.hucreler.length === 1;
+      // "sayı yanında matematik kabul et": sayı modu (önce) VEYA ardından GERÇEK sayı (rakam işareti + a–j rakamı)
+      const sayiBitisik2 = islemIsareti && (sayiModu || (() => {
+        const _R = new Set(['1', '1,2', '1,4', '1,4,5', '1,5', '1,2,4', '1,2,4,5', '1,2,5', '2,4', '2,4,5']);
+        const k = (h) => (h ? [...h].sort((a, b) => a - b).join(',') : '');
+        const o = hi + islemIsareti.hucreler.length;
+        return k(satirHucreleri[o]) === '3,4,5,6' && _R.has(k(satirHucreleri[o + 1]));
+      })());
+      // küme işlemi (∈∩∪⊂⊃\) ancak ardından set adı ([6]/[5,6]) gelirse geçerli; yoksa kesme işareti (')
+      const kumeReddi2 = islemIsareti
+        && new Set(['alt küme', 'kapsar', 'birleşim', 'kesişim', 'fark', 'elemanıdır', 'küme açma']).has(islemIsareti.ad)
+        && (() => { const h = satirHucreleri[hi + islemIsareti.hucreler.length];
+            const kk = h ? [...h].sort((a, b) => a - b).join(',') : ''; return kk !== '6' && kk !== '5,6' && kk !== '3,4,5,6'; })();
+      if (islemIsareti && !kumeReddi2 && (!isAmbiguousMath2(islemIsareti) || sayiBitisik2)) {
         metin += islemIsareti.sembol;
         hi += islemIsareti.hucreler.length - 1;
         sayiModu = sayiModu && matematikIsaretiSayiModunuKorurMu(islemIsareti);
