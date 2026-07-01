@@ -111,6 +111,14 @@ function SayfaOdakYonetimi() {
         if (aktifSekme) aktifSekme.focus();
         return;
       }
+      if (pathname.startsWith('/modul/')) {
+        // Modül route'u (AnaMenu, /modul/:modulId): seçilen modülün içerik başlığına odaklan
+        // (modulSec'in odak niyetiyle aynı) → ekran okuyucu modül adını ve derslerini okur.
+        const baslik = document.querySelector('.modul-icerik-baslik')
+          || document.querySelector('.modul-yan .modul-sekme.aktif');
+        if (baslik) baslik.focus();
+        return;
+      }
 
       // Alt sayfalarda: açılan sayfanın başlığına odaklan.
       // DesktopShell banner'ı (.ds-header) da .banner-baslik taşır; bu yüzden
@@ -167,6 +175,7 @@ export default function App() {
         <DesktopShell>
           <Routes>
           <Route path="/" element={<AnaMenu />} />
+          <Route path="/modul/:modulId" element={<AnaMenu />} />
           <Route path="/arama" element={<AramaSayfasi />} />
           <Route path="/hucre" element={<HucreTanima />} />
           <Route path="/harfler" element={<HarfEgitimi />} />

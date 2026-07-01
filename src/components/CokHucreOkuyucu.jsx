@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
@@ -51,6 +51,7 @@ export default function CokHucreOkuyucu({
 }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const yazmaKaynak = mevcutSayfaIcinKaynakAnahtar(pathname);
   // Bitiş ekranında "Sonraki içerik" butonu için aynı modüldeki bir sonraki ders.
   const sonrakiIcerik = sonrakiDers(pathname);
@@ -75,7 +76,14 @@ export default function CokHucreOkuyucu({
   // yönergeyi ses kaydıyla AYNI ANDA okumaması için yönerge bölgesi ses bitene kadar boş
   // tutulur (bkz. srYonergeMetni'yi geç set etme + yonergeyiOku).
   const sesKaydiOnce = ogeSesiOnceCal && (ogeSesiHerZaman || ogeSesiAktif) && typeof ogeSesiCal === 'function';
-  const [okumaModu, setOkumaModu] = useState(false);
+  // Hızlı Dolaşım (okuma) modu artık URL query param'ında: ?gorunum=dolasim → adres çubuğunda
+  // görünür ve tarayıcı/Alt geri tuşu moddan çıkar. State DEĞİL, URL'den türetilir → 20+ sayfa
+  // otomatik kapsanır. SayfaOdakYonetimi yalnız pathname'e baktığından query değişimi odak
+  // akışını bozmaz; okuma↔öğrenme odak effect'i (aşağıda) sahibidir.
+  const okumaModu = searchParams.get('gorunum') === 'dolasim';
+  // Modu BİZ mi push'ladık (buton) → kapatırken navigate(-1) ile temiz pop (Alt geri ile aynı);
+  // deep-link/refresh ile gelindiyse param'ı replace ile kaldır (uygulamadan çıkmayalım).
+  const okumaPushladikRef = useRef(false);
   // Yönerge bölgesi ODAKLI mı? Odaklıyken aria-live KAPATILIR → NVDA yönergeyi yalnız ODAK
   // ile okur (canlı bölge tekrar duyurusu eklemez). Odak başka yerdeyken (sayfa-içi öğe
   // geçişi / Tekrar) polite kalır → değişiklik duyurulur. (kullanıcı: "yönergeleri bazen iki
@@ -238,15 +246,11 @@ export default function CokHucreOkuyucu({
     if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
     const uzunluk = metin ? metin.length : 0;
     const sesAcik = ayarlariAl().sesAcik;
-    // ⚠⚠ KRİTİK — App TTS KAPALIYKEN (NVDA kullanıcıları) kilit süresi (kullanıcı: "yönerge
-    // okunurken yanlış tuş tıkladığımda direk sonrakine atlıyor"): konus, ses kapalıyken onSon'u
-    // setTimeout(0) ile ANINDA tetikler (ses.js) → eskiden `onSon: yonergeKilidiAc` kilidi HEMEN
-    // açıyordu → NVDA yönergeyi aria-live bölgesinden hâlâ okurken noktalar CANLI (button) olup
-    // erken/yanlış dokunuş kaydoluyor, öğe ilerliyordu (kilit fiilen hiç çalışmıyordu). FIX:
-    //  • App TTS AÇIK → gerçek utterance sonu (onSon) kilidi açar + uzun güvenlik üst sınırı.
-    //  • App TTS KAPALI (NVDA) → onSon ile AÇMA; kilit yalnız NVDA okuma süresi kadar bir timer
-    //    VEYA Tab (kes+ilk noktaya atla) ile açılır → erken dokunuş "Yönerge bitmesini bekleyiniz"
-    //    uyarısı alır, öğe ilerlemez. Tab her an anında noktalara geçiş sağlar (dokunma akışı bozulmaz).
+    // ⚠ NOKTALAR ARTIK KİLİTLENMEZ (kullanıcı: "yönerge bitmesini bekleyiniz ve zorla bekletmeyi
+    // kaldıralım tüm sayfalardan"). `yonergeOkunuyor` yalnız ODAK AKIŞINI sürer (narration "bitti"
+    // → giriş: yönerge bölgesi / öğe geçişi: ilk nokta); dokunma HER AN serbest — toast/kilit/klavye
+    // engeli YOK. Timer, "narration bitti" (odak effect'i) sinyalinin ZAMANLAMASINI verir: App TTS
+    // açıkken gerçek utterance sonu, kapalıyken (NVDA) aria-live okuma süresi tahmini.
     const kilitMs = sesAcik
       ? Math.min(30000, 6000 + uzunluk * 200)   // güvenlik üst sınırı (gerçek onSon daha erken gelir)
       : Math.min(12000, 2500 + uzunluk * 70);   // NVDA aria-live okuma süresi tahmini
@@ -258,15 +262,9 @@ export default function CokHucreOkuyucu({
     konusDil(metin, {
       srAtla: true,
       ...secenek,
-      // App TTS kapalıyken onSon (anında) kilidi AÇMASIN — yukarıdaki timer/Tab açar.
+      // App TTS kapalıyken onSon (anında) narration-bitti sinyalini vermesin — timer verir.
       onSon: sesAcik ? () => yonergeKilidiAc(nesil) : undefined,
     });
-  };
-
-  // Yönerge okunurken kullanıcı bir noktaya dokunmaya çalışırsa: sadece uyar,
-  // TTS kesintisiz devam eder.
-  const yonergeBeklemeUyar = () => {
-    gosterToast('Yönerge bitmesini bekleyiniz.');
   };
 
   const tumSesleriDurdur = () => {
@@ -301,7 +299,18 @@ export default function CokHucreOkuyucu({
 
   const okumaModunaGec = () => {
     konusmayiDurdur();
-    setOkumaModu(true);
+    okumaPushladikRef.current = true;
+    setSearchParams((p) => { const n = new URLSearchParams(p); n.set('gorunum', 'dolasim'); return n; });
+  };
+
+  // Okuma modundan çık: biz push'ladıysak geçmişten pop (Alt geri ile aynı), değilse param'ı kaldır.
+  const okumaModundanCik = () => {
+    if (okumaPushladikRef.current) {
+      okumaPushladikRef.current = false;
+      navigate(-1);
+    } else {
+      setSearchParams((p) => { const n = new URLSearchParams(p); n.delete('gorunum'); return n; }, { replace: true });
+    }
   };
 
   const okumaOgesiSec = (orijinalIndeks) => {
@@ -310,7 +319,7 @@ export default function CokHucreOkuyucu({
     setHucreIndeksi(0);
     setBasilanlar([]);
     setYanlis([]);
-    setOkumaModu(false);
+    okumaModundanCik();
   };
 
   // Yeni kelimeye geçince ilk hücreden başla
@@ -576,6 +585,12 @@ export default function CokHucreOkuyucu({
     if (!(onceki && !yonergeOkunuyor)) return undefined;
     if (okumaModu || bitti) return undefined;
 
+    // ⚠ Kilit kaldırıldı → narration penceresinde noktalar CANLI. Kullanıcı zaten bir noktaya
+    // geçip etkileşimdeyse (odak bir dot butonunda) narration-bitti timer'ı odağı ÇALMASIN — ne
+    // yönerge bölgesine ne ilk noktaya taşı (kullanıcı: "zorla bekletmeyi kaldıralım").
+    const odakEl = typeof document !== 'undefined' ? document.activeElement : null;
+    if (odakEl && odakEl.classList && odakEl.classList.contains('dot')) return undefined;
+
     // İlk narration-bitti = SAYFA GİRİŞİ (mount). Sonraki tüm tetiklemeler öğe geçişidir.
     const girisAni = sayfaGirisiRef.current;
     sayfaGirisiRef.current = false;
@@ -675,46 +690,10 @@ export default function CokHucreOkuyucu({
     return () => window.cancelAnimationFrame(rafId);
   }, [okumaModu, bitti]);
 
-  // Yönerge/ses okunurken klavye: Enter, Space, oklar noktaya erken dokunmayı engeller
-  // (görsel uyarı). ⚠ Tab İSTİSNA: kullanıcı Tab ile İLERLEMEK isterse ses/yönerge KESİLİR
-  // (geriden ses gelmesin), kilit açılır, ilk braille noktasına konumlanır (kullanıcı: "tab
-  // ile ilerlersem ses kesilmeli ve sonradan devam etmemeli").
-  useEffect(() => {
-    if (!yonergeOkunuyor) return undefined;
-    const engellenen = new Set([
-      'Enter', ' ', 'Spacebar',
-      'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-      'Home', 'End', 'PageUp', 'PageDown'
-    ]);
-    const onKey = (e) => {
-      if (e.key === 'Tab') {
-        // Sesi/yönergeyi KES + bekleyen callback'leri (onEnded/safety) İPTAL (nesil artır) + kilidi aç.
-        yonergeNesilRef.current += 1;
-        if (yonergeKilitTimerRef.current) { clearTimeout(yonergeKilitTimerRef.current); yonergeKilitTimerRef.current = null; }
-        tumSesleriDurdur();
-        setYonergeOkunuyor(false);
-        if (!e.shiftKey) {
-          // İleri: noktalar (henüz kilitli=div) Tab sırasında DEĞİL → preventDefault + kilit
-          // açılınca (re-render) ilk noktaya programatik odak.
-          e.preventDefault();
-          window.requestAnimationFrame(() => {
-            const kok = dotSentinelRef.current?.parentElement;
-            // ⚠ STANDART: hücrenin 1. (İLK) noktası — hedef DEĞİL.
-            (kok?.querySelector('button.dot') || dotSentinelRef.current)?.focus();
-          });
-        }
-        // Shift+Tab: preventDefault YOK → tarayıcı geriye (kelime/önceki öğeye) götürür.
-        return;
-      }
-      if (!engellenen.has(e.key)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      yonergeBeklemeUyar();
-    };
-    document.addEventListener('keydown', onKey, true);
-    return () => document.removeEventListener('keydown', onKey, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yonergeOkunuyor]);
+  // ⚠ Yönerge okunurken klavye ENGELLEME KALDIRILDI (kullanıcı: "yönerge bitmesini bekleyiniz ve
+  // zorla bekletmeyi kaldıralım"): noktalar her an etkileşimli; Enter/Space/ok/Tab DOĞAL çalışır
+  // (Tab, yönerge bölgesinden DOM sırasıyla ilk noktaya geçer). Eski "bitmesini bekleyiniz" toast'ı
+  // ve Tab-ile-kes mantığı silindi. Erken odak-çalmayı narration-bitti odak effect'indeki dot-guard önler.
 
   if (okumaModu) {
     return (
@@ -736,7 +715,7 @@ export default function CokHucreOkuyucu({
             getAltEtiket={(oge) => oge.okunus || oge.anlam}
             getHucreler={(oge) => oge.hucreler || []}
             onSec={okumaOgesiSec}
-            onKapat={() => setOkumaModu(false)}
+            onKapat={okumaModundanCik}
             ogeSesiCal={ogeSesiCal}
             ogeSesiGecikmeMs={ogeSesiGecikmeMs}
             okumaModuOgeSesiGecikmeMs={900}
@@ -745,7 +724,7 @@ export default function CokHucreOkuyucu({
           />
         </div>
         <div className="controls">
-          <button className="btn" type="button" onClick={() => setOkumaModu(false)}>Öğrenme Moduna Dön</button>
+          <button className="btn" type="button" onClick={okumaModundanCik}>Öğrenme Moduna Dön</button>
         </div>
       </div>
     );
@@ -1040,8 +1019,6 @@ export default function CokHucreOkuyucu({
                 dogruNoktalar={hucreIndex < guvenliHucreIndeksi ? noktalar : hucreIndex === guvenliHucreIndeksi ? basilanlar : []}
                 yanlisNoktalar={hucreIndex === guvenliHucreIndeksi ? yanlis : []}
                 tiklanabilir={hucreIndex === guvenliHucreIndeksi}
-                kilitli={yonergeOkunuyor}
-                onKilitliEtkilesim={yonergeBeklemeUyar}
                 onNoktaTikla={noktayaTikla}
               />
             ))}
@@ -1052,8 +1029,6 @@ export default function CokHucreOkuyucu({
             dogruNoktalar={basilanlar}
             yanlisNoktalar={yanlis}
             tiklanabilir
-            kilitli={yonergeOkunuyor}
-            onKilitliEtkilesim={yonergeBeklemeUyar}
             hucreAdi={hucreSayisi > 1 ? (k.hucreAdlari?.[guvenliHucreIndeksi] || `${guvenliHucreIndeksi + 1}. hücre`) : undefined}
             onNoktaTikla={noktayaTikla}
             baslikAriaLabel={hucreSayisi > 1

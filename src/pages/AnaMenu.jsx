@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 import { indeksAl } from '../utils/ilerleme.js';
 import TanitimTuru, { turuSifirla } from '../components/TanitimTuru.jsx';
@@ -10,6 +10,9 @@ import { ayarlariAl, ayarlariDinle } from '../utils/ayarlar.js';
 
 export default function AnaMenu() {
   const navigate = useNavigate();
+  // Aktif modül artık URL'de: /modul/:modulId (adres çubuğunda görünür, geri tuşu çalışır).
+  // /  → modulId undefined (varsayılan: son seçilen / modul1).
+  const { modulId } = useParams();
   const modulYanRef = useRef(null);
   const icerikBaslikRef = useRef(null);
   const scrollDragRef = useRef(null);
@@ -27,9 +30,15 @@ export default function AnaMenu() {
   const gorunurModuller = MODULLER.filter((m) => !gizliModuller.includes(m.id));
 
   const [aktifModul, setAktifModul] = useState(() => {
-    try { return sessionStorage.getItem('aktifModul') || 'modul1'; }
-    catch { return 'modul1'; }
+    try { return modulId || sessionStorage.getItem('aktifModul') || 'modul1'; }
+    catch { return modulId || 'modul1'; }
   });
+
+  // URL'deki modül değişince (geri/ileri tuşu veya /modul/x → /modul/y) state'i senkronla.
+  useEffect(() => {
+    if (modulId && modulId !== aktifModul) setAktifModul(modulId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modulId]);
 
   // Aktif modül gizlendiyse ilk görünür modüle geç
   const gecerliAktif = gorunurModuller.find((m) => m.id === aktifModul)
@@ -102,6 +111,8 @@ export default function AnaMenu() {
   };
 
   useEffect(() => {
+    // Karşılama yalnız ana menüde (/) okunur; /modul/x'e girişte (remount) tekrarlanmasın.
+    if (modulId) return undefined;
     const ANAHTAR = 'braille-hosgeldin-okundu';
     let metin;
     try {
@@ -129,6 +140,7 @@ export default function AnaMenu() {
   const modulSec = (id) => {
     setAktifModul(id);
     try { sessionStorage.setItem('aktifModul', id); } catch { /* ignore */ }
+    navigate(`/modul/${id}`); // adres çubuğuna route → geri tuşu çalışır
     const m = MODULLER.find((x) => x.id === id);
     if (m) konus(`${m.baslik}, ${m.altBaslik}`, { kesintiyle: true });
     window.requestAnimationFrame(() => icerikBaslikRef.current?.focus());

@@ -159,7 +159,7 @@ export default function DesktopShell({ children }) {
               className={`btn ${'modul-sekme' + (m.id === aktifModul ? ' aktif' : '')}`}
               onClick={() => {
                 try { sessionStorage.setItem('aktifModul', m.id); } catch { /* ignore */ }
-                navigate('/');
+                navigate(`/modul/${m.id}`); // ana menüye değil, modülün route'una git (geri tuşu çalışır)
               }}
               aria-pressed={m.id === aktifModul}
               aria-label={`${m.baslik}: ${m.altBaslik}`}
