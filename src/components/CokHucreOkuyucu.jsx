@@ -230,13 +230,31 @@ export default function CokHucreOkuyucu({
     const nesil = ++yonergeNesilRef.current;
     setYonergeOkunuyor(true);
     if (yonergeKilitTimerRef.current) clearTimeout(yonergeKilitTimerRef.current);
-    const maxMs = Math.min(30000, 6000 + (metin ? metin.length : 0) * 200);
-    yonergeKilitTimerRef.current = setTimeout(() => yonergeKilidiAc(nesil), maxMs);
+    const uzunluk = metin ? metin.length : 0;
+    const sesAcik = ayarlariAl().sesAcik;
+    // ⚠⚠ KRİTİK — App TTS KAPALIYKEN (NVDA kullanıcıları) kilit süresi (kullanıcı: "yönerge
+    // okunurken yanlış tuş tıkladığımda direk sonrakine atlıyor"): konus, ses kapalıyken onSon'u
+    // setTimeout(0) ile ANINDA tetikler (ses.js) → eskiden `onSon: yonergeKilidiAc` kilidi HEMEN
+    // açıyordu → NVDA yönergeyi aria-live bölgesinden hâlâ okurken noktalar CANLI (button) olup
+    // erken/yanlış dokunuş kaydoluyor, öğe ilerliyordu (kilit fiilen hiç çalışmıyordu). FIX:
+    //  • App TTS AÇIK → gerçek utterance sonu (onSon) kilidi açar + uzun güvenlik üst sınırı.
+    //  • App TTS KAPALI (NVDA) → onSon ile AÇMA; kilit yalnız NVDA okuma süresi kadar bir timer
+    //    VEYA Tab (kes+ilk noktaya atla) ile açılır → erken dokunuş "Yönerge bitmesini bekleyiniz"
+    //    uyarısı alır, öğe ilerlemez. Tab her an anında noktalara geçiş sağlar (dokunma akışı bozulmaz).
+    const kilitMs = sesAcik
+      ? Math.min(30000, 6000 + uzunluk * 200)   // güvenlik üst sınırı (gerçek onSon daha erken gelir)
+      : Math.min(12000, 2500 + uzunluk * 70);   // NVDA aria-live okuma süresi tahmini
+    yonergeKilitTimerRef.current = setTimeout(() => yonergeKilidiAc(nesil), kilitMs);
     // Ekran okuyucu: yönergeyi _srBolge'ye YAZMA (srAtla) — düz metin lang taşıyamaz +
     // "Başla" anında üzerine yazardı. Bunun yerine bileşenin aria-live yönerge bölgesi
     // (lang span'li) duyurur. Yeni öğede metin zaten değiştiği için bölge bir kez okur;
     // nonce SADECE "Tekrar"da (aynı metin) bump edilir → çift-okuma olmaz.
-    konusDil(metin, { srAtla: true, ...secenek, onSon: () => yonergeKilidiAc(nesil) });
+    konusDil(metin, {
+      srAtla: true,
+      ...secenek,
+      // App TTS kapalıyken onSon (anında) kilidi AÇMASIN — yukarıdaki timer/Tab açar.
+      onSon: sesAcik ? () => yonergeKilidiAc(nesil) : undefined,
+    });
   };
 
   // Yönerge okunurken kullanıcı bir noktaya dokunmaya çalışırsa: sadece uyar,

@@ -111,9 +111,11 @@ const yonergeKilitTimerRef = useRef(null);  // safety timeout ref
 **Shared functions:**
 ```js
 yonergeKilidiAc(nesil)                      // unlock dots (checks generation)
-yonergeyiKilitleyerekSeslendir(metin, opt)  // speak + lock; safety: Math.min(30000, 6000+len*200)
+yonergeyiKilitleyerekSeslendir(metin, opt)  // speak + lock; kilit süresi App TTS'e GÖRE (aşağı)
 yonergeBeklemeUyar()                        // show toast only — no focus, no NVDA announcement, TTS uninterrupted
 ```
+
+**⚠⚠ KRİTİK — KİLİT SÜRESİ App TTS'e GÖRE; NVDA'da onSon kilidi HEMEN AÇMAZ (kullanıcı: "yönerge okunurken yanlış tuş tıkladığımda direk sonrakine atlıyor — çok kritik"):** `konus`, app TTS KAPALIYKEN (NVDA kullanıcıları) `onSon`'u `setTimeout(0)` ile **ANINDA** tetikler ([ses.js](src/utils/ses.js) `if (!a.sesAcik)` dalı). ESKİDEN `yonergeyiKilitleyerekSeslendir` `onSon: () => yonergeKilidiAc(nesil)` veriyordu → NVDA'da kilit **hemen** açılıyor, NVDA yönergeyi aria-live bölgesinden hâlâ okurken noktalar CANLI (`button`) oluyor → erken/yanlış dokunuş `noktayaTikla`'ya kaydolup öğeyi ilerletiyordu (kilit fiilen HİÇ çalışmıyordu — öğrenme modunun EN kritik hatası). **Fix (`yonergeyiKilitleyerekSeslendir`):** `sesAcik = ayarlariAl().sesAcik` ile iki dal — **App TTS AÇIK:** `onSon` (gerçek utterance sonu) kilidi açar + güvenlik üst sınırı `Math.min(30000, 6000+len*200)`. **App TTS KAPALI (NVDA):** `onSon` **UNDEFINED** (kilidi AÇMAZ); kilit yalnız NVDA okuma süresi timer'ı `Math.min(12000, 2500+len*70)` VEYA **Tab** (ses/yönergeyi kes + ilk noktaya atla) ile açılır → erken dokunuş `yonergeBeklemeUyar` toast'ı alır, öğe ilerlemez. **Regresyon yok:** modülden girişte odağı `SayfaOdakYonetimi` bağımsız verir; kilit-bitişi effect'i (§3 giriş dot-odak) transition'da yine çalışır (yalnız gecikir); ses-kayıtlı sayfalar kendi audio-sonrası akışında bu fonksiyonu kullanır → onlar da tutarlı kilitlenir. (⚠ NVDA zamanlaması gerçek tarayıcı/NVDA'da doğrulanır; headless preview uygulamayı mount etmiyor.)
 
 **⚠⚠ DEĞİŞMEZ STANDART — İLK TAB = HÜCRENİN 1. NOKTASI (kullanıcı: "ilk tab tuşumda braille hücresinde 1. nokta HER ZAMAN"; "asla ama asla bu standartı değiştirme; yanlış anlarsan sor"):** Öğrenme modunda SAYFA GİRİŞİNDE (ses kaydı YOK) odak YÖNERGE bölgesine (`.yonerge-sr`) gelir — bir dot'a/ilk HEDEF noktaya DEĞİL → NVDA önce yönergeyi okur; kullanıcının **İLK TAB'ı DOM sırasıyla braille hücresinin 1. (ilk) noktasına** konumlanır. Bu yüzden: (a) giriş dot-odak dalı `if (girisAni && !sesKaydiVar)` → `.yonerge-sr` odaklar (NVDA VE app TTS, **rAF-retry** ile — kilit-açma re-render'ında odak düşmesin), dot'a GEÇMEZ; (b) dot'a odaklanan TÜM yollar (sayfa-içi öğe geçişi, Tab-kes) `kok.querySelector('button.dot')` = **1. nokta** kullanır, `button.dot.target` (ilk hedef) DEĞİL. Ses kayıtlı sayfalar ayrı akış (region ses bitince dolar). **Bu standardı ASLA değiştirme; emin değilsen kullanıcıya sor.** (⚠ Headless preview programatik odağı sayfanın "aktif" döneminde tutmuyor → bu davranış yalnız gerçek tarayıcı/NVDA'da doğrulanır.)
 
@@ -662,7 +664,8 @@ through NVDA; the active TTS instruction must remain uninterrupted.
 | `useState(indeksAl(...))` — resumes from saved | `useState(0)` — always start from beginning |
 | Change only DesenOgretici | **Always update CokHucreOkuyucu too** |
 | `konus()`, `pause()`/`resume()`, or `aria-live` on warning toast | `gosterToast()` only, `aria-live="off"` — visual only, NVDA silent, TTS uninterrupted |
-| Safety timer `90ms/char` — unlocks too early | `Math.min(30000, 6000 + len * 200)` |
+| Safety timer `90ms/char` — unlocks too early | `Math.min(30000, 6000 + len * 200)` (App TTS açık) |
+| `yonergeyiKilitleyerekSeslendir` hep `onSon: yonergeKilidiAc` → NVDA'da (TTS kapalı) `konus` onSon'u anında tetikler, kilit hemen açılır, erken dokunuş öğeyi ilerletir | App TTS kapalıysa `onSon: undefined`; kilit `Math.min(12000, 2500+len*70)` timer'ı VEYA Tab ile açılır (bkz. §3 KRİTİK) |
 | Focusing/announcing warning toast after `setState` | Do not focus warning toast; keep it `aria-live="off"` and visual-only |
 | StrictMode: boolean flag for first-load skip | Compare `oncekiYol.current === null` |
 | `kilitli`: only block onClick | Render as `<div>`, `aria-hidden`, remove all handlers |
