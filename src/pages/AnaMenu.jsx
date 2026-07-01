@@ -108,7 +108,7 @@ export default function AnaMenu() {
       if (localStorage.getItem(ANAHTAR)) {
         metin = 'Ana menü. Lütfen bir bölüm seçin.';
       } else {
-        metin = 'Braille Eğitim uygulamasına hoş geldiniz. Lütfen bir bölüm seçin.';
+        metin = 'Braille Öğreniyorum uygulamasına hoş geldiniz. Lütfen bir bölüm seçin.';
         localStorage.setItem(ANAHTAR, '1');
       }
     } catch {
@@ -156,7 +156,7 @@ export default function AnaMenu() {
             </svg>
           </span>
           <h1 className="banner-baslik" style={{ margin: 0, fontSize: '1.5em', whiteSpace: 'nowrap' }}>
-            Braille Eğitim
+            Braille Öğreniyorum
           </h1>
         </div>
         <div className="header-aksiyon">

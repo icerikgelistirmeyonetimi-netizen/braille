@@ -203,7 +203,7 @@ export const KURAN_TECVID = [
   {
     ad: 'Hurufu mukatta\'a ve ayet ortası durak işareti',
     sembol: '',
-    hucreler: [[2, 6]],
+    hucreler: [[3, 6]],
     aciklama: 'Sure başlarında bulunan kesik harflerin (Elif-Lam-Mîm vb.) okunuşunda veya ayet ortalarında genel bir durak/ayrım yerini belirtmek için kullanılır.'
   },
   {

@@ -18,7 +18,7 @@ export default function MuzikBrailleMenu() {
 
   return (
     <div className="page">
-      <PageHeader baslik="Müzik Braille (UEB)" />
+      <PageHeader baslik="Müzik (UEB)" />
       <div
         className="page-mid"
         style={{
@@ -30,7 +30,7 @@ export default function MuzikBrailleMenu() {
         <nav
           className={grup ? 'menu-grid muzik-grup-menu' : 'menu-grid'}
           style={{ width: '100%' }}
-          aria-label="Müzik Braille dersleri"
+          aria-label="Müzik dersleri"
         >
           {!grup && MUZIK_BOLUM_GRUPLARI.map((g) => (
             <button

@@ -275,7 +275,7 @@ const KURAN_ISARET_KAYNAKLARI = [
   { veri: MED_HARFLERI, kategori: 'Med Harfleri', slug: 'med-harfleri' },
   { veri: MUKADDER_MEDLER, kategori: 'Mukadder Medler', slug: 'mukadder-medler' },
   { veri: ELIF_ZAID, kategori: 'Elif-i Zaid', slug: 'elif-zaid' },
-  { veri: DIGER_UZATMA, kategori: 'Diğer Uzatma', slug: 'diger-uzatma' },
+  { veri: DIGER_UZATMA, kategori: 'Diğer Uzatma İşaretleri', slug: 'diger-uzatma' },
   { veri: HEMZELER, kategori: 'Hemzeler', slug: 'hemzeler' },
   { veri: HEMZE_VASL, kategori: 'Hemze-i Vasl ve Kat', slug: 'hemze-vasl' },
 ];
@@ -285,7 +285,7 @@ KURAN_ISARET_KAYNAKLARI.forEach(({ veri, kategori, slug }) => {
 });
 
 kaynakEkle(KURAN_TECVID, (s) => ({ etiket: s.ad, hucreler: s.hucreler }),
-  { modulBaslik: 'Modül 5', kategori: 'Uzatma İşaretleri', yol: '/kuran-uzatma' });
+  { modulBaslik: 'Modül 5', kategori: 'Durak İşaretleri', yol: '/kuran-uzatma' });
 
 // ── Modül 6 — Matematik ────────────────────────────────────────────────────────
 kaynakEkle(MATEMATIK_RAKAMLAR, (r) => ({ etiket: r.rakam, altEtiket: r.ad, hucreler: r.hucreler }),

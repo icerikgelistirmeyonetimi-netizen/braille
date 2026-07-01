@@ -554,9 +554,9 @@ export const MODULLER = [
       { yol: '/kuran-isaretler/hemzeler',              baslik: 'Hemzeler',                ikon: Ikon.hemze,        anahtar: 'kuran-hemzeler',         toplam: 4 },
       { yol: '/kuran-isaretler/tenvinler',             baslik: 'Tenvinler',               ikon: Ikon.tenvin,       anahtar: 'kuran-tenvinler',        toplam: 3 },
       { yol: '/kuran-isaretler/ta-i-merbuta',          baslik: "Ta-i Merbûta",            ikon: Ikon.taMerbuta,    anahtar: 'kuran-ta-i-merbuta',     toplam: 1 },
-      { yol: '/kuran-isaretler/diger-uzatma',          baslik: 'Diğer Uzatma',            ikon: Ikon.tecvid,       anahtar: 'kuran-diger-uzatma',     toplam: 2 },
+      { yol: '/kuran-isaretler/diger-uzatma',          baslik: 'Diğer Uzatma İşaretleri', ikon: Ikon.tecvid,       anahtar: 'kuran-diger-uzatma',     toplam: 2 },
       { yol: '/kuran-isaretler/hemze-vasl',            baslik: 'Hemze-i Vasl ve Kat',    ikon: Ikon.hemzeVasl,    anahtar: 'kuran-hemze-vasl',       toplam: 2 },
-      { yol: '/kuran-uzatma',                           baslik: 'Uzatma İşaretleri',       ikon: Ikon.tecvid,    anahtar: 'kuran-tecvid',           toplam: 22 },
+      { yol: '/kuran-uzatma',                           baslik: 'Durak İşaretleri',        ikon: Ikon.tecvid,    anahtar: 'kuran-tecvid',           toplam: 22 },
       // Hece Okuma ve Kelime Okuma gizlendi; veriler kuran.js'de duruyor.
       // "Kelime Okuma 2" (/kuran-kelimeler) ve "Kısa Sureler" (/kuran-sureler)
       // menüden gizlendi. Rotalar App.jsx'te durabilir; sadece listede görünmezler.
@@ -567,7 +567,7 @@ export const MODULLER = [
     id: 'modul6',
     baslik: 'Modül 6',
     mobilEtiket: 'Matematik',
-    altBaslik: 'Matematik Braille',
+    altBaslik: 'Matematik',
     ikon: Ikon.modul6,
     ogeler: [
       { yol: '/mat-rakamlar',   baslik: 'Rakamlar',           ikon: Ikon.matRakam,  anahtar: 'mat-rakamlar',    toplam: 10 },
@@ -597,7 +597,7 @@ export const MODULLER = [
     id: 'modul8',
     baslik: 'Modül 8',
     mobilEtiket: 'Müzik',
-    altBaslik: 'Müzik Braille',
+    altBaslik: 'Müzik',
     ikon: Ikon.modul8,
     ogeler: [
       ...muzikModulOgeleriOlustur(),
@@ -608,7 +608,7 @@ export const MODULLER = [
     id: 'modul9-yabanci',
     baslik: 'Modül 9',
     mobilEtiket: 'Dil',
-    altBaslik: 'Yabancı Dil Braille',
+    altBaslik: 'Yabancı Dil',
     ikon: Ikon.modulYabanci,
     ogeler: [
       { yol: '/ingilizce', baslik: 'İngilizce', ikon: Ikon.modulYabanci },

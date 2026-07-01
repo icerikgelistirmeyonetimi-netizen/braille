@@ -9,7 +9,7 @@ export default function FransizcaBrailleMenu() {
   const navigate = useNavigate();
   return (
     <div className="page">
-      <PageHeader baslik="Fransızca Braille" />
+      <PageHeader baslik="Fransızca" />
       <div
         className="page-mid"
         style={{
@@ -18,7 +18,7 @@ export default function FransizcaBrailleMenu() {
           padding: '8px 12px',
         }}
       >
-        <nav className="menu-grid" style={{ width: '100%' }} aria-label="Fransızca Braille dersleri">
+        <nav className="menu-grid" style={{ width: '100%' }} aria-label="Fransızca dersleri">
           {FRANSIZCA_BOLUMLER.map((b) => {
             const yol = `/fransizca/${b.slug}`;
             const ilerleme = indeksAl(b.ilerlemeAnahtari);

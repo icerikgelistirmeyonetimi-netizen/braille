@@ -19,11 +19,11 @@ const OGELER = KURAN_TECVID.map((t) => ({
 export default function KuranTecvidEgitimi() {
   return (
     <CokHucreOkuyucu
-      baslik="Kur'an-ı Kerim: Uzatma İşaretleri"
+      baslik="Kur'an-ı Kerim: Durak İşaretleri"
       ogeler={OGELER}
       kategoriAdi="işareti"
       bolumAnahtari="kuran-tecvid"
-      bittiMesaji="Tebrikler! Kur'an-ı Kerim uzatma işaretlerini tamamladınız."
+      bittiMesaji="Tebrikler! Kur'an-ı Kerim durak işaretlerini tamamladınız."
     />
   );
 }

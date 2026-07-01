@@ -9,7 +9,7 @@ export default function AlmancaBrailleMenu() {
   const navigate = useNavigate();
   return (
     <div className="page">
-      <PageHeader baslik="Almanca Braille" />
+      <PageHeader baslik="Almanca" />
       <div
         className="page-mid"
         style={{
@@ -18,7 +18,7 @@ export default function AlmancaBrailleMenu() {
           padding: '8px 12px',
         }}
       >
-        <nav className="menu-grid" style={{ width: '100%' }} aria-label="Almanca Braille dersleri">
+        <nav className="menu-grid" style={{ width: '100%' }} aria-label="Almanca dersleri">
           {ALMANCA_BOLUMLER.map((b) => {
             const yol = `/almanca/${b.slug}`;
             const ilerleme = indeksAl(b.ilerlemeAnahtari);

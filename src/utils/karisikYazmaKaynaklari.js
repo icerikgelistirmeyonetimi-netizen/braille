@@ -170,7 +170,7 @@ const KAYNAKLAR = {
   },
   '/kuran-uzatma': {
     yol: '/kuran-uzatma',
-    baslik: 'Tecvid İşaretleri',
+    baslik: 'Durak İşaretleri',
     etiketTuru: 'tecvid',
     items: KURAN_TECVID.map((t) => ({
       etiket: t.sembol || t.ad,
@@ -405,7 +405,7 @@ const KURAN_ISARET_KAYNAKLARI = {
   'med-harfleri': { veri: MED_HARFLERI, baslik: 'Med (Uzatma) Harfleri' },
   'mukadder-medler': { veri: MUKADDER_MEDLER, baslik: 'Mukadder Medler' },
   'elif-zaid': { veri: ELIF_ZAID, baslik: 'Elif-i Zaid' },
-  'diger-uzatma': { veri: DIGER_UZATMA, baslik: 'Diğer Uzatma' },
+  'diger-uzatma': { veri: DIGER_UZATMA, baslik: 'Diğer Uzatma İşaretleri' },
   'hemzeler': { veri: HEMZELER, baslik: 'Hemzeler' },
   'hemze-vasl': { veri: HEMZE_VASL, baslik: 'Hemze-i Vasl ve Kat' },
 };

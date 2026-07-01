@@ -7,7 +7,7 @@ const ADIMLAR = [
   {
     baslik: 'Hoş geldiniz',
     metin:
-      'Braille Eğitim uygulamasına hoş geldiniz. Bu kısa rehber size uygulamayı tanıtacaktır.'
+      'Braille Öğreniyorum uygulamasına hoş geldiniz. Bu kısa rehber size uygulamayı tanıtacaktır.'
   },
   {
     baslik: 'Sesli Yönergeler',

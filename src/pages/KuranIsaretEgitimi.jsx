@@ -31,7 +31,7 @@ const BOLUMLER = {
   'med-harfleri':     { baslik: 'Med (Uzatma) Harfleri',    kategoriAdi: 'harfi',   bolumAnahtari: 'kuran-med-harfleri',    veri: MED_HARFLERI },
   'mukadder-medler':  { baslik: 'Mukadder Medler',           kategoriAdi: 'işareti', bolumAnahtari: 'kuran-mukadder-medler', veri: MUKADDER_MEDLER },
   'elif-zaid':        { baslik: 'Elif-i Zaid',               kategoriAdi: 'işareti', bolumAnahtari: 'kuran-elif-zaid',       veri: ELIF_ZAID },
-  'diger-uzatma':     { baslik: 'Diğer Uzatma',             kategoriAdi: 'işareti', bolumAnahtari: 'kuran-diger-uzatma',   veri: DIGER_UZATMA },
+  'diger-uzatma':     { baslik: 'Diğer Uzatma İşaretleri',  kategoriAdi: 'işareti', bolumAnahtari: 'kuran-diger-uzatma',   veri: DIGER_UZATMA },
   'hemzeler':         { baslik: 'Hemzeler',                  kategoriAdi: 'hemzesi', bolumAnahtari: 'kuran-hemzeler',        veri: HEMZELER },
   'hemze-vasl':       { baslik: 'Hemze-i Vasl ve Kat',      kategoriAdi: 'işareti', bolumAnahtari: 'kuran-hemze-vasl',     veri: HEMZE_VASL },
 };

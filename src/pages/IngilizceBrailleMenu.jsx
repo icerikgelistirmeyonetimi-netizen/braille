@@ -9,7 +9,7 @@ export default function IngilizceBrailleMenu() {
   const navigate = useNavigate();
   return (
     <div className="page">
-      <PageHeader baslik="İngilizce Braille" />
+      <PageHeader baslik="İngilizce" />
       <div
         className="page-mid"
         style={{
@@ -18,7 +18,7 @@ export default function IngilizceBrailleMenu() {
           padding: '8px 12px',
         }}
       >
-        <nav className="menu-grid" style={{ width: '100%' }} aria-label="İngilizce Braille dersleri">
+        <nav className="menu-grid" style={{ width: '100%' }} aria-label="İngilizce dersleri">
           {INGILIZCE_BOLUMLER.map((b) => {
             const yol = `/ingilizce/${b.slug}`;
             const ilerleme = indeksAl(b.ilerlemeAnahtari);
