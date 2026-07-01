@@ -120,7 +120,7 @@ export default function DesktopShell({ children }) {
             </svg>
           </span>
           <h1 className="banner-baslik" style={{ margin: 0, fontSize: '1.5em', whiteSpace: 'nowrap' }}>
-            Braille Eğitim
+            Braille Öğreniyorum
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
