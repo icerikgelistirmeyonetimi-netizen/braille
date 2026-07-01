@@ -213,7 +213,7 @@ export default function AramaSayfasi() {
                     type="button"
                     className={'btn arama-filtre-cip' + (secili ? ' aktif' : '')}
                     aria-pressed={secili}
-                    aria-label={`${k} bölümünde ara, ${adet} sonuç`}
+                    aria-label={`${k}, ${adet} sonuç`}
                     onClick={() => setFiltre(secili ? null : k)}
                   >
                     {k} <span className="arama-filtre-adet">{adet}</span>
