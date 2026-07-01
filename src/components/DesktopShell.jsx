@@ -98,8 +98,9 @@ export default function DesktopShell({ children }) {
     try { event.currentTarget.releasePointerCapture?.(event.pointerId); } catch { /* ignore */ }
   };
 
-  // Ana sayfada shell yok — AnaMenu kendi layout'unu yönetir
-  if (location.pathname === '/') return <>{children}</>;
+  // Ana sayfada VE modül route'unda (/modul/:modulId) shell YOK — ikisi de AnaMenu'yü kendi
+  // layout'uyla render eder; DesktopShell shell'i de sararsa iki menü/sayfa-içinde-sayfa olur.
+  if (location.pathname === '/' || location.pathname.startsWith('/modul/')) return <>{children}</>;
 
   return (
     <div className="ds-wrapper">
