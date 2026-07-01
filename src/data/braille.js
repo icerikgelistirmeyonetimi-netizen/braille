@@ -726,7 +726,7 @@ export const NOKTALAMA_ISARETLERI = [
     ornekler: ['Yahya Kemal’in “Sessiz Gemi” şiirini okudum.']
   },
   {
-    ad: 'Yay Ayraç (Parantez)',
+    ad: 'Parantez Açma/Kapama',
     sembol: '( )',
     hucreler: [[2, 3, 5, 6]],
     aciklama: '2-3-5-6 noktalarından oluşur; aynı sembol hem açma hem kapama için kullanılır.',
@@ -853,25 +853,25 @@ export const OZEL_ISARETLER = [
     ad: 'Sayfa Numaralama',
     sembol: '—',
     hucreler: [],
-    aciklama: 'Sayfa numarası, sayfanın son satırının sağ tarafına yazılır.',
+    aciklama: 'Sayfa numarası, sayfanın ilk satırının sağ tarafına yazılır. Yazı ile arasında en az iki boşluk bulunmalıdır. Braille için özel bir hücre yazımı yoktur. Devam için sonraki öğeye tıklayınız.',
     kurallar: [
       'Numara, satırın sonundan itibaren geriye doğru sayılarak yazılır.',
-      'Sayfa numarası ile satırın son harfi arasında en az üç boşluk bırakılır.',
+      'Sayfa numarası ile satırın son harfi arasında en az iki boşluk bırakılır.',
       'Numaranın başına rakam işareti (3-4-5-6) konur.'
     ],
     ornekler: []
   },
   {
     ad: 'Tarih Yazma',
-    sembol: '3.3.2013',
-    hucreler: [[3, 4, 5, 6], [1, 4], [3, 6], [1, 4], [3, 6], [1, 2], [2, 4, 5], [1], [1, 4]],
+    sembol: '23.4.1923',
+    hucreler: [[3, 4, 5, 6], [1, 2], [1, 4], [3, 6], [1, 4, 5], [3, 6], [1], [2, 4], [1, 2], [1, 4]],
     aciklama: 'Tarih yazılırken önce rakam işareti konur; gün, ay ve yıl aralık verilmeden yazılır.',
     kurallar: [
       'Tarih yazımlarında sadece en başa rakam işareti yazılır.',
       'Gün, ay ve yıl arasında boşluk bırakılmaz.',
       'Nokta, eğik çizgi veya kısa çizgiyle yazılan sayısal tarihlerde ayırıcı 3-6 noktalarıyla gösterilir.'
     ],
-    ornekler: ['3.3.2013', '03/03/2013', '2013-03-03']
+    ornekler: ['23.4.1923', '23/04/1923', '1923-04-23']
   },
   {
     ad: 'Rumuzlu İfadeler',

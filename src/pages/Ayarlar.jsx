@@ -8,7 +8,7 @@ import {
   ayarlariSifirla
 } from '../utils/ayarlar.js';
 import { tumIlerlemeyiAl, tumIlerlemeyiSifirla } from '../utils/ilerleme.js';
-import { konus, tiklamaSesi, dogruSesi, yanlisSesi } from '../utils/ses.js';
+import { tiklamaSesi, dogruSesi, yanlisSesi } from '../utils/ses.js';
 import { MODULLER } from '../data/moduller.jsx';
 import { titresimBuOrtamdaBeklenmezMi, IOS_TITRESIM_IPUCU } from '../utils/titresimDestek.js';
 
@@ -194,25 +194,13 @@ className="btn"           role="tab"
       ) : (
       <div role="tabpanel" id="panel-ayarlar" aria-labelledby="tab-ayarlar" tabIndex={0} style={{ overflowY: 'auto', minHeight: 0, paddingRight: 6 }}>
 
-        {/* ── Kart: Sesli Yönerge ── */}
+        {/* ── Kart: Ses Efektleri ── (tarayıcı seslendirme kaldırıldı; içeriği ekran okuyucu okur) */}
         <div style={kartStil}>
           <div style={kartBaslikStil}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
             </svg>
-            Sesli Yönerge
-          </div>
-          <div style={satirStil}>
-            <div>
-              <div style={{ fontWeight: 600 }}>Sesli yönerge</div>
-              <div style={aciklamaStil}>Sayfa değişimlerinde otomatik okuma</div>
-            </div>
-            <label style={toggleKapStil}>
-              <input type="checkbox" checked={a.sesAcik} onChange={(e) => guncelle({ sesAcik: e.target.checked })} aria-label={`Sesli yönerge ${a.sesAcik ? 'açık' : 'kapalı'}`} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
-              <span style={{ ...toggleTrackStil, background: a.sesAcik ? 'var(--renk-vurgu, #5465ff)' : '#ccc' }}>
-                <span style={{ ...toggleThumbStil, transform: a.sesAcik ? 'translateX(22px)' : 'translateX(2px)' }} />
-              </span>
-            </label>
+            Ses Efektleri
           </div>
           <div style={satirStil}>
             <div>
@@ -233,22 +221,6 @@ className="btn"           role="tab"
               <button className="btn" type="button" onClick={() => yanlisSesi()} style={ikincilButonStil}>Yanlış</button>
             </div>
           )}
-          <div style={{ ...satirStil, flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600 }}>Konuşma hızı</span>
-              <span style={{ ...rozetStil }}>{a.konusmaHizi.toFixed(2)}×</span>
-            </div>
-            <input type="range" min="0.5" max="1.5" step="0.05" value={a.konusmaHizi}
-              onChange={(e) => guncelle({ konusmaHizi: parseFloat(e.target.value) })}
-              style={{ width: '100%', accentColor: 'var(--renk-vurgu, #5465ff)' }} aria-label="Konuşma hızı" />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78em', color: 'var(--muted)' }}>
-              <span>Yavaş</span><span>Hızlı</span>
-            </div>
-          </div>
-          <button className="btn" type="button" onClick={() => konus('Bu, mevcut hızda örnek bir Türkçe konuşmadır.')} style={ikincilButonStil}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Sesi Dene
-          </button>
         </div>
 
         {/* ── Kart: Görünüm ── */}

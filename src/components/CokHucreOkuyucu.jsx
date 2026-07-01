@@ -167,13 +167,19 @@ export default function CokHucreOkuyucu({
       // SÖZLÜ nokta içeriyorsa ("nokta" + rakam → ör. fen-yunan/sira-sayıları) tekrar EKLENMEZ.
       const noktaMetni = noktaKompozisyonMetni();
       const detayHam = (oge.yonergeDetay || '').trim();
+      // ⚠ HÜCRESİZ öğe (hucreler:[], ör. "Sayfa Numaralama" — braille'de özel hücre yazımı YOK,
+      // bilgi amaçlı): nokta kompozisyonu YOK + "Lütfen bu noktalara dokunun" EKLENMEZ (dokunulacak
+      // nokta yok → çelişki). Açıklama (yonergeDetay) "Devam için sonraki öğeye tıklayınız" yönlendirmesini
+      // taşır (kullanıcı: "braille için özel bir hücre yazımı yoktur, devam için sonraki öğeye tıklayınız").
+      const hucresiz = hucreler.length === 0;
       // Yalnız açıklama SÖZLÜ kompozisyonu ("…noktadan/noktalardan oluşur") içeriyorsa atla.
       // ⚠ "Noktaları: 3-4-5-6" gibi ÇİZGİ gösterimi sözlü SAYILMAZ → sözlü biçim eklenir.
       const zatenSozluNokta = /nokta(dan|lardan)\s+oluşur/i.test(detayHam);
       const detay = detayHam
-        ? (zatenSozluNokta ? detayHam : `${detayHam} ${noktaMetni}`)
+        ? (zatenSozluNokta || hucresiz ? detayHam : `${detayHam} ${noktaMetni}`)
         : noktaMetni;
-      return `${adKategori},${anlamKismi}${aciklamaKismi} ${detay} Lütfen bu noktalara sırayla dokunun.`.replace(/\s+/g, ' ').trim();
+      const kapanis = hucresiz ? '' : ' Lütfen bu noktalara sırayla dokunun.';
+      return `${adKategori},${anlamKismi}${aciklamaKismi} ${detay}${kapanis}`.replace(/\s+/g, ' ').trim();
     }
 
     // Kelime okuma modu (eski CokHucreOkuyucu davranışı)
@@ -716,7 +722,7 @@ export default function CokHucreOkuyucu({
         <div>
           <PageHeader baslik={baslik} />
           <div className="progress" aria-hidden="true">
-            Okuma modu: {ogeler.length} öğe
+            Hızlı dolaşım modu: {ogeler.length} öğe
           </div>
         </div>
         <div className="page-mid" style={{ justifyContent: 'flex-start', gap: 10, paddingTop: 8 }}>

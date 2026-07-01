@@ -81,12 +81,6 @@ export default function MuzikScoreToolbar({
     try { return ayarlariAl().notaTusDuzeni === 'piyano' ? 'piyano' : 'alfabetik'; } catch { return 'alfabetik'; }
   });
   useEffect(() => ayarlariDinle((a) => setNotaTusDuzeni(a.notaTusDuzeni === 'piyano' ? 'piyano' : 'alfabetik')), []);
-  // Tarayıcı seslendirme (sesli yönerge / sesAcik) — aç/kapa. Kapalıyken ekran okuyucu okur.
-  const [sesliYonerge, setSesliYonerge] = useState(() => {
-    try { return ayarlariAl().sesAcik !== false; } catch { return true; }
-  });
-  useEffect(() => ayarlariDinle((a) => setSesliYonerge(a.sesAcik !== false)), []);
-
   // Tone.js detay ayarları (release/volume/reverb) + "Detay" popup'ı.
   const [detayAcik, setDetayAcik] = useState(false);
   const [toneAyar, setToneAyar] = useState(() => toneSesAyarlariAl());
@@ -324,15 +318,6 @@ export default function MuzikScoreToolbar({
               </label>
 
               <div className="mt-2 mb-1.5 border-t border-zinc-100 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Ses</div>
-              <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700 mb-1" title="Tarayıcı seslendirme (sesli yönerge). Kapalıyken ekran okuyucu (NVDA/JAWS vb.) okur; açıkken tarayıcı sesiyle okunur.">
-                <input
-                  type="checkbox"
-                  checked={sesliYonerge}
-                  onChange={(e) => ayarGuncelle({ sesAcik: e.target.checked })}
-                  className="accent-amber-500"
-                />
-                Tarayıcı seslendirme (sesli yönerge)
-              </label>
               <label className="flex items-center gap-2 cursor-pointer rounded-md px-1 py-0.5 hover:bg-zinc-50 transition text-xs text-zinc-700 mb-1" title="Notaya odaklanınca/tıklayınca piyanodan çal (erişilebilirlik)">
                 <input
                   type="checkbox"

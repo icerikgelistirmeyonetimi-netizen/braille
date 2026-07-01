@@ -71,8 +71,8 @@ export function OkumaModuButonu({ onClick }) {
       type="button"
       className="btn okuma-modu-btn sayfa-ici"
       onClick={onClick}
-      aria-label="Okuma moduna geç"
-      title="Okuma modu"
+      aria-label="Hızlı dolaşım moduna geç"
+      title="Hızlı dolaşım modu"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="22" height="22">
         <path d="M4 5h7a4 4 0 0 1 4 4v10H8a4 4 0 0 0-4 4V5z" />
@@ -116,7 +116,7 @@ export default function OkumaModuListesi({
   }, []);
 
   useEffect(() => {
-    konus(`${baslik} okuma modu. ${ogeler.length} öğe listelendi. Bir kutunun üzerine gelince adı ve Braille noktaları okunur.`);
+    konus(`${baslik} hızlı dolaşım modu. ${ogeler.length} öğe listelendi. Bir kutunun üzerine gelince adı ve Braille noktaları okunur.`);
     return () => {
       okumaOgeSesiTemizle();
       konusmayiDurdur();
@@ -265,7 +265,7 @@ export default function OkumaModuListesi({
     <div className={`okuma-modu-panel${rtl ? ' rtl' : ''}`}>
       <div className="okuma-modu-ust">
         <div>
-          <div className="okuma-modu-kicker">Okuma modu</div>
+          <div className="okuma-modu-kicker">Hızlı dolaşım modu</div>
           <div className="okuma-modu-baslik">{baslik}</div>
         </div>
         <button type="button" className="btn okuma-modu-kapat" onClick={() => {

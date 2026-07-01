@@ -5,8 +5,10 @@ const ANAHTAR = 'braille-ayarlar-v1';
 const VARSAYILAN = {
   konusmaHizi: 0.95,   // 0.5 - 1.5
   yaziBoyutu: 17,      // px (16 - 32)
-  sesAcik: true,
-  sesEfektiAcik: true, // tıklama / doğru / yanlış ses efektleri
+  sesAcik: false,      // ⚠ tarayıcı seslendirme (Web Speech TTS) KALDIRILDI — daima kapalı.
+                       // İçeriği yalnız ekran okuyucu (NVDA) okur. Kur'an/Müzik SES KAYITLARI
+                       // (ogeSesiCal — gerçek dosya/piyano) buna BAĞLI DEĞİL, çalışmaya devam eder.
+  sesEfektiAcik: true, // tıklama / doğru / yanlış ses efektleri (TTS'ten ayrı, korunur)
   titresimAcik: true,
   tema: 'normal',      // 'normal' | 'lowVision'
   tonejsSes: false,    // müzik piyano sesini Tone.js motoruyla çal
@@ -32,6 +34,7 @@ function yukle() {
     if (!ham) return { ...VARSAYILAN };
     const okunan = { ...VARSAYILAN, ...JSON.parse(ham) };
     okunan.tema = temayiNormalleştir(okunan.tema);
+    okunan.sesAcik = false; // tarayıcı seslendirme kaldırıldı — eski kayıtlı 'true' değerini yok say
     return okunan;
   } catch {
     return { ...VARSAYILAN };
@@ -49,7 +52,9 @@ export function ayarlariAl() {
 }
 
 export function ayarGuncelle(yama) {
-  ayarlar = { ...ayarlar, ...yama };
+  const temiz = { ...yama };
+  delete temiz.sesAcik; // tarayıcı seslendirme daima kapalı — dışarıdan açılamaz
+  ayarlar = { ...ayarlar, ...temiz };
   kaydet();
   uygulaCss();
   dinleyiciler.forEach((fn) => fn(ayarlar));
