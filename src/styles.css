@@ -634,10 +634,15 @@ h1, h2, h3 { color: var(--fg); }
   flex-wrap: nowrap;
   overflow-x: auto;
   --hucre-sayisi: 1;
+  /* ⚠ TUTARLILIK: --dot-max yüksekliğe duyarlı (media query'ler 56/48/40'a düşürür) — böylece
+     `.cell-row.fit` (CokHucreOkuyucu) ile `:root --dot-size` kullanan sayfalar (HucreTanima)
+     kısa ekranda AYNI boyutta olur (kullanıcı: "iki farklı sayfa tasarımı; boyutlar aynı olmalı").
+     Eskiden .cell-row.fit sabit 64px max'la yükseklikten etkilenmiyor, HucreTanima küçülünce ayrışıyordu. */
+  --dot-max: 64px;
   --dot-size: clamp(
     18px,
     calc((100vw - 64px) / (var(--hucre-sayisi) * 2.6)),
-    64px
+    var(--dot-max)
   );
   --dot-font: clamp(0.6em, calc(var(--dot-size) / 56), 1.25em);
   --cell-gap: clamp(4px, calc(var(--dot-size) / 6), 14px);
@@ -645,10 +650,11 @@ h1, h2, h3 { color: var(--fg); }
   --cell-title: 1.4em;
 }
 [data-theme="lowVision"] .cell-row.fit {
+  --dot-max: 90px;
   --dot-size: clamp(
     24px,
     calc((100vw - 64px) / (var(--hucre-sayisi) * 2.4)),
-    90px
+    var(--dot-max)
   );
   --dot-font: clamp(0.8em, calc(var(--dot-size) / 50), 2em);
   --cell-gap: clamp(6px, calc(var(--dot-size) / 6), 18px);
@@ -1691,14 +1697,21 @@ h1, h2, h3 { color: var(--fg); }
 @media (max-height: 760px) {
   :root { --dot-size: 56px; --cell-gap: 12px; --cell-pad: 14px; --cell-title: 1.5em; }
   [data-theme="lowVision"] { --dot-size: 78px; --cell-gap: 14px; --cell-pad: 18px; --cell-title: 1.9em; }
+  /* .cell-row.fit max'ı da düşür → CokHucreOkuyucu (fit) ile HucreTanima (:root) aynı boyut kalsın */
+  .cell-row.fit { --dot-max: 56px; }
+  [data-theme="lowVision"] .cell-row.fit { --dot-max: 78px; }
 }
 @media (max-height: 640px) {
   :root { --dot-size: 48px; --dot-font: 1em; }
   [data-theme="lowVision"] { --dot-size: 64px; --dot-font: 1.3em; --cell-title: 1.5em; }
+  .cell-row.fit { --dot-max: 48px; }
+  [data-theme="lowVision"] .cell-row.fit { --dot-max: 64px; }
 }
 @media (max-height: 540px) {
   :root { --dot-size: 40px; --dot-font: 0.9em; --btn-min: 40px; --btn-pad: 8px 14px; }
   [data-theme="lowVision"] { --dot-size: 52px; --dot-font: 1.1em; --btn-min: 44px; --btn-pad: 10px 16px; }
+  .cell-row.fit { --dot-max: 40px; }
+  [data-theme="lowVision"] .cell-row.fit { --dot-max: 52px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
