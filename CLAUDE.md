@@ -453,6 +453,8 @@ uygulaCss()             // sync --font-base + data-theme to document (called aut
 | `.okuma-modu-kutu` | Reading mode card — `overflow: hidden` prevents long-text overflow |
 | `.okuma-modu-alt` | Grey sub-description below card label (parenthetical or altEtiket) |
 
+**⚠ İFRAME/KISA YÜKSEKLİK KIRPMA — `.page > .page-mid` + `.cell-row` (kullanıcı: "sayfamı iframe ile yerleştirince iki harfli kısaltmalarda hücreler kesiliyor, bazılarında olmuyor"):** İki ayrı hata birlikte üst-kırpmaya yol açıyordu (yalnız içerik iframe'e SIĞMAYINCA — daha uzun sayfalarda; sığanlarda olmuyordu). (1) **`.page > .page-mid` `justify-content: center` + `overflow-y:auto`** → içerik taşınca `center` bloğu ortalayıp ÜSTÜ görünür alanın üstüne itiyor, scroll ile ulaşılamıyordu → **`justify-content: safe center`** (sığınca ortalar, TAŞINCA flex-start gibi üstten hizalar → üst kırpılmaz, scroll edilir). (2) **`.cell-row.fit` `overflow-x:auto`**, flex item'ın `min-height:auto`'sunu **0** yapıyor → kısa flex-kolonunda cell-row 0 yüksekliğe ÇÖKÜP `align-items:flex-end` ile hücreler yukarı taşıp kırpılıyordu (cell 249px ama cell-row 0) → **`.cell-row { flex-shrink: 0 }`** (doğal yükseklik korunur, page-mid scroll eder). İKİSİ birlikte gerekli. Sığan yükseklikte davranış değişmez. (Tarayıcı: 420px'de cell-row 0→249, ilk nokta kırpık değil scroll'lu; 700px'de içerik sığar, kırpma yok.)
+
 ---
 
 ## 8. Kisaltma Pages (`CokHucreOkuyucu` + `noktalariSeslendir`)

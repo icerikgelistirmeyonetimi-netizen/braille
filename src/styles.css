@@ -600,7 +600,11 @@ h1, h2, h3 { color: var(--fg); }
   min-height: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  /* ⚠ İframe/kısa yükseklikte içerik taşarsa `center` üstü kırpıp scroll ile ulaşılamaz
+     yapıyordu (kullanıcı: "iframe'de iki harfli kısaltmalarda hücreler kesiliyor"). `safe center`:
+     içerik sığınca ortalar, TAŞINCA flex-start gibi üstten hizalar → üst kırpılmaz, overflow-y
+     ile scroll edilir. Sığan sayfalarda davranış değişmez. */
+  justify-content: safe center;
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
@@ -616,6 +620,11 @@ h1, h2, h3 { color: var(--fg); }
   flex-wrap: wrap;
   justify-content: center;
   width: 100%;
+  /* ⚠ Kısa iframe/yükseklikte flex kolonu (.page-mid) cell-row'u SIKIŞTIRMASIN. `.cell-row.fit`
+     `overflow-x:auto` taşıdığından flex item'ın `min-height:auto`'su 0'a düşüyor → cell-row 0
+     yüksekliğe çöküp braille noktaları kırpılıyordu (kullanıcı: "iframe'de hücreler kesiliyor").
+     flex-shrink:0 → cell-row doğal yüksekliğini korur, page-mid onun yerine scroll eder. */
+  flex-shrink: 0;
 }
 /* Tek satırda dinamik küçülme: hücre sayısına göre nokta boyutu hesaplanır.
   --hucre-sayisi inline style ile JSX'ten verilir.
