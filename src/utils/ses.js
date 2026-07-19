@@ -429,12 +429,25 @@ export function tiklamaSesi() {
   });
 }
 
-/** Doğru cevap sesi — yükselen iki nota (olumlu). */
+/** Doğru cevap / öğe-hücre geçiş sesi — yükselen iki nota (olumlu, "ding"). */
 export function dogruSesi() {
   if (!sesEfektiAcikMi()) return;
   efektCal('dogru', () => {
     tonCal({ frekans: 660, sure: 0.12, tip: 'sine', baslangic: 0, kazanc: 0.16 });
     tonCal({ frekans: 880, sure: 0.16, tip: 'sine', baslangic: 0.11, kazanc: 0.16 });
+  });
+}
+
+/**
+ * Doğru nokta dokunuşu sesi — TEK kısa nota (yumuşak "blip").
+ * Öğe/hücre geçişindeki iki notalı `dogruSesi()` dinginden KASITLI olarak AYRI:
+ * öğrenme modunda her doğru braille noktasında çalar; kullanıcı böylece "nokta doğru"yu
+ * "hücre/öğe tamamlandı, geçiliyor"dan (ding) sesle ayırt eder. Dosya: nokta.wav (yoksa sentez).
+ */
+export function noktaSesi() {
+  if (!sesEfektiAcikMi()) return;
+  efektCal('nokta', () => {
+    tonCal({ frekans: 700, sure: 0.075, tip: 'sine', baslangic: 0, kazanc: 0.14 });
   });
 }
 

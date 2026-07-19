@@ -8,7 +8,7 @@ import {
   ayarlariSifirla
 } from '../utils/ayarlar.js';
 import { tumIlerlemeyiAl, tumIlerlemeyiSifirla } from '../utils/ilerleme.js';
-import { tiklamaSesi, dogruSesi, yanlisSesi } from '../utils/ses.js';
+import { konus, tiklamaSesi, dogruSesi, yanlisSesi } from '../utils/ses.js';
 import { MODULLER } from '../data/moduller.jsx';
 import { titresimBuOrtamdaBeklenmezMi, IOS_TITRESIM_IPUCU } from '../utils/titresimDestek.js';
 

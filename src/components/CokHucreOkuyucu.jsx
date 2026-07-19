@@ -3,7 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
 import OkumaModuListesi, { OkumaModuButonu } from './OkumaModu.jsx';
-import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle, dogruSesi, yanlisSesi } from '../utils/ses.js';
+import { konus, basariBildir, hataBildir, konusmayiDurdur, ekranOkuyucuTemizle, dogruSesi, noktaSesi, yanlisSesi } from '../utils/ses.js';
 import { ogrenildiIsaretle, indeksKaydet, indeksAl, sonraOgrenKaydet, sonraOgrenKaldir, sonraOgrenAl } from '../utils/ilerleme.js';
 import { ayarlariAl } from '../utils/ayarlar.js';
 import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
@@ -823,7 +823,8 @@ export default function CokHucreOkuyucu({
   // durum bölgesinden geçer → ekran okuyucu OTOMATİK okur (odak taşımadan, dokunma akışı
   // bozulmadan). TTS srAtla ile (çift duyuru yok — bölge _srBolge'ye yazmaz). Opsiyonel ses.
   const srDurumDuyur = (mesaj, ses) => {
-    if (ses === 'dogru') dogruSesi();
+    if (ses === 'dogru') dogruSesi();           // öğe/hücre geçişi → yükselen iki notalı ding
+    else if (ses === 'nokta') noktaSesi();      // tek doğru nokta → tek notalı blip (dingden AYRI)
     else if (ses === 'yanlis') yanlisSesi();
     setSrSiradakiNokta(mesaj);
     konusDil(mesaj, { srAtla: true });
@@ -846,12 +847,16 @@ export default function CokHucreOkuyucu({
     const yeni = [...basilanlar, n];
     setBasilanlar(yeni);
     if (yeni.length < aktifNoktalar.length) {
-      // DOĞRU ama hücrede başka nokta var → DOĞRU SESİ (ding) + yalnız "sıradaki nokta".
+      // DOĞRU ama hücrede başka nokta var → NOKTA SESİ (tek notalı blip) + yalnız "sıradaki nokta".
+      // ⚠ Nokta sesi, geçişteki iki notalı dingden AYRI (kullanıcı: "noktalara tıklamadaki doğru
+      // ses ile sayfa/öğe geçiş sesi aynı kalmış; iki ayrı ses olsun — doğru tıklamalarda farklı,
+      // geçişte bu ses [ding] kalabilir"). Böylece kullanıcı "nokta doğru"yu "hücre/öğe geçiliyor"dan
+      // sesle ayırt eder (test modundaki gibi bitiş net duyulur).
       // ⚠ "Doğru" SÖZCÜĞÜ KALDIRILDI (kullanıcı: "sıradaki nokta yönergesinden sonra bir
       // önceki doğru cevap için doğru diyor"): mesaj "Doğru" ile başlayıp her dokunuşta
       // tekrarlanıyordu; hızlı dokununca NVDA kuyruğu önceki dokunuşun "Doğru"sunu GEÇ
       // okuyup karıştırıyordu. Ses olumlu onayı verir (kuyruksuz), metin kısalır → gecikme yok.
-      srDurumDuyur(`Sıradaki nokta: ${aktifNoktalar[yeni.length]} numara.`, 'dogru');
+      srDurumDuyur(`Sıradaki nokta: ${aktifNoktalar[yeni.length]} numara.`, 'nokta');
       return;
     }
     // Hücre tamamlandı.
