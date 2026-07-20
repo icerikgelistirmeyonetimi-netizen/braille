@@ -446,7 +446,7 @@ const KELIME_TOKEN = {
   'ه': [1, 2, 5],
   'لا': [1, 2, 3, 6],
   'ي': [2, 4],
-  
+
   // Harekeler ve özel işaretler
   a: [3, 5],
   i: [2, 6],
@@ -469,8 +469,10 @@ function k(yazi, okunus, anlam, kod) {
   const hucreler = kod.trim().split(/\s+/).map((tok) => {
     const v = KELIME_TOKEN[tok];
     if (!v) {
-      // Geliştirme aşamasında uyarı ver, ama uygulama çökmesin
-      console.warn('[KURAN_KELIMELERI] Bilinmeyen token:', tok, 'kelime:', yazi);
+      // YALNIZ geliştirmede uyar (production build konsolu temiz kalmalı); uygulama çökmesin.
+      if (import.meta.env && import.meta.env.DEV) {
+        console.warn('[KURAN_KELIMELERI] Bilinmeyen token:', tok, 'kelime:', yazi);
+      }
       return [];
     }
     return v;
