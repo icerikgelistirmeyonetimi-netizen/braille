@@ -13,6 +13,7 @@ import BrailleGrid from '../components/BrailleGrid.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 import { noktalariBRF, brfNoktalaradon } from '../utils/brailleAscii.js';
+import { brfMetinedonSistemi } from '../utils/brfOkuyucu.js';
 import { noktalardanUnicode } from './BelgeBrf.jsx';
 import {
   metniBrailleyeCevir,
@@ -398,6 +399,10 @@ export function brfSatirininBrailleUnicodeKarsiligi(satir) {
 export const BRF_KAGIT_PRESET_STANDART = { id: 'standart', etiket: 'Standart (40 × 25)', satirdaHucre: 40, sayfadaSatir: 25 };
 export const BRF_KAGIT_PRESET_DAR_A4_OZERI = { id: 'dar', etiket: 'Dar sıra / geniş yazıcı (32 × 28)', satirdaHucre: 32, sayfadaSatir: 28 };
 
+// ⚠ ARTIK KULLANILMIYOR (brf→metin için brfMetinedonSistemi kullanılıyor — bkz. ~satır 5425).
+// _brfMetinedon _NOKTA_TERS'i OBJE-değerli tutar (cell-detay analizörü np.isaret/np.isim için) →
+// text decode'da buf.push(np) obje basıp noktalamayı "[object Object]" yapıyordu. Ortak decoder'a
+// geçildi. Bu üç fonksiyon (ve _brfMetinedon) ölü kod; ileride ayrı bir temizlikte kaldırılabilir.
 function brfMetinedon(icerik) {
   return _brfMetinedon(icerik, false);
 }
@@ -434,6 +439,9 @@ const _NOKTA_TERS = new Map(
     n
   ])
 );
+// [2,3,6] hem soru işareti (?) hem tırnak açma hücresidir; Türkçe'de ? baskın olduğundan
+// decode'da ? tercih edilir (aksi hâlde "son yazan kazanır" tırnağa çözer, ? round-trip bozulur).
+_NOKTA_TERS.set('2,3,6', NOKTALAMA.find((n) => n.isaret === '?'));
 
 // Kelime kökü kısaltmaları: sag hücre key → { kelime, etiket }
 const _KOK_SAG_MAP = new Map(
@@ -637,6 +645,10 @@ function hucreAnlamiBaglamVeModSifir(hucreler, opts) {
     '3,5,6',
     '1,4,6',
     '2,3,6',
+    // '2,6' = artı (+) operatörünün son hücresi ([5,6][2,6]); sayı-öncesi sınır (bkz. brfOkuyucu.js).
+    // Eskiden '?'=[2,6] olduğundan noktalamaHucreMi ile kapanıyordu; '?' [2,3,6]'ya taşındı,
+    // 've'=[2,6] boşlukla ayrık → etkilenmez. Diğer operatör son hücreleriyle ('2,3,6'=×) tutarlı.
+    '2,6',
     '1,2,4',
     '1,5',
     '2,3,4,6',
@@ -1787,6 +1799,10 @@ function _brfMetinedon(icerik, kisaltmali, sistemler = {}) {
     '3,5,6',
     '1,4,6',
     '2,3,6',
+    // '2,6' = artı (+) operatörünün son hücresi ([5,6][2,6]); sayı-öncesi sınır (bkz. brfOkuyucu.js).
+    // Eskiden '?'=[2,6] olduğundan noktalamaHucreMi ile kapanıyordu; '?' [2,3,6]'ya taşındı,
+    // 've'=[2,6] boşlukla ayrık → etkilenmez. Diğer operatör son hücreleriyle ('2,3,6'=×) tutarlı.
+    '2,6',
     '1,2,4',
     '1,5',
     '2,3,4,6',
@@ -5411,8 +5427,11 @@ export default function Araclar() {
       const icerik = ev.target.result;
       setDosyaIcerik(icerik);
       // Kısaltma otomatik tespiti: iki mod fark üretiyorsa kısaltma kullanılmış
-      const normal = brfMetinedon(icerik);
-      const kisaltmali = brfMetinedonKisaltmali(icerik, kisaltmaSistemler);
+      // ⚠ brf→metin: Araclar'ın eski yerel _brfMetinedon'u yerine test edilmiş ortak decoder
+      // (brfOkuyucu.js) kullanılır. Eski kopya _NOKTA_TERS'i OBJE-değerli tuttuğundan (analizör
+      // için) noktalamada "[object Object]" üretiyordu + tırnak/'?'/parantez fix'lerini almıyordu.
+      const normal = brfMetinedonSistemi(icerik, false);
+      const kisaltmali = brfMetinedonSistemi(icerik, true, kisaltmaSistemler);
       const kisaltmaVar = normal !== kisaltmali;
       setOkuKisaltmaAktif(kisaltmaVar);
       setOkunanMetin(kisaltmaVar ? kisaltmali : normal);

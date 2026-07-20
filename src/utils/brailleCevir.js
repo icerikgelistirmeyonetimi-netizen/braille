@@ -41,8 +41,10 @@ const MATEMATIK_GENEL_SEMBOL_ADLARI = new Set([
   'eşittir',
   'skaler çarpma',
   'artı eksi',
-  'parantez açma',
-  'parantez kapama',
+  // ⚠ 'parantez açma'/'parantez kapama' KASITLI ÇIKARILDI: düz-yazı encoder'ı artık NOKTALAMA
+  // parantezini ([2,3,5,6], harf/hece ile çakışmaz) kullanır — matematik paren [1,2,6]/[3,4,5]
+  // 'ğ'/'se' ile çakışıp "(soru)"→"ğsrse" yapıyordu. Decoder peel [2,3,5,6]'yı konumla '('/')'
+  // çözer. (Matematik ders verisi matematik.js'te hâlâ [1,2,6]/[3,4,5]; oralar encoder'dan geçmez.)
   'köşeli parantez açma',
   'köşeli parantez kapama',
   'küme açma',
@@ -1206,6 +1208,10 @@ const SIRA_SAYISI_RAKAM_TERS = (() => {
 const NOKTA_TERS = (() => {
   const m = new Map();
   for (const n of NOKTALAMA) m.set(noktalariAnahtara(n.noktalar), n.isaret);
+  // [2,3,6] hem soru işareti (?) hem tırnak açma hücresidir (konumdan ayırt edilir).
+  // Türkçe'de ? baskın (düz çift-tırnak neredeyse kullanılmaz) → decode'da ? tercih edilir,
+  // aksi hâlde "son yazan kazanır" ile tırnağa çözülüp ? round-trip'i bozulurdu.
+  m.set('2,3,6', '?');
   return m;
 })();
 

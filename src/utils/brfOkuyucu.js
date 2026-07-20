@@ -77,6 +77,26 @@ const _NOKTA_TERS = new Map(
     n.isaret,
   ])
 );
+// [2,3,6] hem soru işareti (?) hem tırnak açma hücresidir; Türkçe'de ? baskın olduğundan
+// decode'da ? tercih edilir (aksi hâlde "son yazan kazanır" tırnağa çözer, ? round-trip bozulur).
+_NOKTA_TERS.set('2,3,6', '?');
+
+// [2,3,6] hücresi tırnak AÇMA (“) mı yoksa soru işareti (?) mi? (kullanıcı: "tırnak açılıp
+// kapanması lazım; tek başına geldiğinde ? olarak algılanmalı"):
+//  • Açılış tırnağı BOŞLUKTAN/başlangıçtan sonra gelir (sonraki kelimenin başına yapışır).
+//  • Soru işareti bir KARAKTERE (harf/rakam…) bitişik gelir.
+// → önceki hücre dolu (bir karakter) ise soru işareti; boşluk/başlangıç ise VE ardında içerik +
+//   ileride EŞLEŞEN kapanış tırnağı [3,5,6] varsa açılış tırnağı. (Kapanış [3,5,6] zaten ” çözülür.)
+function acilisTirnagiMi(b, ci) {
+  const onceki = ci > 0 ? b[ci - 1] : null;
+  if (onceki && onceki.length > 0) return false;          // bir karaktere bitişik → soru işareti
+  const sonraki = ci + 1 < b.length ? b[ci + 1] : null;
+  if (!sonraki || sonraki.length === 0) return false;      // ardında boşluk/hiç → tek başına ?
+  for (let k = ci + 1; k < b.length; k++) {
+    if ([...b[k]].sort((a, x) => a - x).join(',') === '3,5,6') return true;  // eşleşen kapanış var
+  }
+  return false;
+}
 
 // Ünlü uyumuna göre doğru ek varyantını seç
 const _ARKA_UNLU = new Set(['a', 'ı', 'o', 'u']);
@@ -140,6 +160,10 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
     '3,5,6',
     '1,4,6',
     '2,3,6',
+    // '2,6' = artı (+) operatörünün son hücresi (ISLEM.arti = [5,6][2,6]); sayı-öncesi sınır.
+    // Eskiden '?'=[2,6] olduğundan noktalamaHucreMi ile kapanıyordu; '?' [2,3,6]'ya taşındı,
+    // 've'=[2,6] (boşlukla ayrık → etkilenmez). Diğer operatör son hücreleriyle ('2,3,6'=×) tutarlı.
+    '2,6',
     '1,2,4',
     '1,5',
     '2,3,4,6',
@@ -193,16 +217,48 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
       }
       if (blok.length) tumBloklar.push(blok);
 
-      const bloklariIsle = (bRaw, sonrakiIlkHucre) => {
+      // Çok kelimeli tırnak: açılış "“çok" bloğunda, kapanış "iyi”" bloğunda olabilir → her bloktan
+      // SONRA bir yerde kapanış tırnağı [3,5,6] var mı? (blok-içi kapanış ayrıca kontrol edilir.)
+      const kapanisIlerideArr = new Array(tumBloklar.length);
+      { let sonra = false;
+        for (let i = tumBloklar.length - 1; i >= 0; i--) {
+          kapanisIlerideArr[i] = sonra;
+          if (tumBloklar[i].some((h) => noktalariAnahtara(h) === '3,5,6')) sonra = true;
+        } }
+
+      const bloklariIsle = (bRaw, sonrakiIlkHucre, kapanisIleride) => {
         if (bRaw.length === 0) return;
         let bashCase = 'normal';
         let b = bRaw;
+        // Yapışık öndeki açılış tırnağı ([2,3,6], blokta eşleşen kapanış [3,5,6] varsa) + sondaki
+        // kapanış tırnağı ([3,5,6]) kelimeden AYRILIR → kısaltma/hece çözümü TEMİZ kelimede çalışır.
+        // (kullanıcı: "tırnak/parantez yapışınca kelime bozuluyor"; ör. "sr"=soru iki-harfli kısaltması
+        // b.length===2 şartıyla tanındığından yapışık tırnak tanımayı bozup "soru"→"sr" yapıyordu.)
+        let onEk = '', sonEk = '';
+        {
+          const _dk = (h) => [...h].sort((x, y) => x - y).join(',');
+          // Öndeki açılış tırnağı ([2,3,6] + eşleşen kapanış ileride) VEYA açılış parantezi
+          // ([2,3,5,6] = NOKTALAMA paren, harf/hece ile ÇAKIŞMAZ → konumla '(' güvenli) ayrılır.
+          while (b.length > 1) {
+            const _k0 = _dk(b[0]);
+            if (_k0 === '2,3,6' && (kapanisIleride || b.slice(1).some((h) => _dk(h) === '3,5,6'))) { onEk += '“'; b = b.slice(1); }
+            else if (_k0 === '2,3,5,6') { onEk += '('; b = b.slice(1); }
+            else break;
+          }
+          // Sondaki kapanış tırnağı [3,5,6] VEYA kapanış parantezi [2,3,5,6] ayrılır.
+          while (b.length > 1) {
+            const _kL = _dk(b[b.length - 1]);
+            if (_kL === '3,5,6') { sonEk = '”' + sonEk; b = b.slice(0, -1); }
+            else if (_kL === '2,3,5,6') { sonEk = ')' + sonEk; b = b.slice(0, -1); }
+            else break;
+          }
+        }
         if (b.length >= 2 && buyukHarfIsaretiMi(b[0]) && buyukHarfIsaretiMi(b[1])) {
           bashCase = 'tumu'; b = b.slice(2);
         } else if (b.length >= 1 && buyukHarfIsaretiMi(b[0])) {
           bashCase = 'ilk'; b = b.slice(1);
         }
-        if (b.length === 0) return;
+        if (b.length === 0) { if (onEk || sonEk) cikis.push(onEk + sonEk); return; }
         const kasala = (s) => {
           if (!s) return s;
           if (bashCase === 'tumu') return s.toLocaleUpperCase('tr');
@@ -222,11 +278,11 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             if (np == null) { hepsiNoktalama = false; break; }
             kuyruk += np;
           }
-          if (hepsiNoktalama) { cikis.push(kasala(_KISALTMA_TEK.get(ilkKey)) + kuyruk); return; }
+          if (hepsiNoktalama) { cikis.push(onEk + kasala(_KISALTMA_TEK.get(ilkKey)) + kuyruk + sonEk); return; }
         }
         if (ikiHarfAktif && b.length === 2 && ilkKey !== '5' && ilkKey !== '4,5' && ilkKey !== '5,6') {
           const a = ilkKey + '|' + [...b[1]].sort((x, y) => x - y).join(',');
-          if (_KISALTMA_IKI.has(a)) { cikis.push(kasala(_KISALTMA_IKI.get(a))); return; }
+          if (_KISALTMA_IKI.has(a)) { cikis.push(onEk + kasala(_KISALTMA_IKI.get(a)) + sonEk); return; }
         }
         const buf = [];
         let ci = 0;
@@ -500,6 +556,8 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
           }
           const hA = [...noktalar].sort((a, b) => a - b).join(',');
           const np = _NOKTA_TERS.get(hA);
+          // [2,3,6] → eşleşen kapanış varsa açılış tırnağı (“), yoksa soru işareti (?).
+          const npCik = (hA === '2,3,6' && acilisTirnagiMi(b, ci)) ? '“' : np;
           const heceKarsiligi = heceAktif && !sM ? _HECE_TERS.get(hA) : undefined;
           if (np && heceKarsiligi) {
             const ilkHucre = ci === 0;
@@ -518,10 +576,10 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
                 noktalamaKullan = true;
               }
             }
-            if (noktalamaKullan) { buf.push(np); if (hA === '3') kesmeBayrak = true; }
+            if (noktalamaKullan) { buf.push(npCik); if (hA === '3') kesmeBayrak = true; }
             else harfYaz(heceKarsiligi);
           } else if (np) {
-            buf.push(np);
+            buf.push(npCik);
             if (hA === '3') kesmeBayrak = true;   // apostrof yazıldı → sonraki ek literal okunsun
           } else if (heceKarsiligi) {
             harfYaz(heceKarsiligi);
@@ -539,13 +597,13 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
           const sonrakiMetin = buf.slice(kokPrefixIndex + 1).join('');
           buf[kokPrefixIndex] = kelimeKokuOkunusunuYorIcinDuzelt(buf[kokPrefixIndex], sonrakiMetin);
         }
-        cikis.push(buf.join(''));
+        cikis.push(onEk + buf.join('') + sonEk);
       };
 
       for (let bi = 0; bi < tumBloklar.length; bi++) {
         if (bi > 0) cikis.push(' ');
         const sonrakiIlkHucre = bi + 1 < tumBloklar.length ? (tumBloklar[bi + 1][0] ?? null) : null;
-        bloklariIsle(tumBloklar[bi], sonrakiIlkHucre);
+        bloklariIsle(tumBloklar[bi], sonrakiIlkHucre, kapanisIlerideArr[bi]);
       }
       sayfaCiktilari.push(cikis.join(''));
     }

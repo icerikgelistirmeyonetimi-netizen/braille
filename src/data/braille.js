@@ -58,7 +58,7 @@ export const NOKTALAMA = [
   { isaret: ';', isim: 'noktalı virgül', noktalar: [2, 3] },
   { isaret: ':', isim: 'iki nokta', noktalar: [2, 5] },
   { isaret: '.', isim: 'nokta', noktalar: [2, 5, 6] },
-  { isaret: '?', isim: 'soru işareti', noktalar: [2, 6] },
+  { isaret: '?', isim: 'soru işareti', noktalar: [2, 3, 6] },
   { isaret: '!', isim: 'ünlem işareti', noktalar: [2, 3, 5] },
   { isaret: '-', isim: 'tire', noktalar: [3, 6] },
   { isaret: "'", isim: 'kesme işareti', noktalar: [3] },
