@@ -1905,6 +1905,7 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
   const birimKaynakAraliklari = paraBirimiKaynakSonEkiAraliklari(metin);
   let sayiModu = false;
   let mutlakDegerDerinligi = 0;
+  let tirnakAcik = false; // düz tırnak " (U+0022) açılış/kapanış toggle'ı
 
   for (let ti = 0; ti < islenmisJetonlar.length; ti++) {
     const tok = islenmisJetonlar[ti];
@@ -1928,10 +1929,18 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
       cokluSayiListesiEkle(tok.deger, ekle, sayiIsareti);
       sayiModu = true;
     } else if (tok.tip === 'noktalama') {
-      ekle(NOKTA_TABLO.get(tok.deger), tok.idx);
-      const ondalKom =
-        tok.deger === ',' && sayiModu && ondalikVirguluMi(metin, tok.idx, yorumTercihleri);
-      if (!ondalKom) sayiModu = false;
+      if (tok.deger === '"') {
+        // Düz tırnak " (U+0022) açılış/kapanış AYNI karakter → toggle ile ayır:
+        // açılış [2,3,6] (= tırnak açma), kapanış [3,5,6] (= tırnak kapama).
+        if (!tirnakAcik) { ekle([2, 3, 6], tok.idx); tirnakAcik = true; }
+        else { ekle([3, 5, 6], tok.idx); tirnakAcik = false; }
+        sayiModu = false;
+      } else {
+        ekle(NOKTA_TABLO.get(tok.deger), tok.idx);
+        const ondalKom =
+          tok.deger === ',' && sayiModu && ondalikVirguluMi(metin, tok.idx, yorumTercihleri);
+        if (!ondalKom) sayiModu = false;
+      }
     } else if (tok.tip === 'duzeltme') {
       ekle(DUZELTME_YABANCI_HARF_ISARETI, tok.idx);
       sayiModu = false;

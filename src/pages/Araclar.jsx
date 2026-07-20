@@ -1604,6 +1604,19 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
         const kaynakIdx = _esleme[idx];
         if (typeof kaynakIdx === 'number' && kaynakIdx >= 0 && kaynakIdx < _kaynak.length) {
           const kaynakKarakter = _kaynak[kaynakIdx];
+          // ⚠ Tırnak: kaynak " / “ / ” ise etiket HÜCREYE göre (açma [2,3,6] / kapama [3,5,6]);
+          // aksi halde [2,3,6]→np='?' (override) yüzünden açılış tırnağı "soru işareti" görünürdü.
+          const tirnakKaynagi = kaynakKarakter === '"' || kaynakKarakter === '“' || kaynakKarakter === '”';
+          if (tirnakKaynagi && (k === '2,3,6' || k === '3,5,6')) {
+            const acma = k === '2,3,6';
+            return {
+              tip: 'noktalama',
+              baslik: `Noktalama: ${acma ? 'tırnak açma' : 'tırnak kapama'} (${acma ? '“' : '”'})`,
+              detay: `Nokta ${noktaStr}`,
+              noktaStr,
+              isaret: acma ? '“' : '”',
+            };
+          }
           // np.isaret tam eşleşme veya alternatif tırnak/parantez vb. varyantları
           const noktalamaKarakteri = NOKTALAMA.some((n) => n.isaret === kaynakKarakter);
           if (noktalamaKarakteri) {
