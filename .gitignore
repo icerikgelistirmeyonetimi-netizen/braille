@@ -35,3 +35,19 @@ android/app/src/main/assets/public/
 android/app/src/main/assets/capacitor.config.json
 android/app/src/main/assets/capacitor.plugins.json
 
+# Yerel çalışma alanı (repoya girmez — ~38 GB)
+# ML eğitim/veri seti, video kayıtları ve geçici çıktılar makinede kalır.
+_*/
+_*.json
+_*.txt
+_*.jpg
+ml/
+ml.zip
+ml-README-yedek-*.md
+*.pt
+video çalışması/
+etiketle.bat
+
+# Claude Code yerel durum
+.claude/worktrees/
+

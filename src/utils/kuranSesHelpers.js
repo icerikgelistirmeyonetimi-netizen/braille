@@ -100,7 +100,7 @@ export function kuranHarfKarakterindenSesIdAl(harf = '') {
 }
 
 const _base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
-const KURAN_AUDIO_BASE = `${_base}/Kur'an-ı Kerim tüm sesler`;
+const KURAN_AUDIO_BASE = `${_base}/Kuran_i_Kerim`;
 
 export function kuranAudioUrl(path = '') {
   const temizPath = String(path).replace(/^\/+/, '');
