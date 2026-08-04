@@ -65,7 +65,14 @@ function birlesikEtiketler(hucreler) {
     const r = hucreyiIsle(durum, noktalar); // boşlukta da çağrılır → sayı/büyük harf modunu sıfırlar
     if (!noktalar || noktalar.length === 0) return { tip: 'bosluk' };
     if (r.tip === 'isaret') return { tip: 'hucre', hucre: noktalar, etiket: ISARET_GORSEL_ETIKET[r.anons] || r.anons, isaret: true };
-    if (r.tip === 'bilinmeyen' || r.deger === null) return { tip: 'hucre', hucre: noktalar, etiket: '?', isaret: false };
+    // ⚠ Tanınmayan hücrede etiket BOŞ (kullanıcı: "bilmediği yazımlara ? ekliyor, ? gelmesin").
+    // Eskiden '?' yazılıyordu; kullanıcı henüz yazmakta olduğu bir dizinin ara hücresinde bile
+    // hata yapmış gibi görünüyordu. Hücre yine çizilir (yazdığını görür), yalnız altındaki
+    // anlam etiketi boş kalır — boşluk hücresiyle aynı davranış (satır 69). Render'daki
+    // `{e.etiket || ' '}` sayesinde kutu yüksekliği korunur, hizalama bozulmaz.
+    // NOT: metin çıktısı (`normalModMetni`) tanınmayan hücreyi zaten ATLIYOR; sesli anons da
+    // "tanımsız hücre" diyor → '?' yalnız bu görsel etikette kalmıştı.
+    if (r.tip === 'bilinmeyen' || r.deger === null) return { tip: 'hucre', hucre: noktalar, etiket: '', isaret: false };
     return { tip: 'hucre', hucre: noktalar, etiket: r.deger === ' ' ? '' : r.deger, isaret: false };
   });
 }
