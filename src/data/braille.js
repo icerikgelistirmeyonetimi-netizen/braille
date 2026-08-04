@@ -70,6 +70,14 @@ export const NOKTALAMA = [
   { isaret: ')', isim: 'parantez kapama', noktalar: [2, 3, 5, 6] },
 ];
 
+// ⚠ NOKTALAMA artık YALNIZ çevirici tablosudur (metin→brf encoder'ı `NOKTA_TABLO`,
+// brf→metin decoder'ı `_NOKTA_TERS`, Modül 10 araçları, serbest/yönergeli yazma).
+// ÖĞRETİM yüzeyi YOK: Modül 1'in noktalama dersi kaldırıldı, konu Modül 3'te
+// `NOKTALAMA_ISARETLERI` ile işleniyor. Bu yüzden buradaki düz tırnak " (U+0022) gibi
+// yalnız çeviriye ait girdiler artık bir derste görünmez — listeden SİLME: encoder
+// tokenizer'ı `NOKTA_TABLO.has('"')` ile düz tırnağı tanır, sonra `tirnakAcik` toggle'ı
+// ile açılış [2,3,6] / kapanış [3,5,6] hücresini seçer (bkz. brailleCevir.js).
+
 // Türkçe Braille'de kullanılan bazı yaygın kısaltmalar (örnek seti).
 export const KISALTMALAR = [
   { kisaltma: 'TC', acilim: 'Türkiye Cumhuriyeti' },
@@ -574,6 +582,37 @@ export const NOKTALAMA_ISARETLERI = [
     ],
     ornekler: ['Ela al.', 'Tren 09.15’te kalktı.', 'http://tdk.org.tr']
   },
+  // ⚠ SIRA kullanıcı isteğiyle: Nokta'dan hemen sonra Üç Nokta, ardından Sıra Noktalar
+  // ("modül 3te noktadan sonra 3 nokta gelsin") — nokta ailesi arka arkaya öğretilsin,
+  // 2-5-6 ×3 ile 3 ×3 ayrımı taze karşılaştırmayla kurulsun.
+  {
+    ad: 'Üç Nokta',
+    sembol: '…',
+    hucreler: [[2, 5, 6], [2, 5, 6], [2, 5, 6]],
+    aciklama: '2-5-6 noktaları üç defa yazılır.',
+    kurallar: [
+      'Tamamlanmamış cümlelerin sonuna konur.',
+      'Açıklanmak istenmeyen kelime veya bölümlerin yerine konur.',
+      'Alıntılarda alınmayan kısımların yerine konur.',
+      'Sözün okuyucunun hayaline bırakıldığı yerlerde anlatımı güçlendirmek için konur.',
+      'Karşılıklı konuşmalarda eksik bırakılan cevaplarda kullanılır.'
+    ],
+    ornekler: ['Sana uğurlar olsun... Ayrılıyor yolumuz!', '— Hangi Ali?', '— ...']
+  },
+  {
+    // ⚠ Üç Nokta ile KARIŞTIRILMAMALI: üç nokta 2-5-6 hücresinin üç kez yazılmasıdır;
+    // sıra noktalar YALNIZ 3. noktanın üç kez yazılmasıyla oluşur (kesme işareti hücresi ×3).
+    ad: 'Sıra Noktalar',
+    sembol: '...',
+    hucreler: [[3], [3], [3]],
+    aciklama: '3. nokta üç defa arka arkaya yazılır.',
+    kurallar: [
+      'Boş bırakılan, doldurulması istenen yerleri göstermek için kullanılır.',
+      'İçindekiler ve listelerde başlık ile sayfa numarası arasını doldurur.',
+      'Üç nokta işaretiyle aynı değildir: üç nokta 2-5-6 hücresiyle, sıra noktalar 3. nokta ile yazılır.'
+    ],
+    ornekler: ['Adı Soyadı: ...', 'Giriş ... 5']
+  },
   {
     ad: 'Virgül',
     sembol: ',',
@@ -624,20 +663,6 @@ export const NOKTALAMA_ISARETLERI = [
       'Genel ağ adreslerinde kullanılır.'
     ],
     ornekler: ['Ziraatçı sayar:', 'http://tdk.org.tr']
-  },
-  {
-    ad: 'Üç Nokta',
-    sembol: '…',
-    hucreler: [[2, 5, 6], [2, 5, 6], [2, 5, 6]],
-    aciklama: '2-5-6 noktaları üç defa yazılır.',
-    kurallar: [
-      'Tamamlanmamış cümlelerin sonuna konur.',
-      'Açıklanmak istenmeyen kelime veya bölümlerin yerine konur.',
-      'Alıntılarda alınmayan kısımların yerine konur.',
-      'Sözün okuyucunun hayaline bırakıldığı yerlerde anlatımı güçlendirmek için konur.',
-      'Karşılıklı konuşmalarda eksik bırakılan cevaplarda kullanılır.'
-    ],
-    ornekler: ['Sana uğurlar olsun... Ayrılıyor yolumuz!', '— Hangi Ali?', '— ...']
   },
   {
     ad: 'Soru İşareti',

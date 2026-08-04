@@ -1,6 +1,6 @@
 import React from 'react';
 import CokluTest from '../components/CokluTest.jsx';
-import { HARFLER, RAKAMLAR, NOKTALAMA } from '../data/braille.js';
+import { HARFLER, RAKAMLAR } from '../data/braille.js';
 
 // Modül 1 (Braille Öğrenme) Test/Sınav — ortak CokluTest bileşeni
 // (klavye girişi + ses efekti + Perkins/mobil klavye). Tek hücreli öğeler.
@@ -15,11 +15,8 @@ const KAYNAKLAR = {
     kategori: 'rakam',
     veri: RAKAMLAR.map((r) => ({ ad: r.rakam, ariaAd: `${r.rakam}`, hucreler: [r.noktalar] })),
   },
-  noktalama: {
-    etiket: 'Noktalama',
-    kategori: 'işaret',
-    veri: NOKTALAMA.map((n) => ({ ad: n.isaret, ariaAd: n.isim, hucreler: [n.noktalar] })),
-  },
+  // Noktalama kategorisi YOK: Modül 1'in noktalama dersi kaldırıldı (konu Modül 3'te,
+  // `TestNoktalama` ile kendi testinde ölçülüyor) — öğretilmeyen öğe sorulmasın.
 };
 
 export default function Test() {

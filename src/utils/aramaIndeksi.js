@@ -17,7 +17,6 @@
 import {
   HARFLER,
   RAKAMLAR,
-  NOKTALAMA,
   KELIME_KISALTMALARI,
   IKI_HARFLI_KISALTMALAR,
   HECE_KISALTMALARI,
@@ -229,8 +228,9 @@ kaynakEkle(HARFLER, (h) => ({ etiket: h.harf, hucreler: [h.noktalar] }),
 kaynakEkle(RAKAMLAR, (r) => ({ etiket: r.rakam, hucreler: [SAYI_ISARETI, r.noktalar] }),
   { modulBaslik: 'Modül 1', kategori: 'Rakam Eğitimi', yol: '/rakamlar' });
 
-kaynakEkle(NOKTALAMA, (n) => ({ etiket: n.isaret, altEtiket: n.isim, hucreler: [n.noktalar] }),
-  { modulBaslik: 'Modül 1', kategori: 'Noktalama İşaretleri', yol: '/noktalama' });
+// Modül 1 noktalama kaydı KALDIRILDI (ders Modül 3'e devredildi) — `/noktalama` rotası
+// artık yok; indekste kalsaydı arama sonucu ölü rotaya götürürdü. Noktalama araması
+// Modül 3'ün `NOKTALAMA_ISARETLERI` kaydından karşılanır (aşağıda).
 
 // ── Modül 2 — Kısaltmalar ──────────────────────────────────────────────────────
 kaynakEkle(KELIME_KISALTMALARI, (k) => ({ etiket: k.harf, altEtiket: k.kelime, hucreler: [k.noktalar] }),

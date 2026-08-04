@@ -1730,6 +1730,23 @@ h1, h2, h3 { color: var(--fg); }
   border: 0;
 }
 
+/* PageHeader'daki gizli uygulama h1'i — başlık hiyerarşisinde h1 boşluğunu doldurur.
+   Mobilde (<900px) DesktopShell banner'ı `.ds-header { display:none }` ile gizli
+   olduğundan sayfada h1 kalmıyordu; bu görsel-gizli h1 devreye girer.
+   ≥900px'de banner'ın GERÇEK h1'i görünür → burası tamamen kaldırılır (tek h1). */
+.sayfa-uygulama-basligi {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (min-width: 900px) {
+  .sayfa-uygulama-basligi { display: none; }
+}
+
 /* ---------- Perkins Braille Klavyesi ---------- */
 .braille-klavye {
   display: flex;
@@ -5053,8 +5070,10 @@ g:hover .muzik-note-hover-rect,
   padding: clamp(1px, 0.35cqw, 3px) clamp(0px, 0.15cqw, 2px);
 }
 /* Tablet modu: dış grid rtl (hücreler sağdan sola akıyor), iç hücre grid'i ltr.
-   Böylece BrailleCell'in iç sütun yerleşimi double-flip olmaz; mirroring yalnız
-   aynaliEtiket grid swap + tabletDelikAynala üzerinden olur. */
+   Böylece BrailleCell'in iç sütun yerleşimi rtl'den etkilenmez. Nokta aynalaması
+   YALNIZ `tabletDelikAynala` (fill verisi) ile olur; `aynaliEtiket` grid'i DEĞİŞTİRMEZ,
+   sadece etiket numarasını çevirir (ikisi birlikte double-flip yapıyordu — bkz.
+   BrailleCell.jsx `noktaGridYerlesimi`). */
 .araclar-tablet-grid .cell,
 .araclar-tablet-satir .cell { direction: ltr; }
 .araclar-tablet-grid .belge-braille-hucre {

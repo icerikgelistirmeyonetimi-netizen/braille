@@ -19,7 +19,7 @@ export default function KuranSureOkuma() {
       <CokHucreOkuyucu
         baslik={`${seciliSure.ad} Sûresi`}
         ogeler={seciliSure.kelimeler}
-        bittiMesaji={`Tebrikler! ${seciliSure.ad} sûresini tamamladın.`}
+        bittiMesaji={`Tebrikler! ${seciliSure.ad} sûresini tamamladınız.`}
         rtl
         bolumAnahtari={`kuran-sure-${seciliSure.ad}`}
       />

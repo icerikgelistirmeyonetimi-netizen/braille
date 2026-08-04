@@ -13,3 +13,18 @@ export function noktaListesi(nArr, tekEk, cogulEk) {
 export function nlDan(nArr) {
   return noktaListesi(nArr, 'dan', 'dan');
 }
+
+// Yönergenin KAPANIŞ cümlesi — nokta sayısına göre TEKİL/ÇOĞUL (kullanıcı: "tek nokta ise
+// noktalarına değil noktasına tıklayınız gibi bir ifade olmalı").
+// ⚠ Tek noktada "sırayla" da DÜŞER: tek noktanın sırası olmaz ("Lütfen bu noktaya dokunun.").
+// hucreler: number[][] (çok hücreli öğede TÜM hücrelerin noktaları toplanır) veya number[].
+export function dokunmaKapanisi(hucreler) {
+  const dizi = Array.isArray(hucreler) ? hucreler : [];
+  const toplam = Array.isArray(dizi[0])
+    ? dizi.reduce((t, n) => t + ((n && n.length) || 0), 0)
+    : dizi.length;
+  if (toplam === 0) return '';
+  return toplam === 1
+    ? 'Lütfen bu noktaya dokunun.'
+    : 'Lütfen bu noktalara sırayla dokunun.';
+}

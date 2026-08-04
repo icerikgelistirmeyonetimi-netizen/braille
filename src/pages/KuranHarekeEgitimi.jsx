@@ -16,7 +16,7 @@ export default function KuranHarekeEgitimi() {
       ogeler={ogeler}
       kategoriAdi="harekesi"
       bolumAnahtari="kuran-harekeler"
-      bittiMesaji="Tebrikler! Kur'an-ı Kerim braillesindeki harekeleri öğrendiniz."
+      bittiMesaji="Tebrikler! Kur'an-ı Kerim braille harekelerini öğrendiniz."
       rtl
     />
   );

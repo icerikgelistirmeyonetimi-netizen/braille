@@ -1,7 +1,7 @@
 import React from 'react';
 import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { RAKAM_GOSTERGESI, SIRA_SAYISI_RAKAM_NOKTALARI } from '../data/matematik.js';
-import { nlDan as nl } from '../utils/noktaYardimci.js';
+import { nlDan as nl, dokunmaKapanisi } from '../utils/noktaYardimci.js';
 
 const SIRALI_AD = {
   '1': 'birinci', '2': 'ikinci', '3': 'üçüncü', '4': 'dördüncü', '5': 'beşinci',
@@ -25,7 +25,7 @@ export default function MatematikSiraSayilari() {
       hucreAriaEtiketleri: ['sayı işareti', `${d} rakam hücresi`],
       hucreAdlari: ['sayı işareti hücresi', 'rakam hücresi'],
       ...(i === 0
-        ? { tamYonergeMetni: `${INTRO} ${adSirali}, ${detay} Lütfen bu noktalara sırayla dokunun.` }
+        ? { tamYonergeMetni: `${INTRO} ${adSirali}, ${detay} ${dokunmaKapanisi([RAKAM_GOSTERGESI, indNp])}` }
         : { yonergeDetay: detay }),
     };
   });

@@ -9,7 +9,34 @@ import { ayarlariAl } from '../utils/ayarlar.js';
 import { deseniGonder, deseniTemizle, satiriGonder } from '../utils/arduino.js';
 import { mevcutSayfaIcinKaynakAnahtar } from '../utils/karisikYazmaKaynaklari.js';
 import { sonrakiDers } from '../utils/dersAkisi.js';
-import { noktaListesi } from '../utils/noktaYardimci.js';
+import { noktaListesi, dokunmaKapanisi } from '../utils/noktaYardimci.js';
+
+// ── kategoriAdi tekrar denetimi (ekran okuyucu metinleri) ────────────────────────
+// ⚠⚠ "hemze hemzesi" / "do notası nota" gibi MANTIKSAL DİL HATALARI (kullanıcı: "hemze
+// hemzesi gibi polite bölümünde yazımlar var, ekran okuyucu için metinlerdeki bu mantıksal
+// dil hatalarını çözmemiz lazım"). Yönerge `${ttsBaşlık} ${kategoriAdi}` kuruyor; ESKİ guard
+// yalnız TAM SONEK eşleşmesine bakıyordu (`"Büyük Harf İşareti".endsWith("işareti")`) →
+// Türkçe İYELİK EKİ yüzünden kök aynı olsa bile eşleşmiyordu:
+//   "Vavlı hemze" + "hemzesi"  → "Vavlı hemze hemzesi"   (kök: hemze = hemze)
+//   "üstün tenvin" + "tenvini" → "üstün tenvin tenvini"  (kök: tenvin = tenvin)
+//   "do notası"    + "nota"    → "do notası nota"        (TERS yön: başlık ekli, kategori köksüz)
+//   "alfa harfi"   + "Yunan harfi" → "alfa harfi Yunan harfi" (çok sözcüklü kategori)
+// Çözüm: her iki tarafın da 3. tekil İYELİK EKİNİ (-si/-sı/-su/-sü, -i/-ı/-u/-ü) soyup KÖK
+// karşılaştır; başlığın HERHANGİ bir sözcüğünün kökü kategori köküyle aynıysa EKLEME.
+// "Herhangi bir sözcük" (yalnız son sözcük değil) şart: "BD kısaltması, beden kelimesi"
+// gibi kategori sözcüğü ortada kalan başlıklar da yakalanmalı.
+const iyelikEkiniSoy = (s) => s.replace(/(s[ıiuü]|[ıiuü])$/u, '');
+export function kategoriTekrariVarMi(baslikMetni, kategoriAdi) {
+  if (!baslikMetni || !kategoriAdi) return false;
+  // Çok sözcüklü kategoride ("Yunan harfi", "sıra sayısı") belirleyici olan SON sözcüktür.
+  const kategoriKok = iyelikEkiniSoy(kategoriAdi.toLocaleLowerCase('tr').trim().split(/\s+/).pop());
+  if (!kategoriKok) return false;
+  return baslikMetni
+    .toLocaleLowerCase('tr')
+    .split(/[^\p{L}\p{N}']+/u)
+    .filter(Boolean)
+    .some((sozcuk) => iyelikEkiniSoy(sozcuk) === kategoriKok);
+}
 
 // Genel amaçlı çok hücreli sıralı okuma bileşeni.
 // Her öge bir kelime/ifadedir; içindeki hücreler "hücre adımlama" modunda
@@ -140,32 +167,29 @@ export default function CokHucreOkuyucu({
       return kompozisyon ? `${kompozisyon} oluşur.` : '';
     };
 
+    // Kapanış cümlesi TEKİL/ÇOĞUL: tek nokta → "Lütfen bu noktaya dokunun." (sırayla YOK).
+    const kapanisMetni = dokunmaKapanisi(hucreler);
+
     // tamYonergeMetni varsa onu kullan; ama noktalariSeslendir (kısaltma sayfaları) ise
     // nokta kompozisyonunu SONA EKLE — yoksa yönerge yalnız açıklamayı söyleyip noktaları
     // söylemeden bırakıyordu (kullanıcı: "kısaltmalarda ilk hücre söylenip bırakılıyor").
     if (oge.tamYonergeMetni) {
       if (!noktalariSeslendir) return oge.tamYonergeMetni;
       const komp = noktaKompozisyonMetni();
-      return `${oge.tamYonergeMetni} ${komp} Lütfen bu noktalara sırayla dokunun.`.replace(/\s+/g, ' ').trim();
+      return `${oge.tamYonergeMetni} ${komp} ${kapanisMetni}`.replace(/\s+/g, ' ').trim();
     }
 
     // Sembol öğretme modu (kategoriAdi verilmişse — eski DesenOgretici davranışı)
     if (kategoriAdi) {
       const ttsBaşlık = oge.ttsYazi || oge.yazi || '';
-      // ⚠ "İşareti" tekrarı: veri adı "Büyük Harf İşareti" (büyük İ), kategoriAdi "işareti"
-      // (küçük i). endsWith büyük/küçük harfe DUYARLI → eşleşmeyip " işareti" ekliyordu →
-      // "Büyük Harf İşareti işareti" (kullanıcı: "işaret ifadesi tekrarlanıyor, bir kez yeterli").
-      // Türkçe locale ile küçük harfe çevirip karşılaştır (düz toLowerCase "İ"yi bozar).
-      const ttsKucuk = ttsBaşlık.trimEnd().toLocaleLowerCase('tr');
-      const kategoriKucuk = kategoriAdi.toLocaleLowerCase('tr');
-      const adKategori = ttsKucuk.endsWith(kategoriKucuk)
+      const adKategori = kategoriTekrariVarMi(ttsBaşlık, kategoriAdi)
         ? ttsBaşlık
         : `${ttsBaşlık} ${kategoriAdi}`;
       const anlamKismi = oge.anlam ? ` ${oge.anlam}` : '';
       const aciklamaKismi = oge.aciklama ? ` ${oge.aciklama}` : '';
       if (noktalariSeslendir) {
         const komp = noktaKompozisyonMetni();
-        return `${adKategori},${anlamKismi}${aciklamaKismi} ${komp} Lütfen bu noktalara sırayla dokunun.`.replace(/\s+/g, ' ').trim();
+        return `${adKategori},${anlamKismi}${aciklamaKismi} ${komp} ${kapanisMetni}`.replace(/\s+/g, ' ').trim();
       }
       // detay: açıklama (yonergeDetay) + DAİMA okunabilir nokta kompozisyonu.
       // ⚠ Çoğu sembol sayfasının açıklaması ya hiç nokta demiyor (ör. ölçü "mm harfleriyle
@@ -186,15 +210,19 @@ export default function CokHucreOkuyucu({
       const detay = detayHam
         ? (zatenSozluNokta || hucresiz ? detayHam : `${detayHam} ${noktaMetni}`)
         : noktaMetni;
-      const kapanis = hucresiz ? '' : ' Lütfen bu noktalara sırayla dokunun.';
+      const kapanis = hucresiz ? '' : ` ${kapanisMetni}`;
       return `${adKategori},${anlamKismi}${aciklamaKismi} ${detay}${kapanis}`.replace(/\s+/g, ' ').trim();
     }
 
     // Kelime okuma modu (eski CokHucreOkuyucu davranışı)
     let hucreYonergesi;
     if (yonergeFormati === 'sirayla') {
+      // ⚠ Tek noktada "sırayla" DÜŞER (tek noktanın sırası olmaz); `noktaListesi` zaten
+      // "1. noktaya" / "1. ve 2. noktalara" tekil-çoğul uyumunu kendisi kurar.
       const dokunYonergesi = ilkHucre.length
-        ? `Lütfen sırayla ${noktaListesi(ilkHucre, 'ya', 'a')} dokununuz.`
+        ? (ilkHucre.length === 1
+            ? `Lütfen ${noktaListesi(ilkHucre, 'ya', 'a')} dokununuz.`
+            : `Lütfen sırayla ${noktaListesi(ilkHucre, 'ya', 'a')} dokununuz.`)
         : 'Lütfen noktalarına dokununuz.';
       hucreYonergesi = cokHucre
         ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${dokunYonergesi}`
@@ -942,8 +970,12 @@ export default function CokHucreOkuyucu({
           </div>
         )}
         {/* Kelime/ifade yazısı — Tab ile odaklanabilir (kullanıcı: "tab bu bölümlere de
-            odaklanabilmeli"): ekran okuyucu kelimenin üstüne gelince o dilde (lang) okur. */}
-        <div
+            odaklanabilmeli"): ekran okuyucu kelimenin üstüne gelince o dilde (lang) okur.
+            ⚠ h3 (kullanıcı: "braille öğreniyorum h1, noktalama işaretleri h2, nokta h3"):
+            uygulama adı h1 → sayfa başlığı h2 (PageHeader) → o anki öğe h3. Böylece NVDA
+            "H" ile başlıklar arasında gezinirken doğrudan öğeye atlanabilir. Görünüm
+            DEĞİŞMEZ: fontSize/fontWeight/margin zaten inline veriliyor, UA h3 stilini ezer. */}
+        <h3
           tabIndex={0}
           lang={rtl ? 'ar' : (yabanciDil || undefined)}
           style={{
@@ -961,7 +993,7 @@ export default function CokHucreOkuyucu({
           }}
         >
           {k.yazi}
-        </div>
+        </h3>
 
         <span ref={dotSentinelRef} tabIndex={-1} aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', outline: 'none', pointerEvents: 'none' }} />
 

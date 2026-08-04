@@ -28,7 +28,7 @@ export default function YabanciBrailleSayfa({ dil }) {
       kategoriAdi="işareti"
       bolumAnahtari={bolum.ilerlemeAnahtari}
       seslendirmeDili={dil}
-      bittiMesaji="Tebrikler! Tüm öğeleri tamamladınız."
+      bittiMesaji={`Tebrikler! ${bolum.kisaBaslik} bölümünü tamamladınız.`}
     />
   );
 }

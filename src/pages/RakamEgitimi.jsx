@@ -1,7 +1,7 @@
 import React from 'react';
 import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import { RAKAMLAR } from '../data/braille.js';
-import { nlDan as nl } from '../utils/noktaYardimci.js';
+import { nlDan as nl, dokunmaKapanisi } from '../utils/noktaYardimci.js';
 
 const SAYI_ISARETI = [3, 4, 5, 6];
 
@@ -18,7 +18,7 @@ export default function RakamEgitimi() {
       hucreAriaEtiketleri: ['sayı işareti', `${r.rakam} rakam hücresi`],
       hucreAdlari: ['sayı işareti hücresi', 'rakam hücresi'],
       ...(i === 0
-        ? { tamYonergeMetni: `${INTRO} ${r.rakam} rakamı, ${detay} Lütfen bu noktalara sırayla dokunun.` }
+        ? { tamYonergeMetni: `${INTRO} ${r.rakam} rakamı, ${detay} ${dokunmaKapanisi([SAYI_ISARETI, r.noktalar])}` }
         : { yonergeDetay: detay }),
     };
   });

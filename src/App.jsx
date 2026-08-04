@@ -4,7 +4,6 @@ import AnaMenu from './pages/AnaMenu.jsx';
 import HucreTanima from './pages/HucreTanima.jsx';
 import HarfEgitimi from './pages/HarfEgitimi.jsx';
 import RakamEgitimi from './pages/RakamEgitimi.jsx';
-import NoktalamaEgitimi from './pages/NoktalamaEgitimi.jsx';
 import Test from './pages/Test.jsx';
 import Ayarlar from './pages/Ayarlar.jsx';
 import YazmaEgitimi from './pages/YazmaEgitimi.jsx';
@@ -180,7 +179,6 @@ export default function App() {
           <Route path="/hucre" element={<HucreTanima />} />
           <Route path="/harfler" element={<HarfEgitimi />} />
           <Route path="/rakamlar" element={<RakamEgitimi />} />
-          <Route path="/noktalama" element={<NoktalamaEgitimi />} />
           <Route path="/test" element={<Test />} />
           <Route path="/yazma-egitim" element={<YazmaEgitimi />} />
           <Route path="/yazma-yonergeli" element={<YazmaYonergeli />} />

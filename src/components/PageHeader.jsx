@@ -29,7 +29,14 @@ export default function PageHeader({ baslik }) {
           </svg>
         </span>
       </button>
-      <h1
+      {/* ⚠ BAŞLIK HİYERARŞİSİ (kullanıcı: "braille öğreniyorum h1, noktalama işaretleri h2,
+          nokta h3 olması daha makbul olur"): h1 = uygulama adı (DesktopShell banner'ı),
+          h2 = sayfa başlığı (burası), h3 = o anki öğe (CokHucreOkuyucu `yazi`).
+          ⚠ DesktopShell banner'ı `.ds-header { display: none }` ile <900px'de GİZLİ →
+          mobilde sayfada h1 KALMAZDI. Bu sr-only h1 boşluğu doldurur; ≥900px'de CSS ile
+          gizlenir (bkz. .sayfa-uygulama-basligi) → her genişlikte TAM BİR h1 olur. */}
+      <h1 className="sayfa-uygulama-basligi">Braille Öğreniyorum</h1>
+      <h2
         className="banner-baslik"
         style={{
           margin: 0,
@@ -41,7 +48,7 @@ export default function PageHeader({ baslik }) {
         title={baslik}
       >
         {baslik}
-      </h1>
+      </h2>
       <div className="header-aksiyon">
         {/* Braille arama — mobilde shell banner gizli olduğundan arama buraya da gelir;
             masaüstünde banner'da zaten var → CSS ile (.ds-wrapper .header-bar .arama-btn) gizlenir. */}

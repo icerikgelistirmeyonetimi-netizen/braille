@@ -435,6 +435,27 @@ function duzeltmeliHarfBilgisi(ch) {
   return null;
 }
 
+/**
+ * Tek bir karakterin braille hücre DİZİSİ — yönergeli yazma sayfaları (Modül 4) bunu
+ * "beklenen hücreler" olarak kullanır, böylece ders encoder ile (`metniBrailleyeCevir`)
+ * BİREBİR aynı yazımı ister.
+ * - Normal harf / noktalama → tek hücre: `[[1,2,5]]`
+ * - Şapkalı ünlü (â î û ô ê) ve yabancı harf (q w x) → İKİ hücre:
+ *   düzeltme-yabancı harf işareti `[4]` + temel harf, ör. 'â' → `[[4],[1]]`
+ * - Boşluk veya tanınmayan karakter → `[]`
+ * ⚠ Büyük harf işareti EKLENMEZ: yönergeli yazma büyük/küçük harfe duyarsız karşılaştırır.
+ */
+export function karakterHucreleri(ch) {
+  if (!ch || ch === ' ') return [];
+  const dogrudan = HARF_TABLO.get(ch.toLocaleUpperCase('tr'));
+  if (dogrudan) return [dogrudan];
+  const duzeltmeli = duzeltmeliHarfBilgisi(ch);
+  if (duzeltmeli) return [[...DUZELTME_YABANCI_HARF_ISARETI], duzeltmeli.noktalar];
+  const nokta = NOKTA_TABLO.get(ch);
+  if (nokta) return [nokta];
+  return [];
+}
+
 function harfMi(ch) {
   return !!ch && (HARF_TABLO.has(ch.toLocaleUpperCase('tr')) || duzeltmeliHarfBilgisi(ch) !== null);
 }

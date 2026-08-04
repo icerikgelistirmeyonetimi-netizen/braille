@@ -491,7 +491,8 @@ export const MODULLER = [
       { yol: '/hucre',     baslik: 'Hücreyi Tanı',         ikon: Ikon.hucre },
       { yol: '/harfler',   baslik: 'Harf Eğitimi',          ikon: Ikon.harf,     anahtar: 'harfler',   toplam: 29 },
       { yol: '/rakamlar',  baslik: 'Rakam Eğitimi',         ikon: Ikon.rakam,    anahtar: 'rakamlar',  toplam: 10 },
-      { yol: '/noktalama', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalama, anahtar: 'noktalama', toplam: 8 },
+      // Noktalama Modül 3'te (`/noktalama-isaretleri`, kurallar + örneklerle) tam olarak
+      // işleniyor; Modül 1'deki ince kopya kullanıcı isteğiyle kaldırıldı.
       { yol: '/test',      baslik: 'Test / Sınav',          ikon: Ikon.test }
     ]
   },
@@ -517,7 +518,7 @@ export const MODULLER = [
     altBaslik: 'Noktalama ve Özel İşaretler',
     ikon: Ikon.modul4,
     ogeler: [
-      { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul, anahtar: 'noktalama-isaretleri', toplam: 15 },
+      { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul, anahtar: 'noktalama-isaretleri', toplam: 16 },
       { yol: '/ozel-isaretler',       baslik: 'Diğer Özel İşaretler',  ikon: Ikon.ozelIsaret,     anahtar: 'ozel-isaretler',       toplam: 11 },
       { yol: '/test-noktalama',       baslik: 'Test / Sınav',           ikon: Ikon.test }
     ]

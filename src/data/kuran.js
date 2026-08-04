@@ -126,7 +126,7 @@ export const ELIF_ZAID = [
 export const HEMZELER = [
   {
     isaret: 'أ', ad: 'Hemze-elif', okunus: '',
-    noktalar: [4],
+    noktalar: [3, 4],
     aciklama: ''
   },
   {

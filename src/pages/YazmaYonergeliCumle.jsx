@@ -3,7 +3,8 @@ import PageHeader from '../components/PageHeader.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
 import { indeksKaydet } from '../utils/ilerleme.js';
-import { HARFLER, NOKTALAMA } from '../data/braille.js';
+import { HARFLER } from '../data/braille.js';
+import { karakterHucreleri } from '../utils/brailleCevir.js';
 import { YAZMA_CUMLELERI } from '../data/yazmaCumleleri.js';
 
 // Yönergeli cümle yazma — ilkokul 1. ve 2. sınıf seviyesi.
@@ -12,23 +13,23 @@ import { YAZMA_CUMLELERI } from '../data/yazmaCumleleri.js';
 
 const CUMLELER = YAZMA_CUMLELERI;
 
+// Beklenen hücreler `karakterHucreleri` ile türetilir (YazmaYonergeli ile AYNI mantık —
+// ikisini birlikte güncelle). ⚠ Şapkalı ünlü (â î û ô ê) ve yabancı harf (q w x) İKİ
+// hücredir: düzeltme işareti [4] + temel harf; bu yüzden karakter içinde `hucreAdimi` tutulur.
 const NOKTA_TUS = { 1: 'F', 2: 'D', 3: 'S', 4: 'J', 5: 'K', 6: 'L' };
-function karakterinNoktalari(ch) {
-  if (!ch) return [];
-  if (ch === ' ') return [];
-  const ust = ch.toLocaleUpperCase('tr');
-  const h = HARFLER.find((x) => x.harf === ust);
-  if (h) return h.noktalar;
-  const n = NOKTALAMA.find((x) => x.isaret === ch);
-  if (n) return n.noktalar;
-  return [];
-}
+const DUZELTME_ETIKETI = 'Düzeltme işareti';
+
+const ayniHucre = (a, b) => a.length === b.length && a.every((n) => b.includes(n));
+
+const noktalardanHarf = (noktalar) =>
+  HARFLER.find((h) => ayniHucre(h.noktalar, noktalar))?.harf;
 
 export default function YazmaYonergeliCumle() {
   const [cumleIdx, setCumleIdx] = useState(0);
 
   useEffect(() => { indeksKaydet('yazma-yonergeli-cumle', cumleIdx); }, [cumleIdx]);
   const [konum, setKonum] = useState(0);
+  const [hucreAdimi, setHucreAdimi] = useState(0); // çok hücreli karakterde kaçıncı hücre
   const [hataSayisi, setHataSayisi] = useState(0);
   const [karakterDeneme, setKarakterDeneme] = useState(0);
   const [ipucuGoster, setIpucuGoster] = useState(false);
@@ -37,7 +38,18 @@ export default function YazmaYonergeliCumle() {
   const cumle = CUMLELER[cumleIdx];
   const yazilan = cumle.slice(0, konum);
   const beklenen = cumle[konum];
-  const beklenenNoktalar = karakterinNoktalari(beklenen);
+  const beklenenHucreler = karakterHucreleri(beklenen);
+  const cokHucreli = beklenenHucreler.length > 1;
+  const adim = Math.min(hucreAdimi, Math.max(0, beklenenHucreler.length - 1));
+  const beklenenNoktalar = beklenenHucreler[adim] || [];
+
+  const adimEtiketi = (i = adim) => {
+    if (!beklenen) return '';
+    if (!cokHucreli) return `${beklenen.toLocaleUpperCase('tr')} karakteri`;
+    if (i === 0) return DUZELTME_ETIKETI;
+    const h = noktalardanHarf(beklenenHucreler[i] || []);
+    return h ? `${h} harfi` : 'temel harf';
+  };
 
   const yardimMetni = () => {
     if (!beklenen || beklenen === ' ') {
@@ -46,8 +58,17 @@ export default function YazmaYonergeliCumle() {
     if (beklenenNoktalar.length === 0) return '';
     const nk = beklenenNoktalar.join(', ');
     const tuslar = beklenenNoktalar.map((n) => NOKTA_TUS[n]).join(' ve ');
-    return `${beklenen.toLocaleUpperCase('tr')} karakteri için ${nk} numaralı noktalara, ` +
+    return `${adimEtiketi()} için ${nk} numaralı noktalara, ` +
            `klavyede ${tuslar} tuşlarına aynı anda parmaklarınızla basıp birlikte bırakın.`;
+  };
+
+  const cokHucreYonergesi = () => {
+    const sonAdimEtiketi = adimEtiketi(beklenenHucreler.length - 1);
+    if (adim === 0) {
+      return `"${beklenen}" harfi iki hücreyle yazılır: önce ${DUZELTME_ETIKETI.toLocaleLowerCase('tr')}, ` +
+             `sonra ${sonAdimEtiketi}. Şimdi ${DUZELTME_ETIKETI.toLocaleLowerCase('tr')}ni yazın.`;
+    }
+    return `${DUZELTME_ETIKETI} yazıldı. Şimdi ${sonAdimEtiketi} için noktalara basın.`;
   };
 
   const yonerge = () => {
@@ -57,10 +78,15 @@ export default function YazmaYonergeliCumle() {
                ? 'Sonraki cümleye geçmek için Onay düğmesine basın.'
                : 'Tüm cümleleri tamamladınız.');
     }
-    if (konum === 0) {
+    if (konum === 0 && adim === 0) {
       return `Şu cümleyi yazın: ${cumle}. ` +
              `Lütfen "${beklenen === ' ' ? 'boşluk' : beklenen}" karakteriyle başlayın. ` +
-             `Bir karakteri yazmak için, o karakterin nokta düğmelerine aynı anda parmaklarınızla basıp birlikte bırakın.`;
+             (cokHucreli
+               ? cokHucreYonergesi()
+               : 'Bir karakteri yazmak için, o karakterin nokta düğmelerine aynı anda parmaklarınızla basıp birlikte bırakın.');
+    }
+    if (cokHucreli) {
+      return (adim === 0 ? `Sıradaki karakter: ${beklenen}. ` : '') + cokHucreYonergesi();
     }
     return `Sıradaki karakter: ${beklenen === ' ' ? 'boşluk' : beklenen}. ` +
            `Noktalara aynı anda basıp birlikte bırakın.`;
@@ -75,17 +101,19 @@ export default function YazmaYonergeliCumle() {
       konusmayiDurdur();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cumleIdx, konum]);
+  }, [cumleIdx, konum, hucreAdimi]); // hucreAdimi: çok hücreli karakterin 2. adımı da duyurulsun
 
   useEffect(() => {
     setKarakterDeneme(0);
     setIpucuGoster(false);
+    setHucreAdimi(0);
   }, [konum, cumleIdx]);
 
   const ileriCumle = () => {
     if (cumleIdx < CUMLELER.length - 1) {
       setCumleIdx((i) => i + 1);
       setKonum(0);
+      setHucreAdimi(0);
       setHataSayisi(0);
       durumRef.current = yeniYazmaDurumu();
     }
@@ -103,8 +131,39 @@ export default function YazmaYonergeliCumle() {
     });
   };
 
+  const karakteriTamamla = (anons) => {
+    konus(anons, { kesintiyle: true });
+    setHucreAdimi(0);
+    setKonum((k) => k + 1);
+    if (konum + 1 >= cumle.length) {
+      setTimeout(() => basariBildir('Cümleyi tamamladınız.'), 600);
+    }
+  };
+
   const onHucre = (noktalar) => {
     if (!beklenen) return;
+
+    // ÇOK HÜCRELİ karakter (â/q/w…): hücreleri HAM karşılaştır — `hucreyiIsle` [4] gibi bir
+    // işaret hücresini "bilinmeyen" sayar ve durumRef'i (sayı/büyük harf modu) kirletirdi.
+    if (cokHucreli) {
+      const hedef = beklenenHucreler[adim] || [];
+      if (ayniHucre(hedef, noktalar)) {
+        if (adim + 1 < beklenenHucreler.length) {
+          konus(adimEtiketi(adim), { kesintiyle: true });
+          setHucreAdimi(adim + 1);
+        } else {
+          karakteriTamamla(beklenen);
+        }
+      } else {
+        hataBildir(
+          `Yanlış. ${adimEtiketi()} için ${hedef.join(', ')} numaralı noktalar gerekiyor, ` +
+          `siz ${noktalar.length ? noktalar.join(', ') : 'hiçbir'} noktaya bastınız.`
+        );
+        yanlisKaydet();
+      }
+      return;
+    }
+
     const r = hucreyiIsle(durumRef.current, noktalar);
     if (r.tip === 'isaret') {
       konus(r.anons);
@@ -121,11 +180,7 @@ export default function YazmaYonergeliCumle() {
     const yazilanCh = r.deger;
     const eslesti = yazilanCh.toLocaleLowerCase('tr') === beklenen.toLocaleLowerCase('tr');
     if (eslesti) {
-      konus(yazilanCh, { kesintiyle: true });
-      setKonum((k) => k + 1);
-      if (konum + 1 >= cumle.length) {
-        setTimeout(() => basariBildir('Cümleyi tamamladınız.'), 600);
-      }
+      karakteriTamamla(yazilanCh);
     } else {
       hataBildir(
         `Yanlış. ${yazilanCh.toLocaleUpperCase('tr')} karakterini yazdınız, ` +
@@ -149,6 +204,12 @@ export default function YazmaYonergeliCumle() {
   };
 
   const onSil = () => {
+    // Çok hücreli karakterin ortasındaysak önce o karakterin adımını geri al.
+    if (adim > 0) {
+      setHucreAdimi(adim - 1);
+      konus('silindi', { kesintiyle: true });
+      return;
+    }
     if (konum > 0) {
       setKonum((k) => k - 1);
       konus('silindi', { kesintiyle: true });
@@ -157,6 +218,7 @@ export default function YazmaYonergeliCumle() {
 
   const yenidenBasla = () => {
     setKonum(0);
+    setHucreAdimi(0);
     setHataSayisi(0);
     setKarakterDeneme(0);
     setIpucuGoster(false);
@@ -218,6 +280,8 @@ export default function YazmaYonergeliCumle() {
           vurguNoktalar={ipucuGoster ? beklenenNoktalar : []}
           klavyeIpucu={ipucuGoster}
           anindaDokunma
+          // ⚠ Fiziksel klavyeyi yalnız inline klavye yakalasın — bkz. YazmaYonergeli.jsx
+          klavyeAcik={false}
         />
       </div>
     </div>

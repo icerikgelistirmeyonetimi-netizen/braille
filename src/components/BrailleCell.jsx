@@ -66,17 +66,15 @@ export default function BrailleCell({
     5: { gridRow: 2, gridColumn: 2 },
     6: { gridRow: 3, gridColumn: 2 },
   };
-  // Tablet (yazım yüzü) yerleşimi: dot 1-2-3 sağ sütun, 4-5-6 sol sütun
-  // (fiziksel tabletteki punch konumlarına uyacak şekilde mirror)
-  const noktaGridYerlesimiAyna = {
-    1: { gridRow: 1, gridColumn: 2 },
-    2: { gridRow: 2, gridColumn: 2 },
-    3: { gridRow: 3, gridColumn: 2 },
-    4: { gridRow: 1, gridColumn: 1 },
-    5: { gridRow: 2, gridColumn: 1 },
-    6: { gridRow: 3, gridColumn: 1 },
-  };
-  const noktaGridYerlesimi = aynaliEtiket ? noktaGridYerlesimiAyna : noktaGridYerlesimiStd;
+  // ⚠⚠ YERLEŞİM AYNALAMASI YOK — `aynaliEtiket` grid sütunlarını DEĞİŞTİRMEZ (kullanıcı:
+  // "metin→brf sayfasında aynalama tablet modunda doğru yapılmıyor"). Çağıranlar dot
+  // fill'ini ZATEN `tabletDelikAynala` ile aynalayıp verir ([1] → [4]); burada grid'i de
+  // çevirmek İKİNCİ bir aynalama olur ve ikisi birbirini götürürdü → tablet modu normal
+  // modla birebir aynı görünüyordu (tarayıcıda ölçüldü: 'a' iki modda da SOL sütun).
+  // Yerleşim daima standart: aynalanmış [4] doğal olarak SAĞ sütunda çizilir = tabletteki
+  // delik konumu. Bayrak YALNIZ görünür/duyulur ETİKET numarasını çevirir (dot 4 → "1"),
+  // böylece kullanıcı sağdaki deliği mantıksal "1. nokta" olarak okur.
+  const noktaGridYerlesimi = noktaGridYerlesimiStd;
   const AYNA_HARITASI = { 1: 4, 2: 5, 3: 6, 4: 1, 5: 2, 6: 3 };
   const etiketGoster = (n) => (aynaliEtiket ? AYNA_HARITASI[n] : n);
   const sonOkunan = useRef(null);
@@ -130,6 +128,40 @@ export default function BrailleCell({
 
   const noktayiBirak = () => {
     sonOkunan.current = null;
+  };
+
+  // ── Alt + yön okları: hücre İÇİNDE noktalar arası gezinme ─────────────────────
+  // (kullanıcı: "tüm braille hücre sayfalarında alt + yön oklarıyla ileri geri
+  //  gezinebilmeliyim. 1den 4e alt sağ ok ile gidebilmeliyim mesela")
+  // Yerleşim 1 4 / 2 5 / 3 6 → sağ/sol SÜTUN, yukarı/aşağı SATIR değiştirir.
+  // ⚠ DÜZ ok tuşları KULLANILMAZ: NVDA tarama (browse) modunda okları kendi sanal
+  //   imleci için tüketir; Alt+ok o gezinmeyle çakışmaz.
+  // ⚠ Alt+Sol / Alt+Sağ tarayıcıda GERİ / İLERİ demektir → `preventDefault` ŞART
+  //   (kenardayken bile), yoksa kullanıcı noktalar arasında gezinirken sayfadan çıkar.
+  // Komşu, sabit tablo yerine YERLEŞİMDEN türetilir → grid değişirse gezinme de uyar.
+  const YON_ADIMI = {
+    ArrowRight: { satir: 0, sutun: 1 },
+    ArrowLeft: { satir: 0, sutun: -1 },
+    ArrowDown: { satir: 1, sutun: 0 },
+    ArrowUp: { satir: -1, sutun: 0 },
+  };
+
+  const noktaKlavye = (e, n) => {
+    const adim = YON_ADIMI[e.key];
+    if (!e.altKey || !adim) return;
+    e.preventDefault();
+    const su = noktaGridYerlesimi[n];
+    if (!su) return;
+    const hedef = NOKTA_DOM_SIRA.find((m) => {
+      const y = noktaGridYerlesimi[m];
+      return y && y.gridRow === su.gridRow + adim.satir
+        && y.gridColumn === su.gridColumn + adim.sutun;
+    });
+    if (!hedef) return; // kenar: odak yerinde kalır
+    const el = e.currentTarget.closest('.cell')?.querySelector(`[data-nokta="${hedef}"]`);
+    // Odak taşımak yeterli: dot'un onFocus'u numarayı söyler (app TTS),
+    // ekran okuyucu da aria-label'i ("N. nokta, durum") okur.
+    if (el && typeof el.focus === 'function') el.focus();
   };
 
   // Odak hücre dışına çıkınca sıfırla: tekrar girişte hücre adı yeniden söylensin.
@@ -236,7 +268,8 @@ export default function BrailleCell({
                       type: 'button',
                       onClick: () => onNoktaTikla && onNoktaTikla(n),
                       onMouseEnter: () => noktaUzerinde(n),
-                      onFocus: () => noktaUzerinde(n)
+                      onFocus: () => noktaUzerinde(n),
+                      onKeyDown: (e) => noktaKlavye(e, n)
                     }
                   : kesfedilebilir
                     ? {

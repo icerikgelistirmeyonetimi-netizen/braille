@@ -7,7 +7,7 @@
 //   hucreler : sırayla yazılması beklenen braille hücreleri (her biri nokta dizisi)
 
 import {
-  HARFLER, RAKAMLAR, NOKTALAMA,
+  HARFLER, RAKAMLAR,
   KELIME_KISALTMALARI, IKI_HARFLI_KISALTMALAR, HECE_KISALTMALARI,
   KELIME_KOKU_KISALTMALARI, KELIME_PARCASI_KISALTMALARI,
   NOKTALAMA_ISARETLERI, OZEL_ISARETLER
@@ -64,16 +64,8 @@ const KAYNAKLAR = {
       hucreler: tek(r.noktalar)
     }))
   },
-  '/noktalama': {
-    yol: '/noktalama',
-    baslik: 'Noktalama',
-    etiketTuru: 'noktalama',
-    items: NOKTALAMA.map((n) => ({
-      etiket: n.isaret,
-      ariaAd: n.isim,
-      hucreler: tek(n.noktalar)
-    }))
-  },
+  // '/noktalama' (Modül 1) KALDIRILDI — ders Modül 3'e devredildi
+  // ('/noktalama-isaretleri' kaydı aşağıda).
   // --- Modül 3 ---
   '/kisaltma-bir-harfli': {
     yol: '/kisaltma-bir-harfli',

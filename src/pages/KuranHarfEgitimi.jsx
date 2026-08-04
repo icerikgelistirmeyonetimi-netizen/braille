@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import CokHucreOkuyucu from '../components/CokHucreOkuyucu.jsx';
 import SesIzinEkrani from '../components/SesIzinEkrani.jsx';
 import { KURAN_HARFLERI } from '../data/kuran.js';
+import { nlDan, dokunmaKapanisi } from '../utils/noktaYardimci.js';
 import {
   kuranHarfSesIdAl,
   kuranHarfSesUrlAl,
@@ -19,7 +20,11 @@ export default function KuranHarfEgitimi() {
     sesId: h.sesId ?? kuranHarfSesIdAl(h.ad),
     hucreler: [h.noktalar],
     aciklama: '',
-    tamYonergeMetni: `${h.noktalar.join(', ')} numaralı noktalardan oluşur. Lütfen numaralara sırayla dokunun.`,
+    // ⚠ İKİ hata düzeltildi: (1) HARF ADI yoktu — `tamYonergeMetni` verildiğinde kategoriAdi
+    // dalı çalışmaz, ad elle yazılmalı; kullanıcı hangi harfi yazdığını duymuyordu.
+    // (2) "1, 2 numaralı noktalardan" biçimi §11'de YASAK; `nlDan` ile "1. ve 2. noktalardan"
+    // (tüm modüllerle tutarlı, ekran okuyucu sıra sayısını doğru okur).
+    tamYonergeMetni: `${h.ad} harfi, ${nlDan(h.noktalar)} oluşur. ${dokunmaKapanisi(h.noktalar)}`,
   }));
 
   const harfSesiCal = useCallback((oge, opts = {}) => {
@@ -47,13 +52,15 @@ export default function KuranHarfEgitimi() {
     );
   }
 
+  // ⚠ bittiMesaji: "braillesi harflerini" ZİNCİRLİ İYELİK hatasıydı (iki ardışık iyelik eki,
+  // tamlayan belirsiz). "Kur'an-ı Kerim braille harfleri" = sıfat tamlaması + tek iyelik.
   return (
     <CokHucreOkuyucu
       baslik="Kur'an-ı Kerim: Harf Eğitimi"
       ogeler={ogeler}
       kategoriAdi="Kur'an harfi"
       bolumAnahtari="kuran-harfler"
-      bittiMesaji="Tebrikler! Kur'an-ı Kerim braillesi harflerini tamamladınız."
+      bittiMesaji="Tebrikler! Kur'an-ı Kerim braille harflerini tamamladınız."
       rtl
       ogeSesiCal={harfSesiCal}
       ogeSesiDurdur={kuranSesiniDurdur}
