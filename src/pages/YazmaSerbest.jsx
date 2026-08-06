@@ -264,22 +264,43 @@ export default function YazmaSerbest() {
     if (onceki) {
       if (kisaltmaSistemler.kok && kokIsaretiMi(onceki)) {
         const kok = kokAra(noktalar);
-        if (kok) return `${kok} kelime kökü`;
+        if (kok) return `${kok} kelime kökü kısaltması`;
       }
       if (kisaltmaSistemler.ikiHarf) {
         const iki = ikiHarfAra(onceki, noktalar);
         if (iki) return `${iki} kısaltması`;
       }
       if (kisaltmaSistemler.parca) {
+        // parcaAra ünlü uyumu varyantlarını virgülle döndürür ("ları, leri") —
+        // etikette ilk varyant yeter (kesin karşılık kelime etiketinde görünür).
         const parca = parcaAra(onceki, noktalar);
-        if (parca) return `${parca} eki`;
+        if (parca) return `${parca.split(',')[0].trim()} eki kısaltması`;
       }
     }
     if (kisaltmaSistemler.hece) {
       const hece = heceAra(noktalar);
-      if (hece) return `${hece} hecesi`;
+      if (hece) return `${hece} hece kısaltması`;
     }
     return null;
+  };
+
+  // Tek harfli kısaltma: hücre normal modda HARF olarak çözülür ("a") ama kısaltma
+  // modunda metne KELİME olarak girer ("aynı") → etiket de kısaltmayı söylemeli.
+  // Decoder kuralının aynısı: kelime BAŞINDA + kelimenin kalanı yok / yalnız noktalama
+  // ("var.") / [3] ek ayırma işareti ("v" + [3] + ek).
+  const birHarfKisaltmaAnonsu = (hucreler, idx) => {
+    if (!kisaltmaSistemler.birHarf) return null;
+    const kelime = birHarfAra(hucreler[idx]);
+    if (!kelime) return null;
+    if (idx > 0 && (hucreler[idx - 1] || []).length > 0) return null; // kelime başı değil
+    const kalan = [];
+    for (let i = idx + 1; i < hucreler.length && (hucreler[i] || []).length > 0; i++) {
+      kalan.push(hucreler[i]);
+    }
+    if (kalan.length === 0) return `${kelime} kısaltması`;
+    if (noktalariAnahtara(kalan[0]) === '3') return `${kelime} kısaltması`; // + ek
+    const hepsiNoktalama = kalan.every((h) => NOKTALAMA_ANONSLARI.has(noktalariAnahtara(h)));
+    return hepsiNoktalama ? `${kelime} kısaltması` : null;
   };
 
   const hucreAnonsuAt = (hucreler, idx) => {
@@ -294,6 +315,11 @@ export default function YazmaSerbest() {
       return ozel
         || (kisaltmaModu && kisaltmaHucreAnonsu(hucreler, idx))
         || 'tanımsız hücre';
+    }
+    // Harf/rakam çözüldü — ama kısaltma modunda bu hücre tek harfli kısaltma olabilir.
+    if (kisaltmaModu) {
+      const birHarf = birHarfKisaltmaAnonsu(hucreler, idx);
+      if (birHarf) return birHarf;
     }
     return r.anons;
   };
