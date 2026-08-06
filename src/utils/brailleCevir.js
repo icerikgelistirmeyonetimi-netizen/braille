@@ -2174,7 +2174,10 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     govdeBitis--;
   }
   if ((govdeBaslangic > 0 || govdeBitis < b.length) && govdeBaslangic < govdeBitis) {
-    const sol = noktalamaMetni(b.slice(0, govdeBaslangic));
+    // Düz-yazı paren [2,3,5,6] aç/kapa AYNI hücredir → yönü KONUM belirler:
+    // blok başındaki '(' , blok sonundaki ')' (NOKTA_TERS tek değer taşır).
+    const parenKonumlu = (metin, acilis) => metin.replace(/[()]/g, acilis ? '(' : ')');
+    const sol = parenKonumlu(noktalamaMetni(b.slice(0, govdeBaslangic)), true);
     const sagHucreler = b.slice(govdeBitis);
     const govdeTamamlandi = sagHucreler.some((hucre) => noktalariAnahtara(hucre) !== '3');
     const govde = _hucreBlokunuMetneCevirKisaltmali(
@@ -2183,7 +2186,7 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       sonrakiIlkHucre,
       govdeTamamlandi ? {} : opt
     );
-    const sag = noktalamaMetni(sagHucreler);
+    const sag = parenKonumlu(noktalamaMetni(sagHucreler), false);
     return `${sol}${kasala(govde)}${sag}`;
   }
 
@@ -2199,6 +2202,7 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
   const buf = [];
   let ci = 0;
   let sayiModu = false;
+  let siraSayiModu = false; // sıra sayısı modu (# + indirgenmiş rakam) — brfOkuyucu siraSM ikizi
   let ciftListeVirgulle = false;
   let cListeSonTekIsaretSonrasi = false;
   let buyukHarfBekle = bashCase === 'ilk';
@@ -2276,8 +2280,57 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     };
   };
 
+  // ── Matematik sembol desteği (brfOkuyucu brfMetinedonSistemi ile AYNI kurallar) ──
+  // Tek-hücreli matematik sembolü Türk harfleriyle çakışır (√=[1,4,6]=ş, %=y, (=ğ, |=l)
+  // → yalnız sayı modunda VEYA hemen ardından GERÇEK sayı ([3,4,5,6]+a–j) gelirse matematik.
+  const isAmbiguousMath = (isaret) => !!isaret && isaret.hucreler.length === 1;
+  // Küme işlemleri (∈ ∩ ∪ …) yalnız ardından SET ADI ([6]/[5,6]/[3,4,5,6]) gelirse geçerli;
+  // aksi halde [3] kesme işaretidir ("1922'de"→"1922∩" olmasın). bkz. CLAUDE.md §11 (4).
+  const KUME_ISLEMLERI_A = new Set(['alt küme', 'kapsar', 'birleşim', 'kesişim', 'fark', 'elemanıdır', 'küme açma']);
+  const RAKAM_KEYS_A = new Set(['1', '1,2', '1,4', '1,4,5', '1,5', '1,2,4', '1,2,4,5', '1,2,5', '2,4', '2,4,5']);
+  const anahKey = (h) => (h ? noktalariAnahtara(h) : '');
+  const gercekSayiBitisik = (h1, h2) => anahKey(h1) === '3,4,5,6' && RAKAM_KEYS_A.has(anahKey(h2));
+  // Sayı işaretinden önce SINIR sayılan hücreler (brfOkuyucu sayiIsaretiOncesiSinirMi ikizi):
+  // boşluk/büyük harf/noktalama + matematik operatörlerinin son hücreleri ('=' [2,3,5,6],
+  // '+' [2,6], '×' [2,3,6]…) → "5-3=2"de operatörden sonraki # sayıyı başlatabilsin.
+  const MAT_SINIR_A = new Set(['1,2', '1,2,6', '3,4,5', '3,4', '1,3,4,5,6', '1,3,5', '2,4,6',
+    '2,3,5,6', '3,4,6', '3,5,6', '1,4,6', '2,3,6', '2,6', '1,2,4', '1,5', '2,3,4,6', '2,4,5,6']);
+  const sinirMiA = (h) => (
+    !h || h.length === 0
+    || buyukHarfIsaretiMi(h)
+    || NOKTA_TERS.has(anahKey(h))
+    || MAT_SINIR_A.has(anahKey(h))
+    || anahKey(h) === '1,2,3'
+    || anahKey(h) === '4,5,6'
+  );
+  let kesmeBayrak = false; // önceki hücre APOSTROF (') yazıldı mı → sonraki [5,6]+harf LİTERAL ek
+
   while (ci < b.length) {
     const noktalar = b[ci];
+    const buKesme = kesmeBayrak; kesmeBayrak = false; // tek-shot
+    if (buKesme && anahKey(noktalar) === '5,6' && ci + 1 < b.length) {
+      const kesmeHarf = hucreyiKarakteryap(b[ci + 1]);
+      if (kesmeHarf && kesmeHarf !== ' ') { harfYaz(kesmeHarf); ci += 2; continue; }
+    }
+    const islemIsareti = matematikSembolHucreEslesmesi(b, ci);
+    if (islemIsareti) {
+      const islemSonu = ci + islemIsareti.hucreler.length;
+      const sonrakiSayiBitisik = sayiModu || gercekSayiBitisik(b[islemSonu], b[islemSonu + 1]);
+      const setAdiSonra = ['6', '5,6', '3,4,5,6'].includes(anahKey(b[islemSonu]));
+      const kumeReddi = KUME_ISLEMLERI_A.has(islemIsareti.ad) && !setAdiSonra;
+      if (!kumeReddi && (!isAmbiguousMath(islemIsareti) || sonrakiSayiBitisik)) {
+        buf.push(islemIsareti.sembol);
+        sayiModu = sayiModu && matematikIsaretiSayiModunuKorurMu(islemIsareti);
+        buyukHarfBekle = false;
+        tumKelimeBuyuk = false;
+        if (!sayiModu) {
+          ciftListeVirgulle = false;
+          cListeSonTekIsaretSonrasi = false;
+        }
+        ci = islemSonu;
+        continue;
+      }
+    }
     const tekHarf = tekHarfIsaretliOku(ci);
     if (tekHarf) {
       buf.push(tekHarf.metin);
@@ -2299,6 +2352,7 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       const sonraki = ci + 1 < b.length ? b[ci + 1] : null;
       if (sonraki && sayiIsaretiMi(sonraki)) {
         sayiModu = true;
+        siraSayiModu = false;
         ciftListeVirgulle = true;
         cListeSonTekIsaretSonrasi = false;
         ci += 2;
@@ -2307,14 +2361,22 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       const sonrakDigit = sonraki && hucreyiRakamayap(sonraki);
       const sonrakSira = sonraki && hucreyiSiraSayisiRakaminaCevir(sonraki);
       const kelimeBasi = ci === 0;
-      // sayiModu: sayı aralığında ("1233-1334") tireden sonra yeniden yazılan
-      // sayı işareti blok ortasındadır — sayı modu sürerken tüketilir.
-      if ((kelimeBasi || ciftListeVirgulle || sayiModu) && (sonrakDigit || sonrakSira)) {
+      const onceki = ci > 0 ? b[ci - 1] : null;
+      // KURAL (ki hecesi ↔ sayı işareti, bkz. kelimeIciSayiIsaretiKiMi): kelime içindeki
+      // [3,4,5,6], ardında yalnız indirgenmiş rakam varsa 'ki'dir → sayı açılmaz.
+      const kelimeIciKi = heceAktif && !sonrakDigit
+        && kelimeIciSayiIsaretiKiMi(b, ci, sinirMiA);
+      // sayiModu: aralıkta ("1233-1334") tireden sonra yeniden yazılan işaret; sinirMiA:
+      // operatör/noktalama sonrası ("5-3=2", "(3+5)") blok-ortası sayı başlangıcı.
+      if (!kelimeIciKi
+        && (kelimeBasi || ciftListeVirgulle || sayiModu || sinirMiA(onceki))
+        && (sonrakDigit || sonrakSira)) {
         if (ciftListeVirgulle) {
           ciftListeVirgulle = false;
           cListeSonTekIsaretSonrasi = true;
         }
         sayiModu = true;
+        siraSayiModu = !!sonrakSira && !sonrakDigit;
         ci++;
         continue;
       }
@@ -2332,26 +2394,27 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     }
 
     if (sayiModu) {
-      const rakam = hucreyiRakamayap(noktalar);
+      const rakam = !siraSayiModu ? hucreyiRakamayap(noktalar) : null;
       if (rakam) {
         buf.push(rakam);
         ci++;
         continue;
       }
       const bolukMu = noktalariAnahtara(noktalar) === '3';
-      if (bolukMu && ci + 1 < b.length && hucreyiRakamayap(b[ci + 1])) {
+      if (!siraSayiModu && bolukMu && ci + 1 < b.length && hucreyiRakamayap(b[ci + 1])) {
         buf.push('.');
         ci++;
         continue;
       }
       const kVirgulMu = noktalariAnahtara(noktalar) === '2';
-      if (kVirgulMu && ciftListeVirgulle) {
+      if (!siraSayiModu && kVirgulMu && ciftListeVirgulle) {
         buf.push(',');
         ci++;
         continue;
       }
       if (
-        kVirgulMu
+        !siraSayiModu
+        && kVirgulMu
         && !ciftListeVirgulle
         && ci + 1 < b.length
         && hucreyiRakamayap(b[ci + 1])
@@ -2360,9 +2423,11 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
         ci++;
         continue;
       }
+      // Sıra rakamları YALNIZ sıra modunda okunur (brfOkuyucu siraSM ikizi) —
+      // indirgenmiş desen noktalama ile çakışır (')'=[2,3,5,6]=7 "(3+5)" bozulurdu).
       let si = ci;
       let siraTxt = '';
-      while (si < b.length) {
+      while (siraSayiModu && si < b.length) {
         const sr = hucreyiSiraSayisiRakaminaCevir(b[si]);
         if (!sr) break;
         siraTxt += sr;
@@ -2374,6 +2439,7 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
         const kesmeMi = sonraH && noktalariAnahtara(sonraH) === '3';
         if (!kesmeMi) buf.push('.');
         sayiModu = false;
+        siraSayiModu = false;
         ci = si;
         continue;
       }
@@ -2395,6 +2461,7 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
         continue;
       }
       sayiModu = false;
+      siraSayiModu = false;
       if (cListeSonTekIsaretSonrasi) {
         cListeSonTekIsaretSonrasi = false;
         ciftListeVirgulle = false;
@@ -2435,10 +2502,13 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
           noktalamaKullan = true;
         }
       }
-      if (noktalamaKullan) buf.push(noktalama);
-      else harfYaz(heceKarsiligi);
+      if (noktalamaKullan) {
+        buf.push(noktalama);
+        if (anahtar === '3') kesmeBayrak = true; // apostrof → sonraki [5,6]+harf literal
+      } else harfYaz(heceKarsiligi);
     } else if (noktalama) {
       buf.push(noktalama);
+      if (anahtar === '3') kesmeBayrak = true;
     } else if (heceKarsiligi) {
       harfYaz(heceKarsiligi);
     } else {
