@@ -247,7 +247,12 @@ export default function AnaMenu() {
           )}
         </div>
 
-        <section className="modul-icerik" aria-label={`${modul?.baslik} bölümleri`}>
+        {/* ⚠ aria-label KOYMA (kullanıcı: "modül 6 seslendirmesi iki kere okunuyor, rahatsız
+            ediyor"): bölümün etiketi ("Modül 6 bölümleri") ile hemen içindeki h2 ("Modül 6 —
+            Matematik") aynı adı taşıyordu. SayfaOdakYonetimi odağı h2'ye verdiğinde NVDA önce
+            bölge etiketini, sonra başlığı okuyup modül adını İKİ KEZ söylüyordu. Adsız <section>
+            ARIA'da `region` landmark'ı OLMAZ → hiç duyurulmaz; başlık zaten bölümü adlandırıyor. */}
+        <section className="modul-icerik">
             <h2 ref={icerikBaslikRef} className="modul-icerik-baslik" tabIndex={-1}>{modul?.baslik} — {modul?.altBaslik}</h2>
             <nav className="menu-grid" aria-label={modul?.baslik}>
               {modul?.ogeler.map((m) => {

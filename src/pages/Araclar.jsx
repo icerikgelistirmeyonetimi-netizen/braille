@@ -6718,8 +6718,8 @@ export default function Araclar() {
                 setTabletModuAktif(yeniTablet);
               }}
               aria-pressed={tabletModuAktif}
-              aria-label={`Tablet modu ${tabletModuAktif ? 'açık' : 'kapalı'}`}
-              title={'Tablet modu (' + (tabletModuAktif ? 'açık' : 'kapalı') + `). Sayfa: ${TABLET_SATIR_HUCRE}×${TABLET_SAYFADA_SATIR} hücre (${TABLET_BRAILLE_SAYFA_BOYUTU}); satır başına ${TABLET_SATIR_HUCRE} hücre, sağdan sola; delik yönüne göre yansıtılmış nokta`}
+              aria-label={`Braille tablet modu ${tabletModuAktif ? 'açık' : 'kapalı'}`}
+              title={'Braille tablet modu (' + (tabletModuAktif ? 'açık' : 'kapalı') + `). Sayfa: ${TABLET_SATIR_HUCRE}×${TABLET_SAYFADA_SATIR} hücre (${TABLET_BRAILLE_SAYFA_BOYUTU}); satır başına ${TABLET_SATIR_HUCRE} hücre, sağdan sola; delik yönüne göre yansıtılmış nokta`}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
                 <rect x="3" y="5" width="18" height="14" rx="2" />

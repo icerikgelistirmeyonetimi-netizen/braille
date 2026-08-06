@@ -348,17 +348,19 @@ export default function CokluTest({
       </div>
 
       <div className="yazma-bolum yazma-bolum-orta">
-        <div
+        {/* h3 = o anki öğe (h1 uygulama / h2 sayfa hiyerarşisi) — NVDA "h" kısayoluyla erişilir. */}
+        <h3
           className="yazma-metin"
           aria-label={`Yazılacak: ${aktif.ariaAd || aktif.ad}`}
           style={{
             textAlign: 'center', fontSize: 'clamp(1.6em, 7vh, 3em)', lineHeight: 1, padding: '4px 8px', margin: 0,
+            fontWeight: 400,
             // Arapça içerik (Kur'an testi) için Amasya fontu.
             fontFamily: /[؀-ۿ]/.test(String(aktif.ad)) ? "'Amasya', 'Segoe UI', sans-serif" : undefined,
           }}
         >
           {aktif.ad}
-        </div>
+        </h3>
         {cokHucreli && (
           <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '1.05em' }}>
             {HUCRE_ETIKET[hucreIndeksi] || (hucreIndeksi + 1) + '.'} hücreyi yazın ({aktif.hucreler.length} hücreli)
