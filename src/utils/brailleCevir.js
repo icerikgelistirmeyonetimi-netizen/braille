@@ -1407,8 +1407,11 @@ import {
   KELIME_PARCASI_KISALTMALARI,
 } from '../data/braille.js';
 
-// Kelime sonunda kullanılamayan hece kısaltmaları (MEB kılavuzu)
-const HECE_SON_YASAK = new Set(['ba', 'be', 'bu', 'ka', 'ha', 'ki']);
+// Kelime sonunda kullanılamayan hece kısaltmaları (MEB kılavuzu).
+// 'ki' bu listede DEĞİL: kelimenin başında, ortasında ve sonunda kullanılabilir
+// (sanki, belki, peki); tek başına "ki" bağlacı da kısaltılır — yalnız hemen
+// ardından noktalama gelirse kısaltılmaz (bkz. metniBrailleyeCevirKisaltmali).
+const HECE_SON_YASAK = new Set(['ba', 'be', 'bu', 'ka', 'ha']);
 const TEK_HARF_EK_AYIRMA_ISARETI = [3];
 const TURKCE_UNLULER = new Set(['a', 'e', 'ı', 'i', 'o', 'ö', 'u', 'ü']);
 const YUMUSAYAN_IKI_HARFLI_KELIMELER = new Set([
@@ -2081,10 +2084,14 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
         ekle(BUYUK_HARF_ISARETI, -1);
       }
       const isleneKel = (tumuBuyuk || ilkHarfBuyuk) ? kucukKel : kel;
+      // KURAL: tek başına "ki" bağlacı kısaltılır; ancak hemen ardından
+      // noktalama işareti geliyorsa kısaltılmaz (harf harf yazılır).
+      const kiNoktalamaOncesi = kucukKel === 'ki'
+        && islenmisJetonlar[ti + 1]?.tip === 'noktalama';
       const hucreleri = kelimeyiKisaltmayaCevir(isleneKel, {
         buyukHarfIsareti,
         sayiIsareti,
-        hece: kelimeSistemleri.hece,
+        hece: kelimeSistemleri.hece && !kiNoktalamaOncesi,
         birHarf: kelimeSistemleri.birHarf,
         ikiHarf: kelimeSistemleri.ikiHarf,
         kok: kelimeSistemleri.kok,
