@@ -168,7 +168,11 @@ export default function App() {
 
   return (
     <div className="app">
-      <a href="#main" className="skip-link">İçeriğe atla</a>
+      {/* Hücre yazma (öğrenme) modu açıkken CokHucreOkuyucu buraya "Hücreye dön"
+          hayalet butonunu portallar → Ctrl+Home ile sayfa başına dönen NVDA
+          kullanıcısının bulduğu İLK öğe bu olur; etkinleştirince odak braille
+          hücresinin 1. noktasına gider. Slot DOM'un EN BAŞINDA kalmalı. */}
+      <div id="hucre-don-slot" />
       <SayfaOdakYonetimi />
       <main id="main">
         <DesktopShell>

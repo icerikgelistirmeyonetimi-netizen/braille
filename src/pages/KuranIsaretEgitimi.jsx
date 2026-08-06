@@ -43,6 +43,10 @@ export default function KuranIsaretEgitimi() {
   if (!bolum) return <Navigate to="/kuran-harfler" replace />;
   return (
     <CokHucreOkuyucu
+      // ⚠ key ŞART: tüm alt dersler aynı route'ta (/kuran-isaretler/:slug) — slug değişince
+      // remount olmazsa indeks state'i önceki dersin "bitti" değerinde kalır (kullanıcı:
+      // "sonraki içerik butonu sonraki içeriğin son kartına götürüyor").
+      key={slug}
       baslik={`Kur'an-ı Kerim: ${bolum.baslik}`}
       ogeler={ogeler}
       kategoriAdi={bolum.kategoriAdi}

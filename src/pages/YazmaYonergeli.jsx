@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
-import { indeksKaydet } from '../utils/ilerleme.js';
+import { indeksKaydet, indeksAl } from '../utils/ilerleme.js';
 import { HARFLER } from '../data/braille.js';
 import { karakterHucreleri } from '../utils/brailleCevir.js';
 import { YAZMA_KELIMELERI } from '../data/yazmaKelimeleri.js';
@@ -26,7 +26,12 @@ const noktalardanHarf = (noktalar) =>
   HARFLER.find((h) => ayniHucre(h.noktalar, noktalar))?.harf;
 
 export default function YazmaYonergeli() {
-  const [kelimeIdx, setKelimeIdx] = useState(0);
+  // Kaldığı yerden devam (kullanıcı isteği): kayıtlı indeks varsa oradan başla.
+  // Liste kısalmışsa taşmaya karşı clamp'lenir.
+  const [kelimeIdx, setKelimeIdx] = useState(() => {
+    const kayitli = indeksAl('yazma-yonergeli');
+    return kayitli > 0 && kayitli < KELIMELER.length ? kayitli : 0;
+  });
 
   useEffect(() => { indeksKaydet('yazma-yonergeli', kelimeIdx); }, [kelimeIdx]);
   const [konum, setKonum] = useState(0); // doğru yazılan karakter sayısı
@@ -237,6 +242,13 @@ export default function YazmaYonergeli() {
     durumRef.current = yeniYazmaDurumu();
   };
 
+  // İlk kelimeye dön: kayıtlı ilerleme de 0'a çekilir (kelimeIdx effect'i kaydeder).
+  const basaDon = () => {
+    setKelimeIdx(0);
+    yenidenBasla();
+    konus('Başa dönüldü. İlk kelimeden devam ediyorsunuz.', { kesintiyle: true });
+  };
+
   return (
     <div className="page yazma-page">
       <div className="yazma-bolum yazma-bolum-ust">
@@ -278,6 +290,14 @@ export default function YazmaYonergeli() {
       <div className="yazma-bolum yazma-bolum-alt">
         <div className="controls">
           <button className="btn" type="button" onClick={yenidenBasla}>Bu Kelimeyi Tekrar Yaz</button>
+          <button
+            className="btn"
+            type="button"
+            onClick={basaDon}
+            aria-label="Başa dön: ilk kelimeye dön"
+          >
+            Başa Dön
+          </button>
           {!beklenen && kelimeIdx < KELIMELER.length - 1 && (
             <button className="btn" type="button" onClick={ileriKelime}>Sonraki Kelime</button>
           )}

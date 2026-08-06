@@ -23,6 +23,10 @@ export default function YabanciBrailleSayfa({ dil }) {
   if (!bolum) return <Navigate to={menuYolu} replace />;
   return (
     <CokHucreOkuyucu
+      // ⚠ key ŞART: her dilin dersleri aynı route'ta (/{dil}/:slug) ve üç dil de AYNI bileşen —
+      // slug VEYA dil değişince (İngilizce son ders → Almanca ilk ders zinciri) remount olmazsa
+      // indeks önceki dersin "bitti" değerinde kalır (bkz. KuranIsaretEgitimi notu).
+      key={`${dil}-${slug}`}
       baslik={bolum.pageBaslik}
       ogeler={ogeler}
       kategoriAdi="işareti"

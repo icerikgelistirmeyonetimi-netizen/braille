@@ -208,6 +208,9 @@ export default function MuzikBrailleSayfa() {
 
   return (
     <CokHucreOkuyucu
+      // ⚠ key ŞART: tüm müzik dersleri aynı route'ta (/muzik/:slug) — slug değişince remount
+      // olmazsa indeks önceki dersin "bitti" değerinde kalır (bkz. KuranIsaretEgitimi notu).
+      key={slug}
       baslik={bolum.pageBaslik}
       ogeler={ogeler}
       bittiMesaji={`Tebrikler! ${bolum.kisaBaslik} bölümünü tamamladınız.`}

@@ -17,6 +17,9 @@ export default function KuranSureOkuma() {
   if (seciliSure) {
     return (
       <CokHucreOkuyucu
+        // ⚠ key: sûre seçimi rota değiştirmeden (state ile) yapılır — sûre değişince remount
+        // olmazsa indeks önceki sûrenin konumunda kalır (bkz. KuranIsaretEgitimi notu).
+        key={seciliSure.ad}
         baslik={`${seciliSure.ad} Sûresi`}
         ogeler={seciliSure.kelimeler}
         bittiMesaji={`Tebrikler! ${seciliSure.ad} sûresini tamamladınız.`}

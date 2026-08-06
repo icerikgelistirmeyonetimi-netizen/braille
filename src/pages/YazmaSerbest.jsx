@@ -280,9 +280,23 @@ export default function YazmaSerbest() {
     konus(hucreAnonsuAt(h, i), { kesintiyle: true });
   };
 
-  // Görünümdeki hücre butonunun erişilebilir adı: "3. hücre: a"
-  const hucreSecimEtiketi = (index) =>
-    `${index + 1}. hücre: ${hucreAnonsuAt(hucrelerRef.current, index)}`;
+  // Dolu noktaların özeti: "1 ve 2 numaralı noktalar" (BrailleCell pasifOzet ile aynı biçim).
+  const noktaOzeti = (noktalar) => {
+    const s = [...(noktalar || [])].sort((a, b) => a - b);
+    if (s.length === 0) return '';
+    const liste = s.length === 1 ? String(s[0]) : `${s.slice(0, -1).join(', ')} ve ${s[s.length - 1]}`;
+    return `${liste} numaralı ${s.length === 1 ? 'nokta' : 'noktalar'}`;
+  };
+
+  // Görünümdeki hücre butonunun erişilebilir adı: "2. hücre: b, 1 ve 2 numaralı noktalar".
+  // ⚠ İçerideki .cell role=img etiketi BUTONUN adına EKLENMEZ (aria-label içeriği ezer)
+  // → nokta bileşimi butonun kendi etiketinde taşınmalı (kullanıcı beklentisi).
+  const hucreSecimEtiketi = (index) => {
+    const noktalar = hucrelerRef.current[index];
+    const anlam = hucreAnonsuAt(hucrelerRef.current, index);
+    if (!noktalar || noktalar.length === 0) return `${index + 1}. hücre: boşluk`;
+    return `${index + 1}. hücre: ${anlam}, ${noktaOzeti(noktalar)}`;
+  };
 
   // Hücreye ODAKLANMAK/dokunmak yeter: imleç o hücrenin ARKASINA gelir → Sil o hücreyi
   // siler. Enter/Space hücrede ÖZEL işlem YAPMAZ — BrailleKlavye'nin global kısayolları

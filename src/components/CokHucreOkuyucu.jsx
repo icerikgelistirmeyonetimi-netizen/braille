@@ -1,4 +1,5 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import PageHeader from './PageHeader.jsx';
 import BrailleCell from './BrailleCell.jsx';
@@ -718,6 +719,13 @@ export default function CokHucreOkuyucu({
     return () => window.cancelAnimationFrame(rafId);
   }, [okumaModu, bitti]);
 
+  // "Hücreye dön" hayalet butonu App kökündeki #hucre-don-slot'a portallanır (kullanıcı:
+  // "Ctrl+Home ile içeriğin başına dönünce, hücre yazma açıksa, ilk bulunan hayalet buton
+  // 'hücreye dön' olsun ve hücreye konumlandırsın"). Slot App ile AYNI commit'te mount
+  // olduğundan render sırasında değil, mount SONRASI effect ile çözülür.
+  const [hucreDonSlot, setHucreDonSlot] = useState(null);
+  useEffect(() => { setHucreDonSlot(document.getElementById('hucre-don-slot')); }, []);
+
   // ⚠ Yönerge okunurken klavye ENGELLEME KALDIRILDI (kullanıcı: "yönerge bitmesini bekleyiniz ve
   // zorla bekletmeyi kaldıralım"): noktalar her an etkileşimli; Enter/Space/ok/Tab DOĞAL çalışır
   // (Tab, yönerge bölgesinden DOM sırasıyla ilk noktaya geçer). Eski "bitmesini bekleyiniz" toast'ı
@@ -858,6 +866,21 @@ export default function CokHucreOkuyucu({
     konusDil(mesaj, { srAtla: true });
   };
 
+  // Alt+ok kenar geçişi (step-through çok hücreli): odak + duyuru render SONRASI verilmeli.
+  // rAF DEĞİL effect kullanılır — (a) bu effect, srSiradakiNokta'yı temizleyen üstteki
+  // effect'ten SONRA bildirildiğinden aynı flush'ta duyuru temizliğin ÜZERİNE yazılır
+  // (rAF'ta sıra garanti değildi); (b) gizli/görünmez sekmede rAF hiç tetiklenmez.
+  const kenarGecisRef = useRef(null);
+  useEffect(() => {
+    const istek = kenarGecisRef.current;
+    if (!istek) return;
+    kenarGecisRef.current = null;
+    srDurumDuyur(`${istek.ad}.`);
+    const kok = dotSentinelRef.current?.parentElement;
+    kok?.querySelector(`.cell [data-nokta="${istek.nokta}"]`)?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hucreIndeksi]);
+
   const noktayaTikla = (n) => {
     if (basilanlar.includes(n)) return;
     if (n !== aktifNoktalar[basilanlar.length]) {
@@ -909,8 +932,23 @@ export default function CokHucreOkuyucu({
     }, 1500);
   };
 
+    // Ctrl+Home ile sayfa başına dönen ekran okuyucu kullanıcısı için hücreye hızlı dönüş:
+    // DOM'un EN BAŞINDAKİ slot'a hayalet buton portallanır (yalnız öğrenme modunda — okuma
+    // modu ve bitti ekranı bu return'e gelmez). Etkinleştirince odak hücrenin 1. noktasına.
+    const hucreyeDon = () => {
+      const kok = dotSentinelRef.current?.parentElement;
+      // ⚠ STANDART: hücrenin 1. (İLK) noktası — `button.dot.target` (ilk hedef) DEĞİL.
+      kok?.querySelector('button.dot')?.focus();
+    };
+
     return (
       <div className="page">
+        {hucreDonSlot && createPortal(
+          <button type="button" className="hayalet-btn hucre-don-btn" onClick={hucreyeDon}>
+            Hücreye dön
+          </button>,
+          hucreDonSlot
+        )}
         {toast && <div className="toast" aria-live="off">{toast}</div>}
         <div>
           <PageHeader baslik={baslik} />
@@ -1068,6 +1106,23 @@ export default function CokHucreOkuyucu({
             tiklanabilir
             hucreAdi={hucreSayisi > 1 ? (k.hucreAdlari?.[guvenliHucreIndeksi] || `${guvenliHucreIndeksi + 1}. hücre`) : undefined}
             onNoktaTikla={noktayaTikla}
+            // Alt+ok yatay kenarında AKTİF HÜCREYİ değiştir (kullanıcı: "/fen-kimya gibi
+            // çok hücrelilerde de bu sistem çalışmalı") — 3+ hücreli öğeler yan yana
+            // çizilmediğinden geçiş DOM'da değil state'le yapılır (önizleme tıklamasıyla
+            // aynı yol: setHucreIndeksi; hücre-içi basilanlar effect'i zaten sıfırlar).
+            // En dış kenarda hedefIdx taşarsa hiçbir şey yapılmaz → sayfa/öğe DEĞİŞMEZ.
+            onHucreKenari={hucreSayisi > 1 ? (yon, satir) => {
+              const hedefIdx = guvenliHucreIndeksi + yon;
+              if (hedefIdx < 0 || hedefIdx >= hucreSayisi) return;
+              // Yan yana dizilimle aynı his: sağa geçişte yeni hücrenin SOL sütunu
+              // (nokta = satir 1-3), sola geçişte SAĞ sütunu (satir+3). Odak + "N. hücre"
+              // duyurusu render SONRASI kenarGecisRef effect'inde verilir (bkz. tanımı).
+              kenarGecisRef.current = {
+                nokta: yon === 1 ? satir : satir + 3,
+                ad: k.hucreAdlari?.[hedefIdx] || `${hedefIdx + 1}. hücre`,
+              };
+              setHucreIndeksi(hedefIdx);
+            } : undefined}
             baslikAriaLabel={hucreSayisi > 1
               ? `${guvenliHucreIndeksi + 1}. hücre, toplam ${hucreSayisi} hücreden`
               : k.yazi}

@@ -73,6 +73,9 @@ export default function CokluTest({
   const sonrakineGec = () => setSifirlaAnahtari((s) => s + 1);
 
   const aktif = sorular[indeks];
+  // Soru olarak GÖSTERİLEN metin: açıklayıcı `ipucu` (varsa), yoksa glif `ad`.
+  // Ayrı "İpucu:" satırı kaldırıldığından açıklama doğrudan h3'te görünür.
+  const soruMetni = aktif ? (aktif.ipucu || aktif.ad) : '';
   const beklenenHucre = aktif ? aktif.hucreler[hucreIndeksi] : null;
   const cokHucreli = aktif ? aktif.hucreler.length > 1 : false;
   // Bu öğenin ses kaydı var mı? (Kur'an testinde harf/hece var, hareke/tecvid yok.)
@@ -348,27 +351,32 @@ export default function CokluTest({
       </div>
 
       <div className="yazma-bolum yazma-bolum-orta">
-        {/* h3 = o anki öğe (h1 uygulama / h2 sayfa hiyerarşisi) — NVDA "h" kısayoluyla erişilir. */}
+        {/* h3 = o anki öğe (h1 uygulama / h2 sayfa hiyerarşisi) — NVDA "h" kısayoluyla erişilir.
+            ⚠ SORU METNİ = `ipucu` (varsa), `ad` DEĞİL (kullanıcı: "test bölümünde ipucu diye
+            yazan ifadeler yazmalı sadece" → "ipucunu kaldır, ipuçlarında yazanları h3e yaz").
+            ESKİDEN h3 glifi (`ad`: ".", "BD", "ا", "*") gösteriyor, ALTINDA ayrı bir
+            "İpucu: <açıklama>" satırı duruyordu; sembolsüz öğelerde ikisi AYNI metni yazıyordu.
+            Artık açıklayıcı metin doğrudan h3'te, ayrı ipucu satırı YOK.
+            `ipucu` tanımsızsa (bazı kategoriler) eskisi gibi `ad` gösterilir. */}
         <h3
           className="yazma-metin"
-          aria-label={`Yazılacak: ${aktif.ariaAd || aktif.ad}`}
+          aria-label={`Yazılacak: ${aktif.ariaAd || soruMetni}`}
           style={{
             textAlign: 'center', fontSize: 'clamp(1.6em, 7vh, 3em)', lineHeight: 1, padding: '4px 8px', margin: 0,
             fontWeight: 400,
-            // Arapça içerik (Kur'an testi) için Amasya fontu.
-            fontFamily: /[؀-ۿ]/.test(String(aktif.ad)) ? "'Amasya', 'Segoe UI', sans-serif" : undefined,
+            // Arapça içerik (Kur'an testi) için Amasya fontu — GÖSTERİLEN metne bakılır.
+            fontFamily: /[؀-ۿ]/.test(String(soruMetni)) ? "'Amasya', 'Segoe UI', sans-serif" : undefined,
           }}
         >
-          {aktif.ad}
+          {soruMetni}
         </h3>
         {cokHucreli && (
           <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '1.05em' }}>
             {HUCRE_ETIKET[hucreIndeksi] || (hucreIndeksi + 1) + '.'} hücreyi yazın ({aktif.hucreler.length} hücreli)
           </div>
         )}
-        {aktif.ipucu && (
-          <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '0.95em' }}>İpucu: {aktif.ipucu}</div>
-        )}
+        {/* Ayrı "İpucu:" satırı KALDIRILDI — içeriği artık h3'te (yukarı). Aşağıdaki
+            `ipucuGoster` bloğu AYRIDIR: 3 yanlış denemeden sonra çıkan nokta/tuş yardımı. */}
         {ipucuGoster && (
           <div className="yazma-ipucu" role="status" aria-live="polite">
             <b>Yardım:</b> {yardimMetni()}

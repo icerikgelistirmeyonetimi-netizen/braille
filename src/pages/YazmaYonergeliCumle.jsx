@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
-import { indeksKaydet } from '../utils/ilerleme.js';
+import { indeksKaydet, indeksAl } from '../utils/ilerleme.js';
 import { HARFLER } from '../data/braille.js';
 import { karakterHucreleri } from '../utils/brailleCevir.js';
 import { YAZMA_CUMLELERI } from '../data/yazmaCumleleri.js';
@@ -25,7 +25,11 @@ const noktalardanHarf = (noktalar) =>
   HARFLER.find((h) => ayniHucre(h.noktalar, noktalar))?.harf;
 
 export default function YazmaYonergeliCumle() {
-  const [cumleIdx, setCumleIdx] = useState(0);
+  // Kaldığı yerden devam (YazmaYonergeli ile AYNI mantık — ikisini birlikte güncelle).
+  const [cumleIdx, setCumleIdx] = useState(() => {
+    const kayitli = indeksAl('yazma-yonergeli-cumle');
+    return kayitli > 0 && kayitli < CUMLELER.length ? kayitli : 0;
+  });
 
   useEffect(() => { indeksKaydet('yazma-yonergeli-cumle', cumleIdx); }, [cumleIdx]);
   const [konum, setKonum] = useState(0);
@@ -225,6 +229,13 @@ export default function YazmaYonergeliCumle() {
     durumRef.current = yeniYazmaDurumu();
   };
 
+  // İlk cümleye dön: kayıtlı ilerleme de 0'a çekilir (cumleIdx effect'i kaydeder).
+  const basaDon = () => {
+    setCumleIdx(0);
+    yenidenBasla();
+    konus('Başa dönüldü. İlk cümleden devam ediyorsunuz.', { kesintiyle: true });
+  };
+
   return (
     <div className="page yazma-page">
       <div className="yazma-bolum yazma-bolum-ust">
@@ -265,6 +276,14 @@ export default function YazmaYonergeliCumle() {
       <div className="yazma-bolum yazma-bolum-alt">
         <div className="controls">
           <button className="btn" type="button" onClick={yenidenBasla}>Bu Cümleyi Tekrar Yaz</button>
+          <button
+            className="btn"
+            type="button"
+            onClick={basaDon}
+            aria-label="Başa dön: ilk cümleye dön"
+          >
+            Başa Dön
+          </button>
           {!beklenen && cumleIdx < CUMLELER.length - 1 && (
             <button className="btn" type="button" onClick={ileriCumle}>Sonraki Cümle</button>
           )}

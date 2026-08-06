@@ -53,14 +53,13 @@ export default function TanitimTuru({ zorunlu = true, onKapat }) {
     // Odağı turu açan öğeye geri ver; yoksa (ilk açılış otomatik tur) ekran
     // okuyucu body'de kaybolmasın diye ilk anlamlı odaklanabilir öğeye taşı.
     // Not: <main id="main"> display:contents olduğu için odak alamaz; bunun
-    // yerine "İçeriğe atla" skip-link'i veya ilk buton/bağlantı hedeflenir.
+    // yerine sayfadaki ilk buton/bağlantı hedeflenir.
     const geri = oncekiOdakRef.current;
     let hedef = null;
     if (geri && geri !== document.body && geri.isConnected && typeof geri.focus === 'function') {
       hedef = geri;
     } else if (typeof document !== 'undefined') {
-      hedef = document.querySelector('a.skip-link')
-        || document.querySelector('.app a[href], .app button, .app [tabindex]:not([tabindex="-1"])');
+      hedef = document.querySelector('.app a[href], .app button, .app [tabindex]:not([tabindex="-1"])');
     }
     if (hedef) {
       window.setTimeout(() => { try { hedef.focus(); } catch { /* yoksay */ } }, 0);
