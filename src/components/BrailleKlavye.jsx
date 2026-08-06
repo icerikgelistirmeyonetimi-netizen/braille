@@ -288,6 +288,19 @@ export default function BrailleKlavye({
           return;
         }
       }
+      // Odak klavyenin KENDİ butonlarındayken (Tab ile ekran tuşlarında gezinme)
+      // Space/Enter o butonu DOĞAL yolla etkinleştirsin — global boşluk/onay kısayolu
+      // araya girmesin (kullanıcı: "ekrandaki 1-6 tuşlarını enter/space ile
+      // işaretleyebilmeliyim; o alana gelmeden imleç aktif olmamalı").
+      // F/D/S/J/K/L akor tuşları etkilenmez; Backspace global sil olarak kalır.
+      if (
+        hedef instanceof Element
+        && hedef.tagName === 'BUTTON'
+        && hedef.closest('.braille-klavye')
+        && (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter')
+      ) {
+        return;
+      }
       if (e.code in TUS_NOKTA) {
         e.preventDefault();
         if (kilitli) return;
