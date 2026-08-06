@@ -20,7 +20,10 @@ const KAYNAKLAR = {
     etiket: 'Özel İşaretler',
     kategori: 'özel işaret',
     veri: OZEL_ISARETLER.map((o) => ({
-      ad: o.sembol,
+      // ⚠ Basılı karşılığı OLMAYAN biçim işaretlerinde (büyük harf/italik/şiir…) `sembol`
+      // YOKTUR → kart adı olarak İŞARET ADI gösterilir; yoksa kutu boş kalırdı.
+      // ('—' de "sembol yok" nöbetçisidir; isarettenOgeye ile aynı kural.)
+      ad: (o.sembol && o.sembol !== '—') ? o.sembol : o.ad,
       ariaAd: o.ad,
       ipucu: o.ad,
       hucreler: o.hucreler,

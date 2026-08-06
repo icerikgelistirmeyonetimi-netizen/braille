@@ -793,10 +793,17 @@ export const NOKTALAMA_ISARETLERI = [
 // =============================================================================
 // MEB Türkçe Braille Yazı Kılavuzu (2014) – VI.3 Diğer Hususlar (özel işaretler)
 // =============================================================================
+// ⚠ `sembol` YALNIZ basılı yazıda GERÇEK bir karşılığı olan öğelerde bulunur (yıldız `*`,
+// düzeltme `^`, tarih/rumuz örnekleri). Büyük harf / tek harf / italik / şiir işaretleri
+// YALNIZ braille'de var olan BİÇİM işaretleridir — basılı karşılıkları yoktur. Bu alanlarda
+// eskiden braille-ASCII transkripsiyon glifleri ('`', 'p', 'p`', 'h', '\\') yazılıydı ve
+// ders sayfasında hücrelerin altında anlamsız "p h p'" gibi ifadeler olarak görünüyordu
+// (kullanıcı: "braille hücreleri altında anlamsız p h p' gibi ifadeler var, onları kaldıralım").
+// Alan YOKSA gösterim tarafı ADA düşer (bkz. TestNoktalama / karisikYazmaKaynaklari fallback'i;
+// `isarettenOgeye` zaten altMetin üretmez) → hiçbir yüzey boş etiketle kalmaz.
 export const OZEL_ISARETLER = [
   {
     ad: 'Büyük Harf İşareti',
-    sembol: '`',
     hucreler: [[6]],
     aciklama: 'Yalnız 6. noktadan oluşur. Hemen ardından gelen TEK harfi büyük yapar.',
     kurallar: [
@@ -808,7 +815,6 @@ export const OZEL_ISARETLER = [
   },
   {
     ad: 'Hepsi Büyük Harf İşareti',
-    sembol: '``',
     hucreler: [[6], [6]],
     aciklama: '6. nokta arka arkaya iki kere yazılır. Sonraki kelimenin/kısaltmanın TÜM harflerini büyük yapar.',
     kurallar: [
@@ -820,7 +826,6 @@ export const OZEL_ISARETLER = [
   },
   {
     ad: 'Tek Küçük Harf İşareti',
-    sembol: 'p',
     hucreler: [[5, 6]],
     aciklama: '5. ve 6. noktalardan oluşur. Sonraki tek küçük harfin harf olarak okunacağını belirtir.',
     kurallar: [
@@ -831,7 +836,6 @@ export const OZEL_ISARETLER = [
   },
   {
     ad: 'Tek Büyük Harf İşareti',
-    sembol: 'p`',
     hucreler: [[5, 6], [6]],
     aciklama: 'Önce 5-6 (tek harf), sonra 6 (büyük harf) işareti yazılır. Sonraki tek büyük harfin harf olarak okunacağını belirtir.',
     kurallar: [
@@ -842,7 +846,6 @@ export const OZEL_ISARETLER = [
   },
   {
     ad: 'İtalik İşareti',
-    sembol: 'h',
     hucreler: [[4, 6]],
     aciklama: '4. ve 6. noktalardan oluşur.',
     kurallar: [
@@ -865,7 +868,6 @@ export const OZEL_ISARETLER = [
   },
   {
     ad: 'Şiir İşareti',
-    sembol: '\\\\',
     hucreler: [[3, 4, 5], [3, 4, 5]],
     aciklama: '3-4-5 noktaları arka arkaya iki defa yazılır.',
     kurallar: [

@@ -134,7 +134,8 @@ const KAYNAKLAR = {
     baslik: 'Özel İşaretler',
     etiketTuru: 'işaret',
     items: OZEL_ISARETLER.map((n) => ({
-      etiket: n.sembol,
+      // Basılı karşılığı olmayan biçim işaretlerinde `sembol` yok → etiket ADA düşer.
+      etiket: (n.sembol && n.sembol !== '—') ? n.sembol : n.ad,
       ariaAd: n.ad,
       hucreler: n.hucreler
     })).filter(gecerliItem)
