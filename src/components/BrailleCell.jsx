@@ -49,6 +49,10 @@ export default function BrailleCell({
   kilitli = false,
   // Kilitliyken kullanıcı yine de etkileşmeye çalışırsa (tıklama) çağrılır.
   onKilitliEtkilesim,
+  // Alt+ok YATAY kenarında DOM'da komşu .cell yoksa çağrılır: (yon, satir) —
+  // yon: +1 sağ / -1 sol, satir: gridRow (1-3). Tek-tek (step-through) çok hücreli
+  // görünümde CokHucreOkuyucu bununla AKTİF HÜCREYİ değiştirir (bkz. /fen-kimya).
+  onHucreKenari,
   statikDesen = false,
   // Tablet/yazı tableti modu: nokta NUMARA ETİKETLERİ aynalanır (1↔4, 2↔5, 3↔6).
   // Fiziksel braille tabletinin yazım yüzü için. Dot fillleri zaten dış kullanıcıdan
@@ -81,6 +85,23 @@ export default function BrailleCell({
   // Hücreyle herhangi bir parmak/fare etkileşimi (keşif veya tıklama).
   // Yönerge okunurken (kilitli) hiçbir etkileşim olmaz.
   const etkilesimli = (tiklanabilir || kesfedilebilir) && !kilitli;
+
+  // ── PASİF GÖSTERİM (tiklanabilir=false, kesfedilebilir=false) — tek etiket ──
+  // Ekran okuyucu nokta nokta "1. nokta, dolu / 3. nokta, boş" OKUMASIN (kullanıcı:
+  // "sadece dolu noktaları okusun, o dolu bu boş demesin; ana div'ine aria-label ekle").
+  // Noktalar gizlenir; .cell role="img" + tek özet etiket taşır: "1, 2 ve 3 numaralı noktalar".
+  const pasifGosterim = !tiklanabilir && !kesfedilebilir;
+  const pasifOzet = (() => {
+    if (!pasifGosterim) return null;
+    const dolular = NOKTA_DOM_SIRA
+      .filter((n) => aktifNoktalar.includes(n) || dogruNoktalar.includes(n))
+      .map((n) => etiketGoster(n));
+    if (dolular.length === 0) return 'boş braille hücresi';
+    const liste = dolular.length === 1
+      ? String(dolular[0])
+      : `${dolular.slice(0, -1).join(', ')} ve ${dolular[dolular.length - 1]}`;
+    return `${liste} numaralı ${dolular.length === 1 ? 'nokta' : 'noktalar'}`;
+  })();
 
   const noktaDurumu = (n) => {
     const siniflar = ['dot'];
@@ -157,11 +178,43 @@ export default function BrailleCell({
       return y && y.gridRow === su.gridRow + adim.satir
         && y.gridColumn === su.gridColumn + adim.sutun;
     });
-    if (!hedef) return; // kenar: odak yerinde kalır
-    const el = e.currentTarget.closest('.cell')?.querySelector(`[data-nokta="${hedef}"]`);
-    // Odak taşımak yeterli: dot'un onFocus'u numarayı söyler (app TTS),
-    // ekran okuyucu da aria-label'i ("N. nokta, durum") okur.
-    if (el && typeof el.focus === 'function') el.focus();
+    if (hedef) {
+      const el = e.currentTarget.closest('.cell')?.querySelector(`[data-nokta="${hedef}"]`);
+      // Odak taşımak yeterli: dot'un onFocus'u numarayı söyler (app TTS),
+      // ekran okuyucu da aria-label'i ("N. nokta, durum") okur.
+      if (el && typeof el.focus === 'function') el.focus();
+      return;
+    }
+    // ── Hücre kenarı: YATAY adımda KOMŞU HÜCREYE geç (kullanıcı: "çok hücrelilerde
+    //    2'den 5'e geçtim, tekrar alt sağ ok yaparsam sonraki hücreye geçebilmeliyim;
+    //    tersi yönde de hücre varsa geçebilmeliyim; ama son hücreden sonra sonraki
+    //    sayfaya geçmemeli — bu SADECE çok hücreler arası geçiş olmalı").
+    // Yan yana dizilim (.cell-row) içindeki kardeş .cell aranır; sağa geçişte komşunun
+    // SOL sütununa (aynı satır), sola geçişte SAĞ sütununa odaklanılır. En dış kenarda
+    // komşu yoksa odak yerinde kalır (preventDefault zaten çağrıldı → tarayıcı
+    // GERİ/İLERİ'ye de gitmez, sayfa değişmez). Dikey kenarda hücre atlanmaz.
+    if (adim.sutun === 0) return;
+    const suHucre = e.currentTarget.closest('.cell');
+    const satirKapsayici = suHucre?.closest('.cell-row');
+    const hucreler = satirKapsayici ? [...satirKapsayici.querySelectorAll('.cell')] : [];
+    const komsu = satirKapsayici ? hucreler[hucreler.indexOf(suHucre) + adim.sutun] : null;
+    if (!komsu) {
+      // DOM'da komşu hücre yok: tek-tek (step-through) çok hücreli görünümde sayfa
+      // AKTİF hücreyi state ile değiştirir (onHucreKenari — /fen-kimya gibi 3+ hücreli
+      // öğeler yan yana ÇİZİLMEZ, tek büyük hücre gösterilir). Callback verilmemişse
+      // (tek hücreli sayfa / yan yana dizilimin en dış kenarı) odak yerinde kalır.
+      if (onHucreKenari) onHucreKenari(adim.sutun, su.gridRow);
+      return;
+    }
+    const hedefSutun = adim.sutun === 1 ? 1 : 2;
+    const komsuNokta = NOKTA_DOM_SIRA.find((m) => {
+      const y = noktaGridYerlesimi[m];
+      return y && y.gridRow === su.gridRow && y.gridColumn === hedefSutun;
+    });
+    const komsuEl = komsu.querySelector(`[data-nokta="${komsuNokta}"]`);
+    // Pasif hücrenin noktaları div'dir ama tabIndex={-1} taşır (aşağıda) →
+    // programatik odak alır; ekran okuyucu aria-label'ini okur, Alt+ok ile devam edilir.
+    if (komsuEl && typeof komsuEl.focus === 'function') komsuEl.focus();
   };
 
   // Odak hücre dışına çıkınca sıfırla: tekrar girişte hücre adı yeniden söylensin.
@@ -230,8 +283,10 @@ export default function BrailleCell({
            etiketi KOYMA: NVDA noktalardan sonra grup sınırında "Braille hücresi, altı nokta"
            okuyordu (kullanıcı: "noktaları sayıyor sonra braille hücresi diyor") — gereksiz;
            yönerge + her noktanın kendi etiketi zaten bağlamı veriyor. */
-        role={hucreAdi ? 'group' : undefined}
-        aria-label={hucreAdi || undefined}
+        role={hucreAdi ? 'group' : (pasifGosterim ? 'img' : undefined)}
+        aria-label={hucreAdi
+          ? (pasifGosterim ? `${hucreAdi}, ${pasifOzet}` : hucreAdi)
+          : (pasifGosterim ? pasifOzet : undefined)}
         onTouchStart={dokunusHareket}
         onTouchMove={dokunusHareket}
         onTouchEnd={dokunusBitti}
@@ -257,8 +312,8 @@ export default function BrailleCell({
             <Etiket
               key={n}
               className={noktaDurumu(n)}
-              aria-label={kilitli ? undefined : ariaLabel(n)}
-              aria-hidden={kilitli ? true : undefined}
+              aria-label={(kilitli || pasifGosterim) ? undefined : ariaLabel(n)}
+              aria-hidden={(kilitli || pasifGosterim) ? true : undefined}
               data-nokta={n}
               style={yer}
               {...(kilitli
@@ -274,9 +329,17 @@ export default function BrailleCell({
                   : kesfedilebilir
                     ? {
                         'aria-hidden': false,
-                        onMouseEnter: () => noktaUzerinde(n)
+                        onMouseEnter: () => noktaUzerinde(n),
+                        // Çok hücreli yan yana dizilimde Alt+ok ile KOMŞU hücreye geçilebilsin:
+                        // pasif hücrenin div noktası tabIndex={-1} ile PROGRAMATİK odak alır
+                        // (Tab sırasına GİRMEZ → "ilk Tab = 1. nokta" standardı bozulmaz),
+                        // odaklanınca aria-label okunur, Alt+ok ile gezinme devam eder.
+                        tabIndex: -1,
+                        onFocus: () => noktaUzerinde(n),
+                        onKeyDown: (e) => noktaKlavye(e, n)
                       }
-                    : { 'aria-hidden': false })}
+                    // Pasif gösterim: nokta ekran okuyucudan GİZLİ — özet .cell etiketinde.
+                    : { 'aria-hidden': true })}
             >
               {etiketGoster(n)}
             </Etiket>
