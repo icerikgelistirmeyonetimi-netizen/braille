@@ -42,3 +42,7 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Pages kuyruğu yavaş günlerde 10 dk'lık varsayılan zaman aşımına takılıyor
+          # (deployment_queued → abort). 30 dk'ya çıkarıldı.
+          timeout: 1800000
