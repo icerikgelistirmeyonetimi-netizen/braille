@@ -83,12 +83,13 @@ function kisaltmaSegmentler(hucreler, sistemler) {
   const segmentler = [];
   let i = 0;
   while (i < hucreler.length) {
-    if ((hucreler[i] || []).length === 0) { segmentler.push({ tip: 'bosluk' }); i++; continue; }
+    if ((hucreler[i] || []).length === 0) { segmentler.push({ tip: 'bosluk', baslangic: i }); i++; continue; }
+    const baslangic = i; // imleç çizimi için grubun global hücre indeksi
     const grup = [];
     while (i < hucreler.length && (hucreler[i] || []).length > 0) { grup.push(hucreler[i]); i++; }
     const sonGrup = i >= hucreler.length; // hâlâ yazılmakta olan son kelime
     const kelime = hucreleriMetneCevirKisaltmali(grup, sistemler, sonGrup ? { sonTekHarfBeklet: true } : {});
-    segmentler.push({ tip: 'grup', hucreler: grup, kelime });
+    segmentler.push({ tip: 'grup', hucreler: grup, kelime, baslangic });
   }
   return segmentler;
 }
@@ -103,6 +104,15 @@ export default function YazmaSerbest() {
   const hucrelerRef = useRef([]);
   const birlesikRef = useRef(null);
   const [dolu, setDolu] = useState(false); // iki satır doldu — yeni girişi engelle
+  // İmleç: 0..N arası EKLEME NOKTASI (soldaki hücre sayısı). Yeni hücre imlecin
+  // konumuna eklenir; Sil imlecin SOLUNDAKİ hücreyi siler; ok tuşları gezdirir.
+  const [imlec, setImlec] = useState(0);
+  const imlecRef = useRef(0);
+  const imleciAyarla = (n) => {
+    const deger = Math.max(0, Math.min(n, hucrelerRef.current.length));
+    imlecRef.current = deger;
+    setImlec(deger);
+  };
 
   // Kısaltma modu: localStorage'a kaydedilir
   const [kisaltmaModu, setKisaltmaModu] = useState(
@@ -220,7 +230,11 @@ export default function YazmaSerbest() {
       'Bir harfi yazmak için, o harfin nokta düğmelerine ' +
       'aynı anda parmaklarınızla basıp birlikte bırakın. ' +
       'Her hücre okunacaktır. Tüm metni dinlemek için Onay düğmesine basın. ' +
-      'Boşluk için Boşluk, silmek için Sil düğmesini kullanın.'
+      'Boşluk için Boşluk, silmek için Sil düğmesini kullanın. ' +
+      'Sol ve sağ ok tuşlarıyla yazdıklarınız içinde gezinebilirsiniz; ' +
+      'yazılan hücrelere dokunarak da imleci o hücrenin üzerine götürebilirsiniz. ' +
+      'Sil imlecin solundaki, Delete sağındaki hücreyi siler. ' +
+      'Yeni hücre imlecin bulunduğu yere eklenir.'
     );
     const tekrar = () => konus(
       'Serbest yazma modu. Bir harfin tüm noktalarına aynı anda basıp birlikte bırakın. ' +
@@ -236,29 +250,76 @@ export default function YazmaSerbest() {
 
   const doluUyar = () => konus('İki satır doldu, silerek devam edin.', { kesintiyle: true });
 
+  // İmlecin geçtiği/sildiği hücrenin sesli karşılığı — bağlam (sayı/büyük harf modu)
+  // hücre dizisinin başından o hücreye kadar yürütülerek çözülür.
+  const hucreAnonsuAt = (hucreler, idx) => {
+    const noktalar = hucreler[idx];
+    if (!noktalar || noktalar.length === 0) return 'boşluk';
+    const durum = yeniYazmaDurumu();
+    let r = null;
+    for (let i = 0; i <= idx; i++) r = hucreyiIsle(durum, hucreler[i]);
+    const ozel = hucreAnlamAnonsu(noktalar, hucreler.slice(0, idx + 1), kisaltmaModu);
+    if (r && r.tip === 'isaret') return ozel || r.anons;
+    if (!r || r.tip === 'bilinmeyen' || r.deger === null) return ozel || 'tanımsız hücre';
+    return r.anons;
+  };
+
+  const imlecSol = () => {
+    const h = hucrelerRef.current;
+    const i = imlecRef.current;
+    if (i <= 0) { konus('metnin başındasınız', { kesintiyle: true }); return; }
+    imleciAyarla(i - 1);
+    konus(hucreAnonsuAt(h, i - 1), { kesintiyle: true });
+  };
+
+  const imlecSag = () => {
+    const h = hucrelerRef.current;
+    const i = imlecRef.current;
+    if (i >= h.length) { konus('metnin sonundasınız', { kesintiyle: true }); return; }
+    imleciAyarla(i + 1);
+    konus(hucreAnonsuAt(h, i), { kesintiyle: true });
+  };
+
+  // Görünümdeki hücre butonunun erişilebilir adı: "3. hücre: a"
+  const hucreSecimEtiketi = (index) =>
+    `${index + 1}. hücre: ${hucreAnonsuAt(hucrelerRef.current, index)}`;
+
+  // Hücreye ODAKLANMAK/dokunmak yeter: imleç o hücrenin ARKASINA gelir → Sil o hücreyi
+  // siler. Enter/Space hücrede ÖZEL işlem YAPMAZ — BrailleKlavye'nin global kısayolları
+  // (Space=boşluk, Enter=Onay/tümünü oku) hücre odaktayken de aynen çalışır (kullanıcı:
+  // "space ve enter çalışmalı; imleç braille alanına geçtiğimde aktif olmalı").
+  const hucreSec = (index) => {
+    imleciAyarla(index + 1);
+  };
+
   const onHucre = (noktalar) => {
     if (dolu) { doluUyar(); return; }
-    const hucreler = [...hucrelerRef.current, noktalar];
+    const i = imlecRef.current;
+    const hucreler = [...hucrelerRef.current.slice(0, i), noktalar, ...hucrelerRef.current.slice(i)];
     hucrelerRef.current = hucreler;
+    imleciAyarla(i + 1);
     setBrailleHucreleri(hucreler);
     metniYenile(hucreler);
+    // Anonslar "son yazılan" bağlamına bakar → imlece kadarki ÖNEK verilir
+    // (araya eklemede eklenen hücre önekin sonuncusudur).
+    const onek = hucreler.slice(0, i + 1);
 
     if (kisaltmaModu) {
-      const anlamAnonsu = hucreAnlamAnonsu(noktalar, hucreler, true);
-      if (sonHucreBekliyorMu(hucreler, kisaltmaSistemler)) {
+      const anlamAnonsu = hucreAnlamAnonsu(noktalar, onek, true);
+      if (sonHucreBekliyorMu(onek, kisaltmaSistemler)) {
         konus(anlamAnonsu || 'ikinci hücreyi bekliyor', { kesintiyle: true });
       } else if (anlamAnonsu) {
         konus(anlamAnonsu, { kesintiyle: true });
       } else {
-        const cozum = hucreleriMetneCevirKisaltmali(hucreler, kisaltmaSistemler, { sonTekHarfBeklet: true });
+        const cozum = hucreleriMetneCevirKisaltmali(onek, kisaltmaSistemler, { sonTekHarfBeklet: true });
         const sonKelime = cozum.trim().split(/\s+/).filter(Boolean).at(-1);
         konus(sonKelime || 'hücre işlendi', { kesintiyle: true });
       }
       return;
     }
 
-    // Normal mod: son hücrenin bağlam içindeki çözümünü seslendir
-    const r = normalSonHucreBilgisi(hucreler);
+    // Normal mod: eklenen hücrenin bağlam içindeki çözümünü seslendir
+    const r = normalSonHucreBilgisi(onek);
     const anlamAnonsu = hucreAnlamAnonsu(noktalar, [noktalar], false);
     if (r && r.tip === 'isaret') {
       konus(anlamAnonsu || r.anons, { kesintiyle: true });
@@ -271,26 +332,71 @@ export default function YazmaSerbest() {
 
   const onBosluk = () => {
     if (dolu) { doluUyar(); return; }
-    const kisaltmaAnonsu = kisaltmaModu ? sinirdaKisaltmaAnonsu(hucrelerRef.current) : null;
-    const hucreler = [...hucrelerRef.current, []];
+    const i = imlecRef.current;
+    const kisaltmaAnonsu = kisaltmaModu ? sinirdaKisaltmaAnonsu(hucrelerRef.current.slice(0, i)) : null;
+    const hucreler = [...hucrelerRef.current.slice(0, i), [], ...hucrelerRef.current.slice(i)];
     hucrelerRef.current = hucreler;
+    imleciAyarla(i + 1);
     setBrailleHucreleri(hucreler);
     metniYenile(hucreler);
     konus((kisaltmaModu && kisaltmaAnonsu) || 'boşluk', { kesintiyle: true });
   };
 
+  // Sil (Backspace): imlecin SOLUNDAKİ hücreyi siler; imleç sonda ise eski davranışla aynı.
   const onSil = () => {
-    if (hucrelerRef.current.length === 0) {
+    const h = hucrelerRef.current;
+    if (h.length === 0) {
       konus('metin boş', { kesintiyle: true });
       return;
     }
-    const hucreler = hucrelerRef.current.slice(0, -1);
+    const i = imlecRef.current;
+    if (i === 0) {
+      konus('metnin başındasınız', { kesintiyle: true });
+      return;
+    }
+    const silinen = hucreAnonsuAt(h, i - 1);
+    const hucreler = [...h.slice(0, i - 1), ...h.slice(i)];
     hucrelerRef.current = hucreler;
+    imleciAyarla(i - 1);
     setBrailleHucreleri(hucreler);
     metniYenile(hucreler);
     setDolu(false); // bir hücre silindi: yeniden yer açıldı
-    konus('silindi', { kesintiyle: true });
+    konus(`${silinen} silindi`, { kesintiyle: true });
   };
+
+  // Delete: imlecin SAĞINDAKİ hücreyi siler (ileri silme).
+  const onSilIleri = () => {
+    const h = hucrelerRef.current;
+    const i = imlecRef.current;
+    if (i >= h.length) {
+      konus(h.length === 0 ? 'metin boş' : 'metnin sonundasınız', { kesintiyle: true });
+      return;
+    }
+    const silinen = hucreAnonsuAt(h, i);
+    const hucreler = [...h.slice(0, i), ...h.slice(i + 1)];
+    hucrelerRef.current = hucreler;
+    imleciAyarla(i);
+    setBrailleHucreleri(hucreler);
+    metniYenile(hucreler);
+    setDolu(false);
+    konus(`${silinen} silindi`, { kesintiyle: true });
+  };
+
+  // Ok tuşları: imleci gezdir; Delete: ileri sil. Braille nokta tuşlarını
+  // BrailleKlavye yakalar (oklara dokunmaz) → çakışma yok.
+  useEffect(() => {
+    const keydown = (e) => {
+      const hedef = e.target;
+      if (hedef && (hedef.tagName === 'INPUT' || hedef.tagName === 'TEXTAREA' || hedef.isContentEditable)) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.code === 'ArrowLeft') { e.preventDefault(); imlecSol(); }
+      else if (e.code === 'ArrowRight') { e.preventDefault(); imlecSag(); }
+      else if (e.code === 'Delete') { if (e.repeat) return; e.preventDefault(); onSilIleri(); }
+    };
+    window.addEventListener('keydown', keydown);
+    return () => window.removeEventListener('keydown', keydown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kisaltmaModu, kisaltmaSistemler]);
 
   const tumunuOku = () => {
     // metin state'i değil, senkron hucrelerRef'ten türet: Onay'a basıldığında bekleyen
@@ -307,13 +413,15 @@ export default function YazmaSerbest() {
 
   const temizle = () => {
     hucrelerRef.current = [];
+    imleciAyarla(0);
     setBrailleHucreleri([]);
     setMetin('');
     setDolu(false);
     konus('Metin temizlendi.', { kesintiyle: true });
   };
 
-  // İki satır sınırı: yeni hücre üçüncü satıra taşarsa son girişi geri al ve kilitle.
+  // İki satır sınırı: yeni hücre üçüncü satıra taşarsa SON EKLENEN girişi (imlecin
+  // solundaki hücreyi) geri al ve kilitle. Taşma yalnız ekleme sonrası oluşabilir.
   useLayoutEffect(() => {
     const el = birlesikRef.current;
     if (!el) return;
@@ -323,8 +431,10 @@ export default function YazmaSerbest() {
     if (cocuklar.length === 0) return;
     const satirSayisi = new Set(cocuklar.map((c) => Math.round(c.offsetTop))).size;
     if (satirSayisi > 2 && hucrelerRef.current.length > 0) {
-      const hucreler = hucrelerRef.current.slice(0, -1);
+      const i = Math.max(1, imlecRef.current);
+      const hucreler = [...hucrelerRef.current.slice(0, i - 1), ...hucrelerRef.current.slice(i)];
       hucrelerRef.current = hucreler;
+      imleciAyarla(i - 1);
       setBrailleHucreleri(hucreler);
       metniYenile(hucreler);
       setDolu(true);
@@ -356,23 +466,42 @@ export default function YazmaSerbest() {
           {/* Braille hücreleri + anlamı. NORMAL mod: her hücrenin altında harf/rakam/işaret.
               KISALTMA mod: her kelime bloğunun altında TANINAN kısaltma/kelime.
               Görsel; ekran okuyucu yukarıdaki canlı metni okur. En fazla iki satır. */}
-          <div className="yazma-braille-gorunum yazma-birlesik" aria-hidden="true" ref={birlesikRef}>
+          <div className="yazma-braille-gorunum yazma-birlesik" ref={birlesikRef}>
             {brailleHucreleri.length === 0 ? (
               <span className="kalan yazma-baslangic-yonerge">Braille tuşlarına tıklayarak yazınız.</span>
             ) : kisaltmaModu ? (
               kisaltmaSegmentler(brailleHucreleri, kisaltmaSistemler).map((seg, index) =>
                 seg.tip === 'bosluk' ? (
-                  <div key={index} className="yazma-birlesik-bosluk" />
+                  <React.Fragment key={index}>
+                    {imlec === seg.baslangic && <span className="kalan yazma-imlec" />}
+                    <button
+                      type="button"
+                      className="yazma-birlesik-bosluk yazma-hucre-secim"
+                      onClick={() => hucreSec(seg.baslangic)}
+                      onFocus={() => hucreSec(seg.baslangic)}
+                      aria-label={hucreSecimEtiketi(seg.baslangic)}
+                    />
+                  </React.Fragment>
                 ) : (
                   <div key={index} className="yazma-grup">
                     <div className="yazma-grup-satir">
                       {seg.hucreler.map((hucre, j) => (
-                        <BrailleCell
-                          key={j}
-                          aktifNoktalar={hucre}
-                          tiklanabilir={false}
-                          kesfedilebilir={false}
-                        />
+                        <React.Fragment key={j}>
+                          {imlec === seg.baslangic + j && <span className="yazma-imlec" />}
+                          <button
+                            type="button"
+                            className="yazma-hucre-secim"
+                            onClick={() => hucreSec(seg.baslangic + j)}
+                            onFocus={() => hucreSec(seg.baslangic + j)}
+                            aria-label={hucreSecimEtiketi(seg.baslangic + j)}
+                          >
+                            <BrailleCell
+                              aktifNoktalar={hucre}
+                              tiklanabilir={false}
+                              kesfedilebilir={false}
+                            />
+                          </button>
+                        </React.Fragment>
                       ))}
                     </div>
                     <span className="yazma-grup-etiket">{seg.kelime || ' '}</span>
@@ -380,11 +509,25 @@ export default function YazmaSerbest() {
                 )
               )
             ) : (
-              birlesikEtiketler(brailleHucreleri).map((e, index) =>
-                e.tip === 'bosluk' ? (
-                  <div key={index} className="yazma-birlesik-bosluk" />
+              birlesikEtiketler(brailleHucreleri).map((e, index) => (
+                <React.Fragment key={index}>
+                  {imlec === index && <span className="kalan yazma-imlec" />}
+                  {e.tip === 'bosluk' ? (
+                  <button
+                    type="button"
+                    className="yazma-birlesik-bosluk yazma-hucre-secim"
+                    onClick={() => hucreSec(index)}
+                    onFocus={() => hucreSec(index)}
+                    aria-label={hucreSecimEtiketi(index)}
+                  />
                 ) : (
-                  <div key={index} className="yazma-hucre-kutu">
+                  <button
+                    type="button"
+                    className="yazma-hucre-kutu yazma-hucre-secim"
+                    onClick={() => hucreSec(index)}
+                    onFocus={() => hucreSec(index)}
+                    aria-label={hucreSecimEtiketi(index)}
+                  >
                     <BrailleCell
                       aktifNoktalar={e.hucre}
                       tiklanabilir={false}
@@ -395,9 +538,13 @@ export default function YazmaSerbest() {
                     >
                       {e.etiket || ' '}
                     </span>
-                  </div>
-                )
-              )
+                  </button>
+                )}
+                </React.Fragment>
+              ))
+            )}
+            {brailleHucreleri.length > 0 && imlec >= brailleHucreleri.length && (
+              <span className="kalan yazma-imlec" />
             )}
           </div>
         </div>

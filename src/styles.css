@@ -2199,6 +2199,46 @@ h1, h2, h3 { color: var(--fg); }
   align-self: stretch;
   min-width: 20px;
 }
+/* Serbest yazma imleci: hücreler arasında yanıp sönen dikey çubuk.
+   'kalan' sınıfı 2-satır sayma effect'inde yok sayılmasını sağlar. */
+.yazma-imlec {
+  display: inline-block;
+  width: 3px;
+  min-height: 44px;
+  align-self: center;
+  background: var(--accent, #2563eb);
+  border-radius: 2px;
+  margin: 0 1px;
+  animation: yazma-imlec-yanip 1.1s steps(2, start) infinite;
+}
+.yazma-grup-satir .yazma-imlec { min-height: 38px; }
+@keyframes yazma-imlec-yanip { 50% { opacity: 0.15; } }
+/* Yazılan hücreler odaklanabilir/tıklanabilir buton: dokun → hücre okunur,
+   etkinleştir → imleç o hücrenin arkasına taşınır. Görsel sıfırlama + odak halkası. */
+.yazma-birlesik .yazma-hucre-secim {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.yazma-birlesik button.yazma-hucre-kutu.yazma-hucre-secim {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.yazma-birlesik button.yazma-birlesik-bosluk.yazma-hucre-secim {
+  align-self: stretch;
+  min-width: 20px;
+}
+.yazma-birlesik .yazma-hucre-secim:focus-visible {
+  outline: 3px solid var(--accent, #2563eb);
+  outline-offset: 2px;
+}
 
 /* Kısaltma sistemi dropdown */
 .kisaltma-btn-grup {
