@@ -9,7 +9,10 @@ import {
   noktalariAnahtara,
   sayiIsaretiMi,
 } from '../utils/brailleCevir.js';
-import { birHarfAra, kokIsaretiMi, ikiHarfBirinciMi, parcaBirinciMi } from '../utils/kisaltmaCevir.js';
+import {
+  birHarfAra, kokIsaretiMi, ikiHarfBirinciMi, parcaBirinciMi,
+  heceAra, ikiHarfAra, kokAra, parcaAra,
+} from '../utils/kisaltmaCevir.js';
 import { NOKTALAMA, OZEL_ISARETLER } from '../data/braille.js';
 
 const isaretAdiniOku = (ad) => ad.replace(/\s*\([^)]*\)\s*/g, ' ').trim().toLocaleLowerCase('tr');
@@ -252,6 +255,33 @@ export default function YazmaSerbest() {
 
   // İmlecin geçtiği/sildiği hücrenin sesli karşılığı — bağlam (sayı/büyük harf modu)
   // hücre dizisinin başından o hücreye kadar yürütülerek çözülür.
+  // Kısaltma modunda hücrenin KISALTMA karşılığı (hece / iki harfli / kök / parça).
+  // Normal-mod çözücüsü (hucreyiIsle) bu hücreleri bilmez → "tanımsız hücre" kalıyordu
+  // (kullanıcı: "kısaltma aktifken hâlâ tanımsız diye etiketliyor" — [3,4] = ma hecesi).
+  const kisaltmaHucreAnonsu = (hucreler, idx) => {
+    const noktalar = hucreler[idx];
+    const onceki = idx > 0 && (hucreler[idx - 1] || []).length > 0 ? hucreler[idx - 1] : null;
+    if (onceki) {
+      if (kisaltmaSistemler.kok && kokIsaretiMi(onceki)) {
+        const kok = kokAra(noktalar);
+        if (kok) return `${kok} kelime kökü`;
+      }
+      if (kisaltmaSistemler.ikiHarf) {
+        const iki = ikiHarfAra(onceki, noktalar);
+        if (iki) return `${iki} kısaltması`;
+      }
+      if (kisaltmaSistemler.parca) {
+        const parca = parcaAra(onceki, noktalar);
+        if (parca) return `${parca} eki`;
+      }
+    }
+    if (kisaltmaSistemler.hece) {
+      const hece = heceAra(noktalar);
+      if (hece) return `${hece} hecesi`;
+    }
+    return null;
+  };
+
   const hucreAnonsuAt = (hucreler, idx) => {
     const noktalar = hucreler[idx];
     if (!noktalar || noktalar.length === 0) return 'boşluk';
@@ -260,7 +290,11 @@ export default function YazmaSerbest() {
     for (let i = 0; i <= idx; i++) r = hucreyiIsle(durum, hucreler[i]);
     const ozel = hucreAnlamAnonsu(noktalar, hucreler.slice(0, idx + 1), kisaltmaModu);
     if (r && r.tip === 'isaret') return ozel || r.anons;
-    if (!r || r.tip === 'bilinmeyen' || r.deger === null) return ozel || 'tanımsız hücre';
+    if (!r || r.tip === 'bilinmeyen' || r.deger === null) {
+      return ozel
+        || (kisaltmaModu && kisaltmaHucreAnonsu(hucreler, idx))
+        || 'tanımsız hücre';
+    }
     return r.anons;
   };
 
