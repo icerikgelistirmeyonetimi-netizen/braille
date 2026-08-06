@@ -2307,7 +2307,9 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       const sonrakDigit = sonraki && hucreyiRakamayap(sonraki);
       const sonrakSira = sonraki && hucreyiSiraSayisiRakaminaCevir(sonraki);
       const kelimeBasi = ci === 0;
-      if ((kelimeBasi || ciftListeVirgulle) && (sonrakDigit || sonrakSira)) {
+      // sayiModu: sayı aralığında ("1233-1334") tireden sonra yeniden yazılan
+      // sayı işareti blok ortasındadır — sayı modu sürerken tüketilir.
+      if ((kelimeBasi || ciftListeVirgulle || sayiModu) && (sonrakDigit || sonrakSira)) {
         if (ciftListeVirgulle) {
           ciftListeVirgulle = false;
           cListeSonTekIsaretSonrasi = true;
@@ -2377,6 +2379,18 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       }
       if (tarihAyirmaIsaretiMi(noktalar) && tarihHucreAraligi(b, ci)) {
         buf.push('.');
+        ci++;
+        continue;
+      }
+      // KURAL: sayı aralığı tiresi [3,6] sayı modunu BOZMAZ ("1233-1334") —
+      // tireden önce sayı geliyorsa, ardından rakam veya sayı işareti gelen
+      // tireden sonrası da sayıdır.
+      if (
+        noktalariAnahtara(noktalar) === '3,6'
+        && ci + 1 < b.length
+        && (hucreyiRakamayap(b[ci + 1]) || sayiIsaretiMi(b[ci + 1]))
+      ) {
+        buf.push('-');
         ci++;
         continue;
       }

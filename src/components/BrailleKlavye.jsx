@@ -514,6 +514,10 @@ export function hucreyiIsle(durum, noktalar) {
   if (durum.sayiModu) {
     const r = hucreyiRakamayap(noktalar);
     if (r) return { tip: 'karakter', deger: r, anons: r };
+    // KURAL: sayı aralığı tiresi [3,6] sayı modunu BOZMAZ (1233-1334) —
+    // tireden önce sayı geliyorsa tireden sonra gelen de sayıdır.
+    const anah = [...noktalar].sort((a, b) => a - b).join(',');
+    if (anah === '3,6') return { tip: 'karakter', deger: '-', anons: 'tire' };
     durum.sayiModu = false;
   }
   const k = hucreyiKarakteryap(noktalar);

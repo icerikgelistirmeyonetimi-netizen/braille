@@ -816,6 +816,17 @@ function hucreAnlamiBaglamVeModSifir(hucreler, opts) {
       ) {
         return;
       }
+      // KURAL: sayı aralığı tiresi [3,6] sayı modunu BOZMAZ ("1233-1334") —
+      // ardından rakam veya sayı işareti geliyorsa mod korunur (tireden önce
+      // sayı varsa tireden sonrası da sayıdır).
+      if (
+        !mod.siraSayiModu
+        && dotKey(h) === '3,6'
+        && i + 1 < hucreler.length
+        && (hucreyiRakamayap(hucreler[i + 1]) || sayiIsaretiMi(hucreler[i + 1]))
+      ) {
+        return;
+      }
       mod.sayiModu = false;
       mod.siraSayiModu = false;
       if (mod.cListeSonTekIsaretSonrasi) {
