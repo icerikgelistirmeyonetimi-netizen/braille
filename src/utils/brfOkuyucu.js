@@ -23,6 +23,7 @@ import {
   matematikIsaretiSayiModunuKorurMu,
   matematikSembolHucreEslesmesi,
   noktalariAnahtara,
+  kelimeIciSayiIsaretiKiMi,
 } from './brailleCevir.js';
 
 // ─── BRF → nokta dizisi ────────────────────────────────────────────────────
@@ -453,7 +454,14 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             const sonrakSira = sonraki && hucreyiSiraSayisiRakaminaCevir(sonraki);
             const sonrakHarfliSayi = harfliSayiHarfOku(b, ci + 1);
             const onceki = ci > 0 ? b[ci - 1] : null;
-            if ((sayiIsaretiOncesiSinirMi(onceki) || ciftListeVirgulle) && (sonrakDigit || sonrakSira || sonrakHarfliSayi)) {
+            // KURAL (ki hecesi ↔ sayı işareti): kelime İÇİNDEKİ [3,4,5,6], ardında yalnız
+            // İNDİRGENMİŞ rakam (=noktalama deseni: '.'=[2,5,6]) varsa sayı DEĞİL 'ki'dir —
+            // "sonraki." (s+[3]+ki+.) / "içindeki." (i+[3]+de+ki+.) sıra sayısı "4." okunuyordu
+            // (tek-harf ayırma [3] ve bazı hece hücreleri sınır sayıldığından). Üst rakam veya
+            // harfli sayı takip ederse sayı kalır; kelime içi tespiti kelimeIciSayiIsaretiKiMi.
+            const kelimeIciKi = heceAktif && !sonrakDigit && !sonrakHarfliSayi
+              && kelimeIciSayiIsaretiKiMi(b, ci, sayiIsaretiOncesiSinirMi);
+            if (!kelimeIciKi && (sayiIsaretiOncesiSinirMi(onceki) || ciftListeVirgulle) && (sonrakDigit || sonrakSira || sonrakHarfliSayi)) {
               if (ciftListeVirgulle) {
                 ciftListeVirgulle = false;
                 cListeSonTekIsaretSonrasi = true;

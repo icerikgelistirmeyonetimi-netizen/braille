@@ -2106,6 +2106,26 @@ export function metniBrailleyeCevirKisaltmali(metin, opt = {}) {
   return { hucreler, esleme };
 }
 
+/**
+ * [3,4,5,6] hücresi KELİME İÇİNDE mi? — 'ki' hecesi ↔ sayı işareti ayrımı.
+ * Hücreden geriye, blok başına (boşluk hücresi) kadar tarandığında sınır-olmayan
+ * (harf/hece) bir hücre varsa kelime içidir. Kelime içindeki [3,4,5,6]'nın ardında
+ * yalnız İNDİRGENMİŞ rakam varsa ('.'=[2,5,6]=4, ','=[2]=1, ':'=[2,5]=3 — noktalama
+ * ile AYNI desen) sayı DEĞİL 'ki' okunmalıdır ("sonraki." → "sonra4." hatası).
+ * Üst rakam (a–j) veya harfli sayı takip ediyorsa sayı kalır (Ali'98 vb.).
+ * @param {number[][]} hucreler — blok veya boşluk hücreli tam dizi
+ * @param {number} idx — [3,4,5,6] hücresinin indeksi
+ * @param {(hucre: number[]) => boolean} sinirMi — çağıranın sayı-öncesi sınır testi
+ */
+export function kelimeIciSayiIsaretiKiMi(hucreler, idx, sinirMi) {
+  for (let g = idx - 1; g >= 0; g--) {
+    const h = hucreler[g];
+    if (!h || h.length === 0) break;
+    if (!sinirMi(h)) return true;
+  }
+  return false;
+}
+
 function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt = {}) {
   const {
     hece: heceAktif = true,
@@ -2144,7 +2164,13 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     govdeBaslangic++;
   }
   let govdeBitis = b.length;
-  while (govdeBitis > govdeBaslangic && NOKTA_TERS.has(noktalariAnahtara(b[govdeBitis - 1]))) {
+  // Sıra sayısı bloğu ([3,4,5,6] + indirgenmiş rakamlar): indirgenmiş rakamlar noktalama
+  // ile AYNI desendedir ('.'=[2,5,6]=4) → trailing peel onları yutup sayıyı 'ki' hecesine
+  // düşürmesin ("4." → "ki." oluyordu); ana döngünün sıra-sayı dalı okusun.
+  const sayiBlogu = govdeBaslangic + 1 < b.length
+    && sayiIsaretiMi(b[govdeBaslangic])
+    && (hucreyiRakamayap(b[govdeBaslangic + 1]) || hucreyiSiraSayisiRakaminaCevir(b[govdeBaslangic + 1]));
+  while (!sayiBlogu && govdeBitis > govdeBaslangic && NOKTA_TERS.has(noktalariAnahtara(b[govdeBitis - 1]))) {
     govdeBitis--;
   }
   if ((govdeBaslangic > 0 || govdeBitis < b.length) && govdeBaslangic < govdeBitis) {

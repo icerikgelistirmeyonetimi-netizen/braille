@@ -41,6 +41,7 @@ import {
   noktalariAnahtara,
   ondalikVirguluMi,
   siraSayisiSonRakamEtiketiNoktaEki,
+  kelimeIciSayiIsaretiKiMi,
 } from '../utils/brailleCevir.js';
 import {
   paraBirimiKaynakSonEkiAraliklari,
@@ -750,7 +751,12 @@ function hucreAnlamiBaglamVeModSifir(hucreler, opts) {
         mod.tumKelimeBuyuk = false;
         return;
       }
-      if (sayiIsaretiOncesiSinirMi(oncekiH) && sonrakiH && (sonrakNormalRakam || sonrakSiraRakam || sonrakHarfliSayiHarf)) {
+      // KURAL (ki hecesi ↔ sayı işareti): kelime İÇİNDEKİ [3,4,5,6], ardında yalnız
+      // indirgenmiş rakam (=noktalama deseni) varsa sayı modu AÇILMAZ — 'ki' hecesidir
+      // ("sonraki." → sayı işareti + sıra rakam "4." etiketleniyordu).
+      const kelimeIciKi = !sonrakNormalRakam && !sonrakHarfliSayiHarf
+        && kelimeIciSayiIsaretiKiMi(hucreler, i, sayiIsaretiOncesiSinirMi);
+      if (!kelimeIciKi && sayiIsaretiOncesiSinirMi(oncekiH) && sonrakiH && (sonrakNormalRakam || sonrakSiraRakam || sonrakHarfliSayiHarf)) {
         mod.sayiModu = true;
         mod.siraSayiModu = !!sonrakSiraRakam && !sonrakNormalRakam;
         mod.buyukHarfBekle = false;
@@ -1149,7 +1155,14 @@ export function hucreAnlamiTekil(hucreler, idx, kisaltmaAktif, ctx) {
     );
     const listeSonundanOnceTekIsaret = sonrakiRakam && sonrakiHucre && hucreyiRakamayap(sonrakiHucre) && ciftListeVirgulle
       && idx > 0 && virgulListesiAyirMi(hucreler[idx - 1]);
-    if ((prevBosluk || listeSonundanOnceTekIsaret) && sonrakiRakam) {
+    // KURAL (ki hecesi ↔ sayı işareti): kelime İÇİNDEKİ [3,4,5,6], ardında yalnız
+    // indirgenmiş rakam (=noktalama deseni) varsa sayı işareti DEĞİL 'ki' hecesidir
+    // ("sonraki." → "Sıra sayı işareti"+"4" etiketleniyordu) → hece fall-through'una düş.
+    const kelimeIciKi = kisaltmaAktif
+      && !(sonrakiHucre && hucreyiRakamayap(sonrakiHucre))
+      && !harfliSayiHarfIsaretiMi(idx + 1)
+      && kelimeIciSayiIsaretiKiMi(hucreler, idx, sayiIsaretiOncesiSinirMi);
+    if (!kelimeIciKi && (prevBosluk || listeSonundanOnceTekIsaret) && sonrakiRakam) {
       if (listeSonundanOnceTekIsaret) {
         return {
           tip: 'isaret',
