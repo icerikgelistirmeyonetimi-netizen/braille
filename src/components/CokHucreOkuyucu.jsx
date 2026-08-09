@@ -778,7 +778,11 @@ export default function CokHucreOkuyucu({
             seslendirmeDili={seslendirmeDili}
             getEtiket={(oge) => oge.yazi}
             getTtsEtiket={(oge) => oge.ttsYazi || oge.yazi}
-            getAltEtiket={(oge) => oge.okunus || oge.anlam}
+            /* Kartın altındaki GÖRÜNÜR küçük açıklama. `okumaAltEtiket` kısaltma
+               dersleri içindir (kullanıcı: "modül 2'de kısaltmalar için hızlı gezinme
+               modunda kısaltmanın altında neyin kısaltması olduğu da yazmalı") — kartta
+               yalnız "A"/"BD" görünüyordu. */
+            getAltEtiket={(oge) => oge.okumaAltEtiket || oge.okunus || oge.anlam}
             /* Kart için yalnız ekran okuyucu/TTS açıklaması (görsel etikete girmez) —
                kısaltma dersleri "aynı kelimesinin kısaltması, A harfi ile yazılır" der. */
             getOkumaAciklama={(oge) => oge.okumaAciklama}

@@ -9,6 +9,8 @@ export default function KisaltmaBirHarfli() {
     // Hızlı dolaşım kartı (yalnız ekran okuyucu/TTS): kart üzerinde tek harf görünür,
     // bu yüzden neyin kısaltması olduğu ve nasıl yazıldığı söylenir.
     okumaAciklama: `"${k.kelime}" kelimesinin kısaltması, ${k.harf} harfi ile yazılır`,
+    okumaAltEtiket: k.kelime, // kartta harfin altında görünen açıklama
+
     hucreler: [k.noktalar],
     tamYonergeMetni: `${k.harf} harfi tek başına yazıldığında "${k.kelime}" kelimesi okunur.`,
     altMetin: `"${k.kelime}"`,

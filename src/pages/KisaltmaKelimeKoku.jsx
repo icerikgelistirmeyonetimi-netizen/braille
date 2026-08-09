@@ -12,6 +12,8 @@ export default function KisaltmaKelimeKoku() {
       ttsYazi: `${k.etiket} sembolü, ${k.kelime} kelime kökü`,
       // Hızlı dolaşım kartı (yalnız ekran okuyucu/TTS) — kartta "5+ba" gibi sembol görünür.
       okumaAciklama: `"${k.kelime}" kelime kökü kısaltması, önce 5. nokta kök işareti, sonra ${sagSembol} yazılır`,
+      okumaAltEtiket: k.kelime, // kartta sembolün altında görünen açıklama
+
       hucreler: [[5], k.sag],
       hucreBasliklari: ['5', k.etiket.replace(/^5\+?/, '')],
       hucreAriaEtiketleri: ['5. nokta, kök işareti', `${k.etiket} sembolü`],

@@ -56,7 +56,9 @@ const KISAYOL_GRUPLARI = [
     ],
   },
   {
-    baslik: 'Serbest yazma',
+    // Kullanıcı: "kılavuzda serbest yazma yerine Modül 4'te Serbest Yazma bölümü … yaz"
+    // → başlık dersin nerede olduğunu söylesin.
+    baslik: 'Modül 4 — Serbest Yazma bölümü',
     satirlar: [
       ['Sol ok / Sağ ok', 'İmleci yazdığınız hücreler arasında geri ve ileri taşır; geçtiğiniz hücrenin anlamı okunur.'],
       ['Yeni hücre', 'İmlecin bulunduğu yere eklenir, sonuna değil.'],
@@ -132,18 +134,11 @@ const KISALTMA_BOLUMLERI = [
   },
 ];
 
+// ⚠ İKİ AYRI BİLEŞEN (kullanıcı: "kullanım kılavuzuna kısaltmalar başlığını neden ekledim,
+// kısayol tuşları sadece olacaktı"): `KullanimKilavuzu` YALNIZ kısayolları gösterir (F1
+// penceresi bunu kullanır), kısaltma tabloları ayrı `KisaltmaTablolari` bileşenindedir ve
+// yalnız Ayarlar sekmesinde gösterilir.
 export default function KullanimKilavuzu({ kartStil, kartBaslikStil }) {
-  const tabloStil = { width: '100%', borderCollapse: 'collapse', fontSize: '0.92em' };
-  const hucreStil = {
-    textAlign: 'left', padding: '6px 8px',
-    borderBottom: '1px solid var(--panel-border, #e8eaf0)', verticalAlign: 'top',
-  };
-  const basHucreStil = { ...hucreStil, fontWeight: 700, color: 'var(--muted)' };
-  const ozetStil = {
-    cursor: 'pointer', fontWeight: 700, padding: '10px 4px',
-    color: 'var(--accent, #5465ff)',
-  };
-
   return (
     <>
       <div style={kartStil}>
@@ -156,21 +151,41 @@ export default function KullanimKilavuzu({ kartStil, kartBaslikStil }) {
         <p style={{ margin: 0, fontSize: '0.88em', color: 'var(--muted)', lineHeight: 1.5 }}>
           Uygulamayı klavye ve ekran okuyucu ile kullanmak için kısayollar.
         </p>
-        {KISAYOL_GRUPLARI.map((grup) => (
-          <section key={grup.baslik} aria-labelledby={`kisayol-${grup.baslik}`} style={{ marginTop: 4 }}>
-            <h3 id={`kisayol-${grup.baslik}`} style={{ fontSize: '1em', margin: '10px 0 4px' }}>{grup.baslik}</h3>
-            <dl style={{ margin: 0 }}>
+        {KISAYOL_GRUPLARI.map((grup, gi) => (
+          <section key={grup.baslik} aria-labelledby={`kisayol-${gi}`} className="kilavuz-grup">
+            {/* Alt başlıklar belirgin olmalı (kullanıcı: "genel gezinme gibi alt
+                başlıkların stil tasarımı çok sade ve ayırt edici değil"): numaralı
+                rozet + vurgu rengi + bant zemin. */}
+            <h3 id={`kisayol-${gi}`} className="kilavuz-grup-baslik">
+              <span className="kilavuz-grup-no" aria-hidden="true">{gi + 1}</span>
+              {grup.baslik}
+            </h3>
+            <dl className="kilavuz-liste">
               {grup.satirlar.map(([tus, aciklama]) => (
-                <div key={tus} style={{ padding: '6px 0', borderBottom: '1px solid var(--panel-border, #e8eaf0)' }}>
-                  <dt style={{ fontWeight: 700 }}>{tus}</dt>
-                  <dd style={{ margin: '2px 0 0', color: 'var(--muted)', lineHeight: 1.5 }}>{aciklama}</dd>
+                <div key={tus} className="kilavuz-satir">
+                  <dt className="kilavuz-tus">{tus}</dt>
+                  <dd className="kilavuz-aciklama">{aciklama}</dd>
                 </div>
               ))}
             </dl>
           </section>
         ))}
       </div>
+    </>
+  );
+}
 
+// Kısaltma tabloları — YALNIZ Ayarlar → Kılavuz sekmesinde gösterilir (F1 penceresinde YOK).
+export function KisaltmaTablolari({ kartStil, kartBaslikStil }) {
+  const tabloStil = { width: '100%', borderCollapse: 'collapse', fontSize: '0.92em' };
+  const hucreStil = {
+    textAlign: 'left', padding: '6px 8px',
+    borderBottom: '1px solid var(--panel-border, #e8eaf0)', verticalAlign: 'top',
+  };
+  const basHucreStil = { ...hucreStil, fontWeight: 700, color: 'var(--muted)' };
+
+  return (
+    <>
       <div style={kartStil}>
         <div style={kartBaslikStil}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -184,8 +199,11 @@ export default function KullanimKilavuzu({ kartStil, kartBaslikStil }) {
           Müzik braille işaretleri bu listede yer almaz; onlar Müzik → BRF bölümünde verilmiştir.
         </p>
         {KISALTMA_BOLUMLERI.map((bolum) => (
-          <details key={bolum.baslik} style={{ borderTop: '1px solid var(--panel-border, #e8eaf0)' }}>
-            <summary style={ozetStil}>{bolum.baslik} ({bolum.satirlar.length})</summary>
+          <details key={bolum.baslik} className="kilavuz-kisaltma-bolum">
+            <summary className="kilavuz-kisaltma-ozet">
+              {bolum.baslik}
+              <span className="kilavuz-adet" aria-hidden="true">{bolum.satirlar.length}</span>
+            </summary>
             <p style={{ margin: '0 0 8px', fontSize: '0.86em', color: 'var(--muted)', lineHeight: 1.5 }}>
               {bolum.aciklama}
             </p>

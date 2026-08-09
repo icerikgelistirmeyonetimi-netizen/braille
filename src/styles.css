@@ -2253,6 +2253,74 @@ h1, h2, h3 { color: var(--fg); }
   align-items: center;
   gap: 2px;
 }
+/* ── Kullanım kılavuzu (Ayarlar → Kılavuz sekmesi + F1 penceresi) ─────────────
+   Alt başlıklar sade kalınca gruplar birbirinden ayırt edilemiyordu (kullanıcı:
+   "genel gezinme gibi alt başlıkların stil tasarımı çok sade ve ayırt edici değil").
+   Numara rozeti + vurgu rengi + sol şerit + bant zemin ile gruplar net ayrılır. */
+.kilavuz-grup { margin-top: 14px; }
+.kilavuz-grup-baslik {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  padding: 8px 12px;
+  font-size: 1.02em;
+  font-weight: 800;
+  color: var(--accent, #5465ff);
+  background: var(--renk-vurgu-acik, rgba(84, 101, 255, 0.10));
+  border-left: 4px solid var(--accent, #5465ff);
+  border-radius: 8px;
+}
+.kilavuz-grup-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent, #5465ff);
+  color: #fff;
+  font-size: 0.82em;
+  font-weight: 800;
+}
+.kilavuz-liste { margin: 0; }
+.kilavuz-satir {
+  display: grid;
+  grid-template-columns: minmax(120px, 34%) 1fr;
+  gap: 4px 14px;
+  padding: 8px 4px 8px 16px;
+  border-bottom: 1px solid var(--panel-border, #e8eaf0);
+}
+.kilavuz-satir:last-child { border-bottom: 0; }
+.kilavuz-tus { font-weight: 700; }
+.kilavuz-aciklama { margin: 0; color: var(--muted); line-height: 1.5; }
+@media (max-width: 560px) {
+  .kilavuz-satir { grid-template-columns: 1fr; padding-left: 12px; }
+}
+/* Kısaltma bölümleri: açılır başlık da rozetle ayırt edilir. */
+.kilavuz-kisaltma-bolum { border-top: 1px solid var(--panel-border, #e8eaf0); }
+.kilavuz-kisaltma-ozet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 10px 4px;
+  font-weight: 700;
+  color: var(--accent, #5465ff);
+}
+.kilavuz-adet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  padding: 1px 8px;
+  border-radius: 20px;
+  background: var(--renk-vurgu-acik, rgba(84, 101, 255, 0.14));
+  color: var(--accent, #5465ff);
+  font-size: 0.82em;
+}
+
 /* Boşluk hücresi GÖRÜNÜR olmalı (kullanıcı: "boşluk bıraktık mı bırakmadık mı tereddüt
    oluşuyor; görenler için imleç konumunu gösterip boşluk var mı yok mu anlaşılır kılınsın").
    Alt kenarda ince kesikli çizgi = "burada bir boşluk hücresi var" işareti. */

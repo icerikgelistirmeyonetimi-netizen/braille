@@ -98,8 +98,11 @@ export default function KilavuzPenceresi() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          {/* ⚠ F1 penceresi YALNIZ kısayolları gösterir (kullanıcı: "kullanım kılavuzuna
+              kısaltmalar başlığını neden ekledim, kısayol tuşları sadece olacaktı").
+              Kısaltma tabloları Ayarlar → Kılavuz sekmesinde. */}
           <h2 id="kilavuz-pencere-baslik" style={{ margin: 0, color: 'var(--accent)' }}>
-            Kısaltmalar ve Kullanım Kılavuzu
+            Kullanım Kılavuzu
           </h2>
           <button className="btn" type="button" onClick={kapat} aria-label="Kılavuzu kapat">
             Kapat
@@ -107,7 +110,8 @@ export default function KilavuzPenceresi() {
         </div>
         <p style={{ fontSize: '0.88em', color: 'var(--muted)', margin: '6px 0 12px' }}>
           Bu pencereyi F1 tuşuyla açıp kapatabilirsiniz. Escape tuşu da kapatır.
-          Aynı içerik Ayarlar sayfasının Kılavuz sekmesinde de bulunur.
+          Aynı kısayollar ve ek olarak kısaltma tabloları Ayarlar sayfasının Kılavuz
+          sekmesinde bulunur.
         </p>
         <KullanimKilavuzu kartStil={kartStil} kartBaslikStil={kartBaslikStil} />
       </div>

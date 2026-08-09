@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import TanitimTuru, { turuSifirla } from '../components/TanitimTuru.jsx';
-import KullanimKilavuzu from '../components/KullanimKilavuzu.jsx';
+import KullanimKilavuzu, { KisaltmaTablolari } from '../components/KullanimKilavuzu.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import {
   ayarlariAl,
@@ -145,7 +145,10 @@ className="btn"           role="tab"
       {aktifSekme === 'kilavuz' ? (
         <div role="tabpanel" id="panel-kilavuz" aria-labelledby="tab-kilavuz" tabIndex={0} style={{ overflowY: 'auto', minHeight: 0, paddingRight: 6 }}>
           <h2 style={{ fontSize: '1.05em', margin: '4px 0 10px' }}>Kısaltmalar ve Kullanım Kılavuzu</h2>
+          {/* Kısayollar (F1 penceresiyle aynı içerik) + kısaltma tabloları AYRI bileşenler:
+              kılavuzun kendisi yalnız kısayolları anlatır (kullanıcı isteği). */}
           <KullanimKilavuzu kartStil={kartStil} kartBaslikStil={kartBaslikStil} />
+          <KisaltmaTablolari kartStil={kartStil} kartBaslikStil={kartBaslikStil} />
         </div>
       ) : aktifSekme === 'moduller' ? (
         <div role="tabpanel" id="panel-moduller" aria-labelledby="tab-moduller" tabIndex={0} style={{ overflowY: 'auto', minHeight: 0, paddingRight: 6 }}>
