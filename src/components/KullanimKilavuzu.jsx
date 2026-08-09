@@ -1,16 +1,13 @@
 import React from 'react';
-import {
-  KELIME_KISALTMALARI,
-  IKI_HARFLI_KISALTMALAR,
-  HECE_KISALTMALARI,
-  KELIME_KOKU_KISALTMALARI,
-  KELIME_PARCASI_KISALTMALARI,
-} from '../data/braille.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Ayarlar → "Kısaltmalar ve Kullanım Kılavuzu" sekmesinin içeriği.
+// "Kullanım Kılavuzu" — Ayarlar → Kılavuz sekmesi VE F1 penceresi (KilavuzPenceresi)
+// aynı bileşeni kullanır.
 //
-// İKİ bölüm: (1) klavye kısayolları / kullanım, (2) kısaltma tabloları.
+// ⚠ YALNIZ KISAYOLLAR: kısaltma tabloları (bir/iki harfli, hece, kök, parça) burada
+// BULUNMAZ — kullanıcı iki kez açıkça istedi ("kısayol tuşları sadece olacaktı",
+// "kılavuzda hâlâ bu bölüm neden var, bu bölüm çıkacaktı"). Kısaltmalar zaten Modül 2
+// derslerinde öğretiliyor; müzik işaretleri de Müzik → BRF bölümünde. Tablo EKLEME.
 // ⚠ Kısayollar UYDURULMAZ — hepsi koddan doğrulanmıştır:
 //   Alt+ok            → components/BrailleCell.jsx `noktaKlavye`
 //   F D S J K L       → components/BrailleKlavye.jsx `TUS_NOKTA`
@@ -21,7 +18,6 @@ import {
 //   Arama girdisi     → pages/AramaSayfasi.jsx (1-6 + Perkins süzme, boşluk)
 //   Müzik editörü     → components/music/MuzikScoreSvg.jsx + MuzikKlavyeYardim.jsx
 // Kısayol eklenir/değişirse BURAYI da güncelle.
-// ⚠ MÜZİK kısaltmaları bu listede YOK (kullanıcı isteği) — Müzik → BRF bölümünde verilir.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const KISAYOL_GRUPLARI = [
@@ -96,58 +92,26 @@ const KISAYOL_GRUPLARI = [
   },
 ];
 
-// ── Kısaltma tabloları ───────────────────────────────────────────────────────
-const noktaMetni = (hucreler) => hucreler
-  .map((h) => (Array.isArray(h) && h.length ? h.join(', ') : 'boş'))
-  .join(' / ');
-
-const KISALTMA_BOLUMLERI = [
-  {
-    baslik: 'Bir harfli kısaltmalar',
-    aciklama: 'Harf tek başına yazıldığında bu kelime okunur. Kelimenin başında ek alırsa kısaltma ile ek arasına 3. nokta konur.',
-    sutunlar: ['Yazılışı', 'Okunuşu', 'Noktalar'],
-    satirlar: KELIME_KISALTMALARI.map((k) => [k.harf, k.kelime, noktaMetni([k.noktalar])]),
-  },
-  {
-    baslik: 'İki harfli kısaltmalar',
-    aciklama: 'İki hücre ile yazılır. Tek başına veya kelimenin başında ek alarak kullanılır.',
-    sutunlar: ['Yazılışı', 'Okunuşu', 'Noktalar'],
-    satirlar: IKI_HARFLI_KISALTMALAR.map((k) => [k.harf.toLocaleUpperCase('tr'), k.kelime, noktaMetni([k.sol, k.sag])]),
-  },
-  {
-    baslik: 'Hece kısaltmaları',
-    aciklama: 'Tek hücre ile yazılır; kelimenin başında, ortasında ve sonunda kullanılabilir. "ba", "be", "bu", "ka" ve "ha" heceleri kelimenin sonunda kullanılamaz. "ki" tek başına olup sonunda noktalama işareti varsa kısaltılmaz.',
-    sutunlar: ['Hece', 'Noktalar'],
-    satirlar: HECE_KISALTMALARI.map((k) => [k.hece, noktaMetni([k.noktalar])]),
-  },
-  {
-    baslik: 'Kelime kökü kısaltmaları',
-    aciklama: 'Önce 5. nokta (kök işareti), sonra sembol hücresi yazılır. Yalnız kelimenin başında ve ardından en az bir harf gelecek biçimde kullanılır.',
-    sutunlar: ['Yazılışı', 'Kök', 'Noktalar'],
-    satirlar: KELIME_KOKU_KISALTMALARI.map((k) => [k.etiket, k.kelime, noktaMetni([[5], k.sag])]),
-  },
-  {
-    baslik: 'Kelime parçası kısaltmaları',
-    aciklama: 'İki hücre ile yazılır. Kelimenin başında, tek başına veya sessiz harfle başlayan kelimenin ilk harfinden hemen sonra kullanılamaz.',
-    sutunlar: ['Yazılışı', 'Ekler', 'Noktalar'],
-    satirlar: KELIME_PARCASI_KISALTMALARI.map((k) => [k.etiket, k.ekler, noktaMetni([k.sol, k.sag])]),
-  },
-];
-
 // ⚠ İKİ AYRI BİLEŞEN (kullanıcı: "kullanım kılavuzuna kısaltmalar başlığını neden ekledim,
 // kısayol tuşları sadece olacaktı"): `KullanimKilavuzu` YALNIZ kısayolları gösterir (F1
 // penceresi bunu kullanır), kısaltma tabloları ayrı `KisaltmaTablolari` bileşenindedir ve
 // yalnız Ayarlar sekmesinde gösterilir.
-export default function KullanimKilavuzu({ kartStil, kartBaslikStil }) {
+// `baslikGizle`: F1 penceresinde diyaloğun kendi h2'si zaten "Kullanım Kılavuzu" diyor →
+// kart başlığı tekrar edilmesin (aynı metin iki kez okunmasın).
+export default function KullanimKilavuzu({ kartStil, kartBaslikStil, baslikEtiketi = 'h2', baslikGizle = false }) {
   return (
     <>
       <div style={kartStil}>
-        <div style={kartBaslikStil}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {/* ⚠ Başlık İÇERİĞİN İÇİNDE (kullanıcı: "h2 içeriğe taşı"): Ayarlar panelinde
+            kartın üstünde ayrı bir h2 satırı vardı; kaldırıldı, kartın kendi başlığı
+            gerçek <h2> yapıldı → hem görsel tekrar yok hem başlık düzeni korunuyor.
+            `baslikEtiketi` ile F1 penceresi kendi h2'sini (pencere başlığı) kullanabilir. */}
+        {!baslikGizle && React.createElement(baslikEtiketi, { style: { ...kartBaslikStil, margin: 0, fontSize: '1.05em' } },
+          <svg key="ikon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
-          </svg>
-          Kullanım Kılavuzu
-        </div>
+          </svg>,
+          'Kullanım Kılavuzu',
+        )}
         <p style={{ margin: 0, fontSize: '0.88em', color: 'var(--muted)', lineHeight: 1.5 }}>
           Uygulamayı klavye ve ekran okuyucu ile kullanmak için kısayollar.
         </p>
@@ -169,64 +133,6 @@ export default function KullanimKilavuzu({ kartStil, kartBaslikStil }) {
               ))}
             </dl>
           </section>
-        ))}
-      </div>
-    </>
-  );
-}
-
-// Kısaltma tabloları — YALNIZ Ayarlar → Kılavuz sekmesinde gösterilir (F1 penceresinde YOK).
-export function KisaltmaTablolari({ kartStil, kartBaslikStil }) {
-  const tabloStil = { width: '100%', borderCollapse: 'collapse', fontSize: '0.92em' };
-  const hucreStil = {
-    textAlign: 'left', padding: '6px 8px',
-    borderBottom: '1px solid var(--panel-border, #e8eaf0)', verticalAlign: 'top',
-  };
-  const basHucreStil = { ...hucreStil, fontWeight: 700, color: 'var(--muted)' };
-
-  return (
-    <>
-      <div style={kartStil}>
-        <div style={kartBaslikStil}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-          </svg>
-          Kısaltmalar
-        </div>
-        <p style={{ margin: 0, fontSize: '0.88em', color: 'var(--muted)', lineHeight: 1.5 }}>
-          MEB Türkçe Braille Yazı Kılavuzu&apos;ndaki kısaltma sistemleri. Bir bölümü açmak için
-          başlığını etkinleştirin. Noktalar sütununda eğik çizgi hücreleri ayırır.
-          Müzik braille işaretleri bu listede yer almaz; onlar Müzik → BRF bölümünde verilmiştir.
-        </p>
-        {KISALTMA_BOLUMLERI.map((bolum) => (
-          <details key={bolum.baslik} className="kilavuz-kisaltma-bolum">
-            <summary className="kilavuz-kisaltma-ozet">
-              {bolum.baslik}
-              <span className="kilavuz-adet" aria-hidden="true">{bolum.satirlar.length}</span>
-            </summary>
-            <p style={{ margin: '0 0 8px', fontSize: '0.86em', color: 'var(--muted)', lineHeight: 1.5 }}>
-              {bolum.aciklama}
-            </p>
-            <table style={tabloStil}>
-              <caption className="sr-only">{bolum.baslik}</caption>
-              <thead>
-                <tr>
-                  {bolum.sutunlar.map((s) => (
-                    <th key={s} scope="col" style={basHucreStil}>{s}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {bolum.satirlar.map((satir) => (
-                  <tr key={satir.join('|')}>
-                    {satir.map((deger, i) => (
-                      <td key={i} style={hucreStil}>{deger}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </details>
         ))}
       </div>
     </>

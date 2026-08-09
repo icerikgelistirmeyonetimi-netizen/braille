@@ -113,7 +113,9 @@ export default function KilavuzPenceresi() {
           Aynı kısayollar ve ek olarak kısaltma tabloları Ayarlar sayfasının Kılavuz
           sekmesinde bulunur.
         </p>
-        <KullanimKilavuzu kartStil={kartStil} kartBaslikStil={kartBaslikStil} />
+        {/* Pencerenin kendi h2 başlığı zaten "Kullanım Kılavuzu" → kart başlığı gizlenir
+            (aynı metin iki kez görünmesin/okunmasın). */}
+        <KullanimKilavuzu kartStil={kartStil} kartBaslikStil={kartBaslikStil} baslikGizle />
       </div>
     </div>
   );
