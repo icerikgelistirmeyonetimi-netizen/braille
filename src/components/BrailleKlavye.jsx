@@ -104,11 +104,43 @@ export default function BrailleKlavye({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sifirlaAnahtari]);
 
+  // Serbest modda (beklenenSayi yok) hücre, son tıklamadan 3 sn sonra kendiliğinden
+  // gönderilir. Her tıklama/iptal bu sayacı yeniden başlatır.
+  const otomatikGondermeyiKur = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const current = tiklilarRef.current;
+      if (current.size > 0) {
+        tiklilarRef.current = new Set();
+        setTiklilar(new Set());
+        commitHucre(current);
+      }
+    }, 3000);
+  };
+
   const tiklaToggle = (n) => {
     // Kilitliyken (doğru cevap sonrası yönerge okunana kadar) tıklama yok sayılır
     if (kilitli) return;
-    // Sıralı modda aynı noktaya tekrar tıklama yok sayılır
-    if (tiklilarRef.current.has(n)) return;
+    if (tiklilarRef.current.has(n)) {
+      // ⚠ SERBEST MODDA TIKLAMA GERİ ALINABİLİR (kullanıcı: "serbest yazmada tıkladığımı
+      // iptal edebilmeliyim; burası diğer sayfalar gibi değil, orada hatalı tuşa basılmasına
+      // zaten izin verilmiyor"): öğrenme/test sayfalarında yanlış nokta `onTikla` ile
+      // REDDEDİLİR, ama serbest yazmada her nokta geçerlidir → yanlış tıklanan nokta 3 sn
+      // sonra hücreye yazılırdı. Artık AYNI noktaya tekrar tıklamak seçimi KALDIRIR.
+      // `beklenenSayi > 0` olan akışlarda (CokluTest, YazmaKarisik, yönergeli yazma) eski
+      // davranış korunur: tekrar tıklama yok sayılır, sayaç/sıra doğrulaması bozulmasın.
+      if (beklenenSayi > 0) return;
+      const kalan = new Set(tiklilarRef.current);
+      kalan.delete(n);
+      tiklilarRef.current = kalan;
+      setTiklilar(new Set(kalan));
+      tiklamaSesi();
+      // Seçim kalktı: ekran okuyucu aria-pressed değişimini kendisi duyurur (ek konuşma
+      // eklenmez → çift duyuru olmaz). Hiç nokta kalmadıysa otomatik gönderme de iptal.
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (kalan.size > 0) otomatikGondermeyiKur();
+      return;
+    }
 
     // Sıra doğrulama
     if (onTikla && onTikla(n, [...tiklilarRef.current]) === false) return;
@@ -139,14 +171,7 @@ export default function BrailleKlavye({
     if (beklenenSayi > 0) return;
 
     // Serbest modda (beklenen sayı yok) fallback: bir süre sonra otomatik commit
-    debounceRef.current = setTimeout(() => {
-      const current = tiklilarRef.current;
-      if (current.size > 0) {
-        tiklilarRef.current = new Set();
-        setTiklilar(new Set());
-        commitHucre(current);
-      }
-    }, 3000);
+    otomatikGondermeyiKur();
   };
 
   // Mobil dokunmada aktif parmak (touch identifier) sayısı

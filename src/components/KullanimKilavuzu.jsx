@@ -52,6 +52,7 @@ const KISAYOL_GRUPLARI = [
       ['Backspace', 'Son hücreyi siler.'],
       ['Enter', 'Onaylar; serbest yazmada yazdığınız metnin tamamını okutur.'],
       ['Ekrandaki nokta düğmeleri', 'Tab ile bu düğmelere geldiğinizde Enter veya Boşluk o düğmeyi basar; noktayı fare veya dokunmatikle de işaretleyebilirsiniz.'],
+      ['Yanlış işaretlediniz mi?', 'Serbest yazmada aynı noktaya bir kez daha basmak seçimi iptal eder. Sil düğmesi ise henüz tamamlanmamış hücrenin tamamını iptal eder. Test ve alıştırma sayfalarında yanlış noktaya zaten izin verilmez.'],
     ],
   },
   {
