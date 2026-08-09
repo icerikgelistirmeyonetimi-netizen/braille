@@ -467,17 +467,12 @@ const muzikGrupMenuOgesi = (grup) => ({
   altMetin: `${grup.bolumler.length} konu`,
 });
 
-const muzikDiziMenuOgesi = {
-  yol: '/muzik-diziler',
-  baslik: 'Dizi Okuma',
-  ikon: Ikon.muzikDizi,
-  anahtar: 'muzik-dizi',
-  toplam: 3,
-};
-
+// ⚠ "Dizi Okuma" dersi KALDIRILDI (kullanıcı: "modül 8'den dizi okuma bölümünü kaldıralım
+// tamamen, gerek yok o bölüme; aramada da görünmesin"). Menü öğesi, rotası, sayfası,
+// ders akışı, arama indeksi ve karışık yazma kaynağı birlikte silindi. Ham veri
+// (MUZIK_DIZILERI, data/muzik.js) yerinde duruyor ama artık HİÇBİR yüzey kullanmıyor.
 const muzikModulOgeleriOlustur = () => [
   ...MUZIK_BOLUM_GRUPLARI.map((grup) => muzikGrupMenuOgesi(grup)),
-  muzikDiziMenuOgesi,
 ];
 
 export const MODULLER = [

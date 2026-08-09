@@ -28,7 +28,7 @@ import {
   YUNAN_HARFLERI, FEN_SEMBOLLER,
   KIMYASAL_FORMULLER, FIZIK_FORMULLERI
 } from '../data/fen.js';
-import { NOTALAR, MUZIK_SEMBOLLERI, MUZIK_DIZILERI, MUZIK_BOLUMLER } from '../data/muzik.js';
+import { NOTALAR, MUZIK_SEMBOLLERI, MUZIK_BOLUMLER } from '../data/muzik.js';
 import { ALMANCA_BOLUMLER } from '../data/almancaBraille.js';
 import { FRANSIZCA_BOLUMLER } from '../data/fransizcaBraille.js';
 import { INGILIZCE_BOLUMLER } from '../data/ingilizceBraille.js';
@@ -342,19 +342,9 @@ const KAYNAKLAR = {
       ariaAd: f.okunus,
       hucreler: f.hucreler
     })).filter(gecerliItem)
-  },
-
-  // --- Modül 8: Müzik dizileri ---
-  '/muzik-diziler': {
-    yol: '/muzik-diziler',
-    baslik: 'Müzik Dizileri',
-    etiketTuru: 'dizi',
-    items: MUZIK_DIZILERI.map((d) => ({
-      etiket: d.yazi,
-      ariaAd: d.okunus,
-      hucreler: d.hucreler
-    })).filter(gecerliItem)
   }
+  // ⚠ '/muzik-diziler' (Müzik Dizileri) kaydı KALDIRILDI: "Dizi Okuma" dersi tamamen
+  // silindi (kullanıcı isteği) → karışık yazma kaynağı da ölü rotaya işaret etmesin.
 };
 
 // ───────────────────────────────────────────────────────────────────────────

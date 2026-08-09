@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import TanitimTuru, { turuSifirla } from '../components/TanitimTuru.jsx';
+import KullanimKilavuzu from '../components/KullanimKilavuzu.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import {
   ayarlariAl,
@@ -97,7 +98,7 @@ export default function Ayarlar() {
         role="tablist"
         aria-label="Ayarlar sekmeleri"
         onKeyDown={(e) => {
-          const list = ['ayarlar', 'moduller'];
+          const list = ['ayarlar', 'moduller', 'kilavuz'];
           const idx = list.indexOf(aktifSekme);
           if (e.key === 'ArrowRight') { e.preventDefault(); setAktifSekme(list[(idx + 1) % list.length]); }
           if (e.key === 'ArrowLeft')  { e.preventDefault(); setAktifSekme(list[(idx - 1 + list.length) % list.length]); }
@@ -126,9 +127,27 @@ className="btn"           role="tab"
         >
           Modüller
         </button>
+        {/* Kısaltma tabloları + klavye/ekran okuyucu kısayolları (kullanıcı isteği). */}
+        <button
+          className="btn"
+          role="tab"
+          id="tab-kilavuz"
+          aria-selected={aktifSekme === 'kilavuz'}
+          aria-controls="panel-kilavuz"
+          tabIndex={aktifSekme === 'kilavuz' ? 0 : -1}
+          style={sekmeBtnStyle('kilavuz')}
+          onClick={() => setAktifSekme('kilavuz')}
+        >
+          Kılavuz
+        </button>
       </div>
 
-      {aktifSekme === 'moduller' ? (
+      {aktifSekme === 'kilavuz' ? (
+        <div role="tabpanel" id="panel-kilavuz" aria-labelledby="tab-kilavuz" tabIndex={0} style={{ overflowY: 'auto', minHeight: 0, paddingRight: 6 }}>
+          <h2 style={{ fontSize: '1.05em', margin: '4px 0 10px' }}>Kısaltmalar ve Kullanım Kılavuzu</h2>
+          <KullanimKilavuzu kartStil={kartStil} kartBaslikStil={kartBaslikStil} />
+        </div>
+      ) : aktifSekme === 'moduller' ? (
         <div role="tabpanel" id="panel-moduller" aria-labelledby="tab-moduller" tabIndex={0} style={{ overflowY: 'auto', minHeight: 0, paddingRight: 6 }}>
           <div style={kartStil}>
             <div style={kartBaslikStil}>

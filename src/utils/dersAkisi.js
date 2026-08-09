@@ -11,10 +11,10 @@ import { ALMANCA_BOLUMLER } from '../data/almancaBraille.js';
 import { FRANSIZCA_BOLUMLER } from '../data/fransizcaBraille.js';
 import { INGILIZCE_BOLUMLER } from '../data/ingilizceBraille.js';
 
-// Modül 8 (Müzik): grup menüleri yerine gerçek ders rotaları (/muzik/:slug) + dizi + test.
+// Modül 8 (Müzik): grup menüleri yerine gerçek ders rotaları (/muzik/:slug) + test.
+// ("Dizi Okuma" dersi kullanıcı isteğiyle kaldırıldı — bkz. data/moduller.jsx notu.)
 const muzikDersleri = [
   ...MUZIK_BOLUMLER.map((b) => ({ yol: `/muzik/${b.slug}`, baslik: b.kisaBaslik })),
-  { yol: '/muzik-diziler', baslik: 'Dizi Okuma' },
   { yol: '/test-muzik', baslik: 'Test / Sınav' },
 ];
 

@@ -54,7 +54,7 @@ import {
   KIMYASAL_FORMULLER,
   FIZIK_FORMULLERI,
 } from '../data/fen.js';
-import { MUZIK_BOLUMLER, MUZIK_DIZILERI } from '../data/muzik.js';
+import { MUZIK_BOLUMLER } from '../data/muzik.js';
 import { ALMANCA_BOLUMLER } from '../data/almancaBraille.js';
 import { FRANSIZCA_BOLUMLER } from '../data/fransizcaBraille.js';
 import { INGILIZCE_BOLUMLER } from '../data/ingilizceBraille.js';
@@ -336,8 +336,8 @@ kaynakEkle(FIZIK_FORMULLERI, (s) => ({ etiket: s.yazi, altEtiket: s.okunus, hucr
     { modulBaslik: 'Modül 8', kategori: bolum.kisaBaslik, yol: `/muzik/${bolum.slug}` });
 });
 
-kaynakEkle(MUZIK_DIZILERI, (s) => ({ etiket: s.yazi, altEtiket: s.okunus, hucreler: s.hucreler }),
-  { modulBaslik: 'Modül 8', kategori: 'Dizi Okuma', yol: '/muzik-diziler' });
+// ⚠ "Dizi Okuma" (MUZIK_DIZILERI) ARAMA KAPSAMI DIŞI: ders kaldırıldı (kullanıcı:
+// "aramada da görünmesin") → arama sonucu ölü rotaya götürmesin.
 
 // ── Modül 9 — Yabancı Dil ──────────────────────────────────────────────────────
 const YABANCI_DILLER = [

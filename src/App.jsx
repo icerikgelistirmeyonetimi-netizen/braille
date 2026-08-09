@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import AnaMenu from './pages/AnaMenu.jsx';
 import HucreTanima from './pages/HucreTanima.jsx';
@@ -44,7 +44,6 @@ import TestFen from './pages/TestFen.jsx';
 import MuzikNotaEgitimi from './pages/MuzikNotaEgitimi.jsx';
 import MuzikSembolEgitimi from './pages/MuzikSembolEgitimi.jsx';
 import MuzikSureleri from './pages/MuzikSureleri.jsx';
-import MuzikDiziOkuma from './pages/MuzikDiziOkuma.jsx';
 import MuzikBrailleMenu from './pages/MuzikBrailleMenu.jsx';
 import MuzikBrailleSayfa from './pages/MuzikBrailleSayfa.jsx';
 import MuzikBrfYazim from './pages/MuzikBrfYazim.jsx';
@@ -61,6 +60,7 @@ import BrfOku from './pages/BrfOku.jsx';
 import TonePianoTest from './pages/TonePianoTest.jsx';
 import { sallamayiBaslat } from './utils/sallama.js';
 import DesktopShell from './components/DesktopShell.jsx';
+import KilavuzPenceresi from './components/KilavuzPenceresi.jsx';
 import { tamEkranApiDestekleniyorMu } from './utils/tamEkran.js';
 
 function IngilizceBrailleEskiYol() {
@@ -79,61 +79,61 @@ function FransizcaBrailleEskiYol() {
 }
 
 /**
- * Rota değiştiğinde ekran okuyucu odağını yönetir:
- *  - Bir modül açıldığında odak, açılan sayfanın başlığına taşınır. Aksi
- *    halde NVDA, tıklanan modül butonunda kalır; kullanıcı açılan sayfaya
- *    ulaşmak için tüm modül başlıklarını ok tuşlarıyla geçmek zorunda kalır.
- *  - Ana sayfaya dönüldüğünde odak, geri gelinen (aktif) modül sekmesine
- *    taşınır. Aksi halde imleç sayfa sonundaki son satıra düşer.
+ * Rota deÄŸiÅŸtiÄŸinde ekran okuyucu odaÄŸÄ±nÄ± yÃ¶netir:
+ *  - Bir modÃ¼l aÃ§Ä±ldÄ±ÄŸÄ±nda odak, aÃ§Ä±lan sayfanÄ±n baÅŸlÄ±ÄŸÄ±na taÅŸÄ±nÄ±r. Aksi
+ *    halde NVDA, tÄ±klanan modÃ¼l butonunda kalÄ±r; kullanÄ±cÄ± aÃ§Ä±lan sayfaya
+ *    ulaÅŸmak iÃ§in tÃ¼m modÃ¼l baÅŸlÄ±klarÄ±nÄ± ok tuÅŸlarÄ±yla geÃ§mek zorunda kalÄ±r.
+ *  - Ana sayfaya dÃ¶nÃ¼ldÃ¼ÄŸÃ¼nde odak, geri gelinen (aktif) modÃ¼l sekmesine
+ *    taÅŸÄ±nÄ±r. Aksi halde imleÃ§ sayfa sonundaki son satÄ±ra dÃ¼ÅŸer.
  */
 function SayfaOdakYonetimi() {
   const { pathname } = useLocation();
-  // Önceki yolu izleriz: yalnızca gerçek bir rota değişiminde odak taşırız.
-  // (Boolean bayrak yerine yol karşılaştırması — StrictMode'un mount'ta
-  // effect'i iki kez çağırması ilk yüklemede odağı çalmasın diye.)
+  // Ã–nceki yolu izleriz: yalnÄ±zca gerÃ§ek bir rota deÄŸiÅŸiminde odak taÅŸÄ±rÄ±z.
+  // (Boolean bayrak yerine yol karÅŸÄ±laÅŸtÄ±rmasÄ± â€” StrictMode'un mount'ta
+  // effect'i iki kez Ã§aÄŸÄ±rmasÄ± ilk yÃ¼klemede odaÄŸÄ± Ã§almasÄ±n diye.)
   const oncekiYol = useRef(null);
 
   useEffect(() => {
     const onceki = oncekiYol.current;
     oncekiYol.current = pathname;
 
-    // İlk yükleme veya yol değişmediyse odağı taşımayız; ana sayfanın
-    // kendi sesli yönergesi var ve gereksiz odak hırsızlığını önleriz.
+    // Ä°lk yÃ¼kleme veya yol deÄŸiÅŸmediyse odaÄŸÄ± taÅŸÄ±mayÄ±z; ana sayfanÄ±n
+    // kendi sesli yÃ¶nergesi var ve gereksiz odak hÄ±rsÄ±zlÄ±ÄŸÄ±nÄ± Ã¶nleriz.
     if (onceki === null || onceki === pathname) return undefined;
 
-    // Yeni içeriğin DOM'u yerleştikten sonra odakla.
+    // Yeni iÃ§eriÄŸin DOM'u yerleÅŸtikten sonra odakla.
     const id = window.requestAnimationFrame(() => {
       if (pathname === '/') {
-        // Ana sayfaya dönüşte: geri gelinen (aktif) modül sekmesine odaklan.
+        // Ana sayfaya dÃ¶nÃ¼ÅŸte: geri gelinen (aktif) modÃ¼l sekmesine odaklan.
         const aktifSekme = document.querySelector('.modul-yan .modul-sekme.aktif')
           || document.querySelector('.modul-yan .modul-sekme');
         if (aktifSekme) aktifSekme.focus();
         return;
       }
       if (pathname.startsWith('/modul/')) {
-        // Modül route'u (AnaMenu, /modul/:modulId): seçilen modülün içerik başlığına odaklan
-        // (modulSec'in odak niyetiyle aynı) → ekran okuyucu modül adını ve derslerini okur.
+        // ModÃ¼l route'u (AnaMenu, /modul/:modulId): seÃ§ilen modÃ¼lÃ¼n iÃ§erik baÅŸlÄ±ÄŸÄ±na odaklan
+        // (modulSec'in odak niyetiyle aynÄ±) â†’ ekran okuyucu modÃ¼l adÄ±nÄ± ve derslerini okur.
         const baslik = document.querySelector('.modul-icerik-baslik')
           || document.querySelector('.modul-yan .modul-sekme.aktif');
         if (baslik) baslik.focus();
         return;
       }
 
-      // Alt sayfalarda: açılan sayfanın başlığına odaklan.
-      // DesktopShell banner'ı (.ds-header) da .banner-baslik taşır; bu yüzden
-      // yalnızca sayfa içeriği (.ds-content) içindeki başlığı seçeriz.
+      // Alt sayfalarda: aÃ§Ä±lan sayfanÄ±n baÅŸlÄ±ÄŸÄ±na odaklan.
+      // DesktopShell banner'Ä± (.ds-header) da .banner-baslik taÅŸÄ±r; bu yÃ¼zden
+      // yalnÄ±zca sayfa iÃ§eriÄŸi (.ds-content) iÃ§indeki baÅŸlÄ±ÄŸÄ± seÃ§eriz.
       const icerik = document.querySelector('#main .ds-content') || document.getElementById('main');
       if (!icerik) return;
-      // Sayfa kendi giriş odağını belirtmişse (ör. CokHucreOkuyucu yönerge bölgesi) ona
-      // odaklan — başlık yerine. Aksi halde ders sayfalarında modülden girince NVDA önce
-      // başlığı/gereksiz detayı okuyup yönergeyi gömüyordu (kullanıcı: "yönerge ilk okumuyor").
+      // Sayfa kendi giriÅŸ odaÄŸÄ±nÄ± belirtmiÅŸse (Ã¶r. CokHucreOkuyucu yÃ¶nerge bÃ¶lgesi) ona
+      // odaklan â€” baÅŸlÄ±k yerine. Aksi halde ders sayfalarÄ±nda modÃ¼lden girince NVDA Ã¶nce
+      // baÅŸlÄ±ÄŸÄ±/gereksiz detayÄ± okuyup yÃ¶nergeyi gÃ¶mÃ¼yordu (kullanÄ±cÄ±: "yÃ¶nerge ilk okumuyor").
       const hedef = icerik.querySelector('[data-sayfa-odak]')
         || icerik.querySelector('.banner-baslik')
         || icerik.querySelector('h1, h2');
       if (!hedef) return;
-      // Yerleşik odaklanabilir öğelere (input/select/textarea/button/a) tabindex=-1 EKLEME —
-      // aksi halde Tab sırasından çıkarlar (ör. arama girdisi data-sayfa-odak ile odaklanır
-      // ama klavye Tab erişimi korunmalı). Başlık/div gibi öğelere -1 gerekir (focus alsın).
+      // YerleÅŸik odaklanabilir Ã¶ÄŸelere (input/select/textarea/button/a) tabindex=-1 EKLEME â€”
+      // aksi halde Tab sÄ±rasÄ±ndan Ã§Ä±karlar (Ã¶r. arama girdisi data-sayfa-odak ile odaklanÄ±r
+      // ama klavye Tab eriÅŸimi korunmalÄ±). BaÅŸlÄ±k/div gibi Ã¶ÄŸelere -1 gerekir (focus alsÄ±n).
       const yerlesikOdaklanabilir = /^(input|select|textarea|button|a)$/i.test(hedef.tagName);
       if (!hedef.hasAttribute('tabindex') && !yerlesikOdaklanabilir) hedef.setAttribute('tabindex', '-1');
       hedef.focus();
@@ -148,8 +148,8 @@ function SayfaOdakYonetimi() {
 export default function App() {
   useEffect(() => { sallamayiBaslat(); }, []);
 
-  // Mobilde fullscreen: yalnızca API destekleniyorsa (iOS Safari hariç).
-  // İlk yüklemede çoğu tarayıcı izin vermez; ilk dokunuşta yeniden dene.
+  // Mobilde fullscreen: yalnÄ±zca API destekleniyorsa (iOS Safari hariÃ§).
+  // Ä°lk yÃ¼klemede Ã§oÄŸu tarayÄ±cÄ± izin vermez; ilk dokunuÅŸta yeniden dene.
   useEffect(() => {
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
     if (!isMobile || !tamEkranApiDestekleniyorMu()) return;
@@ -168,12 +168,15 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Hücre yazma (öğrenme) modu açıkken CokHucreOkuyucu buraya "Hücreye dön"
-          hayalet butonunu portallar → Ctrl+Home ile sayfa başına dönen NVDA
-          kullanıcısının bulduğu İLK öğe bu olur; etkinleştirince odak braille
-          hücresinin 1. noktasına gider. Slot DOM'un EN BAŞINDA kalmalı. */}
+      {/* HÃ¼cre yazma (Ã¶ÄŸrenme) modu aÃ§Ä±kken CokHucreOkuyucu buraya "HÃ¼creye dÃ¶n"
+          hayalet butonunu portallar â†’ Ctrl+Home ile sayfa baÅŸÄ±na dÃ¶nen NVDA
+          kullanÄ±cÄ±sÄ±nÄ±n bulduÄŸu Ä°LK Ã¶ÄŸe bu olur; etkinleÅŸtirince odak braille
+          hÃ¼cresinin 1. noktasÄ±na gider. Slot DOM'un EN BAÅINDA kalmalÄ±. */}
       <div id="hucre-don-slot" />
       <SayfaOdakYonetimi />
+      {/* F1: Kısaltmalar ve Kullanım Kılavuzu penceresi (müzik editörü hariç — orada
+          F1 editörün kendi kısayol yardımını açar). */}
+      <KilavuzPenceresi />
       <main id="main">
         <DesktopShell>
           <Routes>
@@ -222,7 +225,6 @@ export default function App() {
           <Route path="/muzik-notalar" element={<MuzikNotaEgitimi />} />
           <Route path="/muzik-sureler" element={<MuzikSureleri />} />
           <Route path="/muzik-semboller" element={<MuzikSembolEgitimi />} />
-          <Route path="/muzik-diziler" element={<MuzikDiziOkuma />} />
           <Route path="/muzik" element={<MuzikBrailleMenu />} />
           <Route path="/muzik/grup/:grupId" element={<MuzikBrailleMenu />} />
           <Route path="/muzik/:slug" element={<MuzikBrailleSayfa />} />

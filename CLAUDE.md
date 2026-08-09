@@ -250,7 +250,12 @@ Fullscreen API toggle button. Uses `tamEkranApiDestekleniyorMu()` from `utils/ta
 Normal/lowVision theme toggle for low-vision users. Calls `ayarGuncelle({ tema })` and announces via TTS.
 
 ### `src/components/TanitimTuru.jsx`
-Multi-step onboarding tour dialog (6 steps). Shown once via `localStorage` key `braille-tur-tamam-v1`. Props: `zorunlu` (default `true`), `onKapat`.
+Multi-step onboarding tour dialog (**9 adım**). Shown once via `localStorage` key **`braille-tur-tamam-v2`**. Props: `zorunlu` (default `true`), `onKapat`.
+**⚠ İçerik v2'de güncellendi (kullanıcı: "ayarlar bölümündeki tanıtım turunu da güncelleyelim, güncel değil"):** eski metin KALDIRILAN özellikleri anlatıyordu (tarayıcı seslendirmesi, konuşma hızı ayarı) ve yalnız Modül 1 bölümlerinden söz ediyordu. Yeni adımlar: hoş geldiniz → ekran okuyucu uyumu (ses efektleri) → braille hücresi (Alt+ok) → ders akışı (yönerge → Tab → 1. nokta) → hızlı dolaşım modu → yazma (F D S J K L) → 10 modül + arama → ayarlar & Kılavuz sekmesi → hazırsınız. **Anahtar v1→v2 bilinçli:** içerik esaslı değiştiği için tur kullanıcılara bir kez daha gösterilir. Tur metnini değiştirirken kaldırılmış özellik anlatmadığını doğrula.
+
+### `src/components/KullanimKilavuzu.jsx` + `KilavuzPenceresi.jsx`
+**"Kısaltmalar ve Kullanım Kılavuzu" (kullanıcı isteği).** `KullanimKilavuzu` iki bölüm render eder: (1) **kısayol grupları** (genel gezinme, braille hücresi, Perkins yazma, serbest yazma, arama, ayarlar/menü, müzik editörü) — `<dl>` listeleri; (2) **kısaltma tabloları** — 5 sistem (bir harfli 28, iki harfli 87, hece 22, kök 46, parça 39) `<details>` içinde `<table>` olarak, `data/braille.js`'ten TÜRETİLİR (kopya liste YOK → veri değişince kılavuz da değişir). **⚠ MÜZİK kısaltmaları KAPSAM DIŞI** (kullanıcı: "müzik kısaltmalarını yazma ama müzik→brf başlığı altında verdiğini belirt") → açıklamada "Müzik braille işaretleri … Müzik → BRF bölümünde verilmiştir" notu var. **⚠ Kısayollar UYDURULMAZ** — dosya başındaki yorum her kısayolun kaynak dosyasını listeler (BrailleCell `noktaKlavye`, BrailleKlavye `TUS_NOKTA`, YazmaSerbest imleç keydown, App `#hucre-don-slot`, Ayarlar tablist, AramaSayfasi, MuzikScoreSvg/MuzikKlavyeYardim); **kısayol ekleyen/değiştiren her iş bu dosyayı da güncellemeli.**
+İki giriş noktası: **Ayarlar → Kılavuz sekmesi** (üçüncü sekme; tablist ok gezinmesi `['ayarlar','moduller','kilavuz']`) ve **F1** (`KilavuzPenceresi`, App kökünde) → modal (`role="dialog"`, Esc/F1 kapatır, odak tuzağı, rota değişince kapanır). **⚠ `/muzik-brf-yazim` HARİÇ:** o sayfada F1 müzik editörünün KENDİ kısayol penceresini açar (`MuzikScoreSvg` ~787) → `MUZIK_EDITOR_YOLLARI` ile dinleyici hiç kurulmaz (iki yardım üst üste binmesin).
 
 ### `src/components/OkumaModu.jsx`
 Reading mode grid of cards (used inside `CokHucreOkuyucu`). Contains three card-label helper functions:
@@ -313,7 +318,7 @@ Editor UI for the BRF music notation system:
 
 ### Braille Arama (`/arama`) — `src/pages/AramaSayfasi.jsx` + `src/utils/aramaIndeksi.js`
 
-Nokta-numarasıyla braille sembol araması. Tüm öğrenme modüllerini (Modül 1,2,3,5,6,7,8,9) tek bir düz indekste tarar (~1213 kayıt). Müzik: 20 alt ders (MUZIK_BOLUMLER) **+ Dizi Okuma** (MUZIK_DIZILERI). **Kapsam dışı** (kasıtlı): Test/Sınav sayfaları + Hücreyi Tanı + Modül 4 Yazma (sabit sembol seti yok) + Modül 10 BRF araçları + menüden gizli Kur'an okuma sayfaları (heceler/kelimeler/sureler).
+Nokta-numarasıyla braille sembol araması. Tüm öğrenme modüllerini (Modül 1,2,3,5,6,7,8,9) tek bir düz indekste tarar (~1213 kayıt). Müzik: 20 alt ders (MUZIK_BOLUMLER). **Kapsam dışı** (kasıtlı): **Dizi Okuma (MUZIK_DIZILERI — ders tamamen kaldırıldı, bkz. §9)** + Test/Sınav sayfaları + Hücreyi Tanı + Modül 4 Yazma (sabit sembol seti yok) + Modül 10 BRF araçları + menüden gizli Kur'an okuma sayfaları (heceler/kelimeler/sureler).
 
 **`utils/aramaIndeksi.js`** — `data/`'daki tüm sembol dizilerini içe aktarıp tek bir `ARAMA_INDEKSI` listesi kurar (modül-yükleme anında, bir kez). Her giriş `{ etiket, altEtiket, hucreler, anahtarlar, yol, modulBaslik, kategori }`. Sayfaların **hücre türetme mantığı birebir taklit edilir** (rakamlarda `[3,4,5,6]` sayı işareti öneki; kelime kökü kısaltmasında `[5]` kök işareti; iki harfli/parça kısaltmada `[sol, sag]`). Hücreler `hucreleriCikar()` ile normalize edilir — **bazı veride hücreler düz yazılmış** (örn. `KURAN_TECVID[18].hucreler = [2,5,6]` yerine `[[2,5,6]]` olmalı; düz dizi tek hücreye sarılır, çökme olmaz).
 - `sorguyuNormalle(girdi)` → "1 a2,3" gibi tek parçayı sıralı-tekil anahtar "123" yapar. `sorguHucreleri(girdi)` → boşluğa böler: "123 145" → `["123","145"]`.
@@ -669,6 +674,8 @@ Insert fns (`notaEkleKonuma`/`susEkleKonuma`/`manuelOlcuCizgisiEkle`) **return t
 
 ### Module 8 Music Lesson Pages (`MuzikBrailleSayfa` + `CokHucreOkuyucu`)
 
+**⚠ "Dizi Okuma" DERSİ KALDIRILDI (kullanıcı: "modül 8'den dizi okuma bölümünü kaldıralım tamamen, gerek yok o bölüme; aramada da görünmesin"):** Birlikte giden 6 yüzey — (1) `moduller.jsx` `muzikDiziMenuOgesi` + `muzikModulOgeleriOlustur` girdisi; (2) `App.jsx` `/muzik-diziler` rotası + import; (3) `pages/MuzikDiziOkuma.jsx` **SİLİNDİ**; (4) `dersAkisi.js` `muzikDersleri` zinciri (artık dersler → Test); (5) `aramaIndeksi.js` `kaynakEkle(MUZIK_DIZILERI…)` (arama ölü rotaya götürmesin); (6) `karisikYazmaKaynaklari.js` `'/muzik-diziler'` kaydı. **Ham veri `MUZIK_DIZILERI` (data/muzik.js) DURUYOR** ama hiçbir yüzey kullanmıyor (NOKTALAMA precedent'i gibi; müzik BRF motorları bu diziye bakmaz — `qa:brf-*` yeşil). Yeniden eklenecekse altı yüzey birlikte gelmeli.
+
 - `/muzik/notalar`, `/muzik/sureler`, and sibling music lessons are backed by `src/data/muzik.js` and mapped through `src/pages/MuzikBrailleSayfa.jsx`.
 - `/muzik/grup/:grupId` is rendered by `src/pages/MuzikBrailleMenu.jsx`; group card labels should strip the leading `Müzik ·`/`Müzik:` prefix with `muzikMenuBasligi()` while lesson page headers may keep their full `pageBaslik`.
 - Current user-facing music lesson labels: `zaman-imzasi` is `Ölçü sayılarının yazımı`; `degistirici` is `Değiştirici işaretler`.
@@ -854,7 +861,7 @@ src/
 │   ├── MuzikBrailleMenu.jsx     # Music module group menu
 │   ├── MuzikBrailleSayfa.jsx    # Music lesson page (CokHucreOkuyucu + audio)
 │   ├── MuzikBrfYazim.jsx        # Music BRF writing editor page
-│   ├── MuzikDiziOkuma.jsx       # Music scale reading
+│   # ✗ MuzikDiziOkuma.jsx — DELETED ("Dizi Okuma" dersi kaldırıldı; bkz. §9 notu)
 │   ├── MuzikNotaEgitimi.jsx     # Music note teaching
 │   ├── MuzikSembolEgitimi.jsx   # Music symbol teaching
 │   ├── MuzikSureleri.jsx        # Music durations

@@ -1,38 +1,73 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 
-const ANAHTAR = 'braille-tur-tamam-v1';
+// ⚠ Sürüm v2: tur içeriği güncellendi (kullanıcı: "ayarlar bölümündeki tanıtım turunu da
+// güncelleyelim, güncel değil"). Eski metin kaldırılan özelliklerden söz ediyordu
+// (tarayıcı seslendirmesi, konuşma hızı ayarı) ve yalnız Modül 1 bölümlerini anlatıyordu.
+// Anahtar v1 → v2: içerik esaslı değiştiği için tur bir kez daha gösterilir.
+const ANAHTAR = 'braille-tur-tamam-v2';
 
 const ADIMLAR = [
   {
     baslik: 'Hoş geldiniz',
     metin:
-      'Braille Öğreniyorum uygulamasına hoş geldiniz. Bu kısa rehber size uygulamayı tanıtacaktır.'
+      'Braille Öğreniyorum uygulamasına hoş geldiniz. Bu kısa rehber uygulamayı tanıtır. '
+      + 'İstediğiniz an Atla düğmesiyle çıkabilir, Ayarlar sayfasından tekrar açabilirsiniz.'
   },
   {
-    baslik: 'Sesli Yönergeler',
+    baslik: 'Ekran okuyucu ile uyum',
     metin:
-      'Her ekranda size ne yapmanız gerektiğini sesli olarak söyleyeceğiz. Ayrıca ekran okuyucunuzla da uyumludur.'
+      'Uygulamanın tüm içeriğini ekran okuyucunuz okur. Yönergeler, hücrelerin anlamı ve '
+      + 'her dokunuşun sonucu sesli olarak bildirilir; doğru nokta, hücre geçişi ve hata '
+      + 'için ayrı ses efektleri duyulur.'
   },
   {
-    baslik: 'Braille Hücresi',
+    baslik: 'Braille hücresi',
     metin:
-      'Braille hücresi altı noktadan oluşur. Sol sütunda yukarıdan aşağı 1, 2, 3 numaralı noktalar; sağ sütunda yukarıdan aşağı 4, 5, 6 numaralı noktalar bulunur.'
+      'Braille hücresi altı noktadan oluşur. Sol sütunda yukarıdan aşağı 1, 2 ve 3; sağ '
+      + 'sütunda yukarıdan aşağı 4, 5 ve 6 numaralı noktalar bulunur. Hücre içinde Alt tuşu '
+      + 'ile yön oklarını kullanarak noktalar arasında gezinebilirsiniz.'
   },
   {
-    baslik: 'Eğitim Bölümleri',
+    baslik: 'Ders akışı',
     metin:
-      'Hücreyi tanı, harf, rakam ve noktalama bölümleri vardır. Her bölüm size adım adım rehberlik eder.'
+      'Bir derse girdiğinizde önce yönerge okunur. Sonra Sekme tuşu sizi hücrenin birinci '
+      + 'noktasına götürür ve istenen noktalara sırayla basarsınız. Öğe tamamlanınca '
+      + 'kendiliğinden bir sonrakine geçilir.'
   },
   {
-    baslik: 'Test ve Ayarlar',
+    baslik: 'Hızlı dolaşım modu',
     metin:
-      'Öğrendiklerinizi test bölümünde sınayabilirsiniz. Ayarlar bölümünden ses, hız, yazı boyutu ve temayı değiştirebilirsiniz.'
+      'Ders sayfalarındaki Hızlı dolaşım modu düğmesi, o dersteki tüm öğeleri kart listesi '
+      + 'hâlinde gösterir. Bir kartın üzerine geldiğinizde öğenin anlamı ve noktaları okunur; '
+      + 'etkinleştirdiğinizde o öğe öğrenme modunda açılır.'
+  },
+  {
+    baslik: 'Yazma',
+    metin:
+      'Yazma bölümlerinde ekrandaki altı tuşu kullanabilir ya da klavyeden F, D, S ile 1, 2, 3 '
+      + 've J, K, L ile 4, 5, 6 noktalarına basabilirsiniz. Tuşlara aynı anda basıp birlikte '
+      + 'bırakınca hücre yazılır. Boşluk tuşu boşluk bırakır, geri silme tuşu siler.'
+  },
+  {
+    baslik: 'Modüller ve araçlar',
+    metin:
+      'On modül vardır: harfler, kısaltmalar, noktalama, yazma, Kur’an-ı Kerim, matematik, '
+      + 'fen, müzik, yabancı diller ve BRF dönüştürücü. Braille arama sayfasından nokta '
+      + 'numarasına veya kelimeye göre tüm sembolleri arayabilirsiniz.'
+  },
+  {
+    baslik: 'Ayarlar ve kılavuz',
+    metin:
+      'Ayarlar sayfasından ses efektlerini, titreşimi, yazı boyutunu ve görünümü '
+      + 'değiştirebilir, ana menüde görünecek modülleri seçebilirsiniz. Kılavuz sekmesinde '
+      + 'kısaltma tabloları ve tüm klavye kısayolları yer alır.'
   },
   {
     baslik: 'Hazırsınız',
     metin:
-      'Tanıtım tamamlandı. İyi öğrenmeler dileriz. Bu rehbere ana menüden tekrar ulaşabilirsiniz.'
+      'Tanıtım tamamlandı. İyi öğrenmeler dileriz. Bu rehbere Ayarlar sayfasındaki '
+      + 'tanıtım turu düğmesinden tekrar ulaşabilirsiniz.'
   }
 ];
 
