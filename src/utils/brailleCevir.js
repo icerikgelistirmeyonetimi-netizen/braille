@@ -2236,7 +2236,11 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     }
   }
 
-  if (kokAktif && b.length >= 2 && ci === 0 && ilkKey === '5') {
+  // ⚠ KÖK KISALTMASI EK İSTER: encoder `kelimeKokuKisaltmaPrefixEslesmesi` kaynak kelimenin
+  // kökten UZUN olmasını şart koşar (kök yalnız başta + ardından en az 1 karakter). Bu yüzden
+  // [5]+sag'dan sonra hücre YOKSA kök okuma (b.length >= 3). Sondaki noktalama zaten yukarıda
+  // soyulduğundan "bil." de 2 hücreye iner → kök sayılmaz (encoder de öyle yazmaz).
+  if (kokAktif && b.length >= 3 && ci === 0 && ilkKey === '5') {
     const sagKey = noktalariAnahtara(b[1]);
     const kok = KOK_SAG_TERS.get(sagKey);
     if (kok) {
@@ -2468,13 +2472,19 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       }
     }
 
-    // ⚠ KELİME BAŞINDA PARÇA KISALTMASI YOK (MEB kuralı; kullanıcı: "4-5 ile başlayan
-    // kısaltmalar kelime başında da kullanılabiliyor fakat kural gereğince kullanılmaması
-    // gerekir" — [4,5]+[2,4,5] kelime başında "tır" okunuyordu). Encoder bu kuralı zaten
-    // uyguluyor (_parcaKullanilabilirMi); decoder mirror etmiyordu. [5,6] başlangıçta bu
-    // hata görülmüyordu çünkü [5,6] kelime başında TEK HARF İŞARETİ olarak tüketiliyor
-    // (tekHarfIsaretliOku, yalnız cellIndex 0) → parça dalına hiç düşmüyor.
-    if (parcaAktif && ci > 0 && ci + 1 < b.length) {
+    // ⚠ PARÇA KISALTMASI KONUM KURALI (MEB; encoder `_parcaKullanilabilirMi` ile uyguluyor,
+    // decoder etmiyordu — kullanıcı: "4-5 ile başlayan kısaltmalar kelime başında da
+    // kullanılabiliyor fakat kural gereğince kullanılmaması gerekir"):
+    //   (a) kelime BAŞINDA / tek başına kullanılamaz,
+    //   (b) SESSİZLE başlayan kelimenin İLK HARFİNDEN hemen sonra kullanılamaz.
+    // Konum, hücre indeksi yerine O ANA KADAR ÜRETİLEN METİNDEN ölçülür: hücre≠karakter
+    // (hece hücresi 2 karakter, büyük harf işareti 0 karakter) → char konumu doğru çıkar.
+    // [5,6] kelime başında zaten TEK HARF İŞARETİ olarak tüketilir (tekHarfIsaretliOku),
+    // o yüzden hata yalnız [4,5]'te görünüyordu.
+    const parcaOncesi = buf.join('');
+    const parcaKonumUygun = parcaOncesi.length > 0
+      && !(parcaOncesi.length === 1 && !TURKCE_UNLULER.has(parcaOncesi.toLocaleLowerCase('tr')));
+    if (parcaAktif && parcaKonumUygun && ci + 1 < b.length) {
       const solKey = noktalariAnahtara(noktalar);
       if (solKey === '4,5' || solKey === '5,6') {
         const parca = PARCA_TERS.get(`${solKey}|${noktalariAnahtara(b[ci + 1])}`);

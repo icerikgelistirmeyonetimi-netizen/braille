@@ -72,6 +72,10 @@ const _PARCA_MAP = new Map(
   ])
 );
 
+// Parça kısaltması konum kuralı için (sessizle başlayan kelimenin ilk harfinden sonra
+// kullanılamaz) — brailleCevir.js TURKCE_UNLULER ikizi.
+const _UNLULER = new Set(['a', 'e', 'ı', 'i', 'o', 'ö', 'u', 'ü']);
+
 const _NOKTA_TERS = new Map(
   NOKTALAMA.map((n) => [
     [...n.noktalar].sort((a, b) => a - b).join(','),
@@ -316,7 +320,9 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             ci = 2;
           }
         }
-        if (kokAktif && b.length >= 2 && ilkKey === '5') {
+        // ⚠ KÖK KISALTMASI EK İSTER (bkz. brailleCevir.js aynı guard): [5]+sag'dan sonra
+        // hücre yoksa kök okuma — encoder kökü yalnız "kök + en az 1 karakter" için yazar.
+        if (kokAktif && b.length >= 3 && ilkKey === '5') {
           const sagKey = [...b[1]].sort((x, y) => x - y).join(',');
           const kok = _KOK_SAG_MAP.get(sagKey);
           if (kok) {
@@ -554,11 +560,13 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
               ciftListeVirgulle = false;
             }
           }
-          // ⚠ KELİME BAŞINDA PARÇA KISALTMASI YOK (MEB kuralı; bkz. brailleCevir.js aynı
-          // guard): [4,5]+harf kelime başında "tır"/"cı" gibi okunuyordu. Encoder bu kuralı
-          // uyguluyor; decoder de uygulamalı. ([5,6] kelime başında tek harf işareti olarak
-          // tüketildiğinden orada hata görülmüyordu.)
-          if (parcaAktif && ci > 0 && ci + 1 < b.length) {
+          // ⚠ PARÇA KISALTMASI KONUM KURALI (MEB; bkz. brailleCevir.js aynı guard):
+          // (a) kelime başında/tek başına, (b) sessizle başlayan kelimenin ilk harfinden
+          // hemen sonra kullanılamaz. Konum, üretilen metinden ölçülür (hücre ≠ karakter).
+          const parcaOncesi = buf.join('');
+          const parcaKonumUygun = parcaOncesi.length > 0
+            && !(parcaOncesi.length === 1 && !_UNLULER.has(parcaOncesi.toLocaleLowerCase('tr')));
+          if (parcaAktif && parcaKonumUygun && ci + 1 < b.length) {
             const nKey = [...noktalar].sort((x, y) => x - y).join(',');
             if (nKey === '4,5' || nKey === '5,6') {
               const sagKey = [...b[ci + 1]].sort((x, y) => x - y).join(',');
