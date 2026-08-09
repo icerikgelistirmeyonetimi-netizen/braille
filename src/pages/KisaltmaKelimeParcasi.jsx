@@ -9,6 +9,9 @@ export default function KisaltmaKelimeParcasi() {
     return {
       yazi: k.etiket,
       ttsYazi: `${k.etiket} sembolü, ${k.ekler} ekleri`,
+      // Hızlı dolaşım kartı (yalnız ekran okuyucu/TTS) — kartta sembol görünür.
+      // ⚠ Nokta listesi "4,5" biçiminde YAZILMAZ (ekran okuyucu "kırk beş" okur) → "4 ve 5".
+      okumaAciklama: `"${k.ekler}" eklerinin kısaltması, önce ${k.sol.join(' ve ')}. noktalar, sonra "${sagEtiket}" sembolü ile yazılır`,
       hucreler: [k.sol, k.sag],
       hucreBasliklari: [onekEtiket, sagEtiket],
       hucreAriaEtiketleri: [`${onekEtiket} noktaları, ön ek`, `${sagEtiket} sembolü`],

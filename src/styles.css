@@ -2253,9 +2253,22 @@ h1, h2, h3 { color: var(--fg); }
   align-items: center;
   gap: 2px;
 }
+/* Boşluk hücresi GÖRÜNÜR olmalı (kullanıcı: "boşluk bıraktık mı bırakmadık mı tereddüt
+   oluşuyor; görenler için imleç konumunu gösterip boşluk var mı yok mu anlaşılır kılınsın").
+   Alt kenarda ince kesikli çizgi = "burada bir boşluk hücresi var" işareti. */
 .yazma-birlesik button.yazma-birlesik-bosluk.yazma-hucre-secim {
   align-self: stretch;
-  min-width: 20px;
+  min-width: 24px;
+  position: relative;
+}
+.yazma-birlesik button.yazma-birlesik-bosluk.yazma-hucre-secim::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 22%;
+  height: 0;
+  border-bottom: 2px dashed var(--panel-border, #c7cbd8);
 }
 .yazma-birlesik .yazma-hucre-secim:focus-visible {
   outline: 3px solid var(--accent, #2563eb);

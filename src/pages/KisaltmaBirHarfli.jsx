@@ -6,6 +6,9 @@ export default function KisaltmaBirHarfli() {
   const ogeler = KELIME_KISALTMALARI.map((k) => ({
     yazi: k.harf,
     ttsYazi: `${k.harf} harfi, ${k.kelime} kelimesi`,
+    // Hızlı dolaşım kartı (yalnız ekran okuyucu/TTS): kart üzerinde tek harf görünür,
+    // bu yüzden neyin kısaltması olduğu ve nasıl yazıldığı söylenir.
+    okumaAciklama: `"${k.kelime}" kelimesinin kısaltması, ${k.harf} harfi ile yazılır`,
     hucreler: [k.noktalar],
     tamYonergeMetni: `${k.harf} harfi tek başına yazıldığında "${k.kelime}" kelimesi okunur.`,
     altMetin: `"${k.kelime}"`,

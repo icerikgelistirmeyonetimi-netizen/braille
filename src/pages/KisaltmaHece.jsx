@@ -19,6 +19,12 @@ export default function KisaltmaHece() {
       ttsYazi: kisitli
         ? `${k.hece} hecesi, kelime sonunda kullanılamaz`
         : `${k.hece} hecesi`,
+      // Hızlı dolaşım kartı (yalnız ekran okuyucu/TTS) — kullanım kuralı da söylenir.
+      // ⚠ Sonuna nokta KOYMA: kart etiketi bunu "…. {nokta bilgisi}" ile birleştiriyor
+      // (nokta koyulursa "kullanılamaz.." gibi çift nokta okunur).
+      okumaAciklama: `"${k.hece}" hece kısaltması, tek hücre ile yazılır`
+        + (kisitli ? '. Kelimenin sonunda kullanılamaz' : '')
+        + (ekKural ? ekKural.replace(/\s*\.\s*$/, '') : ''),
       hucreler: [k.noktalar],
       tamYonergeMetni: (kisitli
         ? `"${k.hece}" hecesi. Bu hece kelimenin sonunda kullanılamaz.`

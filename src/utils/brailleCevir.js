@@ -2468,7 +2468,13 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       }
     }
 
-    if (parcaAktif && ci + 1 < b.length) {
+    // ⚠ KELİME BAŞINDA PARÇA KISALTMASI YOK (MEB kuralı; kullanıcı: "4-5 ile başlayan
+    // kısaltmalar kelime başında da kullanılabiliyor fakat kural gereğince kullanılmaması
+    // gerekir" — [4,5]+[2,4,5] kelime başında "tır" okunuyordu). Encoder bu kuralı zaten
+    // uyguluyor (_parcaKullanilabilirMi); decoder mirror etmiyordu. [5,6] başlangıçta bu
+    // hata görülmüyordu çünkü [5,6] kelime başında TEK HARF İŞARETİ olarak tüketiliyor
+    // (tekHarfIsaretliOku, yalnız cellIndex 0) → parça dalına hiç düşmüyor.
+    if (parcaAktif && ci > 0 && ci + 1 < b.length) {
       const solKey = noktalariAnahtara(noktalar);
       if (solKey === '4,5' || solKey === '5,6') {
         const parca = PARCA_TERS.get(`${solKey}|${noktalariAnahtara(b[ci + 1])}`);

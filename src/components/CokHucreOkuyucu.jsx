@@ -779,6 +779,9 @@ export default function CokHucreOkuyucu({
             getEtiket={(oge) => oge.yazi}
             getTtsEtiket={(oge) => oge.ttsYazi || oge.yazi}
             getAltEtiket={(oge) => oge.okunus || oge.anlam}
+            /* Kart için yalnız ekran okuyucu/TTS açıklaması (görsel etikete girmez) —
+               kısaltma dersleri "aynı kelimesinin kısaltması, A harfi ile yazılır" der. */
+            getOkumaAciklama={(oge) => oge.okumaAciklama}
             getHucreler={(oge) => oge.hucreler || []}
             onSec={okumaOgesiSec}
             onKapat={okumaModundanCik}

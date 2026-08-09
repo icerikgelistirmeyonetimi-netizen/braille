@@ -11,6 +11,8 @@ export default function KisaltmaIkiHarfli() {
     return {
       yazi: harfBuyuk,
       ttsYazi: `${harfBuyuk} kısaltması, ${k.kelime} kelimesi`,
+      // Hızlı dolaşım kartı (yalnız ekran okuyucu/TTS) — kartta yalnız harfler görünür.
+      okumaAciklama: `"${k.kelime}" kelimesinin kısaltması, ${h0} ve ${h1} harfleri ile yazılır`,
       hucreler: [k.sol, k.sag],
       hucreBasliklari: [h0, h1],
       hucreAriaEtiketleri: [`${h0} harfi`, `${h1} harfi`],

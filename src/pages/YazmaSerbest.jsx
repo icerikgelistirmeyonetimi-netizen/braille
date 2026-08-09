@@ -472,6 +472,16 @@ export default function YazmaSerbest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kisaltmaModu, kisaltmaSistemler]);
 
+  // Ekran okuyucu satırı: metin boşsa "boş"; SONDA boşluk hücresi varsa (kullanıcı bir
+  // sonraki kelimeye başlamadan boşluk bıraktıysa) "boşluk" sözcüğüyle bitir — ekran
+  // okuyucular sondaki boşluk karakterini yutuyor, kullanıcı boşluk bırakıp bırakmadığını
+  // anlayamıyordu. Ortadaki boşluklar zaten kelime ayrımı olarak duyuluyor.
+  const sonHucreBosluk = brailleHucreleri.length > 0
+    && (brailleHucreleri[brailleHucreleri.length - 1] || []).length === 0;
+  const srMetin = metin.trim().length === 0
+    ? (sonHucreBosluk ? 'boşluk' : 'boş')
+    : `${metin.replace(/\s+$/, '')}${sonHucreBosluk ? ' boşluk' : ''}`;
+
   const tumunuOku = () => {
     // metin state'i değil, senkron hucrelerRef'ten türet: Onay'a basıldığında bekleyen
     // tıklama hücresi yeni commit edildiyse (setMetin henüz uygulanmadan) güncel metin okunsun.
@@ -528,13 +538,18 @@ export default function YazmaSerbest() {
 
       <div className="yazma-bolum yazma-bolum-orta">
         <div className="yazma-gorunum-panel" style={gorunumPanelStyle}>
-          {/* Okuma kutusu görünmez; ekran okuyucu / tarayıcı seslendirmesi için canlı metin. */}
+          {/* Okuma kutusu görünmez; ekran okuyucu / tarayıcı seslendirmesi için canlı metin.
+              ⚠ SONDAKİ BOŞLUK sözcükle bildirilir (kullanıcı: "boşluk bıraktık ve bir sonraki
+              kelimeyi yazmaya başlamadık, okunabildiğimiz satırda boşluk karakteri görünmüyor,
+              bir sonraki kelimeden önce boşluk bıraktık mı diye tereddüt oluşuyor"): ekran
+              okuyucular metin sonundaki boşluğu YUTAR → sonda boşluk hücresi varsa metnin
+              sonuna "boşluk" sözcüğü eklenir. Kelime ARASINDAKİ boşluklar zaten duyuluyor. */}
           <div
             className="sr-only"
             aria-live="polite"
-            aria-label={`Yazılan metin: ${metin || 'boş'}`}
+            aria-label={`Yazılan metin: ${srMetin}`}
           >
-            {metin || 'boş'}
+            {srMetin}
           </div>
 
           {/* Braille hücreleri + anlamı. NORMAL mod: her hücrenin altında harf/rakam/işaret.

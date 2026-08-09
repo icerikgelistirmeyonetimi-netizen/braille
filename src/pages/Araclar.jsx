@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
-import BrailleGrid from '../components/BrailleGrid.jsx';
+import BrailleGrid, { hucreAriaEtiketi } from '../components/BrailleGrid.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 import { noktalariBRF, brfNoktalaradon } from '../utils/brailleAscii.js';
@@ -7011,6 +7011,12 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
       role="button"
       tabIndex={0}
       title="Tıkla: anlam göster"
+      /* ⚠ Ekran okuyucu hücrenin ANLAMINI da duysun (kullanıcı: "metin→brf'te kısaltmalar
+         açıkken kısaltmalı metne göre bir tepki alamadım ekran okuyucu ile"): etiketsizken
+         ad yalnız içteki BrailleCell özetinden geliyordu ("1 ve 2 numaralı noktalar") →
+         kullanıcı kısaltmanın uygulanıp uygulanmadığını duyamıyordu. Artık anlam başlığı
+         (ör. "İki Harfli Kısaltma: beden") + nokta özeti birlikte okunur. */
+      aria-label={hucreAriaEtiketi(anlam)}
       onClick={() => onClick(globalIdx)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

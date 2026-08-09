@@ -16,6 +16,21 @@ function noktaAnahtari(noktalar) {
   return Array.isArray(noktalar) && noktalar.length ? noktalar.join(',') : '';
 }
 
+/**
+ * Hücrenin ekran okuyucu etiketi: ANLAM + nokta listesi.
+ * Görsel `noktaStr` " · " ile ayırır (ekran okuyucuda kötü okunur) → virgüle çevrilir.
+ * Boşluk hücresinde nokta listesi ("—") anlamsız → yalnız "Boşluk" okunur.
+ * ⚠ Araclar.jsx tablet görünümündeki BrailleHucreBileseni'nde AYNI mantık var; birini
+ * değiştirince diğerini de güncelle.
+ */
+export function hucreAriaEtiketi(anlam) {
+  if (!anlam) return undefined;
+  const baslik = anlam.baslik || '';
+  if (anlam.tip === 'bosluk') return baslik || 'Boşluk';
+  const noktalar = typeof anlam.noktaStr === 'string' ? anlam.noktaStr.replace(/\s*·\s*/g, ', ') : '';
+  return noktalar && noktalar !== '—' ? `${baslik}, nokta ${noktalar}` : baslik;
+}
+
 function anlamRenkleri(anlam, paraBirimiHucre) {
   const baslik = anlam && typeof anlam.baslik === 'string' ? anlam.baslik : '';
   if (paraBirimiHucre || baslik.includes('Birim')) return BIRIM_RENKLERI;
@@ -86,6 +101,13 @@ const BrailleGridHucre = memo(function BrailleGridHucre({
       role="button"
       tabIndex={0}
       title="Tıkla: anlam göster"
+      /* ⚠ Ekran okuyucu hücrenin ANLAMINI da duysun (kullanıcı: "metin→brf'te kısaltmalar
+         açıkken kısaltmalı metne göre bir tepki alamadım ekran okuyucu ile"): ad yalnız
+         içteki BrailleCell özetinden geliyordu ("1 ve 2 numaralı noktalar") → kısaltmanın
+         uygulanıp uygulanmadığı duyulmuyordu. Artık anlam başlığı (ör. "İki Harfli
+         Kısaltma: beden") + nokta özeti birlikte okunur. (Aynı düzeltme Araclar'ın tablet
+         görünümündeki BrailleHucreBileseni'nde de var — ikisi birlikte gitmeli.) */
+      aria-label={anlam ? hucreAriaEtiketi(anlam) : undefined}
       onClick={sec}
       onKeyDown={tusla}
     >

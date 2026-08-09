@@ -90,6 +90,12 @@ export default function OkumaModuListesi({
   getEtiket,
   getTtsEtiket, // opsiyonel: TTS için ayrı etiket (gösterim farklıysa)
   getAltEtiket,
+  // Opsiyonel: kart için YALNIZ ekran okuyucu/TTS açıklaması (görsel etikete girmez).
+  // Kısaltma derslerinde "A" kartı tek başına anlamsızdı (kullanıcı: "aynı kelimesi
+  // kısaltması dedikten sonra A harfi ile yazılır, 1. noktadan oluşur demesi daha uygun
+  // olurdu; gerekli detay seslendirilmeli"). getAltEtiket görsel alt yazıya da bastığından
+  // uzun cümle oraya konamaz → ayrı kanal.
+  getOkumaAciklama,
   getHucreler,
   onSec,
   onKapat,
@@ -192,7 +198,9 @@ export default function OkumaModuListesi({
     const noktaBilgisi = hucreYonergeMetni(hucreler);
     // altEtiket varsa ve etiket'ten farklıysa (ör. "1" → "1 rakamı", "," → "virgül")
     // yalnızca altEtiket kullan; aksi hâlde etiket kullan.
-    const anaEtiket = (altEtiket && altEtiket.trim() !== etiket.trim()) ? altEtiket : etiket;
+    const okumaAciklama = typeof getOkumaAciklama === 'function' ? getOkumaAciklama(oge) : '';
+    const anaEtiket = okumaAciklama
+      || ((altEtiket && altEtiket.trim() !== etiket.trim()) ? altEtiket : etiket);
     const metin = [anaEtiket, noktaBilgisi].filter(Boolean).join('. ');
 
     const seslendirmeKapali =
@@ -232,6 +240,7 @@ export default function OkumaModuListesi({
   }, [
     getEtiket,
     getAltEtiket,
+    getOkumaAciklama,
     getHucreler,
     ogeSesiCal,
     ogeSesiGecikmeMs,
@@ -303,7 +312,9 @@ export default function OkumaModuListesi({
                 onClick={() => onSec(index)}
                 aria-label={(() => {
                   const yon = hucreYonergeMetni(hucreler); // "2. ve 5. noktalardan oluşur"
-                  return `${ariaEtiket}${yon ? '. ' + yon : ''}. Öğrenme modunda açmak için etkinleştirin.`;
+                  const aciklama = typeof getOkumaAciklama === 'function' ? getOkumaAciklama(oge, index) : '';
+                  const bas = aciklama || ariaEtiket;
+                  return `${bas}${yon ? '. ' + yon : ''}. Öğrenme modunda açmak için etkinleştirin.`;
                 })()}
               >
                 {(() => {

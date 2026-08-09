@@ -554,7 +554,11 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
               ciftListeVirgulle = false;
             }
           }
-          if (parcaAktif && ci + 1 < b.length) {
+          // ⚠ KELİME BAŞINDA PARÇA KISALTMASI YOK (MEB kuralı; bkz. brailleCevir.js aynı
+          // guard): [4,5]+harf kelime başında "tır"/"cı" gibi okunuyordu. Encoder bu kuralı
+          // uyguluyor; decoder de uygulamalı. ([5,6] kelime başında tek harf işareti olarak
+          // tüketildiğinden orada hata görülmüyordu.)
+          if (parcaAktif && ci > 0 && ci + 1 < b.length) {
             const nKey = [...noktalar].sort((x, y) => x - y).join(',');
             if (nKey === '4,5' || nKey === '5,6') {
               const sagKey = [...b[ci + 1]].sort((x, y) => x - y).join(',');
