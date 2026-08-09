@@ -162,7 +162,13 @@ className="btn"           role="tab"
                       }} aria-hidden="true">
                         {m.ikon}
                       </span>
-                      <span>
+                      {/* ⚠ Görünür metin ekran okuyucudan GİZLİ (kullanıcı: "ayarlar sayfasındaki
+                          modül numaraları başlıklar ile bitişik algılandı" → "Modül 1Braille
+                          Öğrenme"): iki span ayraçsız bitişik okunuyordu ve onay kutusunun kendi
+                          aria-label'iyle de çakışıyordu (aynı bilgi iki kez). Metin artık yalnız
+                          GÖRSEL; erişilebilir ad tek yerden, virgülle ayrılmış olarak input'un
+                          aria-label'inden gelir ("Modül 1, Braille Öğrenme, görünür"). */}
+                      <span aria-hidden="true">
                         <span style={{ fontWeight: 700, display: 'block', color: gizli ? 'var(--muted)' : 'inherit' }}>{m.baslik}</span>
                         <span style={{ fontSize: '0.82em', color: 'var(--muted)' }}>{m.altBaslik}</span>
                       </span>
@@ -179,7 +185,7 @@ className="btn"           role="tab"
                         konus(e.target.checked ? `${m.baslik} açıldı.` : `${m.baslik} gizlendi.`);
                       }}
                       style={{ width: 0, height: 0, position: 'absolute', opacity: 0 }}
-                      aria-label={`${m.baslik} – ${gizli ? 'gizli' : 'görünür'}`}
+                      aria-label={`${m.baslik}, ${m.altBaslik}, ${gizli ? 'gizli' : 'görünür'}`}
                     />
                     {/* Toggle */}
                     <span style={{ ...toggleTrackStil, flexShrink: 0, background: gizli ? '#ccc' : 'var(--renk-vurgu, #5465ff)' }}>

@@ -726,6 +726,36 @@ export default function CokHucreOkuyucu({
   const [hucreDonSlot, setHucreDonSlot] = useState(null);
   useEffect(() => { setHucreDonSlot(document.getElementById('hucre-don-slot')); }, []);
 
+  // Tüm dokunuş geri-bildirimleri (doğru/yanlış/sıradaki nokta/tamamlandı) TEK assertive
+  // durum bölgesinden geçer → ekran okuyucu OTOMATİK okur (odak taşımadan, dokunma akışı
+  // bozulmadan). TTS srAtla ile (çift duyuru yok — bölge _srBolge'ye yazmaz). Opsiyonel ses.
+  const srDurumDuyur = (mesaj, ses) => {
+    if (ses === 'dogru') dogruSesi();           // öğe/hücre geçişi → yükselen iki notalı ding
+    else if (ses === 'nokta') noktaSesi();      // tek doğru nokta → tek notalı blip (dingden AYRI)
+    else if (ses === 'yanlis') yanlisSesi();
+    setSrSiradakiNokta(mesaj);
+    konusDil(mesaj, { srAtla: true });
+  };
+
+  // Alt+ok kenar geçişi (step-through çok hücreli): odak + duyuru render SONRASI verilmeli.
+  // rAF DEĞİL effect kullanılır — (a) bu effect, srSiradakiNokta'yı temizleyen üstteki
+  // effect'ten SONRA bildirildiğinden aynı flush'ta duyuru temizliğin ÜZERİNE yazılır
+  // (rAF'ta sıra garanti değildi); (b) gizli/görünmez sekmede rAF hiç tetiklenmez.
+  // ⚠⚠ BU HOOK'LAR ERKEN `return`'LERDEN (okuma modu / bitti ekranı) ÖNCE DURMALI —
+  // aşağıda kalırlarsa okuma moduna geçince hook sayısı düşer ve React "Rendered fewer
+  // hooks than expected" (minified #300) ile bileşeni çökertir → BOŞ SAYFA (kullanıcı:
+  // "hızlı dolaşım modunda boş sayfa geliyor"). Yeni hook eklerken de aynı kurala uy.
+  const kenarGecisRef = useRef(null);
+  useEffect(() => {
+    const istek = kenarGecisRef.current;
+    if (!istek) return;
+    kenarGecisRef.current = null;
+    srDurumDuyur(`${istek.ad}.`);
+    const kok = dotSentinelRef.current?.parentElement;
+    kok?.querySelector(`.cell [data-nokta="${istek.nokta}"]`)?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hucreIndeksi]);
+
   // ⚠ Yönerge okunurken klavye ENGELLEME KALDIRILDI (kullanıcı: "yönerge bitmesini bekleyiniz ve
   // zorla bekletmeyi kaldıralım"): noktalar her an etkileşimli; Enter/Space/ok/Tab DOĞAL çalışır
   // (Tab, yönerge bölgesinden DOM sırasıyla ilk noktaya geçer). Eski "bitmesini bekleyiniz" toast'ı
@@ -854,32 +884,6 @@ export default function CokHucreOkuyucu({
       setHucreIndeksi((i) => i + 1);
     }
   };
-
-  // Tüm dokunuş geri-bildirimleri (doğru/yanlış/sıradaki nokta/tamamlandı) TEK assertive
-  // durum bölgesinden geçer → ekran okuyucu OTOMATİK okur (odak taşımadan, dokunma akışı
-  // bozulmadan). TTS srAtla ile (çift duyuru yok — bölge _srBolge'ye yazmaz). Opsiyonel ses.
-  const srDurumDuyur = (mesaj, ses) => {
-    if (ses === 'dogru') dogruSesi();           // öğe/hücre geçişi → yükselen iki notalı ding
-    else if (ses === 'nokta') noktaSesi();      // tek doğru nokta → tek notalı blip (dingden AYRI)
-    else if (ses === 'yanlis') yanlisSesi();
-    setSrSiradakiNokta(mesaj);
-    konusDil(mesaj, { srAtla: true });
-  };
-
-  // Alt+ok kenar geçişi (step-through çok hücreli): odak + duyuru render SONRASI verilmeli.
-  // rAF DEĞİL effect kullanılır — (a) bu effect, srSiradakiNokta'yı temizleyen üstteki
-  // effect'ten SONRA bildirildiğinden aynı flush'ta duyuru temizliğin ÜZERİNE yazılır
-  // (rAF'ta sıra garanti değildi); (b) gizli/görünmez sekmede rAF hiç tetiklenmez.
-  const kenarGecisRef = useRef(null);
-  useEffect(() => {
-    const istek = kenarGecisRef.current;
-    if (!istek) return;
-    kenarGecisRef.current = null;
-    srDurumDuyur(`${istek.ad}.`);
-    const kok = dotSentinelRef.current?.parentElement;
-    kok?.querySelector(`.cell [data-nokta="${istek.nokta}"]`)?.focus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hucreIndeksi]);
 
   const noktayaTikla = (n) => {
     if (basilanlar.includes(n)) return;
