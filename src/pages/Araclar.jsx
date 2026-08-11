@@ -4083,11 +4083,35 @@ export default function Araclar() {
     });
   }, [girisMetni]);
 
-  // Klavyeden gelen hücre → metne ekle (imlecin bulunduğu yere)
+  // Klavyeden gelen hücre → metne ekle (imlecin bulunduğu yere).
+  // ⚠ KISALTMA HÜCRELERİ (kullanıcı: "metin→brf'de Perkins klavyede 3 4 (s ve j tuşları)
+  // yazmıyor"): `hucreyiIsle` NORMAL mod çözücüsüdür — hece/kök hücrelerini bilmez, o yüzden
+  // [3,4] ("ma" hecesi) gibi hücreler HİÇBİR ŞEY yazmıyordu. Kısaltma modu AÇIKKEN önce
+  // iki hücreli KÖK öneki ([5]) beklenir, sonra normal çözüm, o da bilmiyorsa HECE denenir.
+  // ([5,6] parça öneki BİLİNÇLİ olarak dışarıda: aynı hücre "tek harf işareti" anlamına da
+  // geldiğinden metin yazarken hangisinin istendiği belirsiz.)
+  const perkinsKokBekleyenRef = useRef(false);
   const onHucre = (noktalar) => {
+    const anahtar = [...noktalar].sort((a, b) => a - b).join(',');
+    if (kisaltmaAktif) {
+      if (perkinsKokBekleyenRef.current) {
+        perkinsKokBekleyenRef.current = false;
+        const kok = _KOK_SAG_MAP.get(anahtar);
+        if (kok) { insertAtCursor(kok.kelime); return; }
+        // Eşleşme yoksa önek yok sayılır; hücre normal yoldan çözülür.
+      } else if (anahtar === '5') {
+        perkinsKokBekleyenRef.current = true;
+        return;
+      }
+    }
     const r = hucreyiIsle(durumRef.current, noktalar);
     if (r.tip !== 'bilinmeyen' && r.deger !== null) {
       insertAtCursor(r.deger);
+      return;
+    }
+    if (kisaltmaAktif) {
+      const hece = _HECE_TERS.get(anahtar);
+      if (hece) insertAtCursor(hece);
     }
   };
   const onBosluk = () => insertAtCursor(' ');

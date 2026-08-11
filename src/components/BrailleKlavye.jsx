@@ -4,7 +4,9 @@ import {
   hucreyiKarakteryap,
   hucreyiRakamayap,
   buyukHarfIsaretiMi,
-  sayiIsaretiMi
+  sayiIsaretiMi,
+  duzeltmeYabanciHarfIsaretiMi,
+  duzeltmeliHucreyiMetneCevir
 } from '../utils/brailleCevir.js';
 
 // Nokta numarası -> standart Perkins klavye tuşu
@@ -530,21 +532,53 @@ export default function BrailleKlavye({
  * küçük yardımcı state makinesi. Sayfaların kullanması için.
  */
 export function yeniYazmaDurumu() {
-  return { sayiModu: false, buyukSiradaki: false };
+  // duzeltmeBekle: [4] düzeltme/yabancı harf işareti yazıldı → SONRAKİ hücre â/î/û/ô/ê/q/w/x olur.
+  // tumuBuyuk: [6][6] (hepsi büyük) → boşluğa kadar TÜM harfler büyük yazılır.
+  return { sayiModu: false, buyukSiradaki: false, duzeltmeBekle: false, tumuBuyuk: false };
 }
 
 /**
- * @param {{sayiModu:boolean, buyukSiradaki:boolean}} durum  (mutate edilir)
+ * @param {{sayiModu:boolean, buyukSiradaki:boolean, duzeltmeBekle?:boolean, tumuBuyuk?:boolean}} durum  (mutate edilir)
  * @param {number[]} noktalar
  * @returns {{ tip:'karakter'|'isaret'|'bilinmeyen', deger:string|null, anons:string }}
  */
 export function hucreyiIsle(durum, noktalar) {
+  // ⚠ DÜZELTME/YABANCI HARF İŞARETİ [4] (kullanıcı: "metin→brf'de Perkins klavyede 3 4
+  // (s ve j tuşları) yazmıyor"): [4] tek başına bir KARAKTER değil, ÖNEKtir; ardından gelen
+  // harfle birlikte â/î/û/ô/ê veya q/w/x üretir. Eskiden hucreyiIsle bunu bilmediğinden
+  // hem [4] hem de ardındaki harf "tanınmayan hücre" olup HİÇBİR ŞEY yazılmıyordu.
+  if (duzeltmeYabanciHarfIsaretiMi(noktalar)) {
+    durum.duzeltmeBekle = true;
+    durum.sayiModu = false;
+    return { tip: 'isaret', deger: null, anons: 'düzeltme işareti' };
+  }
+  if (durum.duzeltmeBekle) {
+    durum.duzeltmeBekle = false;
+    const duzeltmeli = duzeltmeliHucreyiMetneCevir(noktalar);
+    if (duzeltmeli) {
+      const buyuk = durum.buyukSiradaki || durum.tumuBuyuk;
+      if (durum.buyukSiradaki) durum.buyukSiradaki = false;
+      const cikti = buyuk ? duzeltmeli.toLocaleUpperCase('tr') : duzeltmeli;
+      return { tip: 'karakter', deger: cikti, anons: cikti };
+    }
+    // Düzeltme işaretinden sonra tanınmayan hücre: normal çözüme düş.
+  }
   if (sayiIsaretiMi(noktalar)) {
     durum.sayiModu = true;
     durum.buyukSiradaki = false;
+    durum.tumuBuyuk = false;
     return { tip: 'isaret', deger: null, anons: 'sayı işareti' };
   }
   if (buyukHarfIsaretiMi(noktalar)) {
+    // ⚠ İKİNCİ [6] = HEPSİ BÜYÜK (kullanıcı: "hepsi büyük serbest yazmada çalışmıyor"):
+    // art arda iki büyük harf işareti, boşluğa kadar tüm harfleri büyütür. Eskiden ikinci
+    // [6] yalnız `buyukSiradaki`'yi tekrar true yapıyordu → yalnız BİR harf büyüyordu.
+    if (durum.buyukSiradaki) {
+      durum.buyukSiradaki = false;
+      durum.tumuBuyuk = true;
+      durum.sayiModu = false;
+      return { tip: 'isaret', deger: null, anons: 'hepsi büyük harf işareti' };
+    }
     durum.buyukSiradaki = true;
     durum.sayiModu = false;
     return { tip: 'isaret', deger: null, anons: 'büyük harf işareti' };
@@ -561,10 +595,14 @@ export function hucreyiIsle(durum, noktalar) {
   const k = hucreyiKarakteryap(noktalar);
   if (k === null) return { tip: 'bilinmeyen', deger: null, anons: 'tanınmayan hücre' };
   let cikti = k;
-  if (durum.buyukSiradaki && k !== ' ') {
-    cikti = k.toLocaleUpperCase('tr');
+  if (k === ' ') {
+    // Boşluk kelimeyi bitirir → "hepsi büyük" etkisi de burada sona erer.
+    durum.tumuBuyuk = false;
     durum.buyukSiradaki = false;
-  } else if (k !== ' ') {
+  } else if (durum.buyukSiradaki || durum.tumuBuyuk) {
+    cikti = k.toLocaleUpperCase('tr');
+    durum.buyukSiradaki = false; // tumuBuyuk KORUNUR (boşluğa kadar sürer)
+  } else {
     cikti = k.toLocaleLowerCase('tr');
   }
   return { tip: 'karakter', deger: cikti, anons: cikti === ' ' ? 'boşluk' : cikti };
