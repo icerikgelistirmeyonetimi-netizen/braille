@@ -112,6 +112,22 @@ export default function BrfOku() {
       }
     };
 
+    // ⚠ WORKER HATA + ZAMAN AŞIMI KORUMASI (kullanıcı: "brf oku dediğimde okumuyor, sayfa
+    // takılıp kalıyor"): worker bir istisna atarsa ya da hiç yanıt dönmezse `yukleniyor`
+    // sonsuza kadar açık kalıyor ve sayfa "takılmış" görünüyordu — ne hata mesajı ne çıkış
+    // yolu vardı. Artık (a) onerror yakalanır, (b) 45 sn'lik güvenlik süresi dolarsa
+    // kullanıcıya durum bildirilir. Süre, çok büyük dosyaların normal çözüm süresinden
+    // belirgin biçimde uzun seçildi (yanlış alarm vermesin).
+    workerRef.current.onerror = (err) => {
+      setHata('Çeviri sırasında beklenmeyen bir hata oluştu: ' + (err?.message || 'bilinmeyen hata'));
+      setYukleniyor(false);
+    };
+    const zamanAsimi = setTimeout(() => {
+      if (islemIdRef.current !== currentId) return; // yeni bir istek başladı
+      setHata('Dosya çözümlenemedi (işlem çok uzun sürdü). Dosyayı yeniden yüklemeyi deneyin.');
+      setYukleniyor(false);
+    }, 45000);
+
     // Araya setTimeout koyarak React'in 'yukleniyor: true' state'ini çizmesine izin verelim
     const t = setTimeout(() => {
       workerRef.current.postMessage({
@@ -122,7 +138,7 @@ export default function BrfOku() {
         requestId: currentId
       });
     }, 50);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); clearTimeout(zamanAsimi); };
   }, [dosyaIcerik, kisaltmaAktif, kisaltmaSistemler]);
 
   // Metin oluştuktan sonra esleme dizisini hesaplamak için worker kullan
