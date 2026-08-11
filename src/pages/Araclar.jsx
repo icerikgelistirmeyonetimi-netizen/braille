@@ -4093,6 +4093,15 @@ export default function Araclar() {
   const perkinsKokBekleyenRef = useRef(false);
   const onHucre = (noktalar) => {
     const anahtar = [...noktalar].sort((a, b) => a - b).join(',');
+    // ⚠ [2,3,6] = HEM soru işareti HEM açılış tırnağı (kullanıcı: "metin→brf'de de aynı
+    // sorun; 236 yazıldığında ? yazıyor — kelime sonrasında ? olmalı, cümle başında "
+    // olmalı"). Karar İMLECİN SOLUNDAKİ KARAKTERE göre verilir (state bayrağından daha
+    // güvenilir: kullanıcı metni elle yazmış ya da imleci taşımış olabilir). Boşluk /
+    // satır başı / metin başı → açılış tırnağı; harfe bitişik → soru işareti.
+    const ta = textareaRef.current;
+    const imlecKonumu = ta ? ta.selectionStart : girisMetni.length;
+    const solKarakter = (ta ? ta.value : girisMetni).slice(0, imlecKonumu).slice(-1);
+    durumRef.current.oncekiBosMu = solKarakter === '' || /\s/.test(solKarakter);
     if (kisaltmaAktif) {
       if (perkinsKokBekleyenRef.current) {
         perkinsKokBekleyenRef.current = false;

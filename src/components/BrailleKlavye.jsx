@@ -534,8 +534,16 @@ export default function BrailleKlavye({
 export function yeniYazmaDurumu() {
   // duzeltmeBekle: [4] düzeltme/yabancı harf işareti yazıldı → SONRAKİ hücre â/î/û/ô/ê/q/w/x olur.
   // tumuBuyuk: [6][6] (hepsi büyük) → boşluğa kadar TÜM harfler büyük yazılır.
-  return { sayiModu: false, buyukSiradaki: false, duzeltmeBekle: false, tumuBuyuk: false };
+  // oncekiBosMu: önceki hücre boşluk muydu (metin başı da boşluk sayılır) → [2,3,6]'nın
+  //   açılış tırnağı mı yoksa soru işareti mi olduğunu belirler.
+  return { sayiModu: false, buyukSiradaki: false, duzeltmeBekle: false, tumuBuyuk: false, oncekiBosMu: true };
 }
+
+// [2,3,6] HEM soru işareti HEM açılış tırnağıdır. Canlı yazımda ileriye bakılamaz
+// (kapanış henüz yazılmamıştır) → KONUM karar verir: kelime başında (metin başı veya
+// boşluktan sonra) AÇILIŞ TIRNAĞI, bir karaktere bitişikse SORU İŞARETİ.
+// (kullanıcı: "236 yazdığımızda … bir cümle kelime yoksa ilk tırnak olarak algılamalıydı")
+const ANAHTAR_SORU_TIRNAK = '2,3,6';
 
 /**
  * @param {{sayiModu:boolean, buyukSiradaki:boolean, duzeltmeBekle?:boolean, tumuBuyuk?:boolean}} durum  (mutate edilir)
@@ -543,6 +551,13 @@ export function yeniYazmaDurumu() {
  * @returns {{ tip:'karakter'|'isaret'|'bilinmeyen', deger:string|null, anons:string }}
  */
 export function hucreyiIsle(durum, noktalar) {
+  const sonuc = _hucreyiCoz(durum, noktalar);
+  // Her hücreden SONRA "önceki boş muydu" bilgisini tazele (tırnak/soru kararı için).
+  durum.oncekiBosMu = !noktalar || noktalar.length === 0;
+  return sonuc;
+}
+
+function _hucreyiCoz(durum, noktalar) {
   // ⚠ DÜZELTME/YABANCI HARF İŞARETİ [4] (kullanıcı: "metin→brf'de Perkins klavyede 3 4
   // (s ve j tuşları) yazmıyor"): [4] tek başına bir KARAKTER değil, ÖNEKtir; ardından gelen
   // harfle birlikte â/î/û/ô/ê veya q/w/x üretir. Eskiden hucreyiIsle bunu bilmediğinden
@@ -591,6 +606,13 @@ export function hucreyiIsle(durum, noktalar) {
     const anah = [...noktalar].sort((a, b) => a - b).join(',');
     if (anah === '3,6') return { tip: 'karakter', deger: '-', anons: 'tire' };
     durum.sayiModu = false;
+  }
+  // [2,3,6]: kelime başında AÇILIŞ TIRNAĞI, bitişikse SORU İŞARETİ (bkz. ANAHTAR_SORU_TIRNAK).
+  if ([...noktalar].sort((a, b) => a - b).join(',') === ANAHTAR_SORU_TIRNAK) {
+    if (durum.oncekiBosMu !== false) {
+      return { tip: 'karakter', deger: '“', anons: 'tırnak açma' };
+    }
+    return { tip: 'karakter', deger: '?', anons: 'soru işareti' };
   }
   const k = hucreyiKarakteryap(noktalar);
   if (k === null) return { tip: 'bilinmeyen', deger: null, anons: 'tanınmayan hücre' };

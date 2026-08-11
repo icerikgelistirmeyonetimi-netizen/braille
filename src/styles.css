@@ -2167,12 +2167,18 @@ h1, h2, h3 { color: var(--fg); }
   color: var(--muted);
 }
 /* En fazla iki satır; içerik dikeyde ortalanır (tek satırda hücreler bir alta kayar) */
+/* ⚠ SATIR SINIRI KALDIRILDI, KAYDIRMA EKLENDİ (kullanıcı: "serbest yazmada scroll gelsin,
+   satır sınırlamasını kaldırabiliriz"): eskiden yükseklik sabitti (max 2 satır) ve üçüncü
+   satıra taşan hücre geri alınıyordu. Artık alan istenildiği kadar satır tutar; taşınca
+   dikey kaydırılır (`overflow-y: auto`), içerik üstten hizalanır. */
 .yazma-birlesik {
   align-items: flex-start;
-  align-content: center;
+  align-content: flex-start;
   min-height: 150px;
-  max-height: 190px;
-  overflow: hidden;
+  max-height: 38vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 .yazma-birlesik .yazma-hucre-kutu {
   display: flex;
@@ -2936,7 +2942,7 @@ h1, h2, h3 { color: var(--fg); }
     --cell-gap: 2px;
     --cell-pad: 4px;
   }
-  .yazma-page .yazma-birlesik { min-height: 112px; max-height: 124px; }
+  .yazma-page .yazma-birlesik { min-height: 112px; max-height: 34vh; }
   .yazma-page .yazma-braille-gorunum .cell-title { display: none; }
   .yazma-page .yazma-ipucu { padding: 4px 8px; font-size: 0.8em; margin: 0; }
 

@@ -53,6 +53,9 @@ export default function BrailleCell({
   // yon: +1 sağ / -1 sol, satir: gridRow (1-3). Tek-tek (step-through) çok hücreli
   // görünümde CokHucreOkuyucu bununla AKTİF HÜCREYİ değiştirir (bkz. /fen-kimya).
   onHucreKenari,
+  // Serbest Yazma: yazılmış hücrede noktayı AÇ/KAPA (düzeltme). Verilince `kesfedilebilir`
+  // noktalar role="switch" + aria-checked alır; tıklama/Enter/Space noktayı değiştirir.
+  onNoktaDegistir,
   statikDesen = false,
   // Tablet/yazı tableti modu: nokta NUMARA ETİKETLERİ aynalanır (1↔4, 2↔5, 3↔6).
   // Fiziksel braille tabletinin yazım yüzü için. Dot fillleri zaten dış kullanıcıdan
@@ -151,9 +154,10 @@ export default function BrailleCell({
     sonOkunan.current = null;
   };
 
-  // ── Alt + yön okları: hücre İÇİNDE noktalar arası gezinme ─────────────────────
+  // ── Alt + Shift + yön okları: hücre İÇİNDE noktalar arası gezinme ─────────────
   // (kullanıcı: "tüm braille hücre sayfalarında alt + yön oklarıyla ileri geri
-  //  gezinebilmeliyim. 1den 4e alt sağ ok ile gidebilmeliyim mesela")
+  //  gezinebilmeliyim" → sonra: "alt sol ok kısayolu değiştirelim, alt shift ok
+  //  tuşu ile gezinmeyi ayarlayalım" — Alt+ok tarayıcıda GERİ/İLERİ olduğundan)
   // Yerleşim 1 4 / 2 5 / 3 6 → sağ/sol SÜTUN, yukarı/aşağı SATIR değiştirir.
   // ⚠ DÜZ ok tuşları KULLANILMAZ: NVDA tarama (browse) modunda okları kendi sanal
   //   imleci için tüketir; Alt+ok o gezinmeyle çakışmaz.
@@ -169,7 +173,11 @@ export default function BrailleCell({
 
   const noktaKlavye = (e, n) => {
     const adim = YON_ADIMI[e.key];
-    if (!e.altKey || !adim) return;
+    // ⚠ KISAYOL: Alt + Shift + ok (kullanıcı: "alt sol ok kısayolunu değiştirelim,
+    // alt shift ok tuşu ile gezinmeyi ayarlayalım"). Yalnız Alt+ok tarayıcının
+    // GERİ/İLERİ kısayoludur; Shift eklenince çakışma kalmaz. Düz ok tuşlarına yine
+    // DOKUNULMAZ (ekran okuyucunun tarama gezinmesi serbest kalsın).
+    if (!e.altKey || !e.shiftKey || !adim) return;
     e.preventDefault();
     const su = noktaGridYerlesimi[n];
     if (!su) return;
@@ -330,13 +338,34 @@ export default function BrailleCell({
                     ? {
                         'aria-hidden': false,
                         onMouseEnter: () => noktaUzerinde(n),
-                        // Çok hücreli yan yana dizilimde Alt+ok ile KOMŞU hücreye geçilebilsin:
-                        // pasif hücrenin div noktası tabIndex={-1} ile PROGRAMATİK odak alır
-                        // (Tab sırasına GİRMEZ → "ilk Tab = 1. nokta" standardı bozulmaz),
-                        // odaklanınca aria-label okunur, Alt+ok ile gezinme devam eder.
+                        // Çok hücreli yan yana dizilimde Alt+Shift+ok ile KOMŞU hücreye
+                        // geçilebilsin: pasif hücrenin div noktası tabIndex={-1} ile
+                        // PROGRAMATİK odak alır (Tab sırasına GİRMEZ → "ilk Tab = 1. nokta"
+                        // standardı bozulmaz), odaklanınca aria-label okunur.
                         tabIndex: -1,
                         onFocus: () => noktaUzerinde(n),
-                        onKeyDown: (e) => noktaKlavye(e, n)
+                        // ⚠ DÜZENLENEBİLİR HÜCRE (Serbest Yazma; kullanıcı: "hücrelerde
+                        // düzeltme yapabilmeli, noktanın tıklığını kaldırabilmeliyim, boş
+                        // noktaya tıklayabilmeliyim"): `onNoktaDegistir` verilirse nokta
+                        // AÇ/KAPA olur. Sarmalayıcı bir <button> olabildiğinden (nested
+                        // button geçersiz) nokta yine <div> kalır; tıklama/Enter/Space
+                        // burada yakalanır ve stopPropagation ile sarmalayıcıya SIZMAZ.
+                        ...(onNoktaDegistir
+                          ? {
+                              role: 'switch',
+                              'aria-checked': aktifNoktalar.includes(n),
+                              onClick: (e) => { e.preventDefault(); e.stopPropagation(); onNoktaDegistir(n); },
+                            }
+                          : {}),
+                        onKeyDown: (e) => {
+                          if (onNoktaDegistir && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onNoktaDegistir(n);
+                            return;
+                          }
+                          noktaKlavye(e, n);
+                        }
                       }
                     // Pasif gösterim: nokta ekran okuyucudan GİZLİ — özet .cell etiketinde.
                     : { 'aria-hidden': true })}

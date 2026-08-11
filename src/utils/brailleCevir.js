@@ -2177,7 +2177,9 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     // Düz-yazı paren [2,3,5,6] aç/kapa AYNI hücredir → yönü KONUM belirler:
     // blok başındaki '(' , blok sonundaki ')' (NOKTA_TERS tek değer taşır).
     const parenKonumlu = (metin, acilis) => metin.replace(/[()]/g, acilis ? '(' : ')');
-    const sol = parenKonumlu(noktalamaMetni(b.slice(0, govdeBaslangic)), true);
+    // Blok BAŞINDA soyulan [2,3,6] açılış tırnağıdır (NOKTA_TERS '?' verir; bkz. aşağıdaki
+    // noktalamaCik notu) — sondaki peel'de (`sag`) DEĞİŞTİRME, orası kelimeye bitişiktir.
+    const sol = parenKonumlu(noktalamaMetni(b.slice(0, govdeBaslangic)), true).replace(/\?/g, '“');
     const sagHucreler = b.slice(govdeBitis);
     const govdeTamamlandi = sagHucreler.some((hucre) => noktalariAnahtara(hucre) !== '3');
     const govde = _hucreBlokunuMetneCevirKisaltmali(
@@ -2498,6 +2500,12 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
 
     const anahtar = noktalariAnahtara(noktalar);
     const noktalama = NOKTA_TERS.get(anahtar);
+    // ⚠ [2,3,6] KELİME BAŞINDA AÇILIŞ TIRNAĞI (kullanıcı: "236 yazdığımızda … bir cümle
+    // kelime yoksa ilk tırnak olarak algılamalıydı"): `NOKTA_TERS` bu hücreyi DAİMA '?'
+    // veriyor (Türkçe'de ? baskın olduğu için bilinçli override, bkz. §11-6). Blok başı
+    // = kelime başı (bloklar boşlukla ayrılır) → orada açılış tırnağı yazılır; kelimeye
+    // bitişik [2,3,6] soru işareti kalır. Kapanış [3,5,6] zaten tek anlamlıdır.
+    const noktalamaCik = (anahtar === '2,3,6' && ci === 0) ? '“' : noktalama;
     const heceKarsiligi = heceAktif && !sayiModu ? HECE_TERS_KISALTMA.get(anahtar) : undefined;
     if (noktalama && heceKarsiligi) {
       const ilkHucre = ci === 0;
@@ -2519,11 +2527,11 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
         }
       }
       if (noktalamaKullan) {
-        buf.push(noktalama);
+        buf.push(noktalamaCik);
         if (anahtar === '3') kesmeBayrak = true; // apostrof → sonraki [5,6]+harf literal
       } else harfYaz(heceKarsiligi);
     } else if (noktalama) {
-      buf.push(noktalama);
+      buf.push(noktalamaCik);
       if (anahtar === '3') kesmeBayrak = true;
     } else if (heceKarsiligi) {
       harfYaz(heceKarsiligi);
