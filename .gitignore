@@ -51,3 +51,5 @@ etiketle.bat
 # Claude Code yerel durum
 .claude/worktrees/
 
+
+src/utils/__bench_old.js
