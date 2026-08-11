@@ -18,6 +18,7 @@ import { noktalardanUnicode } from './BelgeBrf.jsx';
 import {
   metniBrailleyeCevir,
   metniBrailleyeCevirKisaltmali,
+  hucreleriMetneCevirKisaltmali,
   hucreyiKarakteryap,
   hucreyiRakamayap,
   hucreyiSiraSayisiRakaminaCevir,
@@ -4090,52 +4091,90 @@ export default function Araclar() {
   // iki hücreli KÖK öneki ([5]) beklenir, sonra normal çözüm, o da bilmiyorsa HECE denenir.
   // ([5,6] parça öneki BİLİNÇLİ olarak dışarıda: aynı hücre "tek harf işareti" anlamına da
   // geldiğinden metin yazarken hangisinin istendiği belirsiz.)
-  const perkinsKokBekleyenRef = useRef(false);
-  const onHucre = (noktalar) => {
-    const anahtar = [...noktalar].sort((a, b) => a - b).join(',');
-    // ⚠ [2,3,6] = HEM soru işareti HEM açılış tırnağı (kullanıcı: "metin→brf'de de aynı
-    // sorun; 236 yazıldığında ? yazıyor — kelime sonrasında ? olmalı, cümle başında "
-    // olmalı"). Karar İMLECİN SOLUNDAKİ KARAKTERE göre verilir (state bayrağından daha
-    // güvenilir: kullanıcı metni elle yazmış ya da imleci taşımış olabilir). Boşluk /
-    // satır başı / metin başı → açılış tırnağı; harfe bitişik → soru işareti.
-    const ta = textareaRef.current;
-    const imlecKonumu = ta ? ta.selectionStart : girisMetni.length;
-    const solKarakter = (ta ? ta.value : girisMetni).slice(0, imlecKonumu).slice(-1);
-    durumRef.current.oncekiBosMu = solKarakter === '' || /\s/.test(solKarakter);
-    if (kisaltmaAktif) {
-      if (perkinsKokBekleyenRef.current) {
-        perkinsKokBekleyenRef.current = false;
-        const kok = _KOK_SAG_MAP.get(anahtar);
-        if (kok) { insertAtCursor(kok.kelime); return; }
-        // Eşleşme yoksa önek yok sayılır; hücre normal yoldan çözülür.
-      } else if (anahtar === '5') {
-        perkinsKokBekleyenRef.current = true;
-        return;
-      }
+  // ⚠⚠ PERKINS GİRİŞİ KELİME TAMPONUYLA ÇÖZÜLÜR (kullanıcı: "metin→brf'de Perkins'te
+  // kısaltmalar çalışmıyor"). ESKİDEN her hücre TEK TEK `hucreyiIsle` ile çözülüyordu;
+  // oysa kısaltmalar KELİME BÜTÜNÜNDEN çözülür: iki harfli ([1,2][1,4,5] = "beden"),
+  // bir harfli (tek başına [1] = "aynı"), kök ([5]+sağ), parça ([4,5]/[5,6]+sağ) ve hece
+  // hücreleri tek tek bakıldığında ya harfe düşer ya hiçbir şey yazmaz.
+  // Artık yazılmakta olan KELİMENİN hücreleri biriktirilir ve her yeni hücrede kelime
+  // metni bir bütün olarak yeniden çözülüp metinde YERİNE yazılır — Serbest Yazma ile
+  // aynı çözücü (`hucreleriMetneCevirKisaltmali`), dolayısıyla aynı kurallar (konum
+  // kısıtları, [2,3,6] tırnak/soru, düzeltme işareti, hepsi büyük) otomatik geçerli.
+  // Boşluk kelimeyi SONLANDIRIR (`sonTekHarfBeklet` kalkar → tek harfli kısaltma çözülür).
+  const perkinsKelimeRef = useRef({ hucreler: [], bas: 0, uzunluk: 0 });
+
+  const perkinsNormalMetin = (hucreler) => {
+    const durum = yeniYazmaDurumu();
+    let out = '';
+    for (const h of hucreler) {
+      const r = hucreyiIsle(durum, h);
+      if (r.tip === 'karakter' && r.deger !== null) out += r.deger;
     }
-    const r = hucreyiIsle(durumRef.current, noktalar);
-    if (r.tip !== 'bilinmeyen' && r.deger !== null) {
-      insertAtCursor(r.deger);
+    return out;
+  };
+
+  const perkinsCoz = (hucreler, sonlandir) => (kisaltmaAktif
+    ? hucreleriMetneCevirKisaltmali(hucreler, kisaltmaSistemler, sonlandir ? {} : { sonTekHarfBeklet: true })
+    : perkinsNormalMetin(hucreler));
+
+  // Tek state güncellemesiyle metnin [bas, bas+silUzunluk) aralığını değiştirir.
+  const metniDegistir = (bas, silUzunluk, ekMetin) => {
+    const ta = textareaRef.current;
+    const v = ta ? ta.value : girisMetni;
+    setGirisMetni(v.slice(0, bas) + ekMetin + v.slice(bas + silUzunluk));
+    const yeniImlec = bas + ekMetin.length;
+    if (ta) requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = yeniImlec; });
+    return yeniImlec;
+  };
+
+  const perkinsTamponuSifirla = (bas) => {
+    perkinsKelimeRef.current = { hucreler: [], bas, uzunluk: 0 };
+  };
+
+  const onHucre = (noktalar) => {
+    const ta = textareaRef.current;
+    const st = perkinsKelimeRef.current;
+    const imlec = ta ? ta.selectionStart : girisMetni.length;
+    // Kullanıcı imleci taşıdıysa / elle yazdıysa tampon geçersizdir → yeni kelime başlat.
+    if (st.hucreler.length === 0 || imlec !== st.bas + st.uzunluk) perkinsTamponuSifirla(imlec);
+    const guncel = perkinsKelimeRef.current;
+    const yeniHucreler = [...guncel.hucreler, noktalar];
+    const metin = perkinsCoz(yeniHucreler, false);
+    metniDegistir(guncel.bas, guncel.uzunluk, metin);
+    perkinsKelimeRef.current = { hucreler: yeniHucreler, bas: guncel.bas, uzunluk: metin.length };
+  };
+
+  const onBosluk = () => {
+    const ta = textareaRef.current;
+    const st = perkinsKelimeRef.current;
+    if (st.hucreler.length > 0) {
+      // Kelimeyi sonlandır: bekletilen tek harfli kısaltma da burada çözülür.
+      const son = perkinsCoz(st.hucreler, true);
+      const yeniImlec = metniDegistir(st.bas, st.uzunluk, `${son} `);
+      perkinsTamponuSifirla(yeniImlec);
       return;
     }
-    if (kisaltmaAktif) {
-      const hece = _HECE_TERS.get(anahtar);
-      if (hece) insertAtCursor(hece);
-    }
+    const imlec = ta ? ta.selectionStart : girisMetni.length;
+    perkinsTamponuSifirla(metniDegistir(imlec, 0, ' '));
   };
-  const onBosluk = () => insertAtCursor(' ');
+
   const onSil = () => {
     const ta = textareaRef.current;
+    const st = perkinsKelimeRef.current;
+    // Yazılmakta olan kelimenin SON HÜCRESİNİ geri al (kelime yeniden çözülür).
+    if (st.hucreler.length > 0 && ta && ta.selectionStart === st.bas + st.uzunluk) {
+      const kalan = st.hucreler.slice(0, -1);
+      const metin = kalan.length ? perkinsCoz(kalan, false) : '';
+      metniDegistir(st.bas, st.uzunluk, metin);
+      perkinsKelimeRef.current = { hucreler: kalan, bas: st.bas, uzunluk: metin.length };
+      return;
+    }
     if (!ta) { setGirisMetni((m) => m.slice(0, -1)); return; }
     const { selectionStart: s, selectionEnd: e } = ta;
     if (s === e && s > 0) {
-      const v = girisMetni;
-      setGirisMetni(v.slice(0, s - 1) + v.slice(e));
-      requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = s - 1; });
+      perkinsTamponuSifirla(metniDegistir(s - 1, 1, ''));
     } else if (s !== e) {
-      const v = girisMetni;
-      setGirisMetni(v.slice(0, s) + v.slice(e));
-      requestAnimationFrame(() => { ta.selectionStart = ta.selectionEnd = s; });
+      perkinsTamponuSifirla(metniDegistir(s, e - s, ''));
     }
   };
 

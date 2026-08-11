@@ -94,7 +94,7 @@ export default function BrfOku() {
 
   // Dosya içeriği, kısaltma modu veya sistemler değişince metni yeniden çöz
   useEffect(() => {
-    if (!dosyaIcerik || !workerRef.current) return;
+    if (!dosyaIcerik || !workerRef.current) { setYukleniyor(false); return; }
     setYukleniyor(true);
     islemIdRef.current += 1;
     const currentId = islemIdRef.current;
