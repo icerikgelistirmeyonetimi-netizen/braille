@@ -6,7 +6,8 @@ import {
   buyukHarfIsaretiMi,
   sayiIsaretiMi,
   duzeltmeYabanciHarfIsaretiMi,
-  duzeltmeliHucreyiMetneCevir
+  duzeltmeliHucreyiMetneCevir,
+  hucreyiSiraSayisiRakaminaCevir
 } from '../utils/brailleCevir.js';
 
 // Nokta numarası -> standart Perkins klavye tuşu
@@ -551,10 +552,32 @@ const ANAHTAR_SORU_TIRNAK = '2,3,6';
  * @returns {{ tip:'karakter'|'isaret'|'bilinmeyen', deger:string|null, anons:string }}
  */
 export function hucreyiIsle(durum, noktalar) {
+  // Sıra sayısı bitti mi? (durum sıra modundayken indirgenmiş rakam OLMAYAN hücre geldi)
+  // → üretilecek karakterin ÖNÜNE nokta konur: "2" + "." + sonraki karakter.
+  const siraBitiyor = durum.siraSayiModu
+    && !(durum.sayiModu && hucreyiSiraSayisiRakaminaCevir(noktalar));
   const sonuc = _hucreyiCoz(durum, noktalar);
+  if (siraBitiyor && sonuc.tip === 'karakter' && typeof sonuc.deger === 'string') {
+    durum.siraSayiModu = false;
+    sonuc.deger = `.${sonuc.deger}`;
+    sonuc.anons = sonuc.deger === '. ' ? 'boşluk' : sonuc.anons;
+  }
   // Her hücreden SONRA "önceki boş muydu" bilgisini tazele (tırnak/soru kararı için).
   durum.oncekiBosMu = !noktalar || noktalar.length === 0;
   return sonuc;
+}
+
+/**
+ * Metin BİTTİĞİNDE bekleyen sıra-sayısı noktasını döndürür ("2" → "2.").
+ * Hücre hücre çözen sayfalar (YazmaSerbest normalModMetni, Araclar Perkins) son
+ * hücreden sonra bunu çağırmalıdır.
+ */
+export function yazmaDurumunuSonlandir(durum) {
+  if (durum && durum.siraSayiModu) {
+    durum.siraSayiModu = false;
+    return '.';
+  }
+  return '';
 }
 
 function _hucreyiCoz(durum, noktalar) {
@@ -601,6 +624,17 @@ function _hucreyiCoz(durum, noktalar) {
   if (durum.sayiModu) {
     const r = hucreyiRakamayap(noktalar);
     if (r) return { tip: 'karakter', deger: r, anons: r };
+    // ⚠ SIRA SAYISI — İNDİRGENMİŞ RAKAMLAR (kullanıcı: "rakam işaretinden sonra 23
+    // tuşladığımda 2. olmalıydı; serbest yazmada kabul etmedi, metin→brf'de sorun yok"):
+    // sıra sayıları alta kaydırılmış rakamlarla yazılır ([2]=1, [2,3]=2 …) ve sonuna
+    // NOKTA gelir. `hucreyiRakamayap` yalnız normal rakamları bilir → hücre tanınmıyordu.
+    // Nokta, sıra sayısı BİTİNCE eklenir (sonraki hücre indirgenmiş rakam değilse ya da
+    // metin biterse) — bu yüzden durumda `siraSayiModu` tutulur.
+    const sira = hucreyiSiraSayisiRakaminaCevir(noktalar);
+    if (sira) {
+      durum.siraSayiModu = true;
+      return { tip: 'karakter', deger: sira, anons: sira };
+    }
     // KURAL: sayı aralığı tiresi [3,6] sayı modunu BOZMAZ (1233-1334) —
     // tireden önce sayı geliyorsa tireden sonra gelen de sayıdır.
     const anah = [...noktalar].sort((a, b) => a - b).join(',');

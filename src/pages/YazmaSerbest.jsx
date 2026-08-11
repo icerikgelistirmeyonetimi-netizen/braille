@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
-import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
+import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle, yazmaDurumunuSonlandir } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur, ekranOkuyucuBildir } from '../utils/ses.js';
 import {
   buyukHarfIsaretiMi,
@@ -51,7 +51,8 @@ function normalModMetni(hucreler) {
     const r = hucreyiIsle(durum, noktalar);
     if (r.tip === 'karakter' && r.deger !== null) out += r.deger;
   }
-  return out;
+  // Sıra sayısı en sonda bittiyse noktasını ekle ("#" + indirgenmiş 2 → "2.").
+  return out + yazmaDurumunuSonlandir(durum);
 }
 
 // Normal modda son eklenen hücrenin bağlam içindeki çözümü (seslendirme için).

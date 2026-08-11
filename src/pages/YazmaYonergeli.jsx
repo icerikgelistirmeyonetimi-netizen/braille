@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
+import HizliErisimPaneli from '../components/HizliErisimPaneli.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
 import { indeksKaydet, indeksAl } from '../utils/ilerleme.js';
 import { HARFLER } from '../data/braille.js';
@@ -40,6 +41,7 @@ export default function YazmaYonergeli() {
   // Aynı karakter için ardışık yanlış deneme sayısı
   const [karakterDeneme, setKarakterDeneme] = useState(0);
   const [ipucuGoster, setIpucuGoster] = useState(false);
+  const [hizliErisim, setHizliErisim] = useState(false); // hızlı erişim paneli açık mı
   const durumRef = useRef(yeniYazmaDurumu());
 
   const kelime = KELIMELER[kelimeIdx];
@@ -121,14 +123,26 @@ export default function YazmaYonergeli() {
     setHucreAdimi(0);
   }, [konum, kelimeIdx]);
 
+  // Belirli bir kelimeye atla (ileri/geri butonları + hızlı erişim paneli aynı yolu kullanır).
+  const kelimeyeGit = (yeniIndeks) => {
+    const hedef = Math.max(0, Math.min(yeniIndeks, KELIMELER.length - 1));
+    setKelimeIdx(hedef);
+    setKonum(0);
+    setHucreAdimi(0);
+    setHataSayisi(0);
+    setKarakterDeneme(0);
+    setIpucuGoster(false);
+    durumRef.current = yeniYazmaDurumu();
+  };
+
   const ileriKelime = () => {
-    if (kelimeIdx < KELIMELER.length - 1) {
-      setKelimeIdx((i) => i + 1);
-      setKonum(0);
-      setHucreAdimi(0);
-      setHataSayisi(0);
-      durumRef.current = yeniYazmaDurumu();
-    }
+    if (kelimeIdx < KELIMELER.length - 1) kelimeyeGit(kelimeIdx + 1);
+  };
+
+  // ⚠ GERİ butonu (kullanıcı: "yönergeli yazmaya ileri geri butonu ... eklenebilmeli"):
+  // eskiden yalnız İLERİ vardı ve o da kelime tamamlanınca görünüyordu.
+  const geriKelime = () => {
+    if (kelimeIdx > 0) kelimeyeGit(kelimeIdx - 1);
   };
 
   // Yanlış denemeyi say; 3'e ulaşınca yardım ver
@@ -251,6 +265,20 @@ export default function YazmaYonergeli() {
 
   return (
     <div className="page yazma-page">
+      {hizliErisim && (
+        <HizliErisimPaneli
+          baslik="Hızlı erişim"
+          ogeTuru="kelime"
+          ogeler={KELIMELER}
+          aktifIndeks={kelimeIdx}
+          onSec={(i) => {
+            setHizliErisim(false);
+            kelimeyeGit(i);
+            konus(`${i + 1}. kelime: ${KELIMELER[i]}`, { kesintiyle: true });
+          }}
+          onKapat={() => setHizliErisim(false)}
+        />
+      )}
       <div className="yazma-bolum yazma-bolum-ust">
         <PageHeader baslik="Yönergeli Yazma" />
         <div className="progress" aria-hidden="true">
@@ -289,6 +317,33 @@ export default function YazmaYonergeli() {
 
       <div className="yazma-bolum yazma-bolum-alt">
         <div className="controls">
+          {/* İleri/geri HER ZAMAN görünür (kelime tamamlanmasa da atlanabilir). */}
+          <button
+            className="btn"
+            type="button"
+            onClick={geriKelime}
+            disabled={kelimeIdx === 0}
+            aria-label="Önceki kelimeye geç"
+          >
+            ◀ Önceki
+          </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={ileriKelime}
+            disabled={kelimeIdx >= KELIMELER.length - 1}
+            aria-label="Sonraki kelimeye geç"
+          >
+            Sonraki ▶
+          </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={() => setHizliErisim(true)}
+            aria-label={`Hızlı erişim: ${KELIMELER.length} kelime arasından seç`}
+          >
+            Hızlı Erişim
+          </button>
           <button className="btn" type="button" onClick={yenidenBasla}>Bu Kelimeyi Tekrar Yaz</button>
           <button
             className="btn"
@@ -298,9 +353,6 @@ export default function YazmaYonergeli() {
           >
             Başa Dön
           </button>
-          {!beklenen && kelimeIdx < KELIMELER.length - 1 && (
-            <button className="btn" type="button" onClick={ileriKelime}>Sonraki Kelime</button>
-          )}
         </div>
       </div>
 

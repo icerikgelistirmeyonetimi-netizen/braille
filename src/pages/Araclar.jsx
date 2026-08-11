@@ -10,7 +10,7 @@ import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import BrailleGrid, { hucreAriaEtiketi } from '../components/BrailleGrid.jsx';
-import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
+import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle, yazmaDurumunuSonlandir } from '../components/BrailleKlavye.jsx';
 import { konus, konusmayiDurdur } from '../utils/ses.js';
 import { noktalariBRF, brfNoktalaradon } from '../utils/brailleAscii.js';
 import { brfMetinedonSistemi } from '../utils/brfOkuyucu.js';
@@ -4110,7 +4110,8 @@ export default function Araclar() {
       const r = hucreyiIsle(durum, h);
       if (r.tip === 'karakter' && r.deger !== null) out += r.deger;
     }
-    return out;
+    // Sıra sayısı sonda bittiyse noktasını ekle (#+indirgenmiş 2 → "2.").
+    return out + yazmaDurumunuSonlandir(durum);
   };
 
   const perkinsCoz = (hucreler, sonlandir) => (kisaltmaAktif

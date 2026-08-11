@@ -2126,6 +2126,33 @@ export function kelimeIciSayiIsaretiKiMi(hucreler, idx, sinirMi) {
   return false;
 }
 
+/**
+ * [3,4,5,6] + İNDİRGENMİŞ rakam dizisi GERÇEKTEN sıra sayısı mı? (kullanıcı: "metin→brf'de
+ * ki kısaltma hecesinden sonra metin devam ediyorsa 6.bar yazıyor; kibar yazması lazımdı")
+ *
+ * "kibar" braille'de `ki`([3,4,5,6]) + `ba`([2,3,5]) + `r` yazılır. Ne var ki [3,4,5,6]
+ * SAYI İŞARETİ, [2,3,5] de İNDİRGENMİŞ 6'dır → çözücü "6." + "r" okuyordu. Ayrım şu:
+ * sıra sayısı kelimeye BİTİŞİK yazılmaz; indirgenmiş rakam dizisinden sonra HARF geliyorsa
+ * bu bir sıra sayısı DEĞİL, "ki" hecesidir. Dizi bloğun sonuna kadar sürüyorsa (ya da
+ * yalnız noktalama/kesme kaldıysa) gerçek sıra sayısıdır ("2.", "12.", "2.'ye").
+ *
+ * NOT: İşaretten sonra NORMAL rakam (a–j) geliyorsa bu kural UYGULANMAZ — "1922'de" gibi
+ * sayı + ek yazımları bozulmasın diye yalnız indirgenmiş (sıra) rakamlar denetlenir.
+ *
+ * @param {number[][]} hucreler  blok hücreleri
+ * @param {number} idx           [3,4,5,6] hücresinin indeksi
+ */
+export function siraSayisiDizisiGecerliMi(hucreler, idx) {
+  let i = idx + 1;
+  let adet = 0;
+  while (i < hucreler.length && hucreyiSiraSayisiRakaminaCevir(hucreler[i])) { i++; adet++; }
+  if (adet === 0) return true; // indirgenmiş rakam yok → bu kuralın konusu değil
+  for (; i < hucreler.length; i++) {
+    if (!NOKTA_TERS.has(noktalariAnahtara(hucreler[i]))) return false; // ardından HARF var
+  }
+  return true;
+}
+
 function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt = {}) {
   const {
     hece: heceAktif = true,
@@ -2372,9 +2399,12 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       // [3,4,5,6], ardında yalnız indirgenmiş rakam varsa 'ki'dir → sayı açılmaz.
       const kelimeIciKi = heceAktif && !sonrakDigit
         && kelimeIciSayiIsaretiKiMi(b, ci, sinirMiA);
+      // KURAL: indirgenmiş rakam dizisinin ardından HARF geliyorsa bu sıra sayısı DEĞİL,
+      // "ki" hecesidir ("kibar" = ki + ba + r → eskiden "6.r" okunuyordu).
+      const siraGecerli = !sonrakSira || sonrakDigit || siraSayisiDizisiGecerliMi(b, ci);
       // sayiModu: aralıkta ("1233-1334") tireden sonra yeniden yazılan işaret; sinirMiA:
       // operatör/noktalama sonrası ("5-3=2", "(3+5)") blok-ortası sayı başlangıcı.
-      if (!kelimeIciKi
+      if (!kelimeIciKi && siraGecerli
         && (kelimeBasi || ciftListeVirgulle || sayiModu || sinirMiA(onceki))
         && (sonrakDigit || sonrakSira)) {
         if (ciftListeVirgulle) {

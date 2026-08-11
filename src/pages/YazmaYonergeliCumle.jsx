@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle } from '../components/BrailleKlavye.jsx';
+import HizliErisimPaneli from '../components/HizliErisimPaneli.jsx';
 import { konus, konusmayiDurdur, basariBildir, hataBildir } from '../utils/ses.js';
 import { indeksKaydet, indeksAl } from '../utils/ilerleme.js';
 import { HARFLER } from '../data/braille.js';
@@ -37,6 +38,7 @@ export default function YazmaYonergeliCumle() {
   const [hataSayisi, setHataSayisi] = useState(0);
   const [karakterDeneme, setKarakterDeneme] = useState(0);
   const [ipucuGoster, setIpucuGoster] = useState(false);
+  const [hizliErisim, setHizliErisim] = useState(false); // hızlı erişim paneli açık mı
   const durumRef = useRef(yeniYazmaDurumu());
 
   const cumle = CUMLELER[cumleIdx];
@@ -113,14 +115,25 @@ export default function YazmaYonergeliCumle() {
     setHucreAdimi(0);
   }, [konum, cumleIdx]);
 
+  // Belirli bir cümleye atla (ileri/geri + hızlı erişim aynı yolu kullanır).
+  const cumleyeGit = (yeniIndeks) => {
+    const hedef = Math.max(0, Math.min(yeniIndeks, CUMLELER.length - 1));
+    setCumleIdx(hedef);
+    setKonum(0);
+    setHucreAdimi(0);
+    setHataSayisi(0);
+    setKarakterDeneme(0);
+    setIpucuGoster(false);
+    durumRef.current = yeniYazmaDurumu();
+  };
+
   const ileriCumle = () => {
-    if (cumleIdx < CUMLELER.length - 1) {
-      setCumleIdx((i) => i + 1);
-      setKonum(0);
-      setHucreAdimi(0);
-      setHataSayisi(0);
-      durumRef.current = yeniYazmaDurumu();
-    }
+    if (cumleIdx < CUMLELER.length - 1) cumleyeGit(cumleIdx + 1);
+  };
+
+  // ⚠ GERİ butonu (kullanıcı isteği: "ileri geri butonu ... eklenebilmeli").
+  const geriCumle = () => {
+    if (cumleIdx > 0) cumleyeGit(cumleIdx - 1);
   };
 
   const yanlisKaydet = () => {
@@ -238,6 +251,20 @@ export default function YazmaYonergeliCumle() {
 
   return (
     <div className="page yazma-page">
+      {hizliErisim && (
+        <HizliErisimPaneli
+          baslik="Hızlı erişim"
+          ogeTuru="cümle"
+          ogeler={CUMLELER}
+          aktifIndeks={cumleIdx}
+          onSec={(i) => {
+            setHizliErisim(false);
+            cumleyeGit(i);
+            konus(`${i + 1}. cümle: ${CUMLELER[i]}`, { kesintiyle: true });
+          }}
+          onKapat={() => setHizliErisim(false)}
+        />
+      )}
       <div className="yazma-bolum yazma-bolum-ust">
         <PageHeader baslik="Yönergeli Cümle Yazma" />
         <div className="progress" aria-hidden="true">
@@ -275,6 +302,33 @@ export default function YazmaYonergeliCumle() {
 
       <div className="yazma-bolum yazma-bolum-alt">
         <div className="controls">
+          {/* İleri/geri HER ZAMAN görünür (cümle tamamlanmasa da atlanabilir). */}
+          <button
+            className="btn"
+            type="button"
+            onClick={geriCumle}
+            disabled={cumleIdx === 0}
+            aria-label="Önceki cümleye geç"
+          >
+            ◀ Önceki
+          </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={ileriCumle}
+            disabled={cumleIdx >= CUMLELER.length - 1}
+            aria-label="Sonraki cümleye geç"
+          >
+            Sonraki ▶
+          </button>
+          <button
+            className="btn"
+            type="button"
+            onClick={() => setHizliErisim(true)}
+            aria-label={`Hızlı erişim: ${CUMLELER.length} cümle arasından seç`}
+          >
+            Hızlı Erişim
+          </button>
           <button className="btn" type="button" onClick={yenidenBasla}>Bu Cümleyi Tekrar Yaz</button>
           <button
             className="btn"
@@ -284,9 +338,6 @@ export default function YazmaYonergeliCumle() {
           >
             Başa Dön
           </button>
-          {!beklenen && cumleIdx < CUMLELER.length - 1 && (
-            <button className="btn" type="button" onClick={ileriCumle}>Sonraki Cümle</button>
-          )}
         </div>
       </div>
 

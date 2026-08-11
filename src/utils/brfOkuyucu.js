@@ -24,6 +24,7 @@ import {
   matematikSembolHucreEslesmesi,
   noktalariAnahtara,
   kelimeIciSayiIsaretiKiMi,
+  siraSayisiDizisiGecerliMi,
 } from './brailleCevir.js';
 
 // ─── BRF → nokta dizisi ────────────────────────────────────────────────────
@@ -467,7 +468,11 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             // harfli sayı takip ederse sayı kalır; kelime içi tespiti kelimeIciSayiIsaretiKiMi.
             const kelimeIciKi = heceAktif && !sonrakDigit && !sonrakHarfliSayi
               && kelimeIciSayiIsaretiKiMi(b, ci, sayiIsaretiOncesiSinirMi);
-            if (!kelimeIciKi && (sayiIsaretiOncesiSinirMi(onceki) || ciftListeVirgulle) && (sonrakDigit || sonrakSira || sonrakHarfliSayi)) {
+            // KURAL (bkz. brailleCevir.js siraSayisiDizisiGecerliMi): indirgenmiş rakam
+            // dizisinin ardından HARF geliyorsa sıra sayısı DEĞİL "ki" hecesidir
+            // ("kibar" = ki + ba + r → eskiden "6.r" okunuyordu).
+            const siraGecerli = !sonrakSira || sonrakDigit || siraSayisiDizisiGecerliMi(b, ci);
+            if (!kelimeIciKi && siraGecerli && (sayiIsaretiOncesiSinirMi(onceki) || ciftListeVirgulle) && (sonrakDigit || sonrakSira || sonrakHarfliSayi)) {
               if (ciftListeVirgulle) {
                 ciftListeVirgulle = false;
                 cListeSonTekIsaretSonrasi = true;
