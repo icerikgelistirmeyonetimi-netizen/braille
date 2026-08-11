@@ -628,28 +628,14 @@ export default function YazmaSerbest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kisaltmaModu, kisaltmaSistemler]);
 
-  // Ekran okuyucu satırı: metin boşsa "boş"; SONDA boşluk hücresi varsa (kullanıcı bir
-  // sonraki kelimeye başlamadan boşluk bıraktıysa) "boşluk" sözcüğüyle bitir — ekran
-  // okuyucular sondaki boşluk karakterini yutuyor, kullanıcı boşluk bırakıp bırakmadığını
-  // anlayamıyordu. Ortadaki boşluklar zaten kelime ayrımı olarak duyuluyor.
-  // ⚠ ARDIŞIK BOŞLUKLAR SAYIYLA SÖYLENİR (kullanıcı: "iki boşluk bırakıldığında ekran
-  // okuyucu tek boşluk gibi birleştirerek okuyor"): HTML ardışık boşlukları tek boşluğa
-  // indirger ve ekran okuyucu da öyle okur → kullanıcı kaç boşluk bıraktığını bilemiyordu.
-  // Metin içindeki 2+ boşluk dizisi "N boşluk" olarak; SONDAKİ boşluklar da (metinden
-  // kırpıldığı için) sayılarak eklenir.
-  let sonBoslukSayisi = 0;
-  for (let i = brailleHucreleri.length - 1; i >= 0 && (brailleHucreleri[i] || []).length === 0; i--) {
-    sonBoslukSayisi += 1;
-  }
-  const boslukEki = sonBoslukSayisi === 0
-    ? ''
-    : (sonBoslukSayisi === 1 ? ' boşluk' : ` ${sonBoslukSayisi} boşluk`);
-  const srGovde = metin
-    .replace(/\s+$/, '')
-    .replace(/ {2,}/g, (bosluklar) => ` ${bosluklar.length} boşluk `);
-  const srMetin = srGovde.trim().length === 0
-    ? (boslukEki ? boslukEki.trim() : 'boş')
-    : `${srGovde}${boslukEki}`;
+  // ⚠ EKRAN OKUYUCU SATIRI: "boşluk"/"boş" SÖZCÜĞÜ KULLANILMAZ (kullanıcı: "serbest yazmada
+  // ekran okuyucu boşluk diye okumasın; boşsa boş geçecek, seslendirmeyecek boşluk diye").
+  // Önceki sürümler sondaki boşluğu " boşluk" diye ekliyor, ardışık boşlukları "N boşluk"
+  // diye sayıyordu; artık metin OLDUĞU GİBİ verilir. Boşlukların yutulmaması için bölge
+  // CSS'te `white-space: pre-wrap` taşır → ardışık ve sondaki boşluklar erişilebilirlik
+  // ağacında KORUNUR, ekran okuyucu duraklamayı kendi algılar. Metin boşsa bölge de BOŞ
+  // kalır (hiçbir şey duyurulmaz).
+  const srMetin = metin;
 
   const tumunuOku = () => {
     // metin state'i değil, senkron hucrelerRef'ten türet: Onay'a basıldığında bekleyen
@@ -700,16 +686,14 @@ export default function YazmaSerbest() {
 
       <div className="yazma-bolum yazma-bolum-orta">
         <div className="yazma-gorunum-panel" style={gorunumPanelStyle}>
-          {/* Okuma kutusu görünmez; ekran okuyucu / tarayıcı seslendirmesi için canlı metin.
-              ⚠ SONDAKİ BOŞLUK sözcükle bildirilir (kullanıcı: "boşluk bıraktık ve bir sonraki
-              kelimeyi yazmaya başlamadık, okunabildiğimiz satırda boşluk karakteri görünmüyor,
-              bir sonraki kelimeden önce boşluk bıraktık mı diye tereddüt oluşuyor"): ekran
-              okuyucular metin sonundaki boşluğu YUTAR → sonda boşluk hücresi varsa metnin
-              sonuna "boşluk" sözcüğü eklenir. Kelime ARASINDAKİ boşluklar zaten duyuluyor. */}
+          {/* Okuma kutusu görünmez; ekran okuyucu için canlı metin.
+              ⚠ "boşluk" SÖZCÜĞÜ YOK (kullanıcı isteği): metin olduğu gibi verilir;
+              `white-space: pre-wrap` sayesinde ardışık ve sondaki boşluklar korunur,
+              ekran okuyucu boşluğu kendi algılar. Metin boşken bölge de boş kalır. */}
           <div
-            className="sr-only"
+            className="sr-only yazma-sr-metin"
             aria-live="polite"
-            aria-label={`Yazılan metin: ${srMetin}`}
+            aria-label={srMetin ? `Yazılan metin: ${srMetin}` : undefined}
           >
             {srMetin}
           </div>

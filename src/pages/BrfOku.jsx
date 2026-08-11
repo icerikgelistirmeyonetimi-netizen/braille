@@ -81,6 +81,8 @@ export default function BrfOku() {
   // Worker için referanslar
   const workerRef = useRef(null);
   const islemIdRef = useRef(0);
+  // Her dosya okumasında artar → aynı dosya tekrar seçilse bile çözüm effect'i çalışır.
+  const [okumaNonce, setOkumaNonce] = useState(0);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('../workers/araclarCevir.worker.js', import.meta.url), { type: 'module' });
@@ -92,7 +94,13 @@ export default function BrfOku() {
     };
   }, []);
 
-  // Dosya içeriği, kısaltma modu veya sistemler değişince metni yeniden çöz
+  // Dosya içeriği, kısaltma modu veya sistemler değişince metni yeniden çöz.
+  // ⚠⚠ `okumaNonce` BAĞIMLILIĞI ŞART (kullanıcı: "brf oku dediğimde okumuyor, sayfa takılıp
+  // kalıyor"): AYNI dosya ikinci kez seçildiğinde `setDosyaIcerik` AYNI string'i verir →
+  // React bail-out yapar → bu effect HİÇ çalışmaz → worker'a istek gitmez, ama
+  // `processBrfFile` "Okunuyor…" spinner'ını çoktan açmıştır → sayfa sonsuza kadar takılır
+  // (dosya seçici `value=''` ile sıfırlandığından aynı dosyayı tekrar seçmek çok kolay).
+  // Nonce her dosya okumasında artar → içerik aynı olsa da effect yeniden koşar.
   useEffect(() => {
     if (!dosyaIcerik || !workerRef.current) { setYukleniyor(false); return; }
     setYukleniyor(true);
@@ -101,15 +109,18 @@ export default function BrfOku() {
     
     workerRef.current.onmessage = (e) => {
       if (e.data.requestId !== currentId) return;
-      if (e.data.actionType === 'brfToText' || typeof e.data.resultText === 'string') {
-        if (e.data.ok) {
-          setOkunanMetin(e.data.resultText);
-          setYukleniyor(false);
-        } else {
-          setHata('Çeviri sırasında hata oluştu: ' + (e.data.error || ''));
-          setYukleniyor(false);
-        }
+      // ⚠ HATA YANITI DA İŞLENMELİ (kullanıcı: "brf oku dediğimde okumuyor, sayfa takılıp
+      // kalıyor"): worker hata durumunda YALNIZ { ok:false, error } gönderir — `actionType`
+      // ve `resultText` alanları YOKTUR. Eski koşul bu iki alanı aradığından hata dalı ÖLÜ
+      // KOD'du: çeviri patladığında ne mesaj çıkıyor ne de "Okunuyor…" kapanıyordu.
+      if (e.data.ok) {
+        if (typeof e.data.resultText !== 'string') return; // bu yanıt textToBrf'e ait
+        setOkunanMetin(e.data.resultText);
+        setYukleniyor(false);
+        return;
       }
+      setHata('Çeviri sırasında hata oluştu: ' + (e.data.error || ''));
+      setYukleniyor(false);
     };
 
     // ⚠ WORKER HATA + ZAMAN AŞIMI KORUMASI (kullanıcı: "brf oku dediğimde okumuyor, sayfa
@@ -139,7 +150,7 @@ export default function BrfOku() {
       });
     }, 50);
     return () => { clearTimeout(t); clearTimeout(zamanAsimi); };
-  }, [dosyaIcerik, kisaltmaAktif, kisaltmaSistemler]);
+  }, [dosyaIcerik, okumaNonce, kisaltmaAktif, kisaltmaSistemler]);
 
   // Metin oluştuktan sonra esleme dizisini hesaplamak için worker kullan
   useEffect(() => {
@@ -198,6 +209,7 @@ export default function BrfOku() {
     reader.onload = (ev) => {
       const icerik = ev.target.result;
       setDosyaIcerik(icerik);
+      setOkumaNonce((n) => n + 1); // aynı dosya tekrar seçilse de çözüm effect'i tetiklensin
       // setYukleniyor(false); => Worker'a devrediliyor
     };
     reader.onerror = () => { setHata('Dosya okunurken hata oluştu.'); setYukleniyor(false); };

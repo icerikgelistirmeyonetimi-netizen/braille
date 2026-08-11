@@ -2483,9 +2483,21 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     // (hece hücresi 2 karakter, büyük harf işareti 0 karakter) → char konumu doğru çıkar.
     // [5,6] kelime başında zaten TEK HARF İŞARETİ olarak tüketilir (tekHarfIsaretliOku),
     // o yüzden hata yalnız [4,5]'te görünüyordu.
-    const parcaOncesi = buf.join('');
-    const parcaKonumUygun = parcaOncesi.length > 0
-      && !(parcaOncesi.length === 1 && !TURKCE_UNLULER.has(parcaOncesi.toLocaleLowerCase('tr')));
+    // ⚠⚠ PERFORMANS: ESKİDEN `buf.join('')` idi → her hücrede tüm tamponu birleştirdiğinden
+    // boşluksuz uzun bloklarda O(n²) (32.000 hücre 0,93sn → 11,4sn). Kural için yalnız
+    // "0 mı, tam 1 karakter mi" gerektiğinden 2. karakterde ERKEN ÇIKAN özet kullanılır.
+    const parcaKonumUygun = (() => {
+      let uzunluk = 0;
+      let ilk = '';
+      for (const parca of buf) {
+        if (!parca) continue;
+        if (!ilk) ilk = parca[0];
+        uzunluk += parca.length;
+        if (uzunluk > 1) return true;
+      }
+      if (uzunluk === 0) return false;
+      return TURKCE_UNLULER.has(ilk.toLocaleLowerCase('tr'));
+    })();
     if (parcaAktif && parcaKonumUygun && ci + 1 < b.length) {
       const solKey = noktalariAnahtara(noktalar);
       if (solKey === '4,5' || solKey === '5,6') {

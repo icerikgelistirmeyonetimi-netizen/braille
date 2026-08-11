@@ -2167,6 +2167,10 @@ h1, h2, h3 { color: var(--fg); }
   color: var(--muted);
 }
 /* En fazla iki satır; içerik dikeyde ortalanır (tek satırda hücreler bir alta kayar) */
+/* Serbest yazma canlı metin bölgesi: ardışık/sondaki boşluklar erişilebilirlik ağacında
+   korunsun diye pre-wrap (kullanıcı: "boşluk diye okumasın, boşluğu kendi algılasın"). */
+.yazma-sr-metin { white-space: pre-wrap; }
+
 /* ⚠ SATIR SINIRI KALDIRILDI, KAYDIRMA EKLENDİ (kullanıcı: "serbest yazmada scroll gelsin,
    satır sınırlamasını kaldırabiliriz"): eskiden yükseklik sabitti (max 2 satır) ve üçüncü
    satıra taşan hücre geri alınıyordu. Artık alan istenildiği kadar satır tutar; taşınca

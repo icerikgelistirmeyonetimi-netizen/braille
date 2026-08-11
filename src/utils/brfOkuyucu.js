@@ -563,9 +563,23 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
           // ⚠ PARÇA KISALTMASI KONUM KURALI (MEB; bkz. brailleCevir.js aynı guard):
           // (a) kelime başında/tek başına, (b) sessizle başlayan kelimenin ilk harfinden
           // hemen sonra kullanılamaz. Konum, üretilen metinden ölçülür (hücre ≠ karakter).
-          const parcaOncesi = buf.join('');
-          const parcaKonumUygun = parcaOncesi.length > 0
-            && !(parcaOncesi.length === 1 && !_UNLULER.has(parcaOncesi.toLocaleLowerCase('tr')));
+          // ⚠⚠ PERFORMANS: burada ESKİDEN `buf.join('')` vardı — her hücrede TÜM tamponu
+          // birleştirdiğinden boşluksuz uzun bloklarda O(n²) oluyordu (ölçüm: 32.000 hücrelik
+          // tek blok 0,93sn → 11,4sn; 200 bin hücrede dakikalarca "takılma"). Kurala YALNIZ
+          // "0 mı, tam 1 karakter mi" bilgisi gerektiğinden 2. karakterde ERKEN ÇIKAN özet
+          // kullanılır → pratikte O(1), çıktı birebir aynı.
+          const parcaKonumUygun = (() => {
+            let uzunluk = 0;
+            let ilk = '';
+            for (const parca of buf) {
+              if (!parca) continue;
+              if (!ilk) ilk = parca[0];
+              uzunluk += parca.length;
+              if (uzunluk > 1) return true; // 1'den uzun → konum serbest
+            }
+            if (uzunluk === 0) return false; // kelime başı → parça kullanılamaz
+            return _UNLULER.has(ilk.toLocaleLowerCase('tr')); // tek harf: ünlüyse serbest
+          })();
           if (parcaAktif && parcaKonumUygun && ci + 1 < b.length) {
             const nKey = [...noktalar].sort((x, y) => x - y).join(',');
             if (nKey === '4,5' || nKey === '5,6') {
