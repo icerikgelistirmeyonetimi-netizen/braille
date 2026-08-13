@@ -1526,7 +1526,7 @@ export function readMusicBrailleGroup(group = [], context) {
         const item = pushSpecialItem(context, {
           id: nowId('braille-repeat', context.items.length),
           tip: 'brailleRepeat',
-          ad: sayi > 1 ? `braille ölçü tekrarı ×${sayi}` : 'braille ölçü tekrarı',
+          ad: sayi > 1 ? `Braille ölçü tekrarı ×${sayi}` : 'Braille ölçü tekrarı',
           gorunum: '𝄎',
           hucreler: tokens.slice(i, p).map((t) => [...t.dots]),
           tekrarSayisi: sayi,
@@ -1535,7 +1535,7 @@ export function readMusicBrailleGroup(group = [], context) {
         for (let k = i; k < p; k += 1) {
           pushDebug(context, tokens[k], {
             category: 'repeat',
-            meaning: sayi > 1 ? `braille ölçü tekrarı ×${sayi}` : 'braille ölçü tekrarı',
+            meaning: sayi > 1 ? `Braille ölçü tekrarı ×${sayi}` : 'Braille ölçü tekrarı',
             effect: 'önceki ölçüyü tekrarlar',
             itemId: item.id,
           });
@@ -1946,7 +1946,7 @@ export function readMusicBrailleGroup(group = [], context) {
       pushDebug(context, cell, {
         category: 'literary',
         meaning: fallbackLetter,
-        effect: 'edebi braille / müzik bağlamında atlandı',
+        effect: 'edebi Braille / müzik bağlamında atlandı',
       });
       continue;
     }

@@ -1,14 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { titret, tiklamaSesi } from '../utils/ses.js';
-import {
-  hucreyiKarakteryap,
-  hucreyiRakamayap,
-  buyukHarfIsaretiMi,
-  sayiIsaretiMi,
-  duzeltmeYabanciHarfIsaretiMi,
-  duzeltmeliHucreyiMetneCevir,
-  hucreyiSiraSayisiRakaminaCevir
-} from '../utils/brailleCevir.js';
+// ⚠ Perkins tek-hücre çözücüsü (durum makinesi) `utils/perkinsYazma.js`'e TAŞINDI (node ile
+// test edilebilsin: `npm run qa:perkins`). Var olan tüm sayfalar bu üçünü hâlâ buradan
+// import ettiğinden geriye dönük uyumluluk için yeniden dışa aktarılır.
+export { yeniYazmaDurumu, hucreyiIsle, yazmaDurumunuSonlandir } from '../utils/perkinsYazma.js';
 
 // Nokta numarası -> standart Perkins klavye tuşu
 const NOKTA_TUS = { 1: 'F', 2: 'D', 3: 'S', 4: 'J', 5: 'K', 6: 'L' };
@@ -463,8 +458,8 @@ export default function BrailleKlavye({
       className="braille-klavye"
       role="group"
       aria-label={anindaDokunma
-        ? 'Perkins braille klavyesi, altı nokta. Sağa kaydır boşluk, sola kaydır sil.'
-        : 'Perkins braille klavyesi, altı nokta'}
+        ? 'Perkins Braille klavyesi, altı nokta. Sağa kaydır boşluk, sola kaydır sil.'
+        : 'Perkins Braille klavyesi, altı nokta'}
       onTouchStart={anindaDokunma ? undefined : onTouchStart}
       onTouchMove={anindaDokunma ? undefined : onTouchMove}
       onTouchEnd={anindaDokunma ? undefined : onTouchEnd}
@@ -527,139 +522,4 @@ export default function BrailleKlavye({
     </div>
   );
 }
-
-/**
- * Hücreyi karaktere çevirirken sayı/büyük harf modunu da takip eden
- * küçük yardımcı state makinesi. Sayfaların kullanması için.
- */
-export function yeniYazmaDurumu() {
-  // duzeltmeBekle: [4] düzeltme/yabancı harf işareti yazıldı → SONRAKİ hücre â/î/û/ô/ê/q/w/x olur.
-  // tumuBuyuk: [6][6] (hepsi büyük) → boşluğa kadar TÜM harfler büyük yazılır.
-  // oncekiBosMu: önceki hücre boşluk muydu (metin başı da boşluk sayılır) → [2,3,6]'nın
-  //   açılış tırnağı mı yoksa soru işareti mi olduğunu belirler.
-  return { sayiModu: false, buyukSiradaki: false, duzeltmeBekle: false, tumuBuyuk: false, oncekiBosMu: true };
-}
-
-// [2,3,6] HEM soru işareti HEM açılış tırnağıdır. Canlı yazımda ileriye bakılamaz
-// (kapanış henüz yazılmamıştır) → KONUM karar verir: kelime başında (metin başı veya
-// boşluktan sonra) AÇILIŞ TIRNAĞI, bir karaktere bitişikse SORU İŞARETİ.
-// (kullanıcı: "236 yazdığımızda … bir cümle kelime yoksa ilk tırnak olarak algılamalıydı")
-const ANAHTAR_SORU_TIRNAK = '2,3,6';
-
-/**
- * @param {{sayiModu:boolean, buyukSiradaki:boolean, duzeltmeBekle?:boolean, tumuBuyuk?:boolean}} durum  (mutate edilir)
- * @param {number[]} noktalar
- * @returns {{ tip:'karakter'|'isaret'|'bilinmeyen', deger:string|null, anons:string }}
- */
-export function hucreyiIsle(durum, noktalar) {
-  // Sıra sayısı bitti mi? (durum sıra modundayken indirgenmiş rakam OLMAYAN hücre geldi)
-  // → üretilecek karakterin ÖNÜNE nokta konur: "2" + "." + sonraki karakter.
-  const siraBitiyor = durum.siraSayiModu
-    && !(durum.sayiModu && hucreyiSiraSayisiRakaminaCevir(noktalar));
-  const sonuc = _hucreyiCoz(durum, noktalar);
-  if (siraBitiyor && sonuc.tip === 'karakter' && typeof sonuc.deger === 'string') {
-    durum.siraSayiModu = false;
-    sonuc.deger = `.${sonuc.deger}`;
-    sonuc.anons = sonuc.deger === '. ' ? 'boşluk' : sonuc.anons;
-  }
-  // Her hücreden SONRA "önceki boş muydu" bilgisini tazele (tırnak/soru kararı için).
-  durum.oncekiBosMu = !noktalar || noktalar.length === 0;
-  return sonuc;
-}
-
-/**
- * Metin BİTTİĞİNDE bekleyen sıra-sayısı noktasını döndürür ("2" → "2.").
- * Hücre hücre çözen sayfalar (YazmaSerbest normalModMetni, Araclar Perkins) son
- * hücreden sonra bunu çağırmalıdır.
- */
-export function yazmaDurumunuSonlandir(durum) {
-  if (durum && durum.siraSayiModu) {
-    durum.siraSayiModu = false;
-    return '.';
-  }
-  return '';
-}
-
-function _hucreyiCoz(durum, noktalar) {
-  // ⚠ DÜZELTME/YABANCI HARF İŞARETİ [4] (kullanıcı: "metin→brf'de Perkins klavyede 3 4
-  // (s ve j tuşları) yazmıyor"): [4] tek başına bir KARAKTER değil, ÖNEKtir; ardından gelen
-  // harfle birlikte â/î/û/ô/ê veya q/w/x üretir. Eskiden hucreyiIsle bunu bilmediğinden
-  // hem [4] hem de ardındaki harf "tanınmayan hücre" olup HİÇBİR ŞEY yazılmıyordu.
-  if (duzeltmeYabanciHarfIsaretiMi(noktalar)) {
-    durum.duzeltmeBekle = true;
-    durum.sayiModu = false;
-    return { tip: 'isaret', deger: null, anons: 'düzeltme işareti' };
-  }
-  if (durum.duzeltmeBekle) {
-    durum.duzeltmeBekle = false;
-    const duzeltmeli = duzeltmeliHucreyiMetneCevir(noktalar);
-    if (duzeltmeli) {
-      const buyuk = durum.buyukSiradaki || durum.tumuBuyuk;
-      if (durum.buyukSiradaki) durum.buyukSiradaki = false;
-      const cikti = buyuk ? duzeltmeli.toLocaleUpperCase('tr') : duzeltmeli;
-      return { tip: 'karakter', deger: cikti, anons: cikti };
-    }
-    // Düzeltme işaretinden sonra tanınmayan hücre: normal çözüme düş.
-  }
-  if (sayiIsaretiMi(noktalar)) {
-    durum.sayiModu = true;
-    durum.buyukSiradaki = false;
-    durum.tumuBuyuk = false;
-    return { tip: 'isaret', deger: null, anons: 'sayı işareti' };
-  }
-  if (buyukHarfIsaretiMi(noktalar)) {
-    // ⚠ İKİNCİ [6] = HEPSİ BÜYÜK (kullanıcı: "hepsi büyük serbest yazmada çalışmıyor"):
-    // art arda iki büyük harf işareti, boşluğa kadar tüm harfleri büyütür. Eskiden ikinci
-    // [6] yalnız `buyukSiradaki`'yi tekrar true yapıyordu → yalnız BİR harf büyüyordu.
-    if (durum.buyukSiradaki) {
-      durum.buyukSiradaki = false;
-      durum.tumuBuyuk = true;
-      durum.sayiModu = false;
-      return { tip: 'isaret', deger: null, anons: 'hepsi büyük harf işareti' };
-    }
-    durum.buyukSiradaki = true;
-    durum.sayiModu = false;
-    return { tip: 'isaret', deger: null, anons: 'büyük harf işareti' };
-  }
-  if (durum.sayiModu) {
-    const r = hucreyiRakamayap(noktalar);
-    if (r) return { tip: 'karakter', deger: r, anons: r };
-    // ⚠ SIRA SAYISI — İNDİRGENMİŞ RAKAMLAR (kullanıcı: "rakam işaretinden sonra 23
-    // tuşladığımda 2. olmalıydı; serbest yazmada kabul etmedi, metin→brf'de sorun yok"):
-    // sıra sayıları alta kaydırılmış rakamlarla yazılır ([2]=1, [2,3]=2 …) ve sonuna
-    // NOKTA gelir. `hucreyiRakamayap` yalnız normal rakamları bilir → hücre tanınmıyordu.
-    // Nokta, sıra sayısı BİTİNCE eklenir (sonraki hücre indirgenmiş rakam değilse ya da
-    // metin biterse) — bu yüzden durumda `siraSayiModu` tutulur.
-    const sira = hucreyiSiraSayisiRakaminaCevir(noktalar);
-    if (sira) {
-      durum.siraSayiModu = true;
-      return { tip: 'karakter', deger: sira, anons: sira };
-    }
-    // KURAL: sayı aralığı tiresi [3,6] sayı modunu BOZMAZ (1233-1334) —
-    // tireden önce sayı geliyorsa tireden sonra gelen de sayıdır.
-    const anah = [...noktalar].sort((a, b) => a - b).join(',');
-    if (anah === '3,6') return { tip: 'karakter', deger: '-', anons: 'tire' };
-    durum.sayiModu = false;
-  }
-  // [2,3,6]: kelime başında AÇILIŞ TIRNAĞI, bitişikse SORU İŞARETİ (bkz. ANAHTAR_SORU_TIRNAK).
-  if ([...noktalar].sort((a, b) => a - b).join(',') === ANAHTAR_SORU_TIRNAK) {
-    if (durum.oncekiBosMu !== false) {
-      return { tip: 'karakter', deger: '“', anons: 'tırnak açma' };
-    }
-    return { tip: 'karakter', deger: '?', anons: 'soru işareti' };
-  }
-  const k = hucreyiKarakteryap(noktalar);
-  if (k === null) return { tip: 'bilinmeyen', deger: null, anons: 'tanınmayan hücre' };
-  let cikti = k;
-  if (k === ' ') {
-    // Boşluk kelimeyi bitirir → "hepsi büyük" etkisi de burada sona erer.
-    durum.tumuBuyuk = false;
-    durum.buyukSiradaki = false;
-  } else if (durum.buyukSiradaki || durum.tumuBuyuk) {
-    cikti = k.toLocaleUpperCase('tr');
-    durum.buyukSiradaki = false; // tumuBuyuk KORUNUR (boşluğa kadar sürer)
-  } else {
-    cikti = k.toLocaleLowerCase('tr');
-  }
-  return { tip: 'karakter', deger: cikti, anons: cikti === ' ' ? 'boşluk' : cikti };
-}
+

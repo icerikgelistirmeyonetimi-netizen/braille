@@ -731,9 +731,9 @@ export default function PerkinsYazimPaneli({
           {olcuHucreleri.length > 0 ? (
             <div className="perkins-gecmis">
               <p className="perkins-gecmis-baslik">
-                {gosterilenOlcuNo ? `${gosterilenOlcuNo}. ölçü braille` : 'Ölçü braille'} ({olcuHucreleri.length})
+                {gosterilenOlcuNo ? `${gosterilenOlcuNo}. ölçü Braille` : 'Ölçü Braille'} ({olcuHucreleri.length})
               </p>
-              <div className="perkins-gecmis-liste" aria-label={`${gosterilenOlcuNo || ''}. ölçü braille hücreleri`}>
+              <div className="perkins-gecmis-liste" aria-label={`${gosterilenOlcuNo || ''}. ölçü Braille hücreleri`}>
                 {olcuHucreleri.map((h, i) => (
                   <span
                     key={`${h.ogeId}-${i}`}
@@ -748,7 +748,7 @@ export default function PerkinsYazimPaneli({
             </div>
           ) : (
             <p className="perkins-gecmis-baslik" aria-live="polite">
-              {gosterilenOlcuNo ? `${gosterilenOlcuNo}. ölçü boş` : 'Bu ölçüde henüz braille yok'}
+              {gosterilenOlcuNo ? `${gosterilenOlcuNo}. ölçü boş` : 'Bu ölçüde henüz Braille yok'}
             </p>
           )}
         </div>

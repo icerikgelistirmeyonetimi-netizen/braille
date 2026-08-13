@@ -99,7 +99,7 @@ const KURAL_DONANIM = [
 ];
 
 const KURAL_BARLINE = [
-  'Ölçü çizgisi braille’de boş bir hücredir.',
+  'Ölçü çizgisi Braille’de boş bir hücredir.',
   'Eserin sonundaki ikili çubuk (final double barline): 1-2-6 + 1-3.',
   'Bölüm sonu (sectional double barline): 1-2-6 + 1-3 + 3.',
 ];
@@ -179,7 +179,7 @@ const KURAL_NUMARA_TEKRAR = [
   'Geri sayım tekrarı: iki rakam aralarında boşluk olmadan yazılır.',
   'İlk rakam kaç ölçü geri sayılacağını, ikinci rakam kaç ölçü çalınacağını gösterir (örn. ⠼⠓⠼⠙ = 8 geri, 4 çal).',
   'Geri sayım ile çalınacak miktar eşitse tek rakam yeterlidir.',
-  'Genellikle 8 ölçüden uzun pasajlar için kullanılmaz; aynı braille sayfasında olmalıdır.',
+  'Genellikle 8 ölçüden uzun pasajlar için kullanılmaz; aynı Braille sayfasında olmalıdır.',
 ];
 
 const KURAL_OLCU_NO_TEKRAR = [
@@ -206,7 +206,7 @@ export const MUZIK_NOTALAR = [
 
 /* ─────────  2) NOTA SÜRELERİ (Duration)  ──────────── */
 export const MUZIK_SURELER = [
-  { ...R('8\'lik ve 128\'lik süre', [], 'Temel hücredir, 3 ve 6 noktası eklenmez. 8\'lik ve 128\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '♪'), tamYonergeMetni: 'Bilgilendirme: Süreler notalara 3. ve 6. noktalardan eklemeler yapılarak tanımlanır. 8lik ve 128lik nota için ekleme yapılmaz. notalar doğal formlarında yazılır. Lütfen bu adımda tıklama yapmadan devam ediniz.' },
+  { ...R('8\'lik ve 128\'lik süre', [], 'Temel hücredir, 3 ve 6 noktası eklenmez. 8\'lik ve 128\'lik nota aynı Braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '♪'), tamYonergeMetni: 'Bilgilendirme: Süreler notalara 3. ve 6. noktalardan eklemeler yapılarak tanımlanır. 8lik ve 128lik nota için ekleme yapılmaz. notalar doğal formlarında yazılır. Lütfen bu adımda tıklama yapmadan devam ediniz.' },
   R('8\'lik ve 128\'lik Do', ['1-4-5'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
   R('8\'lik ve 128\'lik Re', ['1-5'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
   R('8\'lik ve 128\'lik Mi', ['1-2-4'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
@@ -215,7 +215,7 @@ export const MUZIK_SURELER = [
   R('8\'lik ve 128\'lik La', ['2-4'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
   R('8\'lik ve 128\'lik Si', ['2-4-5'], '8\'lik ve 128\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♪'),
 
-  R('4\'lük ve 64\'lük süre', ['6'], 'Temel hücreye 6 noktası eklenir. 4\'lük ve 64\'lük nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '♩'),
+  R('4\'lük ve 64\'lük süre', ['6'], 'Temel hücreye 6 noktası eklenir. 4\'lük ve 64\'lük nota aynı Braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '♩'),
   R('4\'lük ve 64\'lük Do', ['1-4-5-6'], '4\'lük ve 64\'lük aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♩'),
   R('4\'lük ve 64\'lük Re', ['1-5-6'], '4\'lük ve 64\'lük aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♩'),
   R('4\'lük ve 64\'lük Mi', ['1-2-4-6'], '4\'lük ve 64\'lük aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♩'),
@@ -224,7 +224,7 @@ export const MUZIK_SURELER = [
   R('4\'lük ve 64\'lük La', ['2-4-6'], '4\'lük ve 64\'lük aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♩'),
   R('4\'lük ve 64\'lük Si', ['2-4-5-6'], '4\'lük ve 64\'lük aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '♩'),
 
-  R('İkilik ve 32\'lik süre', ['3'], 'Temel hücreye 3 noktası eklenir. Yarım ve 32\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
+  R('İkilik ve 32\'lik süre', ['3'], 'Temel hücreye 3 noktası eklenir. Yarım ve 32\'lik nota aynı Braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
   R('İkilik ve 32\'lik Do', ['1-3-4-5'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
   R('İkilik ve 32\'lik Re', ['1-3-5'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
   R('İkilik ve 32\'lik Mi', ['1-2-3-4'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
@@ -233,7 +233,7 @@ export const MUZIK_SURELER = [
   R('İkilik ve 32\'lik La', ['2-3-4'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
   R('İkilik ve 32\'lik Si', ['2-3-4-5'], 'İkilik ve 32\'lik aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅗𝅥'),
 
-  R('Birlik ve 16\'lık süre', ['3-6'], 'Temel hücreye 3 ve 6 noktaları eklenir. Tam ve 16\'lık nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '𝅝'),
+  R('Birlik ve 16\'lık süre', ['3-6'], 'Temel hücreye 3 ve 6 noktaları eklenir. Tam ve 16\'lık nota aynı Braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.', KURAL_SURE, undefined, '𝅝'),
   R('Birlik ve 16\'lık Do', ['1-3-4-5-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
   R('Birlik ve 16\'lık Re', ['1-3-5-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
   R('Birlik ve 16\'lık Mi', ['1-2-3-4-6'], 'Birlik ve 16\'lık aynı yazılır. Bağlamdan anlaşılır.', KURAL_SURE, undefined, '𝅝'),
@@ -343,26 +343,26 @@ export const MUZIK_SURELER_ILERI = [
   ...sureDersiOlustur({
     ad: "16'lık",
     ekNoktalar: [3, 6],
-    aciklama: "16'lık nota, 1'lik nota ile aynı braille hücresini kullanır; okuma bağlamdan anlaşılır.",
+    aciklama: "16'lık nota, 1'lik nota ile aynı Braille hücresini kullanır; okuma bağlamdan anlaşılır.",
     sembol: '16',
-    tamYonergeMetni: "Bilgilendirme: İkinci aşamada kullanım sıklığına göre 16lık, 32lik, 64lük ve 128lik süreler çalışılacaktır. 16lık nota 1lik nota ile aynı braille hücresini kullanır. Lütfen sırasıyla noktalara dokununuz.",
+    tamYonergeMetni: "Bilgilendirme: İkinci aşamada kullanım sıklığına göre 16lık, 32lik, 64lük ve 128lik süreler çalışılacaktır. 16lık nota 1lik nota ile aynı Braille hücresini kullanır. Lütfen sırasıyla noktalara dokununuz.",
   }),
   ...sureDersiOlustur({
     ad: "32'lik",
     ekNoktalar: [3],
-    aciklama: "32'lik nota, 2'lik nota ile aynı braille hücresini kullanır; okuma bağlamdan anlaşılır.",
+    aciklama: "32'lik nota, 2'lik nota ile aynı Braille hücresini kullanır; okuma bağlamdan anlaşılır.",
     sembol: '32',
   }),
   ...sureDersiOlustur({
     ad: "64'lük",
     ekNoktalar: [6],
-    aciklama: "64'lük nota, 4'lük nota ile aynı braille hücresini kullanır; okuma bağlamdan anlaşılır.",
+    aciklama: "64'lük nota, 4'lük nota ile aynı Braille hücresini kullanır; okuma bağlamdan anlaşılır.",
     sembol: '64',
   }),
   ...sureDersiOlustur({
     ad: "128'lik",
     ekNoktalar: [],
-    aciklama: "128'lik nota, 8'lik nota ile aynı braille hücresini kullanır; okuma bağlamdan anlaşılır.",
+    aciklama: "128'lik nota, 8'lik nota ile aynı Braille hücresini kullanır; okuma bağlamdan anlaşılır.",
     sembol: '128',
   }),
 ];
@@ -380,12 +380,12 @@ export const MUZIK_ESLAR = [
 
 export const MUZIK_ESLAR_ILERI = [
   {
-    ...R("16'lık sus", ['1-3-4'], "16'lık sus, birlik sus ile aynı braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '16'),
-    tamYonergeMetni: "Bilgilendirme: İleri sus bölümünde 16lık, 32lik, 64lük ve 128lik suslar çalışılır. Bu suslar temel suslarla aynı braille hücrelerini kullanır; hangi sürenin okunacağı müzik bağlamından anlaşılır. Lütfen sırasıyla noktalara dokununuz.",
+    ...R("16'lık sus", ['1-3-4'], "16'lık sus, birlik sus ile aynı Braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '16'),
+    tamYonergeMetni: "Bilgilendirme: İleri sus bölümünde 16lık, 32lik, 64lük ve 128lik suslar çalışılır. Bu suslar temel suslarla aynı Braille hücrelerini kullanır; hangi sürenin okunacağı müzik bağlamından anlaşılır. Lütfen sırasıyla noktalara dokununuz.",
   },
-  R("32'lik sus", ['1-3-6'], "32'lik sus, ikilik sus ile aynı braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '32'),
-  R("64'lük sus", ['1-2-3-6'], "64'lük sus, dörtlük sus ile aynı braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '64'),
-  R("128'lik sus", ['1-3-4-6'], "128'lik sus, sekizlik sus ile aynı braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '128'),
+  R("32'lik sus", ['1-3-6'], "32'lik sus, ikilik sus ile aynı Braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '32'),
+  R("64'lük sus", ['1-2-3-6'], "64'lük sus, dörtlük sus ile aynı Braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '64'),
+  R("128'lik sus", ['1-3-4-6'], "128'lik sus, sekizlik sus ile aynı Braille hücresini kullanır; süre bağlamdan anlaşılır.", KURAL_ES, undefined, '128'),
 ];
 
 const MUZIK_UZATMA_NOKTASI_ORNEKLERI = [
@@ -596,7 +596,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
     aciklama: 'Largo çok yavaş tempoyu belirtir. Metronom örneğinde yavaş vuruşlarla gösterilir.',
     kurallar: [
       'Tempo işaretleri müzik braillede metin ifadesi olarak yazılır.',
-      'Kontraksiyonsuz braille harfleriyle gösterilir.',
+      'Kontraksiyonsuz Braille harfleriyle gösterilir.',
       'Müzik başlığında veya eser içinde tempo bilgisi olarak kullanılabilir.',
     ],
     ornekler: ['Largo: çok yavaş.'],
@@ -719,7 +719,7 @@ export const MUZIK_TEMPO_ISARETLERI = [
 
 /* ─────────────────  15) BRAILLE TEKRAR İŞARETLERİ  ─────────────────────── */
 export const MUZIK_TEKRAR = [
-  R('braille tekrar işareti', ['2-3-5-6'], '(önceki ölçü/parçayı aynen tekrarlar) · ⠶', KURAL_BRAILLE_REPEAT, undefined, '𝄎'),
+  R('Braille tekrar işareti', ['2-3-5-6'], '(önceki ölçü/parçayı aynen tekrarlar) · ⠶', KURAL_BRAILLE_REPEAT, undefined, '𝄎'),
   R('tekrar ×3', ['2-3-5-6', '3-4-5-6', '1-4'], '(işaret + boşluksuz rakam = 3 kez)', KURAL_BRAILLE_REPEAT),
   R('geri sayım tekrarı (8↩4)', ['3-4-5-6', '1-2-5', '3-4-5-6', '1-4-5'], '(8 ölçü geri, 4 ölçü çal)', KURAL_NUMARA_TEKRAR),
   R('eşit geri sayım (4↩4)', ['3-4-5-6', '1-4-5'], '(araya başka müzik yoksa tek rakam yeter)', KURAL_NUMARA_TEKRAR),
@@ -925,37 +925,37 @@ export const NOTALAR = [
 export const SURE_GOSTERGELERI = [
   {
     ad: 'sekizlik nota', esAd: '128\'lik nota', sembol: '♪',
-    aciklama: 'Temel hücre; 3 ve 6 noktası eklenmez. Örn. sekizlik Do: 1-4-5. Sekizlik nota ile 128\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
+    aciklama: 'Temel hücre; 3 ve 6 noktası eklenmez. Örn. sekizlik Do: 1-4-5. Sekizlik nota ile 128\'lik nota aynı Braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [], realValue: 8, bayrak: 1,
   },
   {
     ad: 'dörtlük nota', esAd: '64\'lük nota', sembol: '♩',
-    aciklama: 'Temel hücreye 6 noktası eklenir. Örn. dörtlük Do: 1-4-5-6. Dörtlük nota ile 64\'lük nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
+    aciklama: 'Temel hücreye 6 noktası eklenir. Örn. dörtlük Do: 1-4-5-6. Dörtlük nota ile 64\'lük nota aynı Braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [6], realValue: 4, bayrak: 0,
   },
   {
     ad: 'ikilik nota', esAd: '32\'lik nota', sembol: '𝅗𝅥',
-    aciklama: 'Temel hücreye 3 noktası eklenir. Örn. ikilik Do: 1-3-4-5. İkilik nota ile 32\'lik nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
+    aciklama: 'Temel hücreye 3 noktası eklenir. Örn. ikilik Do: 1-3-4-5. İkilik nota ile 32\'lik nota aynı Braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [3], realValue: 2, bayrak: 0,
   },
   {
     ad: 'birlik nota', esAd: '16\'lık nota', sembol: '𝅝',
-    aciklama: 'Temel hücreye 3 ve 6 noktaları eklenir. Örn. birlik Do: 1-3-4-5-6. Birlik nota ile 16\'lık nota aynı braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
+    aciklama: 'Temel hücreye 3 ve 6 noktaları eklenir. Örn. birlik Do: 1-3-4-5-6. Birlik nota ile 16\'lık nota aynı Braille hücresiyle yazılır; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [3, 6], realValue: 1, bayrak: 0,
   },
   {
     ad: '16-lık nota', esAd: 'birlik nota', sembol: '𝅘𝅥𝅮',
-    aciklama: 'Birlik nota ile aynı braille hücresiyle yazılır; 3 ve 6 noktaları eklenir. 16\'lık nota ile birlik nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
+    aciklama: 'Birlik nota ile aynı Braille hücresiyle yazılır; 3 ve 6 noktaları eklenir. 16\'lık nota ile birlik nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [3, 6], realValue: 16, bayrak: 2,
   },
   {
     ad: '32-lik nota', esAd: 'ikilik nota', sembol: '𝅘𝅥𝅯',
-    aciklama: 'İkilik nota ile aynı braille hücresiyle yazılır; 3 noktası eklenir. 32\'lik nota ile ikilik nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
+    aciklama: 'İkilik nota ile aynı Braille hücresiyle yazılır; 3 noktası eklenir. 32\'lik nota ile ikilik nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [3], realValue: 32, bayrak: 3,
   },
   {
     ad: '64-lük nota', esAd: 'dörtlük nota', sembol: '𝅘𝅥𝅰',
-    aciklama: 'Dörtlük nota ile aynı braille hücresiyle yazılır; 6 noktası eklenir. 64\'lük nota ile dörtlük nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
+    aciklama: 'Dörtlük nota ile aynı Braille hücresiyle yazılır; 6 noktası eklenir. 64\'lük nota ile dörtlük nota aynı şekilde gösterilir; hangisinin okunacağı parçanın akışından anlaşılır.',
     noktalarEk: [6], realValue: 64, bayrak: 4,
   },
 ];

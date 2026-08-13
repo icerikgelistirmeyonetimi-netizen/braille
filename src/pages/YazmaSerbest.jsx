@@ -14,6 +14,7 @@ import {
   heceAra, ikiHarfAra, kokAra, parcaAra,
 } from '../utils/kisaltmaCevir.js';
 import { NOKTALAMA, OZEL_ISARETLER } from '../data/braille.js';
+import { satirKonumMetni } from '../utils/noktaYardimci.js';
 
 const isaretAdiniOku = (ad) => ad.replace(/\s*\([^)]*\)\s*/g, ' ').trim().toLocaleLowerCase('tr');
 
@@ -43,13 +44,30 @@ const ISARET_GORSEL_ETIKET = {
   'düzeltme işareti': '^', // [4]: sonraki harfi â/î/û/ô/ê veya q/w/x yapar
 };
 
+// ⚠⚠ İKİ HARFLİ KISALTMA YALNIZ KELİME BAŞINDA — anonslar konumu SORMALI (kullanıcı:
+// "ekran okuyucu bazen 2 harfli kısaltma diye kelime ortasında ses veriyor"). MEB kuralı:
+// iki harfli kısaltma kelimenin BAŞINDA olur, ortada/sonda olmaz. Decoder (`brailleCevir`
+// `_hucreBlokunuMetneCevirKisaltmali`) bunu zaten uyguluyor (blok BAŞINDA arar) → yazılan
+// METİN doğruydu; hatalı olan yalnız SESLİ anonstu: `ikiHarfBirinciMi`/`ikiHarfAra` salt
+// hücreye bakıp konumu sormuyordu. 18 `sol` hücresinin 10'u (k l m n r s t v y z — hepsi
+// 3. noktalı) sık kullanılan ünsüz harflerdir → "kitap" yazarken ortadaki `t`, "insan"da
+// `n`/`s` "iki harfli kısaltma başlangıcı" diye okunuyordu.
+// Kelime başı = dizinin başı VEYA önceki hücre boşluk.
+const kelimeBasindaMi = (hucreler, idx) => idx <= 0 || (hucreler[idx - 1] || []).length === 0;
+
 // Normal modda tüm hücre dizisini metne çevirir (sayı/büyük harf modu boyunca takip edilir).
+// ⚠ İLERİ BAKIŞ ŞART (kullanıcı: "perkins yazımı tüm kapsam … tüm tutarsızlıklar giderilmeli"):
+// matematik işaretleri ÇOK HÜCRELİdir ('=' [5,6]+[2,3,5,6]) ve sayı içi noktalama ([3] bölük,
+// [2] ondalık virgül) sonraki hücreye bakmadan çözülemez. `hucreyiIsle`'ye kalan hücreler
+// verilir, dönen `tuketilen` kadar atlanır → "=", "2,5", "1.000", "(3+5)" doğru yazılır
+// (eskiden ")", "21.5", "1’jjj", ")357." oluyordu). bkz. `npm run qa:perkins`.
 function normalModMetni(hucreler) {
   const durum = yeniYazmaDurumu();
   let out = '';
-  for (const noktalar of hucreler) {
-    const r = hucreyiIsle(durum, noktalar);
+  for (let i = 0; i < hucreler.length;) {
+    const r = hucreyiIsle(durum, hucreler[i], hucreler.slice(i + 1));
     if (r.tip === 'karakter' && r.deger !== null) out += r.deger;
+    i += r.tuketilen || 1;
   }
   // Sıra sayısı en sonda bittiyse noktasını ekle ("#" + indirgenmiş 2 → "2.").
   return out + yazmaDurumunuSonlandir(durum);
@@ -59,7 +77,10 @@ function normalModMetni(hucreler) {
 function normalSonHucreBilgisi(hucreler) {
   const durum = yeniYazmaDurumu();
   let son = null;
-  for (const noktalar of hucreler) son = hucreyiIsle(durum, noktalar);
+  for (let i = 0; i < hucreler.length;) {
+    son = hucreyiIsle(durum, hucreler[i], hucreler.slice(i + 1));
+    i += son.tuketilen || 1;
+  }
   return son;
 }
 
@@ -67,9 +88,23 @@ function normalSonHucreBilgisi(hucreler) {
 // ise altında anlamı (harf / rakam / işaret). Tek liste → hücreler doğal olarak alt satıra kayar.
 function birlesikEtiketler(hucreler) {
   const durum = yeniYazmaDurumu();
-  return hucreler.map((noktalar) => {
-    const r = hucreyiIsle(durum, noktalar); // boşlukta da çağrılır → sayı/büyük harf modunu sıfırlar
+  // ⚠ ÇOK HÜCRELİ SEMBOL: `hucreyiIsle` ileri bakışla birden çok hücre tüketebilir ('=' iki
+  // hücre). Etiket dizisi hücre sayısıyla BİREBİR kalmalı (imleç/`data-hucre-idx` indeksleri
+  // buna dayanır) → sembolün İLK hücresi etiketi taşır, tüketilen diğer hücreler boş etiketli
+  // (ama çizilen) hücre olur.
+  const sonuclar = new Array(hucreler.length).fill(null);
+  for (let i = 0; i < hucreler.length;) {
+    const r = hucreyiIsle(durum, hucreler[i], hucreler.slice(i + 1));
+    sonuclar[i] = r;
+    const adim = r.tuketilen || 1;
+    for (let k = 1; k < adim && i + k < hucreler.length; k++) sonuclar[i + k] = { tip: 'devam' };
+    i += adim;
+  }
+  return hucreler.map((noktalar, i) => {
+    const r = sonuclar[i] || { tip: 'bilinmeyen', deger: null, anons: '' };
     if (!noktalar || noktalar.length === 0) return { tip: 'bosluk' };
+    // Çok hücreli sembolün İKİNCİ/ÜÇÜNCÜ hücresi: hücre çizilir, etiket ilk hücrede.
+    if (r.tip === 'devam') return { tip: 'hucre', hucre: noktalar, etiket: '', isaret: false };
     if (r.tip === 'isaret') return { tip: 'hucre', hucre: noktalar, etiket: ISARET_GORSEL_ETIKET[r.anons] || r.anons, isaret: true };
     // ⚠ Tanınmayan hücrede etiket BOŞ (kullanıcı: "bilmediği yazımlara ? ekliyor, ? gelmesin").
     // Eskiden '?' yazılıyordu; kullanıcı henüz yazmakta olduğu bir dizinin ara hücresinde bile
@@ -98,6 +133,35 @@ function kisaltmaSegmentler(hucreler, sistemler) {
     segmentler.push({ tip: 'grup', hucreler: grup, kelime, baslangic });
   }
   return segmentler;
+}
+
+// ── SATIR METNİ (ekran okuyucu satır satır okusun; kullanıcı: "ekran okuyucu tüm metni
+//    seslendiriyor, satır satır okumayı doğru yapmıyor").
+// Her HÜCRENİN ürettiği metin parçası — satır metinleri bundan kurulur (satırlar görsel
+// sarmadan doğduğu için hücre indekslerine göre bölünür).
+// NORMAL mod: `hucreyiIsle` ileri bakışla birden çok hücre tüketebilir ('=' iki hücre) →
+// parça İLK hücreye yazılır, tüketilen hücreler boş kalır (indeks hizası korunur).
+// KISALTMA mod: tanınan kelime, kelime bloğunun İLK hücresine yazılır.
+function hucreMetinParcalari(hucreler, kisaltmali, sistemler) {
+  const parcalar = new Array(hucreler.length).fill('');
+  if (kisaltmali) {
+    for (const seg of kisaltmaSegmentler(hucreler, sistemler)) {
+      parcalar[seg.baslangic] = seg.tip === 'bosluk' ? ' ' : (seg.kelime || '');
+    }
+    return parcalar;
+  }
+  const durum = yeniYazmaDurumu();
+  let sonIndeks = 0;
+  for (let i = 0; i < hucreler.length;) {
+    const r = hucreyiIsle(durum, hucreler[i], hucreler.slice(i + 1));
+    if (r.tip === 'karakter' && r.deger !== null) parcalar[i] = r.deger;
+    sonIndeks = i;
+    i += r.tuketilen || 1;
+  }
+  // Sıra sayısı en sonda bittiyse noktası son hücrenin parçasına eklenir.
+  const kuyruk = yazmaDurumunuSonlandir(durum);
+  if (kuyruk && hucreler.length) parcalar[sonIndeks] = (parcalar[sonIndeks] || '') + kuyruk;
+  return parcalar;
 }
 
 // Serbest yazma: kullanıcı istediğini yazar; her karakter anında seslendirilir.
@@ -147,7 +211,8 @@ export default function YazmaSerbest() {
     if (!son || son.length === 0) return false;
     return (
       (sistemler.kok && kokIsaretiMi(son)) ||
-      (sistemler.ikiHarf && ikiHarfBirinciMi(son)) ||
+      // ⚠ konum şartı: iki harfli kısaltma yalnız kelime başında (bkz. kelimeBasindaMi)
+      (sistemler.ikiHarf && ikiHarfBirinciMi(son) && kelimeBasindaMi(hucreler, hucreler.length - 1)) ||
       (sistemler.parca && parcaBirinciMi(son))
     );
   };
@@ -160,7 +225,10 @@ export default function YazmaSerbest() {
       const onceki = hucreler[hucreler.length - 2];
       if (onceki && birHarfAra(onceki)) return 'kısaltma ek ayırma işareti';
     }
-    if (kisaltmali && ikiHarfBirinciMi(noktalar)) return 'iki harfli kısaltma başlangıcı';
+    // ⚠ konum şartı: iki harfli kısaltma yalnız kelime başında (bkz. kelimeBasindaMi).
+    // `hucreler` imlece kadarki ÖNEK → yeni hücrenin indeksi son elemandır.
+    if (kisaltmali && ikiHarfBirinciMi(noktalar)
+        && kelimeBasindaMi(hucreler, hucreler.length - 1)) return 'iki harfli kısaltma başlangıcı';
     return null;
   };
 
@@ -240,6 +308,29 @@ export default function YazmaSerbest() {
     setKisaltmaModu(yeni);
   };
 
+  // ⚠ Shift+Ctrl+Alt = kısaltma modu aç/kapa — Araclar (metin→brf) ile AYNI kısayol
+  // (kullanıcı: "shift+ctrl+alt tuşu serbest yazmada da kısayol için olmalı").
+  // SAF DEĞİŞTİRİCİ akoru: harf yok → üçlüyü TAMAMLAYAN tuşun keydown'ında yakalanır;
+  // `e.repeat` guard'ı basılı tutmada tekrarı önler. Toggle düğmeyle AYNI fonksiyondur
+  // (`kisaltmaModuToggle` → localStorage + sesli/ekran okuyucu duyurusu + hücreleri
+  // yeni moda göre yeniden çözen effect). Perkins tuşları (F D S J K L) ve imleç
+  // okları etkilenmez; dinleyici ref üzerinden çağırdığından her render'da yeniden
+  // bağlanmaz.
+  const kisaltmaToggleRef = useRef(kisaltmaModuToggle);
+  useEffect(() => { kisaltmaToggleRef.current = kisaltmaModuToggle; });
+  useEffect(() => {
+    const DEGISTIRICILER = new Set(['Shift', 'Control', 'Alt']);
+    const handle = (e) => {
+      if (e.repeat) return;
+      if (e.shiftKey && e.ctrlKey && e.altKey && DEGISTIRICILER.has(e.key)) {
+        e.preventDefault();
+        kisaltmaToggleRef.current();
+      }
+    };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, []);
+
   useEffect(() => {
     konus(
       'Serbest yazma. İstediğiniz harfleri yazabilirsiniz. ' +
@@ -248,6 +339,8 @@ export default function YazmaSerbest() {
       'Her hücre okunacaktır. Tüm metni dinlemek için Onay düğmesine basın. ' +
       'Boşluk için Boşluk, silmek için Sil düğmesini kullanın. ' +
       'Sol ve sağ ok tuşlarıyla yazdıklarınız içinde gezinebilirsiniz; ' +
+      'yukarı ve aşağı ok tuşları bir üst ya da alt satıra geçip o satırı okur; ' +
+      'Home satır başına, End satır sonuna götürür. ' +
       'yazılan hücrelere dokunarak da imleci o hücrenin üzerine götürebilirsiniz. ' +
       'Sil imlecin solundaki, Delete sağındaki hücreyi siler. ' +
       'Yeni hücre imlecin bulunduğu yere eklenir.'
@@ -279,7 +372,10 @@ export default function YazmaSerbest() {
         const kok = kokAra(noktalar);
         if (kok) return `${kok} kelime kökü kısaltması`;
       }
-      if (kisaltmaSistemler.ikiHarf) {
+      // ⚠ konum şartı: çift `onceki`+`noktalar` bir iki harfli kısaltma olabilmek için
+      // KELİME BAŞINDA başlamalı (bkz. kelimeBasindaMi) — "kitap" ortasındaki t+p çifti
+      // aksi halde "toprak kısaltması" diye etiketleniyordu.
+      if (kisaltmaSistemler.ikiHarf && kelimeBasindaMi(hucreler, idx - 1)) {
         const iki = ikiHarfAra(onceki, noktalar);
         if (iki) return `${iki} kısaltması`;
       }
@@ -372,6 +468,41 @@ export default function YazmaSerbest() {
     return harita.satirNo.has(son) ? harita.satirNo.get(son) : 0;
   };
 
+  // Görsel satırların METNİ (ekran okuyucu bölgesi satır satır render edilir).
+  const [srSatirlar, setSrSatirlar] = useState([]);
+  const satirMetinleriAl = (harita) => {
+    if (!harita) return [];
+    const parcalar = hucreMetinParcalari(hucrelerRef.current, kisaltmaModu, kisaltmaSistemler);
+    return harita.satirlar.map((idxler) => idxler.map((i) => parcalar[i] || '').join(''));
+  };
+
+  // Satır metinlerini state'e yaz (aynıysa yeniden render etme — döngü olmasın).
+  const satirlariYenile = (harita = satirHaritasiAl()) => {
+    const yeni = satirMetinleriAl(harita);
+    setSrSatirlar((onceki) => (
+      onceki.length === yeni.length && onceki.every((t, i) => t === yeni[i]) ? onceki : yeni
+    ));
+  };
+
+  // ⚠ Hücre etiketine SATIR İÇİ KONUM (kullanıcı: "hücre numaraları okunduktan sonra …
+  // kaçıncı satırdaki kaçıncı hücre olduğu da seslendirilebilir"). Satırlar GÖRSEL sarmadan
+  // doğduğu için DOM'dan (satirHaritasiAl) türetilir → render sırasında DOM okunamaz, bu
+  // yüzden konumlar state'te tutulur ve satır haritasıyla BİRLİKTE (layout effect + resize)
+  // tazelenir. TEK satır varken eklenmez: "7. hücre" ile "1. satırın 7. hücresi" aynı bilgi
+  // olurdu (satirDuyur'un `satirSayisi > 1` kuralıyla tutarlı).
+  const [satirKonumlari, setSatirKonumlari] = useState([]); // hücre indeksi → "N. satırın M. hücresi"
+  const satirKonumlariniYenile = (harita = satirHaritasiAl()) => {
+    const yeni = [];
+    if (harita && harita.satirSayisi > 1) {
+      harita.satirlar.forEach((idxler, s) => {
+        idxler.forEach((idx, j) => { yeni[idx] = satirKonumMetni(s + 1, j + 1); });
+      });
+    }
+    setSatirKonumlari((onceki) => (
+      onceki.length === yeni.length && onceki.every((t, i) => t === yeni[i]) ? onceki : yeni
+    ));
+  };
+
   // Satır değişimini ekran okuyucuya duyur (yalnız DEĞİŞİNCE).
   const sonSatirRef = useRef(0);
   const satirDuyur = (harita = satirHaritasiAl(), zorla = false) => {
@@ -425,6 +556,28 @@ export default function YazmaSerbest() {
     konus(`${s + 1}. satır sonu, ${hucreAnonsuAt(hucrelerRef.current, son)}`, { kesintiyle: true });
   };
 
+  // Yukarı / Aşağı: imleci ÜST / ALT satırın aynı sütununa taşır ve o satırı okur
+  // (kullanıcı: "satır satır okuma"). Satır yoksa kenarda kalınır.
+  const satirDegistir = (yon) => {
+    const harita = satirHaritasiAl();
+    if (!harita) { konus('metin boş', { kesintiyle: true }); return; }
+    const s = imlecSatiriAl(harita);
+    const hedef = s + yon;
+    if (hedef < 0 || hedef >= harita.satirSayisi) {
+      konus(yon < 0 ? 'ilk satırdasınız' : 'son satırdasınız', { kesintiyle: true });
+      return;
+    }
+    const mevcut = harita.satirlar[s] || [];
+    const kolon = Math.max(0, mevcut.indexOf(imlecRef.current));
+    const liste = harita.satirlar[hedef] || [];
+    if (liste.length === 0) return;
+    imleciAyarla(liste[Math.min(kolon, liste.length - 1)]);
+    sonSatirRef.current = hedef;
+    const metinler = satirMetinleriAl(harita);
+    const metin = (metinler[hedef] || '').trim();
+    konus(`${hedef + 1}. satır${metin ? `, ${metin}` : ''}`, { kesintiyle: true });
+  };
+
   // Dolu noktaların özeti: "1 ve 2 numaralı noktalar" (BrailleCell pasifOzet ile aynı biçim).
   const noktaOzeti = (noktalar) => {
     const s = [...(noktalar || [])].sort((a, b) => a - b);
@@ -442,8 +595,9 @@ export default function YazmaSerbest() {
     // ⚠ BOŞLUK hücresinin etiketinde "boşluk" SÖZCÜĞÜ YAZILMAZ (kullanıcı: "serbest yazmada
     // boşluk için aria label boşluk yazılmamalı, ekran okuyucu boşluğu algılaması yeterli")
     // — okunan metin satırında boşluk zaten duyuluyor; etiket yalnız sırayı söyler.
-    if (!noktalar || noktalar.length === 0) return `${index + 1}. hücre`;
-    return `${index + 1}. hücre: ${anlam}, ${noktaOzeti(noktalar)}`;
+    const konum = satirKonumlari[index] ? `, ${satirKonumlari[index]}` : '';
+    if (!noktalar || noktalar.length === 0) return `${index + 1}. hücre${konum}`;
+    return `${index + 1}. hücre: ${anlam}, ${noktaOzeti(noktalar)}${konum}`;
   };
 
   // Hücreye ODAKLANMAK/dokunmak yeter: imleç o hücrenin ARKASINA gelir → Sil o hücreyi
@@ -620,6 +774,8 @@ export default function YazmaSerbest() {
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       if (e.code === 'ArrowLeft') { e.preventDefault(); imlecSol(); }
       else if (e.code === 'ArrowRight') { e.preventDefault(); imlecSag(); }
+      else if (e.code === 'ArrowUp') { e.preventDefault(); satirDegistir(-1); }
+      else if (e.code === 'ArrowDown') { e.preventDefault(); satirDegistir(1); }
       else if (e.code === 'Home') { e.preventDefault(); satirBasinaGit(); }
       else if (e.code === 'End') { e.preventDefault(); satirSonunaGit(); }
       else if (e.code === 'Delete') { if (e.repeat) return; e.preventDefault(); onSilIleri(); }
@@ -629,14 +785,6 @@ export default function YazmaSerbest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kisaltmaModu, kisaltmaSistemler]);
 
-  // ⚠ EKRAN OKUYUCU SATIRI: "boşluk"/"boş" SÖZCÜĞÜ KULLANILMAZ (kullanıcı: "serbest yazmada
-  // ekran okuyucu boşluk diye okumasın; boşsa boş geçecek, seslendirmeyecek boşluk diye").
-  // Önceki sürümler sondaki boşluğu " boşluk" diye ekliyor, ardışık boşlukları "N boşluk"
-  // diye sayıyordu; artık metin OLDUĞU GİBİ verilir. Boşlukların yutulmaması için bölge
-  // CSS'te `white-space: pre-wrap` taşır → ardışık ve sondaki boşluklar erişilebilirlik
-  // ağacında KORUNUR, ekran okuyucu duraklamayı kendi algılar. Metin boşsa bölge de BOŞ
-  // kalır (hiçbir şey duyurulmaz).
-  const srMetin = metin;
 
   const tumunuOku = () => {
     // metin state'i değil, senkron hucrelerRef'ten türet: Onay'a basıldığında bekleyen
@@ -667,14 +815,29 @@ export default function YazmaSerbest() {
   useLayoutEffect(() => {
     const el = birlesikRef.current;
     if (!el) return;
-    satirDuyur();
+    const harita = satirHaritasiAl();
+    satirDuyur(harita);
+    satirlariYenile(harita);
+    satirKonumlariniYenile(harita);
     const i = Math.min(imlecRef.current, hucrelerRef.current.length - 1);
     const hedef = i >= 0 ? el.querySelector(`[data-hucre-idx="${i}"]`) : null;
     if (hedef && typeof hedef.scrollIntoView === 'function') {
       hedef.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brailleHucreleri, imlec]);
+  }, [brailleHucreleri, imlec, metin, kisaltmaModu, kisaltmaSistemler]);
+
+  // Pencere yeniden boyutlanınca görsel sarma → satır sınırları değişir; sr satırları tazele.
+  useEffect(() => {
+    const yenile = () => {
+      const harita = satirHaritasiAl();
+      satirlariYenile(harita);
+      satirKonumlariniYenile(harita);
+    };
+    window.addEventListener('resize', yenile);
+    return () => window.removeEventListener('resize', yenile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kisaltmaModu, kisaltmaSistemler]);
 
   return (
     <div className="page yazma-page serbest-yazma-page">
@@ -687,16 +850,19 @@ export default function YazmaSerbest() {
 
       <div className="yazma-bolum yazma-bolum-orta">
         <div className="yazma-gorunum-panel" style={gorunumPanelStyle}>
-          {/* Okuma kutusu görünmez; ekran okuyucu için canlı metin.
+          {/* Okuma kutusu görünmez; ekran okuyucu METNİ SATIR SATIR okusun diye her görsel
+              satır AYRI blok olarak yazılır (kullanıcı: "ekran okuyucu tüm metni seslendiriyor,
+              satır satır okumayı doğru yapmıyor").
+              ⚠ `aria-live` YOK: bölge canlıyken her hücrede TÜM metin yeniden duyuruluyordu;
+              hücre geri bildirimi zaten `konus()` ile (uygulama TTS'i kapalıyken aria-live
+              bölgesine yazılarak) verilir. Bölge artık okunacak METİN kaynağıdır: NVDA tarama
+              modunda yukarı/aşağı okla satır satır gezilir.
               ⚠ "boşluk" SÖZCÜĞÜ YOK (kullanıcı isteği): metin olduğu gibi verilir;
-              `white-space: pre-wrap` sayesinde ardışık ve sondaki boşluklar korunur,
-              ekran okuyucu boşluğu kendi algılar. Metin boşken bölge de boş kalır. */}
-          <div
-            className="sr-only yazma-sr-metin"
-            aria-live="polite"
-            aria-label={srMetin ? `Yazılan metin: ${srMetin}` : undefined}
-          >
-            {srMetin}
+              `white-space: pre-wrap` sayesinde ardışık ve sondaki boşluklar korunur. */}
+          <div className="sr-only yazma-sr-metin" aria-live="off">
+            {srSatirlar.map((satirMetni, i) => (
+              <div key={i}>{satirMetni}</div>
+            ))}
           </div>
 
           {/* Braille hücreleri + anlamı. NORMAL mod: her hücrenin altında harf/rakam/işaret.
@@ -815,7 +981,8 @@ export default function YazmaSerbest() {
               className={`btn kisaltma-mod-btn ${kisaltmaModu ? 'aktif' : ''}`}
               aria-pressed={kisaltmaModu}
               onClick={kisaltmaModuToggle}
-              title="Kısaltmaları tanı ve kısaltma kullanarak yaz"
+              aria-keyshortcuts="Shift+Control+Alt"
+              title="Kısaltmaları tanı ve kısaltma kullanarak yaz. Kısayol: Shift + Ctrl + Alt."
             >Kısaltma</button>
             <button
               type="button"

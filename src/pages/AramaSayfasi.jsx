@@ -5,7 +5,7 @@ import { aramaYap, sozlukAra, sorguHucreleri, noktaCumlesi, KONU_SIRASI } from '
 import { konusmayiDurdur } from '../utils/ses.js';
 
 const YONERGE =
-  'Lütfen braille noktalarının numaralarını aralarında boşluk, virgül olmadan yan yana yazınız. Örnek: 123. Birden fazla hücre aramak isterseniz hücreler arasına boşluk koyarak devam edin. Örnek: 123 145. Dilerseniz Perkins klavye tuşlarını (F D S J K L) da kullanabilirsiniz; otomatik olarak nokta numaralarına çevrilir.';
+  'Lütfen Braille noktalarının numaralarını aralarında boşluk, virgül olmadan yan yana yazınız. Örnek: 123. Birden fazla hücre aramak isterseniz hücreler arasına boşluk koyarak devam edin. Örnek: 123 145. Dilerseniz Perkins klavye tuşlarını (F D S J K L) da kullanabilirsiniz; otomatik olarak nokta numaralarına çevrilir.';
 const YONERGE_SOZLUK =
   'Aramak istediğiniz sembolün adını, anlamını ya da yazılışını yazın. Örnek: çarpma işaretini bulmak için çarpma; "aynı" kısaltmasını bulmak için aynı; A harfini bulmak için a.';
 
@@ -118,7 +118,7 @@ export default function AramaSayfasi() {
   const ozet = !aramaAktif
     ? (sozlukModu
         ? 'Aramak için bir sözcük yazın.'
-        : 'Aramak için bir braille hücresinin nokta numaralarını yazın.')
+        : 'Aramak için bir Braille hücresinin nokta numaralarını yazın.')
     : tumSonuc.length === 0
       ? `${sorguSozu} için sonuç bulunamadı.`
       : aktifFiltre

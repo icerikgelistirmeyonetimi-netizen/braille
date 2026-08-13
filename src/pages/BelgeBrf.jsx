@@ -632,7 +632,7 @@ export default function BelgeBrf() {
                     className={'belge-braille-erisilebilir' + (tabletModuAktif ? ' belge-braille-erisilebilir-tablet' : '')}
                     role="region"
                     aria-label={(tabletModuAktif ? `Tablet: ${TABLET_SATIR_HUCRE}×${TABLET_SAYFADA_SATIR} hücre/sayfa. ` : '')
-                      + `Erişilebilir braille metin görünümü, sayfa ${brailleSayfa + 1} / ${toplamSayfa}`}
+                      + `Erişilebilir Braille metin görünümü, sayfa ${brailleSayfa + 1} / ${toplamSayfa}`}
                     lang="tr"
                   >
                     <div className={'belge-braille-text-unicode-group' + (tabletModuAktif ? ' belge-braille-text-unicode-group-tablet' : '')} aria-label={belgeMetni}>
@@ -929,8 +929,8 @@ export default function BelgeBrf() {
                   className={`btn ${'araclar-seslendir-btn araclar-erisilebilir-btn' + (erisilebilirMod ? ' aktif' : '')}`}
                   onClick={() => setErisilebilirMod((v) => !v)}
                   aria-pressed={erisilebilirMod}
-                  aria-label={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir braille metin görünümüne geç (Unicode braille glifleri)'}
-                  title={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir mod (braille metin/font görünümü)'}
+                  aria-label={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir Braille metin görünümüne geç (Unicode Braille glifleri)'}
+                  title={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir mod (Braille metin/font görünümü)'}
                 >
                   {erisilebilirMod ? (
                     <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">

@@ -10,9 +10,11 @@ import { toJpeg } from 'html-to-image';
 import PageHeader from '../components/PageHeader.jsx';
 import BrailleCell from '../components/BrailleCell.jsx';
 import BrailleGrid, { hucreAriaEtiketi } from '../components/BrailleGrid.jsx';
-import BrailleKlavye, { yeniYazmaDurumu, hucreyiIsle, yazmaDurumunuSonlandir } from '../components/BrailleKlavye.jsx';
-import { konus, konusmayiDurdur } from '../utils/ses.js';
+import BrailleKlavye from '../components/BrailleKlavye.jsx';
+import { yeniYazmaDurumu, hucreyiIsle } from '../utils/perkinsYazma.js';
+import { konus, konusmayiDurdur, ekranOkuyucuBildir } from '../utils/ses.js';
 import { noktalariBRF, brfNoktalaradon } from '../utils/brailleAscii.js';
+import { satirKonumMetni } from '../utils/noktaYardimci.js';
 import { brfMetinedonSistemi } from '../utils/brfOkuyucu.js';
 import { noktalardanUnicode } from './BelgeBrf.jsx';
 import {
@@ -232,7 +234,7 @@ function liblouisIsaretAnlami(noktalar, rol) {
     case 'harf':
       return { tip: 'isaret', baslik: 'Harf işareti', etiket: '·', noktaStr, detay: 'Sonraki hücre tek başına bir harftir (kısaltma/sayı değil).' };
     default:
-      return { tip: 'isaret', baslik: 'Özel işaret', etiket: '•', noktaStr, detay: 'Özel braille göstergesi.' };
+      return { tip: 'isaret', baslik: 'Özel işaret', etiket: '•', noktaStr, detay: 'Özel Braille göstergesi.' };
   }
 }
 
@@ -3822,7 +3824,7 @@ function muzikHucreAnlami(noktalar) {
   if (!kayit) {
     return {
       tip: 'isaret',
-      baslik: 'Müzik braille hücresi',
+      baslik: 'Müzik Braille hücresi',
       detay: `Müzik yazım modunda kullanılan hücre. Nokta gösterimi: ${noktalar.join(' · ') || 'boş'}.`,
       noktaStr: noktalar.join(' · ') || '—',
       etiket: '♪',
@@ -3941,6 +3943,60 @@ export default function Araclar() {
   const [sayfaInput, setSayfaInput] = useState('');
   const brailleKutuRef = useRef(null);
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ⚠ MOD KISAYOLLARI — alt çubuktaki düğmeye tıklamadan aç/kapa (kullanıcı:
+  // "shift+ctrl+alt tuşu metin→brf'de kısaltmayı aç kapa olacak. alttaki butona
+  // tıklamadan kısayolla aktif edilip kapanabilir. alt+p perkins aç kapa olacak
+  // alt+t ise tablet modu aç kapa olacak").
+  // Üç mod da TEK toggle fonksiyonundan geçer (düğme + kısayol AYNI yol → davranış
+  // birebir; tablet modunda sayfa numarası yeniden ölçeklenmesi de korunur) ve yeni
+  // durum `ekranOkuyucuBildir` ile duyurulur (uygulama TTS'i kapalı — NVDA aria-live
+  // bölgesinden okur; düğmenin `aria-pressed`'i odak dışındayken duyurulmaz).
+  // ⚠ Kısayol eklenince `components/KullanimKilavuzu.jsx` de güncellenmeli.
+  // ─────────────────────────────────────────────────────────────────────────────
+  const tabletModuToggle = useCallback(() => {
+    const eskiBoyut = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
+    const yeniTablet = !tabletModuAktif;
+    const yeniBoyut = yeniTablet ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
+    setBrailleSayfa((sayfa) => Math.floor((sayfa * eskiBoyut) / yeniBoyut));
+    setTabletModuAktif(yeniTablet);
+    ekranOkuyucuBildir(`Braille tablet modu ${yeniTablet ? 'açık' : 'kapalı'}.`);
+  }, [tabletModuAktif]);
+
+  const perkinsToggle = useCallback(() => {
+    const yeni = !perkinsAktif;
+    setPerkinsAktif(yeni);
+    ekranOkuyucuBildir(`Perkins klavye ${yeni ? 'açık' : 'kapalı'}.`);
+  }, [perkinsAktif]);
+
+  const kisaltmaToggle = useCallback(() => {
+    const yeni = !kisaltmaAktif;
+    setKisaltmaAktif(yeni);
+    ekranOkuyucuBildir(`Kısaltma ${yeni ? 'açık' : 'kapalı'}.`);
+  }, [kisaltmaAktif]);
+
+  useEffect(() => {
+    // ⚠ Shift+Ctrl+Alt SAF DEĞİŞTİRİCİ akorudur (harf yok) → üçlüyü TAMAMLAYAN tuşun
+    // keydown'ında tetiklenir: o olayda `e.key` Shift/Control/Alt'tan biridir ve üç
+    // bayrak da true'dur. `e.repeat` guard'ı basılı tutmada tekrar tetiklemeyi önler.
+    const DEGISTIRICILER = new Set(['Shift', 'Control', 'Alt']);
+    const handle = (e) => {
+      if (e.repeat) return;
+      if (e.shiftKey && e.ctrlKey && e.altKey && DEGISTIRICILER.has(e.key)) {
+        e.preventDefault();
+        kisaltmaToggle();
+        return;
+      }
+      // Alt+P / Alt+T — yalnız Alt basılıyken (Ctrl/Shift/Meta ile birlikteyse dokunma).
+      // ⚠ `e.code` kullanılır: Alt+harf bazı klavye düzenlerinde `e.key`'i değiştirir.
+      if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.code === 'KeyP') { e.preventDefault(); perkinsToggle(); }
+      else if (e.code === 'KeyT') { e.preventDefault(); tabletModuToggle(); }
+    };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, [kisaltmaToggle, perkinsToggle, tabletModuToggle]);
+
   // Escape ile popup kapat
   useEffect(() => {
     if (!seciliHucre) return;
@@ -4022,7 +4078,6 @@ export default function Araclar() {
 
   // ── Metin → BRF ──
   const [girisMetni, setGirisMetni] = useState('');
-  const durumRef = useRef(yeniYazmaDurumu());
   const textareaRef = useRef(null);
   /** Tıklama işleyicide güncel eşleme/kaynak — closure eski değer tutmasın diye ref. */
   const brailleSecimRef = useRef({ esleme: [], hucreSayisi: 0, kaynak: '' });
@@ -4103,20 +4158,22 @@ export default function Araclar() {
   // Boşluk kelimeyi SONLANDIRIR (`sonTekHarfBeklet` kalkar → tek harfli kısaltma çözülür).
   const perkinsKelimeRef = useRef({ hucreler: [], bas: 0, uzunluk: 0 });
 
-  const perkinsNormalMetin = (hucreler) => {
-    const durum = yeniYazmaDurumu();
-    let out = '';
-    for (const h of hucreler) {
-      const r = hucreyiIsle(durum, h);
-      if (r.tip === 'karakter' && r.deger !== null) out += r.deger;
-    }
-    // Sıra sayısı sonda bittiyse noktasını ekle (#+indirgenmiş 2 → "2.").
-    return out + yazmaDurumunuSonlandir(durum);
-  };
-
-  const perkinsCoz = (hucreler, sonlandir) => (kisaltmaAktif
-    ? hucreleriMetneCevirKisaltmali(hucreler, kisaltmaSistemler, sonlandir ? {} : { sonTekHarfBeklet: true })
-    : perkinsNormalMetin(hucreler));
+  // ⚠⚠ HER İKİ MODDA AYNI BLOK ÇÖZÜCÜ — ÇÖZÜCÜ ENCODER'IN TERSİDİR (kullanıcı: "metin→brf'de
+  // Perkins modunda ciddi sorunlar var; = için braille tuşlarını yazdığımda ) parantez kapa
+  // olarak görüyor … perkins yazımı tüm kapsam araştırılmalı, tüm tutarsızlıklar giderilmeli").
+  // ESKİDEN kısaltma KAPALIYKEN hücreler TEK TEK `hucreyiIsle` ile çözülüyordu; o durum
+  // makinesi ÇOK HÜCRELİ sembolleri bilmez → '=' ([5,6]+[2,3,5,6]) ')' oluyor, '+' hiç
+  // yazılmıyor, '×'→'?', '÷'→':', '<'→'’ö', '√'→'ş', '%'→'y', '(' → ')', '2,5'→'21.5' …
+  // (ölçüm: 60 örnekte 27 hata). Artık her iki modda `hucreleriMetneCevirKisaltmali`
+  // kullanılır; tek fark KISALTMA SİSTEMLERİ: açıkken `kisaltmaSistemler`, kapalıyken
+  // `TUM_HUCRE_AYARLARI_KAPALI`. Bu, sayfanın ENCODER seçimiyle (aynı koşul, satır ~4682)
+  // birebir simetriktir → yazılan hücre dizisi ile üretilen braille aynı kuralları izler.
+  // (Ölçüm sonrası: 30 örnekte 0 hata; `npm run qa:perkins`.)
+  const perkinsCoz = (hucreler, sonlandir) => hucreleriMetneCevirKisaltmali(
+    hucreler,
+    kisaltmaAktif ? kisaltmaSistemler : TUM_HUCRE_AYARLARI_KAPALI,
+    sonlandir ? {} : { sonTekHarfBeklet: true },
+  );
 
   // Tek state güncellemesiyle metnin [bas, bas+silUzunluk) aralığını değiştirir.
   const metniDegistir = (bas, silUzunluk, ekMetin) => {
@@ -4132,6 +4189,25 @@ export default function Araclar() {
     perkinsKelimeRef.current = { hucreler: [], bas, uzunluk: 0 };
   };
 
+  /**
+   * ⚠ ÖNEK (İŞARET) HÜCRESİ METNE HİÇBİR ŞEY YAZMAZ → "kabul edilmedi" sanılır
+   * (kullanıcı: "56 2356 yazdığımda = yazmıyor, 56'yı kısayol gibi algıladığından kabul
+   * etmiyor"). `=` iki hücredir: [5,6] TEK BAŞINA bir karakter üretmez, ikinci hücreyle
+   * ('=' için [2,3,5,6]) birleşince yazılır. Ekranda/metinde değişiklik olmadığından
+   * kullanıcı hücrenin yok sayıldığını düşünüp siliyor ya da baştan yazıyordu.
+   * Artık her hücreden sonra ekran okuyucuya durum bildirilir: metin değişmediyse
+   * "işaret hücresi — sonraki hücre bekleniyor", değiştiyse yazılan metin.
+   */
+  const perkinsHucreAnonsu = (noktalar) => {
+    const durum = yeniYazmaDurumu();
+    const r = hucreyiIsle(durum, noktalar);
+    // Tek başına anlamı olmayan ÖNEK hücreleri ([5,6] tek harf işareti, matematik
+    // operatörlerinin ilk hücresi…) durum makinesinde "tanınmayan" görünür; kullanıcıya
+    // "tanınmadı" demek YANILTICI olur — hücre kabul edildi, ikinci parçası bekleniyor.
+    const anons = r && r.anons ? r.anons : '';
+    return (!anons || anons === 'tanınmayan hücre') ? 'işaret hücresi' : anons;
+  };
+
   const onHucre = (noktalar) => {
     const ta = textareaRef.current;
     const st = perkinsKelimeRef.current;
@@ -4139,10 +4215,19 @@ export default function Araclar() {
     // Kullanıcı imleci taşıdıysa / elle yazdıysa tampon geçersizdir → yeni kelime başlat.
     if (st.hucreler.length === 0 || imlec !== st.bas + st.uzunluk) perkinsTamponuSifirla(imlec);
     const guncel = perkinsKelimeRef.current;
+    const oncekiCozum = guncel.hucreler.length ? perkinsCoz(guncel.hucreler, false) : '';
     const yeniHucreler = [...guncel.hucreler, noktalar];
     const metin = perkinsCoz(yeniHucreler, false);
     metniDegistir(guncel.bas, guncel.uzunluk, metin);
     perkinsKelimeRef.current = { hucreler: yeniHucreler, bas: guncel.bas, uzunluk: metin.length };
+    // Geri bildirim: hücre yazıldı mı, yoksa çok hücreli bir sembolün ilk parçası mı?
+    const noktaMetni = [...noktalar].sort((a, b) => a - b).join(', ');
+    if (metin === oncekiCozum) {
+      ekranOkuyucuBildir(`${noktaMetni}. nokta yazıldı, ${perkinsHucreAnonsu(noktalar)} — sonraki hücre bekleniyor.`);
+    } else {
+      const eklenen = metin.startsWith(oncekiCozum) ? metin.slice(oncekiCozum.length) : metin;
+      ekranOkuyucuBildir(eklenen.trim() ? eklenen : `${noktaMetni}. nokta yazıldı.`);
+    }
   };
 
   const onBosluk = () => {
@@ -4289,7 +4374,7 @@ export default function Araclar() {
       metin: t,
       gorunum: `>${t}`,
       hucreler,
-      aciklama: `Word-sign (>) + kontraksiyonsuz braille. Sonraki nota oktav işareti almalıdır.`,
+      aciklama: `Word-sign (>) + kontraksiyonsuz Braille. Sonraki nota oktav işareti almalıdır.`,
     };
     setMuzikOgeleri((onceki) => [...onceki, oge]);
     setSeciliMuzikOgeId(oge.id);
@@ -4726,9 +4811,51 @@ export default function Araclar() {
     };
   }, [girisMetni, muzikOgeleri, muzikBaglar, muzikHeader, muzikTupletler, muzikModuAktif, hucreYorumlariAktif, kisaltmaAktif, kisaltmaSistemler, kelimeBazliKisaltmaTercihleri, karakterYorumTercihleri, dil]);
 
-  const hucrelerCache = cevirSonuc.hucreler;
+  // ── ELLE NOKTA DÜZENLEME (Alt+Shift gezinme + nokta aç/kapa) ────────────────────────────
+  // Kullanıcı: "shift alt tuşunda braille noktaları arasında gezinebilmeliyim ve noktayı aktif
+  // yapıp noktayı seçilisini kaldırabilmeliyim böylece noktayı değiştirebilmeliyim."
+  // Braille çıktısı METİNDEN türetilir; elle değiştirilen noktalar bu türetmenin ÜZERİNE binen
+  // bir katmanda tutulur (metin YENİDEN YAZILMAZ). Sebep: düzeltilen hücreyi metne geri çözüp
+  // yeniden kodlamak, çözücü+kodlayıcı aynı sonuca döndüğünde kullanıcının düzeltmesini SESSİZCE
+  // geri alırdı. Katman `hucrelerCache` üzerinden uygulandığından BRF indir/ön izleme/hücre
+  // anlamları/sayfalama hepsi düzeltilmiş hücreyi görür.
+  // ⚠ Metin (kaynak) değişince katman GEÇERSİZDİR (indeksler kayar) → düşürülür + duyurulur.
+  const [elleNoktaDuzenlemeleri, setElleNoktaDuzenlemeleri] = useState(null); // { kaynak, harita: Map<idx, number[]> }
+
+  const hucrelerCache = useMemo(() => {
+    const ham = cevirSonuc.hucreler;
+    const kat = elleNoktaDuzenlemeleri;
+    if (!kat || kat.kaynak !== cevirSonuc.kaynak || kat.harita.size === 0) return ham;
+    const kopya = ham.slice();
+    kat.harita.forEach((noktalar, idx) => {
+      if (idx >= 0 && idx < kopya.length) kopya[idx] = noktalar;
+    });
+    return kopya;
+  }, [cevirSonuc.hucreler, cevirSonuc.kaynak, elleNoktaDuzenlemeleri]);
   const eslemeCache = cevirSonuc.esleme;
   const kaynakCache = cevirSonuc.kaynak;
+
+  /** Elle düzenlenen hücre indeksleri (görsel işaret + ekran okuyucu etiketi için). */
+  const elleDuzenliIndeksler = useMemo(() => {
+    const kat = elleNoktaDuzenlemeleri;
+    if (!kat || kat.kaynak !== cevirSonuc.kaynak) return null;
+    return kat.harita.size ? kat.harita : null;
+  }, [elleNoktaDuzenlemeleri, cevirSonuc.kaynak]);
+
+  // Kaynak metin değişti → katman geçersiz; state'i de temizle (bir kez duyur).
+  useEffect(() => {
+    if (!elleNoktaDuzenlemeleri) return;
+    if (elleNoktaDuzenlemeleri.kaynak === cevirSonuc.kaynak) return;
+    setElleNoktaDuzenlemeleri(null);
+    if (elleNoktaDuzenlemeleri.harita.size) {
+      ekranOkuyucuBildir('Metin değiştiği için elle yapılan nokta düzenlemeleri sıfırlandı.');
+    }
+  }, [cevirSonuc.kaynak, elleNoktaDuzenlemeleri]);
+
+  const noktaDuzenlemeleriniSifirla = useCallback(() => {
+    setElleNoktaDuzenlemeleri(null);
+    ekranOkuyucuBildir('Elle yapılan nokta düzenlemeleri geri alındı.');
+  }, []);
 
   /** BRF ön izleme: mevcut hücre önbelleğinden (Worker/anh çeviri tek); modal kapalıyken hesaplanmaz. */
   const brfOnizlemeDosyaMetni = useMemo(() => {
@@ -4938,6 +5065,54 @@ export default function Araclar() {
     sayfaSonIndeks,
   ]);
 
+  // ── ERİŞİLEBİLİR GÖRÜNÜM SATIRLARI (kullanıcı: "metin→brf'de ekran okuyucu tüm metni
+  //    seslendiriyor, satır satır okumayı doğru yapmıyor").
+  // ESKİDEN tüm Unicode braille bloğu TEK `aria-label={girisMetni}` taşıyordu → ekran
+  // okuyucu bütün metni tek parça okuyor, satır satır gezinmek MÜMKÜN OLMUYORDU. Artık
+  // hücreler kabartma satır genişliğine (BRF ön izleme kâğıt ayarı, varsayılan 40) göre
+  // SATIRLARA bölünür; her satır kendi `role="img"` + `aria-label`'ıyla ("3. satır, ...")
+  // tek bir okunabilir birimdir → tarama modunda yukarı/aşağı okla satır satır okunur.
+  // Satırın METNİ `esleme` (hücre → kaynak karakter indeksi) üzerinden çıkarılır.
+  const erisilebilirSatirlar = useMemo(() => {
+    if (!erisilebilirMod || tabletModuAktif) return [];
+    const genislik = Math.max(8, brfOnizlemeKagitBoyutu.satirdaHucre || 40);
+    const kaynak = kaynakCache || '';
+    const ilkKarakter = (bas, son) => {
+      for (let i = bas; i < son; i++) {
+        const c = eslemeCache ? eslemeCache[i] : undefined;
+        if (typeof c === 'number' && c >= 0) return c;
+      }
+      return -1;
+    };
+    const satirlar = [];
+    for (let b = 0; b < sayfaHucreler.length; b += genislik) {
+      const uzunluk = Math.min(genislik, sayfaHucreler.length - b);
+      const g0 = sayfaBaslangic + b;
+      const bas = ilkKarakter(g0, g0 + uzunluk);
+      const sonrakiBas = ilkKarakter(g0 + uzunluk, hucrelerCache.length);
+      const metin = bas < 0
+        ? ''
+        : kaynak.slice(bas, sonrakiBas >= 0 ? sonrakiBas : undefined);
+      satirlar.push({
+        no: Math.floor(b / genislik) + 1,
+        bas,
+        yerelBas: b,
+        uzunluk,
+        metin: metin.replace(/\s+/g, ' ').trim(),
+      });
+    }
+    return satirlar;
+  }, [
+    erisilebilirMod,
+    tabletModuAktif,
+    brfOnizlemeKagitBoyutu,
+    kaynakCache,
+    eslemeCache,
+    hucrelerCache.length,
+    sayfaBaslangic,
+    sayfaHucreler.length,
+  ]);
+
   /** Tablet sıraları için sayfa içi yerel indeks grupları (her biri en çok 28 hücre). */
   const tabletSatirYerelleri = useMemo(() => {
     const n = sayfaHucreler.length;
@@ -5082,6 +5257,86 @@ export default function Araclar() {
     setSeciliHucre({ index: globalIdx });
     setMetinSecimHucreAraligi(null);
   }, [hucrelerCache, hucreYorumlariAktif, karakterYorumTercihleri, muzikModuAktif]);
+
+  // ── Nokta gezinme / aç-kapa yardımcıları (Alt+Shift+ok, Enter/Space) ────────────────────
+  // ⚠ Odaklama GRID koordinatıyla yapılır: `data-nokta` daima 1–6 grid konumudur; tablet
+  // modunda yalnız görünen ETİKET aynalanır (BrailleCell `aynaliEtiket`). Bu yüzden komşu
+  // hücreye geçişte mantıksal↔ayna çevirimi GEREKMEZ.
+  const hucreNoktasinaOdakla = useCallback((globalIdx, gridNokta) => {
+    const kok = brailleKutuRef.current;
+    if (!kok) return false;
+    const el = kok.querySelector(`[data-hucre-index="${globalIdx}"] .cell [data-nokta="${gridNokta}"]`);
+    if (!el || typeof el.focus !== 'function') return false;
+    el.focus();
+    return true;
+  }, []);
+
+  /**
+   * Hücrenin YATAY kenarında Alt+Shift+ok → KOMŞU hücrenin aynı satırındaki noktaya geç.
+   * ⚠ BrailleCell'in kendi komşu araması `.cell-row` sarmalayıcısına bakar; burada hücreler
+   * sayfa ızgarasının (`.araclar-nokta-gorunus` / `.araclar-tablet-grid`) doğrudan çocuklarıdır
+   * → geçişi biz yaparız (YazmaSerbest `hucreKenarindanGec` ile aynı kalıp).
+   * Yön OKUMA SIRASINA göredir (index ±1): tablet modunda görünüm sağdan sola aksa da braille
+   * okuma sırası korunur. Sayfa sonunda komşu yoksa odak yerinde kalır (sayfa değişmez).
+   */
+  const hucreKenarindanGec = useCallback((globalIdx, yon, satir) => {
+    hucreNoktasinaOdakla(globalIdx + yon, yon === 1 ? satir : satir + 3);
+  }, [hucreNoktasinaOdakla]);
+
+  /** Hücre düğmesindeyken Alt+Shift+ok → hücrenin İÇİNDEKİ noktalara gir (sağ/aşağı→1, sol/yukarı→6). */
+  const hucreDuzenlemeKlavye = useCallback((e, globalIdx) => {
+    // ⚠ YALNIZ sarmalayıcının KENDİSİ hedefse: nokta div'inden BALONLANAN olayı da yakalarsak
+    // BrailleCell'in nokta→nokta gezinmesini ezip odağı hep 1. noktaya geri alırdık.
+    if (e.target !== e.currentTarget) return false;
+    if (!e.altKey || !e.shiftKey) return false;
+    if (!['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown'].includes(e.key)) return false;
+    e.preventDefault();
+    return hucreNoktasinaOdakla(globalIdx, (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? 6 : 1);
+  }, [hucreNoktasinaOdakla]);
+
+  /** Ekran okuyucu özeti: [1,2,3] → "1, 2 ve 3 numaralı noktalar" (BrailleCell pasif özeti ikizi). */
+  const noktaOzetiMetni = useCallback((noktalar) => {
+    if (!noktalar || noktalar.length === 0) return 'hücre boş';
+    if (noktalar.length === 1) return `${noktalar[0]} numaralı nokta`;
+    return `${noktalar.slice(0, -1).join(', ')} ve ${noktalar[noktalar.length - 1]} numaralı noktalar`;
+  }, []);
+
+  /**
+   * Hücredeki bir noktayı AÇ/KAPA (elle düzeltme katmanı).
+   * @param {number} globalIdx hücre indeksi
+   * @param {number} gridNokta BrailleCell'in bildirdiği GRID nokta numarası (1–6)
+   * @param {boolean} aynali tablet modu mu (grid → mantıksal nokta çevirimi gerekir)
+   */
+  const hucreNoktasiniDegistir = useCallback((globalIdx, gridNokta, aynali = false) => {
+    if (muzikModuAktif) return; // müzik braille'i SKORDAN türer; elle nokta düzenlenmez
+    const mevcut = hucrelerCache[globalIdx];
+    if (!Array.isArray(mevcut)) return;
+    // Tablet modunda hücre aynalanmış çizilir (mantıksal 1 → grid 4) → grid noktasını
+    // mantıksal noktaya çevir. Ayna simetrik olduğundan aynı yardımcı iki yöne de çalışır.
+    const nokta = aynali ? tabletDelikAynala([gridNokta])[0] : gridNokta;
+    const vardi = mevcut.includes(nokta);
+    const yeni = vardi
+      ? mevcut.filter((n) => n !== nokta)
+      : [...mevcut, nokta].sort((a, b) => a - b);
+    setElleNoktaDuzenlemeleri((onceki) => {
+      const gecerli = onceki && onceki.kaynak === kaynakCache ? onceki.harita : null;
+      const harita = new Map(gecerli || []);
+      // Kullanıcı hücreyi ELLE eski hâline döndürdüyse düzenleme kaydını da kaldır →
+      // "elle düzenlendi" işareti ve geri-al sayacı gerçeği yansıtsın.
+      const ham = cevirSonuc.hucreler[globalIdx];
+      if (Array.isArray(ham) && ham.join(',') === yeni.join(',')) harita.delete(globalIdx);
+      else harita.set(globalIdx, yeni);
+      if (harita.size === 0) return null;
+      return { kaynak: kaynakCache, harita };
+    });
+    // Tablette görünen etiket = mantıksal nokta (ayna yalnız KONUMU değiştirir) → tek numara.
+    ekranOkuyucuBildir(
+      `Hücre ${globalIdx + 1}, ${nokta}. nokta ${vardi ? 'kaldırıldı' : 'eklendi'}. ${noktaOzetiMetni(yeni)}.`,
+    );
+  }, [hucrelerCache, cevirSonuc.hucreler, kaynakCache, muzikModuAktif, noktaOzetiMetni]);
+
+  /** Elle nokta düzenleme müzik modunda kapalıdır (braille skordan türer). */
+  const noktaDuzenlemeAcik = !muzikModuAktif;
 
   const getHucreTipiRengi = (anlam, paraBirimiHucre) => {
     if (paraBirimiHucre) return 'var(--braille-noktalama-fill)';
@@ -5358,7 +5613,7 @@ export default function Araclar() {
     setKelimeBazliKisaltmaTercihleri({});
     setKarakterYorumTercihleri({});
     setHucreAyarPaneliAcik(false);
-    durumRef.current = yeniYazmaDurumu();
+    perkinsKelimeRef.current = { hucreler: [], bas: 0, uzunluk: 0 };
   };
 
   const sesToggle = (alan, metinFn) => {
@@ -5580,7 +5835,7 @@ export default function Araclar() {
                     className={`araclar-dil-btn${dil === d.kod ? ' aktif' : ''}`}
                     aria-pressed={dil === d.kod}
                     onClick={() => dilDegistir(d.kod)}
-                    title={`${d.etiket} braille`}
+                    title={`${d.etiket} Braille`}
                   >
                     <span className="araclar-dil-bayrak" aria-hidden="true">{d.bayrak}</span>
                     {d.etiket}
@@ -5652,7 +5907,7 @@ export default function Araclar() {
                       className="btn araclar-muzik-ifade-ekle-btn"
                       onClick={() => { muzikIfadeEkle(muzikIfadeGirisi); setMuzikIfadeGirisi(''); }}
                       disabled={!muzikIfadeGirisi.trim()}
-                      title="Word-sign + kontraksiyonsuz braille olarak ekle"
+                      title="Word-sign + kontraksiyonsuz Braille olarak ekle"
                     >+ İfade</button>
                   </div>
                   {bekleyenBagBilgisi && (
@@ -6359,10 +6614,14 @@ export default function Araclar() {
                     className={'belge-braille-erisilebilir' + (tabletModuAktif ? ' belge-braille-erisilebilir-tablet' : '')}
                     role="region"
                   aria-label={(tabletModuAktif ? `Tablet: ${TABLET_SATIR_HUCRE}×${TABLET_SAYFADA_SATIR} hücre/sayfa. ` : '')
-                      + `erişilebilir braille metin görünümü, sayfa ${brailleSayfa + 1} / ${toplamSayfa}`}
+                      + `erişilebilir Braille metin görünümü, sayfa ${brailleSayfa + 1} / ${toplamSayfa}`}
                     lang="tr"
                   >
-                    <div className={'belge-braille-text-unicode-group' + (tabletModuAktif ? ' belge-braille-text-unicode-group-tablet' : '')} aria-label={girisMetni}>
+                    {/* ⚠ Grubun TAMAMINA `aria-label={girisMetni}` VERİLMEZ (kullanıcı: "ekran
+                        okuyucu tüm metni seslendiriyor, satır satır okumayı doğru yapmıyor"):
+                        tek etiket bütün metni tek parça okutuyor, satır gezinmesini yok
+                        ediyordu. Etiket artık SATIR bloklarında (bkz. erisilebilirSatirlar). */}
+                    <div className={'belge-braille-text-unicode-group' + (tabletModuAktif ? ' belge-braille-text-unicode-group-tablet' : '')}>
                       {tabletModuAktif ? (
                         <div className="araclar-tablet-grid">
                           {/* Üst kolon numaraları */}
@@ -6409,36 +6668,48 @@ export default function Araclar() {
                           ))}
                         </div>
                       ) : (
-                        sayfaHucreler.map((noktalar, i) => {
-                          const globalIdx = sayfaBaslangic + i;
-                          const anlam = sayfaHucreAnlamlari[i];
-                          const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
-                          const renk = getHucreTipiRengi(anlam, paraBirimiHucre);
-                          const isVurgulu = metinSecimHucreAraligi
-                            && globalIdx >= metinSecimHucreAraligi.lo
-                            && globalIdx <= metinSecimHucreAraligi.hi;
+                        erisilebilirSatirlar.map((satir) => (
+                          <div
+                            key={`er-satir-${satir.no}`}
+                            className="belge-braille-er-satir"
+                            role="img"
+                            aria-label={`${satir.no}. satır${satir.metin ? `, ${satir.metin}` : ', boş'}`}
+                          >
+                            {sayfaHucreler
+                              .slice(satir.yerelBas, satir.yerelBas + satir.uzunluk)
+                              .map((noktalar, j) => {
+                                const i = satir.yerelBas + j;
+                                const globalIdx = sayfaBaslangic + i;
+                                const anlam = sayfaHucreAnlamlari[i];
+                                const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
+                                const renk = getHucreTipiRengi(anlam, paraBirimiHucre);
+                                const isVurgulu = metinSecimHucreAraligi
+                                  && globalIdx >= metinSecimHucreAraligi.lo
+                                  && globalIdx <= metinSecimHucreAraligi.hi;
 
-                          return (
-                            <span
-                              key={globalIdx}
-                              className={`unicode-hucre${isVurgulu ? ' vurgulu' : ''}`}
-                              style={{
-                                color: renk,
-                                fontSize: '.2 em',
-                                cursor: 'pointer',
-                                display: 'inline-block',
-                                backgroundColor: isVurgulu ? '#e0f2fe' : 'transparent',
-                                borderRadius: '1px',
-                                padding: '0 1px',
-                                lineHeight: '1',
-                              }}
-                              onClick={() => hucreTiklandigindaMetniSec(globalIdx)}
-                              title={anlam?.baslik}
-                            >
-                              {noktalardanUnicode(noktalar)}
-                            </span>
-                          );
-                        })
+                                return (
+                                  <span
+                                    key={globalIdx}
+                                    className={`unicode-hucre${isVurgulu ? ' vurgulu' : ''}`}
+                                    style={{
+                                      color: renk,
+                                      fontSize: '.2 em',
+                                      cursor: 'pointer',
+                                      display: 'inline-block',
+                                      backgroundColor: isVurgulu ? '#e0f2fe' : 'transparent',
+                                      borderRadius: '1px',
+                                      padding: '0 1px',
+                                      lineHeight: '1',
+                                    }}
+                                    onClick={() => hucreTiklandigindaMetniSec(globalIdx)}
+                                    title={anlam?.baslik}
+                                  >
+                                    {noktalardanUnicode(noktalar)}
+                                  </span>
+                                );
+                              })}
+                          </div>
+                        ))
                       )}
                     </div>
                   </div>
@@ -6448,9 +6719,13 @@ export default function Araclar() {
                   className={'araclar-nokta-gorunus belge-braille-kutu'
                     + (genisletAktif ? ' genisletilmis' : '')
                     + (tabletModuAktif ? ' araclar-tablet-mod' : '')}
-                  aria-label={tabletModuAktif
+                  aria-label={(tabletModuAktif
                     ? `Braille nokta görünümü (tablet: ${TABLET_SATIR_HUCRE} hücre × ${TABLET_SAYFADA_SATIR} sıra, sağdan sola)`
-                    : 'Braille nokta görünümü'}
+                    : 'Braille nokta görünümü')
+                    /* Kısayolu ekran okuyucu kullanıcısı da duysun (kullanıcı isteği). */
+                    + (noktaDuzenlemeAcik
+                      ? '. Hücre üzerinde Alt+Shift+ok tuşları ile noktalara girilir, noktalar arasında Alt+Shift+ok ile gezinilir; Enter veya boşluk noktayı açar ya da kapatır.'
+                      : '')}
                 >
                   {tabletModuAktif ? (
                     <div className="araclar-tablet-grid">
@@ -6464,7 +6739,7 @@ export default function Araclar() {
                       {tabletSatirYerelleri.map((yerler, ri) => (
                         <React.Fragment key={`t-${brailleSayfa}-${ri}`}>
                           <div className="tablet-satir-numarasi">{ri + 1}</div>
-                          {yerler.map((i) => {
+                          {yerler.map((i, sutunIdx) => {
                             const noktalar = sayfaHucreler[i];
                             const globalIdx = sayfaBaslangic + i;
                             const paraBirimiHucre = hucreParaBirimiKaynakBaglamiMi(eslemeCache, globalIdx, paraBirimiKaynakAraliklari);
@@ -6484,6 +6759,11 @@ export default function Araclar() {
                                 isVurgulu={isVurgulu}
                                 onClick={hucreTiklandigindaMetniSec}
                                 aynaliEtiket={true}
+                                onNoktaDegistir={noktaDuzenlemeAcik ? hucreNoktasiniDegistir : undefined}
+                                onHucreKenari={noktaDuzenlemeAcik ? hucreKenarindanGec : undefined}
+                                onHucreKlavye={noktaDuzenlemeAcik ? hucreDuzenlemeKlavye : undefined}
+                                elleDuzenli={!!(elleDuzenliIndeksler && elleDuzenliIndeksler.has(globalIdx))}
+                                konumEtiketi={satirKonumMetni(ri + 1, sutunIdx + 1)}
                               />
                             );
                           })}
@@ -6508,6 +6788,14 @@ export default function Araclar() {
                       esleme={eslemeCache}
                       paraBirimiKaynakAraliklari={paraBirimiKaynakAraliklari}
                       isHighlighted={(idx) => !!(metinSecimHucreAraligi && idx >= metinSecimHucreAraligi.lo && idx <= metinSecimHucreAraligi.hi)}
+                      onNoktaDegistir={noktaDuzenlemeAcik ? hucreNoktasiniDegistir : undefined}
+                      onHucreKenari={noktaDuzenlemeAcik ? hucreKenarindanGec : undefined}
+                      onHucreKlavye={noktaDuzenlemeAcik ? hucreDuzenlemeKlavye : undefined}
+                      elleDuzenliIndeksler={elleDuzenliIndeksler}
+                      /* Satır içi konum duyurusu: SATIR = kabartma satırı (BRF ön izleme
+                         kâğıt genişliği, varsayılan 40) — erisilebilirSatirlar ile aynı
+                         hesap, indirilen BRF ile aynı satır numarası. */
+                      satirGenisligi={Math.max(8, brfOnizlemeKagitBoyutu.satirdaHucre || 40)}
                     />
                   )}
                 </div>
@@ -6707,8 +6995,8 @@ export default function Araclar() {
                   className={`btn ${'araclar-seslendir-btn araclar-erisilebilir-btn' + (erisilebilirMod ? ' aktif' : '')}`}
                   onClick={() => setErisilebilirMod((v) => !v)}
                   aria-pressed={erisilebilirMod}
-                  aria-label={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir braille metin görünümüne geç (Unicode braille glifleri)'}
-                  title={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir mod (braille metin/font görünümü)'}
+                  aria-label={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir Braille metin görünümüne geç (Unicode Braille glifleri)'}
+                  title={erisilebilirMod ? 'Nokta görünümüne dön' : 'Erişilebilir mod (Braille metin/font görünümü)'}
                 >
                   {erisilebilirMod ? (
                     <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
@@ -6792,6 +7080,20 @@ export default function Araclar() {
                 </svg>
               </button>
             </div>
+            {/* Elle nokta düzenlemesi varsa geri alma yolu (kullanıcı düzelttiği noktayı
+                eski haline döndürebilsin; metin değişince katman kendiliğinden düşer). */}
+            {elleDuzenliIndeksler ? (
+              <button
+                type="button"
+                onClick={noktaDuzenlemeleriniSifirla}
+                className="btn araclar-nokta-duzenleme-geri"
+                aria-label={`Elle düzenlenen ${elleDuzenliIndeksler.size} hücreyi geri al`}
+                title="Elle değiştirilen noktaları metne göre yeniden oluştur"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><path d="M3 7v6h6"/><path d="M3.51 13a9 9 0 1 0 2.13-9.36L3 7"/></svg>
+                <span className="btn-yazi">{`Noktaları geri al (${elleDuzenliIndeksler.size})`}</span>
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={temizle}
@@ -6807,16 +7109,11 @@ export default function Araclar() {
               type="button"
               disabled={!etkinGirdiVar}
               className={`btn ${'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (tabletModuAktif ? ' aktif' : '')}`}
-              onClick={() => {
-                const eskiBoyut = tabletModuAktif ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
-                const yeniTablet = !tabletModuAktif;
-                const yeniBoyut = yeniTablet ? TABLET_BRAILLE_SAYFA_BOYUTU : BRAILLE_SAYFA_BOYUTU;
-                setBrailleSayfa((sayfa) => Math.floor((sayfa * eskiBoyut) / yeniBoyut));
-                setTabletModuAktif(yeniTablet);
-              }}
+              onClick={tabletModuToggle}
               aria-pressed={tabletModuAktif}
+              aria-keyshortcuts="Alt+T"
               aria-label={`Braille tablet modu ${tabletModuAktif ? 'açık' : 'kapalı'}`}
-              title={'Braille tablet modu (' + (tabletModuAktif ? 'açık' : 'kapalı') + `). Sayfa: ${TABLET_SATIR_HUCRE}×${TABLET_SAYFADA_SATIR} hücre (${TABLET_BRAILLE_SAYFA_BOYUTU}); satır başına ${TABLET_SATIR_HUCRE} hücre, sağdan sola; delik yönüne göre yansıtılmış nokta`}
+              title={'Braille tablet modu (' + (tabletModuAktif ? 'açık' : 'kapalı') + '). Kısayol: Alt + T.' + ` Sayfa: ${TABLET_SATIR_HUCRE}×${TABLET_SAYFADA_SATIR} hücre (${TABLET_BRAILLE_SAYFA_BOYUTU}); satır başına ${TABLET_SATIR_HUCRE} hücre, sağdan sola; delik yönüne göre yansıtılmış nokta`}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true">
                 <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -6827,10 +7124,11 @@ export default function Araclar() {
             <button
               type="button"
               className={`btn ${'araclar-perkins-btn araclar-perkins-btn--yalnizca-ikon' + (perkinsAktif ? ' aktif' : '')}`}
-              onClick={() => setPerkinsAktif((v) => !v)}
+              onClick={perkinsToggle}
               aria-pressed={perkinsAktif}
+              aria-keyshortcuts="Alt+P"
               aria-label={'Perkins klavye ' + (perkinsAktif ? 'açık' : 'kapalı')}
-              title={'Perkins klavye (' + (perkinsAktif ? 'açık' : 'kapalı') + ')'}
+              title={'Perkins klavye (' + (perkinsAktif ? 'açık' : 'kapalı') + '). Kısayol: Alt + P.'}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M8 17h8"/></svg>
             </button>
@@ -6838,9 +7136,11 @@ export default function Araclar() {
               <button
                 type="button"
                 className={`btn ${'araclar-perkins-btn' + (kisaltmaAktif ? ' aktif' : '')}`}
-                onClick={() => setKisaltmaAktif((v) => !v)}
+                onClick={kisaltmaToggle}
                 aria-pressed={kisaltmaAktif}
+                aria-keyshortcuts="Shift+Control+Alt"
                 aria-label={'Kısaltma ' + (kisaltmaAktif ? 'Aktif' : 'Kapalı')}
+                title={'Kısaltma (' + (kisaltmaAktif ? 'açık' : 'kapalı') + '). Kısayol: Shift + Ctrl + Alt.'}
                 style={{ borderRadius: dil === 'tr' ? 'var(--radius) 0 0 var(--radius)' : 'var(--radius)' }}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="btn-ikon" aria-hidden="true"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
@@ -7048,6 +7348,14 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
   isVurgulu,
   onClick,
   aynaliEtiket = false,
+  // Elle nokta düzenleme (bkz. `hucreNoktasiniDegistir`); verilmezse eski pasif davranış.
+  onNoktaDegistir,
+  onHucreKenari,
+  onHucreKlavye,
+  elleDuzenli = false,
+  // Tablet sırasındaki konum ("3. satırın 5. hücresi") — görünen sıra/kolon numaralarıyla
+  // AYNI sayılar; ekran okuyucu etiketinin sonuna eklenir.
+  konumEtiketi = '',
 }) {
   const { noktaRenk, etiketRenk } = useMemo(() => {
     const baslikStr = anlam && typeof anlam.baslik === 'string' ? anlam.baslik : '';
@@ -7070,7 +7378,7 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
   }, [anlam, paraBirimiHucre]);
 
   const boslukMu = anlam?.tip === 'bosluk';
-  const siniflar = `belge-braille-hucre${boslukMu ? ' belge-braille-hucre--bosluk' : ''}${isSecili ? ' secili' : ''}${isVurgulu ? ' metin-secim-vurgu' : ''}`;
+  const siniflar = `belge-braille-hucre${boslukMu ? ' belge-braille-hucre--bosluk' : ''}${isSecili ? ' secili' : ''}${isVurgulu ? ' metin-secim-vurgu' : ''}${elleDuzenli ? ' hucre-elle-duzenli' : ''}`;
   const hucreNoktalariSvg = svgAktifNoktalar ?? noktalar;
 
   return (
@@ -7089,9 +7397,13 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
          ad yalnız içteki BrailleCell özetinden geliyordu ("1 ve 2 numaralı noktalar") →
          kullanıcı kısaltmanın uygulanıp uygulanmadığını duyamıyordu. Artık anlam başlığı
          (ör. "İki Harfli Kısaltma: beden") + nokta özeti birlikte okunur. */
-      aria-label={hucreAriaEtiketi(anlam)}
+      /* ⚠ Konum eki: nokta özetinden SONRA, "Tıkla: anlam göster" başlığından ÖNCE okunur
+         (kullanıcı: "kaçıncı satırdaki kaçıncı hücre olduğu da seslendirilebilir"). */
+      aria-label={`${hucreAriaEtiketi(anlam) || ''}${elleDuzenli ? ', elle düzenlendi' : ''}${konumEtiketi ? `, ${konumEtiketi}` : ''}` || undefined}
       onClick={() => onClick(globalIdx)}
       onKeyDown={(e) => {
+        // Alt+Shift+ok → hücrenin noktalarına gir; tüketilmezse Enter/Space anlam gösterir.
+        if (onHucreKlavye && onHucreKlavye(e, globalIdx)) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onClick(globalIdx);
@@ -7102,7 +7414,14 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
         <BrailleCell
           aktifNoktalar={hucreNoktalariSvg}
           tiklanabilir={false}
-          kesfedilebilir={false}
+          /* Nokta düzenleme açıkken noktalar Alt+Shift+ok ile gezilir, Enter/Space ile aç/kapa. */
+          kesfedilebilir={!!onNoktaDegistir}
+          onNoktaDegistir={onNoktaDegistir
+            /* Tablet görünümünde hücre AYNALANMIŞ çizilir → grid noktası mantıksal noktaya
+               çevrilsin diye `aynaliEtiket` bayrağı iletilir. */
+            ? (n) => onNoktaDegistir(globalIdx, n, aynaliEtiket)
+            : undefined}
+          onHucreKenari={onHucreKenari ? (yon, satir) => onHucreKenari(globalIdx, yon, satir) : undefined}
           aynaliEtiket={aynaliEtiket}
         />
       </div>
@@ -7123,6 +7442,11 @@ const BrailleHucreBileseni = React.memo(function BrailleHucreBileseni({
     && prev.genisletAktif === next.genisletAktif
     && prev.paraBirimiHucre === next.paraBirimiHucre
     && (prev.aynaliEtiket || false) === (next.aynaliEtiket || false)
+    && (prev.elleDuzenli || false) === (next.elleDuzenli || false)
+    && (prev.konumEtiketi || '') === (next.konumEtiketi || '')
+    && prev.onNoktaDegistir === next.onNoktaDegistir
+    && prev.onHucreKenari === next.onHucreKenari
+    && prev.onHucreKlavye === next.onHucreKlavye
     && brailleHucreAnlamiMemoAnahtari(prev.anlam, prev.paraBirimiHucre, prev.genisletAktif)
       === brailleHucreAnlamiMemoAnahtari(next.anlam, next.paraBirimiHucre, next.genisletAktif);
 });

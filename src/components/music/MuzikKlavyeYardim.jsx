@@ -15,7 +15,7 @@ const GRUPLAR = [
     kisayollar: [
       ['Enter', 'Düzenleme modunu aç / kapat (sayfanın her yerinden)'],
       ['F2', 'Ekleme ↔ Düzeltme modu arası geçiş'],
-      ['Alt', 'Seçili notanın braille noktalarını oku'],
+      ['Alt', 'Seçili notanın Braille noktalarını oku'],
       ['F1', 'Bu kısayol penceresini aç'],
       ['Esc', 'Pencereyi kapat'],
     ],

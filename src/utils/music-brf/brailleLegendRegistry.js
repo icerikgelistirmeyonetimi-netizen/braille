@@ -313,7 +313,7 @@ export function brailleLejantEtiketiAl(anlam = {}) {
   // Kompakt ⠶⠼N tekrarında türü/sayıyı da yaz ("braille tekrar ×8").
   if (kategori === 'bar-repeat') {
     const n = Number(a.tekrarSayisi);
-    return n > 1 ? `braille tekrar ×${n}` : 'braille tekrar';
+    return n > 1 ? `Braille tekrar ×${n}` : 'Braille tekrar';
   }
   // Sayısal ölçü tekrarı (⠼N / ⠼N⠼M / ⠼<alt>N-M) — geri-sayısal VEYA bar-number; ikisi de N ölçülük tekrar.
   if (kategori === 'backward-repeat') {
@@ -350,7 +350,7 @@ export function brailleLejantEtiketiAl(anlam = {}) {
   if (kategori === 'bar-number') return 'ölçü numarası';
   if (kategori === 'bar-repeat') {
     const n = Number(a.tekrarSayisi);
-    return n > 1 ? `braille tekrar ×${n}` : 'braille tekrar';
+    return n > 1 ? `Braille tekrar ×${n}` : 'Braille tekrar';
   }
   if (kategori === 'backward-repeat') {
     const n = Number(a.tekrarSayisi);

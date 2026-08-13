@@ -7,6 +7,13 @@ import {
 } from './matematik.js';
 import { KURAN_HECELERI, KURAN_KELIMELERI_TEMEL } from './kuran.js';
 import { MUZIK_BOLUM_GRUPLARI } from './muzik.js';
+// ⚠ Modül 4 sayaçları VERİDEN türetilir, elle yazılmaz (kullanıcı: "modül 4'te kelime
+// cümle sayıları değişti ama hâlâ eski sayılara göre istatistik veriyor"): liste
+// kısalınca/uzayınca ana menüdeki ilerleme yüzdesi yanlış kalıyordu (kelime listesi
+// 500 → 468'e inmişti, `toplam: 500` sabit kalmıştı → ilerleme olduğundan düşük
+// görünüyordu). Matematik/müzik girdileri zaten `.length` kullanıyor; aynı kalıp.
+import { YAZMA_KELIMELERI } from './yazmaKelimeleri.js';
+import { YAZMA_CUMLELERI } from './yazmaCumleleri.js';
 // İkonlar – sade çizgi tabanlı SVG'ler. currentColor kullanılır,
 // böylece tema rengine uyum sağlar.
 export const Ikon = {
@@ -513,7 +520,7 @@ export const MODULLER = [
     altBaslik: 'Noktalama ve Özel İşaretler',
     ikon: Ikon.modul4,
     ogeler: [
-      { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul, anahtar: 'noktalama-isaretleri', toplam: 16 },
+      { yol: '/noktalama-isaretleri', baslik: 'Noktalama İşaretleri',  ikon: Ikon.noktalamaModul, anahtar: 'noktalama-isaretleri', toplam: 17 },
       { yol: '/ozel-isaretler',       baslik: 'Diğer Özel İşaretler',  ikon: Ikon.ozelIsaret,     anahtar: 'ozel-isaretler',       toplam: 11 },
       { yol: '/test-noktalama',       baslik: 'Test / Sınav',           ikon: Ikon.test }
     ]
@@ -526,8 +533,8 @@ export const MODULLER = [
     ikon: Ikon.modul2,
     ogeler: [
       { yol: '/yazma-egitim',          baslik: 'Perkins Klavye Eğitimi', ikon: Ikon.klavye },
-      { yol: '/yazma-yonergeli',       baslik: 'Yönergeli Yazma',        ikon: Ikon.yazma,  anahtar: 'yazma-yonergeli',       toplam: 500 },
-      { yol: '/yazma-yonergeli-cumle', baslik: 'Yönergeli Cümle Yazma',  ikon: Ikon.cumle,  anahtar: 'yazma-yonergeli-cumle', toplam: 78 },
+      { yol: '/yazma-yonergeli',       baslik: 'Yönergeli Yazma',        ikon: Ikon.yazma,  anahtar: 'yazma-yonergeli',       toplam: YAZMA_KELIMELERI.length },
+      { yol: '/yazma-yonergeli-cumle', baslik: 'Yönergeli Cümle Yazma',  ikon: Ikon.cumle,  anahtar: 'yazma-yonergeli-cumle', toplam: YAZMA_CUMLELERI.length },
       { yol: '/yazma-serbest',         baslik: 'Serbest Yazma',          ikon: Ikon.serbest }
     ]
   },

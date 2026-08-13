@@ -28,3 +28,14 @@ export function dokunmaKapanisi(hucreler) {
     ? 'Lütfen bu noktaya dokunun.'
     : 'Lütfen bu noktalara sırayla dokunun.';
 }
+
+// Hücrenin SATIR İÇİ konumu — ekran okuyucu etiketinin sonuna eklenir (kullanıcı: "hücre
+// numaraları okunduktan sonra kaçıncı satır, satırdaki kaçıncı hücre olduğu da seslendirilsin").
+// "2. satırın 5. hücresi" — "hücre" sözcüğü etiketin başındaki sıra numarasıyla (Serbest
+// Yazma'da "7. hücre: …") karışmasın diye İYELİK ekiyle yazılır.
+// Kullananlar: YazmaSerbest (görsel sarma satırı), Araclar metin→brf (kabartma satırı /
+// tablet sırası), BrailleGrid (satirGenisligi prop'u verildiğinde).
+export function satirKonumMetni(satirNo, siraNo) {
+  if (!satirNo || !siraNo) return '';
+  return `${satirNo}. satırın ${siraNo}. hücresi`;
+}

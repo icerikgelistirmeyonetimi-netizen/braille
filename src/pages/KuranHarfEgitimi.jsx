@@ -60,7 +60,7 @@ export default function KuranHarfEgitimi() {
       ogeler={ogeler}
       kategoriAdi="Kur'an harfi"
       bolumAnahtari="kuran-harfler"
-      bittiMesaji="Tebrikler! Kur'an-ı Kerim braille harflerini tamamladınız."
+      bittiMesaji="Tebrikler! Kur'an-ı Kerim Braille harflerini tamamladınız."
       rtl
       ogeSesiCal={harfSesiCal}
       ogeSesiDurdur={kuranSesiniDurdur}

@@ -106,6 +106,11 @@ export default function OkumaModuListesi({
   okumaModuOgeSesiGecikmeMs = 900,
   okumaModuOgeSesiAktif = false,
   okumaModundaSadeceOgeSesi = false,
+  // Hızlı dolaşım moduna girişte İLK karta verilen PROGRAMATİK odak (CokHucreOkuyucu
+  // okumaModu effect'i) seslendirme/ses kaydı TETİKLEMEZ (kullanıcı: "geçilir geçilmez
+  // ilk ses okunuyor; kullanıcı odaklanmadan okuma yapmamalı"). Ref, girişten sonraki
+  // kısa pencerenin bitiş zaman damgasıdır; ilk kullanıcı girdisinde de düşer.
+  girisSessizRef,
 }) {
   const sonOkunanRef = useRef(null);
   const sonOkumaOgesiRef = useRef({ oge: null, time: 0 });
@@ -113,6 +118,17 @@ export default function OkumaModuListesi({
   const aktifIstekRef = useRef(0); // her yeni öğe isteğinde artar; eski ses-bitti callback'lerini geçersiz kılar
   // Okuma moduna girince odak İLK KART'a CokHucreOkuyucu'daki okumaModu effect'inden verilir
   // (parent stabil; child StrictMode mount/unmount'unda rAF odağı tutmuyordu).
+
+  // Girişteki programatik odak penceresi: yalnız İLK kart (odak hedefi) sessiz geçilir;
+  // kullanıcı bu pencerede Tab/tıklama yaparsa pencere hemen kapanır → sonraki odaklar okur.
+  const girisSessizMi = useCallback((index) => {
+    if (index !== 0 || !girisSessizRef) return false;
+    return typeof girisSessizRef.current === 'number' && Date.now() < girisSessizRef.current;
+  }, [girisSessizRef]);
+
+  const girisSessizBitir = useCallback(() => {
+    if (girisSessizRef) girisSessizRef.current = 0;
+  }, [girisSessizRef]);
 
   const okumaOgeSesiTemizle = useCallback(() => {
     if (okumaOgeSesiTimerRef.current) {
@@ -271,7 +287,12 @@ export default function OkumaModuListesi({
   };
 
   return (
-    <div className={`okuma-modu-panel${rtl ? ' rtl' : ''}`}>
+    <div
+      className={`okuma-modu-panel${rtl ? ' rtl' : ''}`}
+      onKeyDownCapture={girisSessizBitir}
+      onPointerDownCapture={girisSessizBitir}
+      onPointerMoveCapture={girisSessizBitir}
+    >
       <div className="okuma-modu-ust">
         <div>
           <div className="okuma-modu-kicker">Hızlı dolaşım modu</div>
@@ -297,8 +318,19 @@ export default function OkumaModuListesi({
               <button
                 type="button"
                 className="btn okuma-modu-kutu"
-                onPointerEnter={() => okumaOgesiniSeslendirVeCal(oge)}
-                onFocus={() => okumaOgesiniSeslendirVeCal(oge)}
+                onPointerEnter={() => {
+                  // Giriş penceresinde imleç zaten kartın üzerindeyse (yeni panel imlecin
+                  // altında açıldı) bu bir kullanıcı hareketi DEĞİLDİR → sessiz geç.
+                  // Gerçek fare hareketi panelin pointermove yakalayıcısıyla pencereyi kapatır.
+                  if (girisSessizMi(index)) return;
+                  okumaOgesiniSeslendirVeCal(oge);
+                }}
+                onFocus={() => {
+                  // Giriş odağı (programatik) → ses/seslendirme YOK; ekran okuyucu kartın
+                  // aria-label'ini zaten okur. Kullanıcı kendi odaklandığında çalar.
+                  if (girisSessizMi(index)) return;
+                  okumaOgesiniSeslendirVeCal(oge);
+                }}
                 onPointerLeave={() => {
                   sonOkunanRef.current = null;
                   aktifIstekRef.current += 1; // bekleyen "ses bitince Braille oku" callback'ini iptal et

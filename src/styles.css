@@ -5497,6 +5497,13 @@ g:hover .muzik-note-hover-rect,
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
   outline: none;
 }
+/* Nokta düzenleme açıkken hücre içindeki noktalar programatik odak alır (tabIndex -1) →
+   odak halkası görünür olsun ki Alt+Shift gezinmesi takip edilebilsin. */
+.belge-braille-hucre .dot:focus-visible,
+.belge-braille-hucre .dot:focus {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
 /* Araçlar: hover/focus — hücrenin semantik rengi (--dot-active-color) */
 .araclar-nokta-gorunus .belge-braille-hucre:hover,
 .araclar-nokta-gorunus .belge-braille-hucre:focus-visible {
@@ -5514,6 +5521,21 @@ g:hover .muzik-note-hover-rect,
 .belge-braille-hucre.metin-secim-vurgu {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   border-color: var(--accent);
+}
+/* Elle nokta düzenlemesi yapılmış hücre (Modül 10 metin→brf; bkz. Araclar
+   `hucreNoktasiniDegistir`): braille artık METİNDEN türetilenden ayrıldığı için
+   görünür işaret. Ekran okuyucuda aria-label'e ", elle düzenlendi" eklenir.
+   ⚠ Seçim/vurgu kurallarından SONRA gelmeli (aynı 0,2,0 specificity) ki düzenleme
+   işareti seçili hücrede de kaybolmasın.
+   ⚠ TEST NOTU: hücrenin background/border-color'ı `transition`lıdır; kare üretmeyen
+   (gizli) önizleme panelinde geçiş İLERLEMEZ → getComputedStyle eski (şeffaf) değeri
+   döndürür. Doğrulama için geçici olarak `transition: none` verip ölçün. */
+.belge-braille-hucre.hucre-elle-duzenli,
+.belge-braille-hucre.hucre-elle-duzenli.secili,
+.belge-braille-hucre.hucre-elle-duzenli.metin-secim-vurgu {
+  border-color: #b45309;
+  border-style: dashed;
+  background: rgba(180, 83, 9, 0.12);
 }
 .belge-braille-hucre.kisaltma-hucre .dot {
   border-color: var(--panel-border);
@@ -5801,6 +5823,10 @@ g:hover .muzik-note-hover-rect,
   white-space: pre-wrap;
   user-select: text;
 }
+/* Erişilebilir braille görünümünde her KABARTMA SATIRI ayrı blok (ekran okuyucu satır
+   satır okusun). Blok içinde hücreler dar ekranda sarabilir; a11y birimi yine satırdır. */
+.belge-braille-er-satir { display: block; }
+
 .araclar-erisilebilir-btn {
   position: absolute;
   top: 6px;

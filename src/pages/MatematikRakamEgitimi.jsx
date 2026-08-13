@@ -19,7 +19,7 @@ export default function MatematikRakamEgitimi() {
       ogeler={ogeler}
       kategoriAdi="rakamı"
       bolumAnahtari="mat-rakamlar"
-      bittiMesaji="Tebrikler! Tüm rakamların braille karşılıklarını öğrendiniz."
+      bittiMesaji="Tebrikler! Tüm rakamların Braille karşılıklarını öğrendiniz."
     />
   );
 }

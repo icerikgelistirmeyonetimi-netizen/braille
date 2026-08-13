@@ -513,7 +513,7 @@ export default function MuzikScoreBrailleOverlay({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Ölçü braille hücreleri"
+            aria-label="Ölçü Braille hücreleri"
             className="muzik-tum-hucre-modal"
             onClick={(e) => e.stopPropagation()}
             style={{

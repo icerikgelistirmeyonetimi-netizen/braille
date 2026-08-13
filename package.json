@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "qa:perkins": "node scripts/braille-perkins-qa.mjs",
     "qa:score-layout": "node scripts/music-score-layout-qa.cjs",
     "qa:score-clef": "node scripts/music-score-clef-qa.cjs",
     "qa:score-beam": "node scripts/music-score-beam-qa.mjs",

@@ -787,6 +787,21 @@ export const NOKTALAMA_ISARETLERI = [
       'Bir ek veya harfin özellikle gösterilmesi gerektiğinde kullanılır.'
     ],
     ornekler: ['Ankara’ya', 'TDK’nin', '1985’te']
+  },
+  {
+    // ⚠ Hücre kullanıcı isteğiyle tek nokta: 4. nokta ("modül 3te noktalamalara en sonuna
+    // @ işaretini de ekle braille hücresi 4. hücre olacak"). Bu hücre düzeltme/yabancı harf
+    // işaretiyle (bkz. §4 BrailleKlavye `duzeltmeBekle`) aynıdır; YALNIZ ders verisidir —
+    // NOKTALAMA (çevirici tablosu) ve encoder/decoder'a EKLENMEDİ.
+    ad: 'Et İşareti',
+    sembol: '@',
+    hucreler: [[4]],
+    aciklama: 'Yalnızca 4. noktadan oluşur.',
+    kurallar: [
+      'Genel ağ (internet) adreslerinde kullanıcı adı ile alan adını ayırmak için kullanılır.',
+      'Elektronik posta adreslerinde "at" anlamında okunur.'
+    ],
+    ornekler: ['bilgi@tdk.gov.tr']
   }
 ];
 

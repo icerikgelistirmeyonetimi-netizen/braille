@@ -22,6 +22,9 @@ import {
   kelimeKokuOkunusunuYorIcinDuzelt,
   matematikIsaretiSayiModunuKorurMu,
   matematikSembolHucreEslesmesi,
+  cokHucreliMatematikKapsami,
+  matematikSayiBaglamiIleride,
+  sayiModundaKesmeIsaretiMi,
   noktalariAnahtara,
   kelimeIciSayiIsaretiKiMi,
   siraSayisiDizisiGecerliMi,
@@ -137,7 +140,34 @@ function _unluUyumuSec(ekler, oncekiMetin) {
   return variants[0];
 }
 
+/** Tüm kısaltma sistemleri kapalı — kısaltmasız okuma da BLOK yolundan geçsin diye. */
+const TUM_KISALTMALAR_KAPALI = {
+  hece: false, birHarf: false, ikiHarf: false, kok: false, parca: false,
+};
+
 export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
+  // ⚠⚠ KISALTMASIZ OKUMA DA BLOK YOLUNU KULLANIR (kullanıcı: "bu tarz detayları detaylıca tüm
+  // sistemler için kontrol et; bu ciddi bir hata, başka yazımlarda da sorun olmasın").
+  // ESKİDEN bu fonksiyonun İÇİNDE İKİ AYRI ÇÖZÜCÜ vardı: `kisaltmali` ise blok yolu
+  // (`bloklariIsle` — kelime bloğu + tırnak/parantez soyma + matematik + kesme), değilse
+  // AŞAĞIDAKİ ESKİ satır-satır/hücre-hücre döngüsü. Eski yol blok mantığını hiç bilmediğinden
+  // ölçümde 33 örnekten 9'unu YANLIŞ okuyordu: açılış tırnağı `"aynı"`→`?aynı”`, açılış
+  // parantezi `(soru)`→`)soru)`, `1922'de`→`1922.45`, `|−7|`→`l-7|`. Artık kısaltmasız okuma,
+  // blok yolunu TÜM SİSTEMLER KAPALI çağırır → tek çözücü, tek davranış (Modül 10 metin→brf
+  // Perkins'inde yapılan birleştirmenin ikizi).
+  // ⚠ SATIR YAPISI KORUNUR: blok yolu bir sayfayı tek metne indirger (BRF satır sonları
+  // kâğıt genişliğinden doğan sarmadır); kısaltmasız okumada satır sonları KULLANICIYA
+  // gösteriliyordu → geriye dönük uyumluluk için satır satır çağrılıp yeni satırla birleşir.
+  if (!kisaltmali) {
+    return icerik
+      .split(/\f/)
+      .map((sayfa) => sayfa
+        .split(/[\r\n]+/)
+        .map((satir) => (satir.trim() ? brfMetinedonSistemi(satir, true, TUM_KISALTMALAR_KAPALI) : ''))
+        .join('\n'))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n');
+  }
   const {
     hece: heceAktif = true,
     birHarf: birHarfAktif = true,
@@ -243,17 +273,30 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
         let onEk = '', sonEk = '';
         {
           const _dk = (h) => [...h].sort((x, y) => x - y).join(',');
+          // ⚠ Çok hücreli matematik sembolünün hücreleri AYRILMAZ (bkz. brailleCevir
+          // `cokHucreliMatematikKapsami`): '=' = [5,6]+[2,3,5,6]; ikinci hücre ')' ile aynı →
+          // blok sonundaki ')' soyması "=" yerine ")" bırakıyordu. Kapsam, hücreler
+          // koparıldıkça yeniden hesaplanır (indeksler kayar).
+          const _matKorumali = (hucreler, indeks) => cokHucreliMatematikKapsami(hucreler).has(indeks);
           // Öndeki açılış tırnağı ([2,3,6] + eşleşen kapanış ileride) VEYA açılış parantezi
           // ([2,3,5,6] = NOKTALAMA paren, harf/hece ile ÇAKIŞMAZ → konumla '(' güvenli) ayrılır.
           while (b.length > 1) {
             const _k0 = _dk(b[0]);
+            if (_matKorumali(b, 0)) break;
             if (_k0 === '2,3,6' && (kapanisIleride || b.slice(1).some((h) => _dk(h) === '3,5,6'))) { onEk += '“'; b = b.slice(1); }
             else if (_k0 === '2,3,5,6') { onEk += '('; b = b.slice(1); }
             else break;
           }
+          // ⚠ KÖK ÇİFTİNİN ([5]+sag) İKİNCİ HÜCRESİ SOYULMAZ (bkz. brailleCevir aynı koruma):
+          // 5+be "bekle" sag hücresi [2,3,5,6] = kapanış parantezi ile AYNI → soyulunca geriye
+          // yalnız [5] kalıp kelime "”" okunuyordu.
+          const _kokCifti = (hucreler) => hucreler.length === 2 && _dk(hucreler[0]) === '5'
+            && _KOK_SAG_MAP.has(_dk(hucreler[1]));
           // Sondaki kapanış tırnağı [3,5,6] VEYA kapanış parantezi [2,3,5,6] ayrılır.
           while (b.length > 1) {
             const _kL = _dk(b[b.length - 1]);
+            if (_matKorumali(b, b.length - 1)) break;
+            if (kokAktif && _kokCifti(b)) break;
             if (_kL === '3,5,6') { sonEk = '”' + sonEk; b = b.slice(0, -1); }
             else if (_kL === '2,3,5,6') { sonEk = ')' + sonEk; b = b.slice(0, -1); }
             else break;
@@ -321,9 +364,11 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             ci = 2;
           }
         }
-        // ⚠ KÖK KISALTMASI EK İSTER (bkz. brailleCevir.js aynı guard): [5]+sag'dan sonra
-        // hücre yoksa kök okuma — encoder kökü yalnız "kök + en az 1 karakter" için yazar.
-        if (kokAktif && b.length >= 3 && ilkKey === '5') {
+        // ⚠⚠ ÇIPLAK KÖK DE OKUNUR ([5]+sag, ek YOK) — eski `b.length >= 3` guard'ı KALDIRILDI
+        // (bkz. brailleCevir.js aynı guard; iki çözücü SENKRON kalmalı). Encoder kökü yalnız
+        // "kök + en az 1 karakter" için yazar; o asimetriyi çözücüye taşımak elle yazılan
+        // (Perkins) ve elle kabartılmış BRF'teki çıplak kökü okunamaz kılıyordu.
+        if (kokAktif && b.length >= 2 && ilkKey === '5') {
           const sagKey = [...b[1]].sort((x, y) => x - y).join(',');
           const kok = _KOK_SAG_MAP.get(sagKey);
           if (kok) {
@@ -401,8 +446,11 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             if (_h && _h !== ' ') { harfYaz(_h); ci += 2; continue; }
           }
           const islemIsareti = matematikSembolHucreEslesmesi(b, ci);
+          // "sayı yanında": doğrudan sayı VEYA araya çok hücreli operatör girip sonra sayı
+          // ("|−7|" → '|' ardından '−' + 7; brailleCevir matematikSayiBaglamiIleride ikizi).
           const sonrakiSayiBitisik = islemIsareti
-            && (sM || gercekSayiBitisik(b[ci + islemIsareti.hucreler.length], b[ci + islemIsareti.hucreler.length + 1]));
+            && (sM || gercekSayiBitisik(b[ci + islemIsareti.hucreler.length], b[ci + islemIsareti.hucreler.length + 1])
+              || matematikSayiBaglamiIleride(b, ci + islemIsareti.hucreler.length));
           const _setAdiSonra = () => { const h = islemIsareti && b[ci + islemIsareti.hucreler.length];
             const kk = h ? [...h].sort((a, b) => a - b).join(',') : ''; return kk === '6' || kk === '5,6' || kk === '3,4,5,6'; };
           const kumeReddi = islemIsareti && _KUME_ISLEMLERI.has(islemIsareti.ad) && !_setAdiSonra();
@@ -502,6 +550,18 @@ export function brfMetinedonSistemi(icerik, kisaltmali, sistemler = {}) {
             if (!siraSM && r) { buf.push(r); ci++; continue; }
             const bolukMu = [...noktalar].sort((x, y) => x - y).join(',') === '3';
             if (!siraSM && bolukMu && ci + 1 < b.length && hucreyiRakamayap(b[ci + 1])) {
+              // [3] = bölük ayırıcı VEYA kesme işareti (brailleCevir sayiModundaKesmeIsaretiMi):
+              // "1.000" → bölük; "1922'de" → kesme (kısaltmasız ekin harfleri de rakam hücresi).
+              if (sayiModundaKesmeIsaretiMi(b, ci)) {
+                buf.push('’');
+                kesmeBayrak = true;
+                sM = false;
+                siraSM = false;
+                ciftListeVirgulle = false;
+                cListeSonTekIsaretSonrasi = false;
+                ci++;
+                continue;
+              }
               buf.push('.');
               ci++;
               continue;

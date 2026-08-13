@@ -17,7 +17,12 @@ import React from 'react';
 //   Sekme okları      → pages/Ayarlar.jsx tablist onKeyDown
 //   Arama girdisi     → pages/AramaSayfasi.jsx (1-6 + Perkins süzme, boşluk)
 //   Müzik editörü     → components/music/MuzikScoreSvg.jsx + MuzikKlavyeYardim.jsx
+//   Shift+Ctrl+Alt, Alt+P, Alt+T → pages/Araclar.jsx mod kısayolları effect'i
+//   Shift+Ctrl+Alt (kısaltma)    → pages/YazmaSerbest.jsx kısaltma kısayolu effect'i
 // Kısayol eklenir/değişirse BURAYI da güncelle.
+// ⚠ TEK İSTİSNA — "Ekran okuyucu — serbest gezinme" grubu: NVDA (Insert+Boşluk) ve JAWS
+// (Insert+Z) kendi kısayollarıdır, uygulamada karşılığı YOKTUR (kullanıcı isteğiyle
+// hatırlatma olarak eklendi). Bunları koddan doğrulamaya çalışma.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const KISAYOL_GRUPLARI = [
@@ -27,8 +32,21 @@ const KISAYOL_GRUPLARI = [
       ['Tab / Shift + Tab', 'Düğmeler ve içerik arasında ileri / geri gezinir.'],
       ['Enter veya Boşluk', 'Üzerinde bulunduğunuz düğmeyi çalıştırır.'],
       ['H', 'Ekran okuyucunun tarama kipinde başlıklar arasında atlar. Başlık düzeni: birinci düzey uygulama adı, ikinci düzey sayfa başlığı, üçüncü düzey o anda çalıştığınız öğe.'],
-      ['Ctrl + Home', 'İçeriğin en başına döner. Oradaki ilk düğme "Hücreye dön"dür; Enter ile doğrudan braille hücresinin 1. noktasına konumlanırsınız.'],
+      ['Ctrl + Home', 'İçeriğin en başına döner. Oradaki ilk düğme "Hücreye dön"dür; Enter ile doğrudan Braille hücresinin 1. noktasına konumlanırsınız.'],
       ['Esc', 'Açık pencereyi, paneli veya tanıtım turunu kapatır.'],
+    ],
+  },
+  {
+    // ⚠ Bu gruptaki kısayollar UYGULAMANIN DEĞİL, ekran okuyucunun kendi kısayollarıdır
+    // (kullanıcı: "yardıma serbest gezinme modu (sanal imleç) aç kapa için jaws programı ve
+    // nvda için kısayollar eklenmeli. insert + z jaws için, insert + boşluk nvda için").
+    // Uygulama bu tuşları YAKALAMAZ; kılavuzda yalnız hatırlatma olarak yer alır.
+    baslik: 'Ekran okuyucu — serbest gezinme (sanal imleç)',
+    satirlar: [
+      ['NVDA: Insert + Boşluk', 'Tarama (serbest gezinme) kipi ile odak kipi arasında geçiş yapar. Tarama kipinde ok tuşlarıyla sayfada serbestçe dolaşır, H ile başlıklara atlarsınız; odak kipinde tuşlar doğrudan uygulamaya gider.'],
+      ['JAWS: Insert + Z', 'Sanal imleci (serbest gezinme) açar ve kapatır. Kapalıyken tuşlar doğrudan uygulamaya gider.'],
+      ['Ne zaman kapatmalı?', 'Braille noktalarına Enter veya Boşluk ile basarken, Perkins tuşlarıyla (F D S J K L) yazarken ve metin kutusuna yazarken serbest gezinme kapalı olmalıdır. Bu alanlara geçtiğinizde ekran okuyucu genellikle kipi kendisi değiştirir.'],
+      ['Bu tuşlar uygulamaya ait değildir', 'NVDA ve JAWS kendi kısayollarıdır; uygulama bunları değiştirmez. Insert yerine Büyük Harf Kilidi (Caps Lock) tuşunu kullanacak şekilde ayarlanmış ekran okuyucularda o tuşla da çalışır.'],
     ],
   },
   {
@@ -57,10 +75,24 @@ const KISAYOL_GRUPLARI = [
     baslik: 'Modül 4 — Serbest Yazma bölümü',
     satirlar: [
       ['Sol ok / Sağ ok', 'İmleci yazdığınız hücreler arasında geri ve ileri taşır; geçtiğiniz hücrenin anlamı okunur.'],
+      ['Yukarı ok / Aşağı ok', 'Bir üst ya da alt satıra geçer ve o satırın metnini okur.'],
+      ['Home / End', 'İmleci bulunduğunuz satırın başına ya da sonuna taşır.'],
       ['Yeni hücre', 'İmlecin bulunduğu yere eklenir, sonuna değil.'],
       ['Backspace / Delete', 'Backspace imlecin solundaki, Delete sağındaki hücreyi siler.'],
       ['Hücreye odaklanma', 'Tab ile yazdığınız bir hücreye geldiğinizde imleç oraya taşınır; hücrenin anlamı ve nokta bileşimi okunur.'],
+      ['Shift + Ctrl + Alt', 'Kısaltmalı yazımı açar ve kapatır; alttaki Kısaltma düğmesine tıklamakla aynı işi yapar. Yazdığınız hücreler silinmez, yeni moda göre yeniden çözülür.'],
       ['Kısaltma düğmesi', 'Açıkken yazdıklarınız kısaltma kurallarına göre çözülür; hangi kısaltma sistemlerinin etkin olduğunu yanındaki liste düğmesinden seçebilirsiniz.'],
+    ],
+  },
+  {
+    // Kullanıcı isteğiyle eklendi: "shift+ctrl+alt … kısaltmayı aç kapa … alt+p perkins
+    // … alt+t tablet modu". Kaynak: pages/Araclar.jsx mod kısayolları effect'i.
+    baslik: 'Modül 10 — Metin → BRF aracı',
+    satirlar: [
+      ['Shift + Ctrl + Alt', 'Kısaltmalı yazımı açar ve kapatır; alttaki Kısaltma düğmesine tıklamakla aynı işi yapar.'],
+      ['Alt + P', 'Perkins klavyeyi açar ve kapatır.'],
+      ['Alt + T', 'Braille tablet modunu açar ve kapatır.'],
+      ['Durum bildirimi', 'Üç kısayol da yeni durumu ("Kısaltma açık", "Perkins klavye kapalı" gibi) ekran okuyucuya bildirir.'],
     ],
   },
   {
@@ -87,7 +119,7 @@ const KISAYOL_GRUPLARI = [
       ['Enter', 'Düzenleme modunu açar ve kapatır.'],
       ['Art arda iki Enter', 'Perkins yazım panelini açar.'],
       ['F2', 'Ekleme ve düzeltme modu arasında geçiş yapar.'],
-      ['Alt', 'Seçili notanın braille noktalarını okur.'],
+      ['Alt', 'Seçili notanın Braille noktalarını okur.'],
     ],
   },
 ];

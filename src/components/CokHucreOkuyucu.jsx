@@ -132,6 +132,11 @@ export default function CokHucreOkuyucu({
   const oncekiYonergeOkunuyorRef = useRef(false);
   // Okuma modundan öğrenme moduna dönüşte odağı ilk içeriğe vermek için (en alta düşmesin).
   const oncekiOkumaModuRef = useRef(false);
+  // Hızlı dolaşım moduna GİRİŞTE odak ilk karta PROGRAMATİK verilir; bu odak kartın
+  // seslendirme/ses kaydı akışını TETİKLEMEMELİ (kullanıcı: "hızlı dolaşım moduna geçilir
+  // geçilmez ilk ses okunuyor; kullanıcı odaklanmadan okuma yapmamalı"). Ref bir zaman
+  // damgası tutar; OkumaModuListesi ilk kartın bu penceredeki odağını sessiz geçer.
+  const okumaGirisSessizRef = useRef(0);
   // Sayfa girişi (mount): ilk narration-bitti = giriş; sonrası öğe geçişi. NVDA'da girişte
   // odağı yönergeye verip (dot'a değil) önce yönergeyi okutmak için (bkz. dot-odak effect'i).
   const sayfaGirisiRef = useRef(true);
@@ -226,12 +231,12 @@ export default function CokHucreOkuyucu({
             : `Lütfen sırayla ${noktaListesi(ilkHucre, 'ya', 'a')} dokununuz.`)
         : 'Lütfen noktalarına dokununuz.';
       hucreYonergesi = cokHucre
-        ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${dokunYonergesi}`
+        ? `${hucreler.length} Braille hücresinden oluşur. 1. hücre: ${dokunYonergesi}`
         : dokunYonergesi;
     } else {
       const ilkHucreNoktalar = ilkHucre.length ? noktaListesi(ilkHucre, 'ya', 'a') : 'boş hücre';
       hucreYonergesi = cokHucre
-        ? `${hucreler.length} braille hücresinden oluşur. 1. hücre: ${ilkHucreNoktalar} dokunun.`
+        ? `${hucreler.length} Braille hücresinden oluşur. 1. hücre: ${ilkHucreNoktalar} dokunun.`
         : `${ilkHucreNoktalar} dokunun.`;
     }
 
@@ -700,6 +705,9 @@ export default function CokHucreOkuyucu({
     const ogrenmeyeDonus = onceki && !okumaModu;
     const okumayaGiris = !onceki && okumaModu;
     if (!ogrenmeyeDonus && !okumayaGiris) return undefined;
+    // Girişte ilk karta verilecek PROGRAMATİK odak ses/seslendirme tetiklemesin (bkz. ref notu).
+    // Zaman penceresi: mount churn'ünde odak birkaç kez düşüp geri gelebilir (aşağıdaki retry).
+    okumaGirisSessizRef.current = okumayaGiris ? Date.now() + 1500 : 0;
     const sec = ogrenmeyeDonus
       ? '#main .yonerge-sr'
       : '#main .okuma-modu-grid button.okuma-modu-kutu';
@@ -794,6 +802,7 @@ export default function CokHucreOkuyucu({
             okumaModuOgeSesiGecikmeMs={900}
             okumaModuOgeSesiAktif={typeof ogeSesiCal === 'function'}
             okumaModundaSadeceOgeSesi={okumaModundaSadeceOgeSesi}
+            girisSessizRef={okumaGirisSessizRef}
           />
         </div>
         <div className="controls">

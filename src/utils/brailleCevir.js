@@ -411,6 +411,103 @@ export function matematikIsaretiSayiModunuKorurMu(isaret) {
   return !!isaret && SAYI_MODU_KORUYAN_MATEMATIK_ISARETLERI.has(isaret.ad);
 }
 
+/**
+ * Küme işlemleri: yalnız ardından SET ADI ([6] büyük harf / [5,6] küme-adı öneki /
+ * [3,4,5,6] sayı) gelirse geçerlidir; aksi halde ilk hücre [3] KESME İŞARETİdir
+ * ("1922'de" → "1922∩" olmasın). bkz. CLAUDE.md §11 (4).
+ */
+export const MATEMATIK_KUME_ISLEM_ADLARI = new Set([
+  'alt küme', 'kapsar', 'birleşim', 'kesişim', 'fark', 'elemanıdır', 'küme açma',
+]);
+const KUME_SET_ADI_ANAHTARLARI = ['6', '5,6', '3,4,5,6'];
+
+/** Küme işlemi eşleşmesi bağlam gereği REDDEDİLİR mi? (ardından set adı yoksa) */
+export function matematikKumeReddiMi(isaret, hucreler, bitisIndeksi) {
+  if (!isaret || !MATEMATIK_KUME_ISLEM_ADLARI.has(isaret.ad)) return false;
+  const sonraki = hucreler[bitisIndeksi];
+  const anahtar = sonraki ? noktalariAnahtara(sonraki) : '';
+  return !KUME_SET_ADI_ANAHTARLARI.includes(anahtar);
+}
+
+/**
+ * Bir hücre bloğunda ÇOK HÜCRELİ (≥2) matematik sembollerinin kapsadığı hücre indeksleri.
+ *
+ * ⚠⚠ NOKTALAMA SOYMA (peel) BU HÜCRELERİ YUTMAMALI (kullanıcı: "metin→brf'de = için braille
+ * tuşlarını yazdığımda ) parantez kapa olarak görüyor"): '=' iki hücredir ([5,6] + [2,3,5,6])
+ * ve İKİNCİ hücresi düz-yazı parantezi ')' ile AYNI hücredir. Blok sonundaki noktalama soyma
+ * döngüsü onu ')' diye ayırıp geriye yalnız [5,6] (tek harf işareti = çıktısız) bırakıyordu →
+ * "=" yerine ")" yazılıyordu. Aynı kusur '×' ([5,6]+[2,3,6]), '÷' ([5,6]+[2,5]), '≠', '≤',
+ * '≥' ve boşlukla ayrılmış "15 + 8 = 23" gibi tüm blok-sonu operatörlerinde vardı.
+ * Ana çözüm döngüsü bu sembolleri DOĞRU okuyordu; kusur yalnız peel'in ana döngüden önce
+ * hücreleri koparmasıydı → peel artık ana döngüyle AYNI matematik eşleşmesine bakar.
+ *
+ * Yalnız ≥2 hücreli eşleşmeler işaretlenir: tek hücreli semboller (√=[1,4,6]=ş, %=y, (=ğ,
+ * |=l) harflerle çakıştığından bağlam kuralına (`isAmbiguousMath` / "sayı yanında") tabidir;
+ * onları peel'den korumak düz yazıyı bozardı.
+ */
+const MATEMATIK_RAKAM_ANAHTARLARI = new Set([
+  '1', '1,2', '1,4', '1,4,5', '1,5', '1,2,4', '1,2,4,5', '1,2,5', '2,4', '2,4,5',
+]);
+
+/**
+ * Tek hücreli (Türk harfiyle ÇAKIŞAN) matematik sembolü "sayı yanında" mı?
+ * Doğrudan ardından gerçek sayı ([3,4,5,6] + a–j rakamı) gelirse EVET; ayrıca araya
+ * ÇOK HÜCRELİ bir matematik operatörü giriyorsa onun ardına bakılır.
+ * (kullanıcı hatası: "|−7|" → mutlak değer '|' ardından '−' operatörü var, doğrudan sayı
+ * YOK → eskiden 'l' harfine düşüp "l-7|" okunuyordu.)
+ */
+export function matematikSayiBaglamiIleride(hucreler, index, atlamaLimiti = 2) {
+  let i = index;
+  for (let adim = 0; adim <= atlamaLimiti; adim++) {
+    const anahtar = hucreler[i] ? noktalariAnahtara(hucreler[i]) : '';
+    const sonrakiAnahtar = hucreler[i + 1] ? noktalariAnahtara(hucreler[i + 1]) : '';
+    if (anahtar === '3,4,5,6' && MATEMATIK_RAKAM_ANAHTARLARI.has(sonrakiAnahtar)) return true;
+    const isaret = matematikSembolHucreEslesmesi(hucreler, i);
+    if (!isaret || isaret.hucreler.length < 2) return false;
+    if (matematikKumeReddiMi(isaret, hucreler, i + isaret.hucreler.length)) return false;
+    i += isaret.hucreler.length;
+  }
+  return false;
+}
+
+/**
+ * Sayı modundaki [3] hücresi BÖLÜK ayırıcı mı ("1.000") KESME işareti mi ("1922'de")?
+ *
+ * ⚠ Kısaltma KAPALIYKEN ekin harfleri de GEÇERLİ RAKAM hücresidir (d=[1,4,5]=4, e=[1,5]=5)
+ * → "1922'de" eskiden "1922.45" okunuyordu (kısaltma açıkken 'de' hece hücresi olduğundan
+ * sorun görünmüyordu). Ayırt etme kuralları (yazım geleneği):
+ *   1) Ardındaki rakam grubu TAM 3 ise bölük ayırıcıdır — "1.000", "1.234.567".
+ *   2) [3]'ten ÖNCEKİ kesintisiz rakam sayısı 3'ten azsa bölük/nokta kabul edilir: saat
+ *      ("12.30" = "12:30" ile AYNI braille) ve kısa ondalık bozulmasın.
+ *   3) Aksi halde (4+ haneli sayı + 3'lük olmayan grup) KESME işaretidir → sayı modu kapanır,
+ *      kalan hücreler HARF olarak okunur ("1922'de", "1923'ten").
+ * Türkçe'de ondalık ayıracı VİRGÜL ([2]) olduğundan (3) yanlış-pozitif riski düşüktür;
+ * tarihler ise [3,6] (tarih ayırma) kullandığından bu kuralın dışındadır.
+ */
+export function sayiModundaKesmeIsaretiMi(hucreler, index) {
+  let grup = 0;
+  for (let i = index + 1; i < hucreler.length && hucreyiRakamayap(hucreler[i]); i++) grup++;
+  if (grup === 3) return false;
+  let once = 0;
+  for (let i = index - 1; i >= 0 && hucreyiRakamayap(hucreler[i]); i--) once++;
+  return once >= 3;
+}
+
+export function cokHucreliMatematikKapsami(hucreler) {
+  const kapsanan = new Set();
+  if (!Array.isArray(hucreler) || hucreler.length < 2) return kapsanan;
+  for (let i = 0; i < hucreler.length; i++) {
+    const isaret = matematikSembolHucreEslesmesi(hucreler, i);
+    if (!isaret || isaret.hucreler.length < 2) continue;
+    const bitis = i + isaret.hucreler.length;
+    // Ana döngü küme işlemini set adı yoksa reddeder → peel koruması da reddetmeli.
+    if (matematikKumeReddiMi(isaret, hucreler, bitis)) continue;
+    for (let k = i; k < bitis; k++) kapsanan.add(k);
+    i = bitis - 1;
+  }
+  return kapsanan;
+}
+
 function duzeltmeliHarfBilgisi(ch) {
   if (!ch) return null;
   const ust = ch.toLocaleUpperCase('tr');
@@ -2184,10 +2281,14 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     .map((hucre) => NOKTA_TERS.get(noktalariAnahtara(hucre)) || '')
     .join('');
 
+  // ⚠ Çok hücreli matematik sembolünün hücreleri peel'de SOYULMAZ (bkz.
+  // `cokHucreliMatematikKapsami`): '=' = [5,6]+[2,3,5,6] ve ikinci hücre ')' ile aynı.
+  const matKapsam = cokHucreliMatematikKapsami(b);
   let govdeBaslangic = 0;
   while (govdeBaslangic < b.length) {
     const anahtar = noktalariAnahtara(b[govdeBaslangic]);
     if (anahtar !== '2,3,6' && anahtar !== '2,3,5,6') break;
+    if (matKapsam.has(govdeBaslangic)) break;
     govdeBaslangic++;
   }
   let govdeBitis = b.length;
@@ -2197,7 +2298,21 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
   const sayiBlogu = govdeBaslangic + 1 < b.length
     && sayiIsaretiMi(b[govdeBaslangic])
     && (hucreyiRakamayap(b[govdeBaslangic + 1]) || hucreyiSiraSayisiRakaminaCevir(b[govdeBaslangic + 1]));
-  while (!sayiBlogu && govdeBitis > govdeBaslangic && NOKTA_TERS.has(noktalariAnahtara(b[govdeBitis - 1]))) {
+  // ⚠ KÖK ÇİFTİNİN ([5]+sag) İKİNCİ HÜCRESİ PEEL'DE SOYULMAZ — `matKapsam`ın kök ikizi
+  // (kullanıcı: "5'li kısaltmalarda çalışmıyor"). 46 kökün 3'ünde `sag` hücresi aynı zamanda
+  // bir NOKTALAMA hücresidir: 5+ba "bulun" = [2,3,5] ('!'), 5+be "bekle" = [2,3,5,6] ('”'),
+  // 5+ka "kalk" = [2,5,6] ('.'). Trailing peel onu koparınca geriye yalnız [5] (çıktısız kök
+  // işareti) kalıyor ve kelime "!" / "”" / "." olarak okunuyordu. Yalnız İKİNCİ hücre korunur
+  // (index govdeBaslangic+1) → "bulun." gibi gerçekten noktalı yazımlarda sondaki nokta yine
+  // normal biçimde soyulur.
+  const kokKorumaliIndeks = noktalariAnahtara(b[govdeBaslangic] || []) === '5'
+    && KOK_SAG_TERS.has(noktalariAnahtara(b[govdeBaslangic + 1] || []))
+    ? govdeBaslangic + 1
+    : -1;
+  while (!sayiBlogu && govdeBitis > govdeBaslangic
+    && govdeBitis - 1 !== kokKorumaliIndeks
+    && NOKTA_TERS.has(noktalariAnahtara(b[govdeBitis - 1]))
+    && !matKapsam.has(govdeBitis - 1)) {
     govdeBitis--;
   }
   if ((govdeBaslangic > 0 || govdeBitis < b.length) && govdeBaslangic < govdeBitis) {
@@ -2265,11 +2380,19 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     }
   }
 
-  // ⚠ KÖK KISALTMASI EK İSTER: encoder `kelimeKokuKisaltmaPrefixEslesmesi` kaynak kelimenin
-  // kökten UZUN olmasını şart koşar (kök yalnız başta + ardından en az 1 karakter). Bu yüzden
-  // [5]+sag'dan sonra hücre YOKSA kök okuma (b.length >= 3). Sondaki noktalama zaten yukarıda
-  // soyulduğundan "bil." de 2 hücreye iner → kök sayılmaz (encoder de öyle yazmaz).
-  if (kokAktif && b.length >= 3 && ci === 0 && ilkKey === '5') {
+  // ⚠⚠ ÇIPLAK KÖK DE OKUNUR ([5]+sag, ek YOK) — eski `b.length >= 3` guard'ı KALDIRILDI
+  // (kullanıcı: "serbest yazma ve metin→brf'de 5'li kısaltmalarda çalışmıyor"). ENCODER kökü
+  // yalnız "kök + en az 1 karakter" için yazar (`kelimeKokuKisaltmaPrefixEslesmesi` kaynak
+  // kelimenin kökten UZUN olmasını şart koşar) → eski guard bu ASİMETRİYİ çözücüye taşımıştı.
+  // Ama Perkins girişinde (Serbest Yazma + Modül 10 metin→brf) kullanıcı hücreleri ELİYLE
+  // yazar: derste öğretildiği gibi [5]+[1,2] yazınca "bil" yerine yalnız "b" görünüyordu →
+  // kök sistemi çalışmıyor sanılıyordu. Ayrıca peel sondaki noktalamayı zaten soyduğundan
+  // "bil." de 2 hücreye iniyor ve nokta EKLENMİŞ olmasına rağmen kök okunmuyordu.
+  // ⚠ REGRESYON RİSKİ YOK — ölçüldü: 48.793 sözlük kelimesinin encoder çıktısında TAM 2
+  // hücreli + [5] başlangıçlı blok SIFIR; [5] hücresi yalnız blok BAŞINDA geçiyor (777 kez,
+  // 0 kez blok içinde) → çözücü yalnız ELLE yazılan/BRF'ten gelen çıplak kök için gevşer,
+  // encoder üretimi metinlerin round-trip'i AYNEN korunur. (brfOkuyucu.js'te ikizi var.)
+  if (kokAktif && b.length >= 2 && ci === 0 && ilkKey === '5') {
     const sagKey = noktalariAnahtara(b[1]);
     const kok = KOK_SAG_TERS.get(sagKey);
     if (kok) {
@@ -2348,7 +2471,11 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
     const islemIsareti = matematikSembolHucreEslesmesi(b, ci);
     if (islemIsareti) {
       const islemSonu = ci + islemIsareti.hucreler.length;
-      const sonrakiSayiBitisik = sayiModu || gercekSayiBitisik(b[islemSonu], b[islemSonu + 1]);
+      // "sayı yanında" testi: doğrudan sayı VEYA araya çok hücreli operatör girip sonra sayı
+      // ("|−7|" → '|' ardından '−' + 7; bkz. matematikSayiBaglamiIleride).
+      const sonrakiSayiBitisik = sayiModu
+        || gercekSayiBitisik(b[islemSonu], b[islemSonu + 1])
+        || matematikSayiBaglamiIleride(b, islemSonu);
       const setAdiSonra = ['6', '5,6', '3,4,5,6'].includes(anahKey(b[islemSonu]));
       const kumeReddi = KUME_ISLEMLERI_A.has(islemIsareti.ad) && !setAdiSonra;
       if (!kumeReddi && (!isAmbiguousMath(islemIsareti) || sonrakiSayiBitisik)) {
@@ -2438,6 +2565,18 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       }
       const bolukMu = noktalariAnahtara(noktalar) === '3';
       if (!siraSayiModu && bolukMu && ci + 1 < b.length && hucreyiRakamayap(b[ci + 1])) {
+        // [3] = bölük ayırıcı VEYA kesme işareti (bkz. sayiModundaKesmeIsaretiMi):
+        // "1.000" → bölük; "1922'de" → kesme (ekin harfleri de rakam hücresidir!).
+        if (sayiModundaKesmeIsaretiMi(b, ci)) {
+          buf.push('’');
+          kesmeBayrak = true;
+          sayiModu = false;
+          siraSayiModu = false;
+          ciftListeVirgulle = false;
+          cListeSonTekIsaretSonrasi = false;
+          ci++;
+          continue;
+        }
         buf.push('.');
         ci++;
         continue;
@@ -2481,6 +2620,19 @@ function _hucreBlokunuMetneCevirKisaltmali(bRaw, sistemler, sonrakiIlkHucre, opt
       }
       if (tarihAyirmaIsaretiMi(noktalar) && tarihHucreAraligi(b, ci)) {
         buf.push('.');
+        ci++;
+        continue;
+      }
+      // ⚠ İKİ SAYI ARASINDAKİ NOKTALAMA hece/kısaltma OLARAK OKUNMAZ (encoder tutarsızlığı,
+      // ölçüldü): "12.30" TEK BAŞINA yazılınca bölük hücresi [3] üretiliyor, CÜMLE İÇİNDE
+      // ("Saat 12.30 oldu.") nokta [2,5,6] + YENİDEN sayı işareti üretiliyor. [2,5,6] aynı
+      // zamanda 'ka' hecesi olduğundan kısaltmalı çözücü "12ka30" okuyordu. Sayı işareti
+      // hemen ardından geliyorsa hücre noktalamadır — sayının içinde hece bulunmaz.
+      // (brfOkuyucu `sayiIciNoktalama` İKİZİ — orada zaten vardı, burada EKSİKTİ: iki
+      // çözücünün sayı-içi davranışı ayrışmıştı.)
+      const sayiIciNoktalama = !siraSayiModu ? NOKTA_TERS.get(noktalariAnahtara(noktalar)) : null;
+      if (sayiIciNoktalama) {
+        buf.push(sayiIciNoktalama);
         ci++;
         continue;
       }

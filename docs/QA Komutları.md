@@ -1,12 +1,20 @@
 ---
-tags: [qa, test, muzik]
+tags: [qa, test, muzik, braille]
 ---
 
 # ✅ QA Komutları
 
 `package.json` script'leri. ← [[Müzik BRF]] · [[Proje Haritası]]
 
-> **Ne zaman:** müzik motoru/reader/`muzik.js` değişince ilgili `qa:*`'ı çalıştır. `muzik.js` değişince → `qa:brf-roundtrip`. Standart davranış değişince → `qa:brf-standard`.
+> **Ne zaman:** braille çevirici/çözücü (`brailleCevir.js`, `brfOkuyucu.js`, `perkinsYazma.js`) değişince → `qa:perkins` + `kapsamli_test`. Müzik motoru/reader/`muzik.js` değişince ilgili `qa:*`'ı çalıştır. `muzik.js` değişince → `qa:brf-roundtrip`. Standart davranış değişince → `qa:brf-standard`.
+
+## Braille yazım/çeviri kalkanları
+| Komut | Neyi korur |
+|-------|-----------|
+| `npm run qa:perkins` | Perkins yazımı: metin→brf blok çözücü (148/148) + `hucreyiIsle` durum makinesi ileri bakışlı 59/59 / ileri bakışsız 17/17. **Çözücü = encoder'ın tersi**; `=`/`×`/`÷`/`≤` gibi ÇOK HÜCRELİ semboller, `[3]` bölük↔kesme, `[2]` ondalık virgül, düz-yazı parantezi. **+ ÇAPRAZ DENETİM**: aynı hücre dizisini A (Perkins) / B (brf→metin) / C (durum makinesi) aynı okumalı (82/82) → bir çözücüyü düzeltip diğerini unutmayı yakalar. `brailleCevir.js` / `brfOkuyucu.js` / `perkinsYazma.js` değişince çalıştır. |
+| `node _datasets/kapsamli_test.mjs` | round-trip kategori denetimi (%98.73) + çakışma taraması |
+| `node _datasets/genistest.mjs` | 800 sözlük kelimesi + 78 cümle round-trip |
+| `node _datasets/mattest.mjs` | matematik ifadeleri round-trip (19/20) |
 
 ## BRF yazım/okuma kalkanları
 | Komut | Neyi korur |

@@ -99,7 +99,7 @@ export default function BrailleCell({
     const dolular = NOKTA_DOM_SIRA
       .filter((n) => aktifNoktalar.includes(n) || dogruNoktalar.includes(n))
       .map((n) => etiketGoster(n));
-    if (dolular.length === 0) return 'boş braille hücresi';
+    if (dolular.length === 0) return 'boş Braille hücresi';
     const liste = dolular.length === 1
       ? String(dolular[0])
       : `${dolular.slice(0, -1).join(', ')} ve ${dolular[dolular.length - 1]}`;

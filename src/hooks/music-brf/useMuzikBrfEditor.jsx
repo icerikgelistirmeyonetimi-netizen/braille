@@ -1324,7 +1324,7 @@ export function useMuzikBrfEditor() {
       gorunum: `>${t}`,
       hucreler,
       requiresNextNoteOctave: true,
-      aciklama: 'Word-sign + kontraksiyonsuz braille. Sonraki nota oktav alır.',
+      aciklama: 'Word-sign + kontraksiyonsuz Braille. Sonraki nota oktav alır.',
     };
     setMuzikOgeleri((onceki) => [...onceki, oge]);
     setIfadeGirisi('');

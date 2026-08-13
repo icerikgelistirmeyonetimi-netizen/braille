@@ -225,7 +225,7 @@ function GruplamaSecici({ timeSignature, onChange }) {
         onClick={() => setOpen((o) => !o)}
         className="h-8 inline-flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-800 hover:border-amber-400 hover:bg-amber-50/40 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
         aria-label="Vuruş gruplaması seçimi"
-        title="Aksak ölçüde vuruş gruplaması (kiriş + braille gruplama)"
+        title="Aksak ölçüde vuruş gruplaması (kiriş + Braille gruplama)"
       >
         <span className="text-zinc-400 text-[10px] uppercase tracking-wide">Gruplama</span>
         <span className="text-zinc-900 font-semibold text-sm tabular-nums">{aktifAnahtar}</span>
@@ -421,7 +421,7 @@ export default function MuzikScoreHeader({
         <div className="w-px h-4 bg-zinc-200" />
         <label
           className="h-full flex items-center gap-1.5 px-2 cursor-pointer hover:bg-zinc-50 transition"
-          title="Gruplama / pitch-only braille okuma"
+          title="Gruplama / pitch-only Braille okuma"
         >
           <input
             type="checkbox"

@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useMemo, useRef } from 'react';
 import BrailleCell from './BrailleCell.jsx';
 import { hucreParaBirimiKaynakBaglamiMi } from '../utils/paraBirimiKaynak.js';
+import { satirKonumMetni } from '../utils/noktaYardimci.js';
 
 const VARSAYILAN_RENKLER = { noktaRenk: '#3b82f6', etiketRenk: '#000000' };
 const NOKTALAMA_RENKLERI = { noktaRenk: '#10b981', etiketRenk: '#10b981' };
@@ -68,6 +69,16 @@ const BrailleGridHucre = memo(function BrailleGridHucre({
   isSecili,
   isVurgulu,
   onSelect,
+  // ── Elle nokta düzenleme (Modül 10 metin→brf; bkz. Araclar.jsx `hucreNoktasiniDegistir`) ──
+  // Verilince noktalar Alt+Shift+ok ile gezilebilir (programatik odak, Tab sırasına GİRMEZ)
+  // ve Enter/Space ile aç/kapa yapılabilir. Verilmezse davranış AYNEN eskisi gibi (pasif özet).
+  onNoktaDegistir,
+  onHucreKenari,
+  onHucreKlavye,
+  elleDuzenli = false,
+  // Ekran okuyucu etiketinin sonuna eklenen satır içi konum ("2. satırın 5. hücresi").
+  // Boş string → eklenmez (davranış eskisi gibi).
+  konumEtiketi = '',
 }) {
   const { noktaRenk, etiketRenk } = useMemo(
     () => anlamRenkleri(anlam, paraBirimiHucre),
@@ -82,16 +93,25 @@ const BrailleGridHucre = memo(function BrailleGridHucre({
     + (boslukMu ? ' belge-braille-hucre--bosluk' : '')
     + (isSecili ? ' secili' : '')
     + (isVurgulu ? ' metin-secim-vurgu' : '')
-    + (paraBirimiHucre ? ' para-birimi-hucre' : '');
+    + (paraBirimiHucre ? ' para-birimi-hucre' : '')
+    + (elleDuzenli ? ' hucre-elle-duzenli' : '');
   const sec = useCallback(() => {
     onSelect(globalIdx, anlam);
   }, [onSelect, globalIdx, anlam]);
   const tusla = useCallback((e) => {
+    // Alt+Shift+ok → hücrenin noktalarına gir (varsa); tüketilmezse Enter/Space seçime düşer.
+    if (onHucreKlavye && onHucreKlavye(e, globalIdx)) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onSelect(globalIdx, anlam);
     }
-  }, [onSelect, globalIdx, anlam]);
+  }, [onSelect, onHucreKlavye, globalIdx, anlam]);
+  const noktaDegistir = useCallback((n) => {
+    if (onNoktaDegistir) onNoktaDegistir(globalIdx, n);
+  }, [onNoktaDegistir, globalIdx]);
+  const hucreKenari = useCallback((yon, satir) => {
+    if (onHucreKenari) onHucreKenari(globalIdx, yon, satir);
+  }, [onHucreKenari, globalIdx]);
 
   return (
     <div
@@ -107,12 +127,25 @@ const BrailleGridHucre = memo(function BrailleGridHucre({
          uygulanıp uygulanmadığı duyulmuyordu. Artık anlam başlığı (ör. "İki Harfli
          Kısaltma: beden") + nokta özeti birlikte okunur. (Aynı düzeltme Araclar'ın tablet
          görünümündeki BrailleHucreBileseni'nde de var — ikisi birlikte gitmeli.) */
-      aria-label={anlam ? hucreAriaEtiketi(anlam) : undefined}
+      /* ⚠ Konum eki (kullanıcı: "hücre numaraları okunduktan sonra … kaçıncı satırdaki
+         kaçıncı hücre olduğu da seslendirilebilir"): nokta özetinden SONRA, "Tıkla: anlam
+         göster" başlığından (NVDA açıklaması) ÖNCE okunur. */
+      aria-label={anlam
+        ? `${hucreAriaEtiketi(anlam)}${elleDuzenli ? ', elle düzenlendi' : ''}${konumEtiketi ? `, ${konumEtiketi}` : ''}`
+        : undefined}
       onClick={sec}
       onKeyDown={tusla}
     >
       <div className="hucre-svg-sarici">
-        <BrailleCell aktifNoktalar={noktalar} tiklanabilir={false} kesfedilebilir={false} />
+        <BrailleCell
+          aktifNoktalar={noktalar}
+          tiklanabilir={false}
+          /* Nokta düzenleme AÇIKKEN noktalar keşfedilebilir olur (Alt+Shift+ok ile odak,
+             Enter/Space ile aç/kapa); KAPALIYKEN eski pasif özet etiketi korunur. */
+          kesfedilebilir={!!onNoktaDegistir}
+          onNoktaDegistir={onNoktaDegistir ? noktaDegistir : undefined}
+          onHucreKenari={onHucreKenari ? hucreKenari : undefined}
+        />
       </div>
       {genisletAktif && anlam && (
         <div className="belge-hucre-etiket" aria-hidden="true">{etiket || '\u00A0'}</div>
@@ -127,6 +160,12 @@ const BrailleGridHucre = memo(function BrailleGridHucre({
   && onceki.isVurgulu === sonraki.isVurgulu
   && onceki.etiket === sonraki.etiket
   && onceki.anlamKey === sonraki.anlamKey
+  && onceki.elleDuzenli === sonraki.elleDuzenli
+  && onceki.konumEtiketi === sonraki.konumEtiketi
+  && !!onceki.onNoktaDegistir === !!sonraki.onNoktaDegistir
+  && onceki.onNoktaDegistir === sonraki.onNoktaDegistir
+  && onceki.onHucreKenari === sonraki.onHucreKenari
+  && onceki.onHucreKlavye === sonraki.onHucreKlavye
   && noktaAnahtari(onceki.noktalar) === noktaAnahtari(sonraki.noktalar)
 ));
 
@@ -147,6 +186,15 @@ export default function BrailleGrid({
   kaynak = undefined,
   esleme = undefined,
   paraBirimiKaynakAraliklari = undefined,
+  // Elle nokta düzenleme (opsiyonel; yalnız Modül 10 metin→brf kullanır).
+  onNoktaDegistir = undefined,
+  onHucreKenari = undefined,
+  onHucreKlavye = undefined,
+  elleDuzenliIndeksler = undefined, // Map<globalIdx, number[]> | null
+  // Satır içi konum duyurusu: verilirse (kabartma satırında kaç hücre var) her hücrenin
+  // ekran okuyucu etiketine "N. satırın M. hücresi" eklenir. Satır numarası SAYFA İÇİ
+  // yereldir (erisilebilirSatirlar ile aynı hesap). Verilmezse etiket AYNEN eskisi gibi.
+  satirGenisligi = 0,
 }) {
   const renderIndices = useMemo(() => (
     Array.isArray(indices)
@@ -172,6 +220,9 @@ export default function BrailleGrid({
         const etiket = genisletAktif && typeof buildEtiket === 'function'
           ? buildEtiket(anlam, globalIdx)
           : '';
+        const konumEtiketi = satirGenisligi > 0
+          ? satirKonumMetni(Math.floor(localIdx / satirGenisligi) + 1, (localIdx % satirGenisligi) + 1)
+          : '';
         return (
           <BrailleGridHucre
             key={globalIdx}
@@ -185,6 +236,11 @@ export default function BrailleGrid({
             isSecili={seciliIndex === globalIdx}
             isVurgulu={typeof isHighlighted === 'function' && isHighlighted(globalIdx)}
             onSelect={selectCell}
+            onNoktaDegistir={onNoktaDegistir}
+            onHucreKenari={onHucreKenari}
+            onHucreKlavye={onHucreKlavye}
+            elleDuzenli={!!(elleDuzenliIndeksler && elleDuzenliIndeksler.has(globalIdx))}
+            konumEtiketi={konumEtiketi}
           />
         );
       });

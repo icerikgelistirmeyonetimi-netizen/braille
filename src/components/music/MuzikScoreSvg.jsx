@@ -2226,7 +2226,7 @@ export default function MuzikScoreSvg({
                   className="muzik-header-braille-btn"
                   role="button"
                   tabIndex={0}
-                  aria-label="Eser bilgileri ve header braille"
+                  aria-label="Eser bilgileri ve header Braille"
                   style={{ cursor: 'pointer' }}
                   onMouseEnter={() => setHoverHeaderBrailleBtn(true)}
                   onMouseLeave={() => setHoverHeaderBrailleBtn(false)}
