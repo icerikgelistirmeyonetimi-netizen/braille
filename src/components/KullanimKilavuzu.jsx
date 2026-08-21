@@ -9,7 +9,7 @@ import React from 'react';
 // "kılavuzda hâlâ bu bölüm neden var, bu bölüm çıkacaktı"). Kısaltmalar zaten Modül 2
 // derslerinde öğretiliyor; müzik işaretleri de Müzik → BRF bölümünde. Tablo EKLEME.
 // ⚠ Kısayollar UYDURULMAZ — hepsi koddan doğrulanmıştır:
-//   Alt+ok            → components/BrailleCell.jsx `noktaKlavye`
+//   Alt+Shift+ok, Alt+Shift+Enter/Boşluk → components/BrailleCell.jsx `noktaKlavye`
 //   F D S J K L       → components/BrailleKlavye.jsx `TUS_NOKTA`
 //   Boşluk/Backspace/Enter → components/BrailleKlavye.jsx keydown
 //   Sol/Sağ ok, Delete → pages/YazmaSerbest.jsx imleç keydown
@@ -52,9 +52,10 @@ const KISAYOL_GRUPLARI = [
   {
     baslik: 'Braille hücresi (öğrenme sayfaları)',
     satirlar: [
-      ['Alt + Sağ ok / Alt + Sol ok', 'Hücrenin sütunları arasında geçer: 1 ile 4, 2 ile 5, 3 ile 6 arasında. Öğede birden çok hücre varsa kenardan komşu hücreye geçer; son hücrede durur, sayfa değişmez.'],
-      ['Alt + Yukarı ok / Alt + Aşağı ok', 'Hücrenin satırları arasında geçer: 1-2-3 ve 4-5-6.'],
+      ['Alt + Shift + Sağ ok / Sol ok', 'Hücrenin sütunları arasında geçer: 1 ile 4, 2 ile 5, 3 ile 6 arasında. Öğede birden çok hücre varsa kenardan komşu hücreye geçer; son hücrede durur, sayfa değişmez.'],
+      ['Alt + Shift + Yukarı ok / Aşağı ok', 'Hücrenin satırları arasında geçer: 1-2-3 ve 4-5-6.'],
       ['Enter veya Boşluk', 'Üzerinde durduğunuz noktaya basar.'],
+      ['Alt + Shift + Enter / Boşluk', 'Alt ve Shift basılı dururken de üzerinde olduğunuz noktaya basar; düzeltilebilir hücrelerde işaretliyse işareti kaldırır. Böylece Alt + Shift ile gezinirken eli kaldırmadan işaretleme yapılır. Öğrenme sayfalarında işaretleme yalnız çalışılan (aktif) hücrede yapılır; yandaki hücrenin noktaları sadece okunur.'],
       ['Düz ok tuşları', 'Uygulama bunlara dokunmaz; ekran okuyucunun kendi tarama gezinmesi için serbest bırakılmıştır.'],
     ],
   },
@@ -80,6 +81,7 @@ const KISAYOL_GRUPLARI = [
       ['Yeni hücre', 'İmlecin bulunduğu yere eklenir, sonuna değil.'],
       ['Backspace / Delete', 'Backspace imlecin solundaki, Delete sağındaki hücreyi siler.'],
       ['Hücreye odaklanma', 'Tab ile yazdığınız bir hücreye geldiğinizde imleç oraya taşınır; hücrenin anlamı ve nokta bileşimi okunur.'],
+      ['Hücrede nokta düzeltme', 'Yazdığınız hücrenin üzerindeyken Alt + Shift + ok ile hücrenin noktalarına girilir; Enter/Boşluk (Alt ve Shift basılıyken de) noktayı açar ya da kapatır.'],
       ['Shift + Ctrl + Alt', 'Kısaltmalı yazımı açar ve kapatır; alttaki Kısaltma düğmesine tıklamakla aynı işi yapar. Yazdığınız hücreler silinmez, yeni moda göre yeniden çözülür.'],
       ['Kısaltma düğmesi', 'Açıkken yazdıklarınız kısaltma kurallarına göre çözülür; hangi kısaltma sistemlerinin etkin olduğunu yanındaki liste düğmesinden seçebilirsiniz.'],
     ],
@@ -92,6 +94,7 @@ const KISAYOL_GRUPLARI = [
       ['Shift + Ctrl + Alt', 'Kısaltmalı yazımı açar ve kapatır; alttaki Kısaltma düğmesine tıklamakla aynı işi yapar.'],
       ['Alt + P', 'Perkins klavyeyi açar ve kapatır.'],
       ['Alt + T', 'Braille tablet modunu açar ve kapatır.'],
+      ['Elle nokta düzenleme', 'Çıktıdaki hücrenin üzerindeyken Alt + Shift + ok ile noktalara girilir; Enter/Boşluk (Alt ve Shift basılıyken de) noktayı açar ya da kapatır.'],
       ['Durum bildirimi', 'Üç kısayol da yeni durumu ("Kısaltma açık", "Perkins klavye kapalı" gibi) ekran okuyucuya bildirir.'],
     ],
   },

@@ -106,6 +106,29 @@ export default function BrailleCell({
     return `${liste} numaralı ${dolular.length === 1 ? 'nokta' : 'noktalar'}`;
   })();
 
+  // ── ÇOK HÜCRELİ PASİF HÜCRE (tiklanabilir=false + kesfedilebilir + hucreAdi) — hücre
+  // İÇERİĞİ tarama kipinde de okunsun (kullanıcı: "birden fazla hücreli ifadelerde ilk hücre
+  // geçildikten sonra erişilebilir şekilde ilk hücre okunamıyor"). Rol'süz div noktaların
+  // aria-label'ı NVDA TARAMA modunda okunmaz (generic öğede ad uygulanmaz; yalnız Alt+Shift+ok
+  // odak gezintisi okur) → yan yana dizilimde aktif olmayan hücre fiilen sessizdi. Çözüm:
+  // hücrenin içine sr-only DÜZ METİN özet konur (düz metin tarama tamponunda daima vardır;
+  // grup da boş kalmaz → "1. hücre" grup etiketi sınırda okunmaya devam eder). Noktalardaki
+  // çıplak rakam içerikleri aria-hidden span'a alınır (tarama kipinde anlamsız "1 2 3 4 5 6"
+  // gürültüsü kalkar; buton/switch noktalarda ad zaten aria-label'dan gelir, etkilenmez).
+  const pasifHucreOzeti = (() => {
+    if (tiklanabilir || !kesfedilebilir || !hucreAdi || kilitli) return null;
+    const listeYap = (arr) => (arr.length === 1
+      ? `${arr[0]} numaralı nokta`
+      : `${arr.slice(0, -1).join(', ')} ve ${arr[arr.length - 1]} numaralı noktalar`);
+    const dolular = NOKTA_DOM_SIRA
+      .filter((m) => aktifNoktalar.includes(m) || dogruNoktalar.includes(m))
+      .map((m) => etiketGoster(m));
+    if (dolular.length > 0) return `tamamlandı: ${listeYap(dolular)}`;
+    const hedefler = NOKTA_DOM_SIRA.filter((m) => hedefNoktalar.includes(m)).map((m) => etiketGoster(m));
+    if (hedefler.length > 0) return `henüz yazılmadı, basılacak ${listeYap(hedefler)}`;
+    return null;
+  })();
+
   const noktaDurumu = (n) => {
     const siniflar = ['dot'];
     if (aktifNoktalar.includes(n)) siniflar.push('on');
@@ -172,6 +195,21 @@ export default function BrailleCell({
   };
 
   const noktaKlavye = (e, n) => {
+    // ⚠ Alt+Shift+Enter / Alt+Shift+Boşluk = üzerinde olunan noktayı işaretle, işaretliyse
+    // kaldır (kullanıcı: "bir el alt ve shift tuşlarına basılı dururken noktalar arasında
+    // gezindik; işaretlemek için o eli kaldırmak gerekmesin, basılıyken de işaretleme
+    // yapılabilsin"). Düz Enter/Boşluk davranışı DEĞİŞMEZ (yerel buton aktivasyonu /
+    // onNoktaDegistir handler'ı aynen kalır); bu dal yalnız modifier'lar basılıyken devreye
+    // girer. Öğrenme noktasında (tiklanabilir) basma, düzeltme noktasında (onNoktaDegistir)
+    // aç/kapa yapılır; pasif noktada işlev yok (sessiz).
+    if (e.altKey && e.shiftKey && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (kilitli) return;
+      if (tiklanabilir && onNoktaTikla) onNoktaTikla(n);
+      else if (onNoktaDegistir) onNoktaDegistir(n);
+      return;
+    }
     const adim = YON_ADIMI[e.key];
     // ⚠ KISAYOL: Alt + Shift + ok (kullanıcı: "alt sol ok kısayolunu değiştirelim,
     // alt shift ok tuşu ile gezinmeyi ayarlayalım"). Yalnız Alt+ok tarayıcının
@@ -312,6 +350,8 @@ export default function BrailleCell({
             }
           : {})}
       >
+        {/* sr-only özet: .sr-only position:absolute olduğundan grid yerleşimini bozmaz. */}
+        {pasifHucreOzeti && <span className="sr-only">{pasifHucreOzeti}</span>}
         {statikKullan ? null : NOKTA_DOM_SIRA.map((n) => {
           // Kilitliyken: tıklanamaz/odaklanamaz div + ekran okuyucudan gizli.
           const Etiket = (tiklanabilir && !kilitli) ? 'button' : 'div';
@@ -370,7 +410,7 @@ export default function BrailleCell({
                     // Pasif gösterim: nokta ekran okuyucudan GİZLİ — özet .cell etiketinde.
                     : { 'aria-hidden': true })}
             >
-              {etiketGoster(n)}
+              <span aria-hidden="true">{etiketGoster(n)}</span>
             </Etiket>
           );
         })}

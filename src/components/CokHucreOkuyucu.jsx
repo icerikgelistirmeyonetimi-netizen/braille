@@ -94,6 +94,20 @@ export default function CokHucreOkuyucu({
   const [hucreIndeksi, setHucreIndeksi] = useState(0);
   const [basilanlar, setBasilanlar] = useState([]);
   const [yanlis, setYanlis] = useState([]);
+  // ⚠ HÜCRE BAŞINA TAMAMLANMA KAYDI — öğe ANCAK TÜM hücreleri tamamlanınca biter (kullanıcı:
+  // "ilk kutular tamamlanmadan son kutu tamamlanırsa işlem başarılı bulunup sonraki sayfaya
+  // geçiliyor; tüm hücrelerde işaretlemenin doğru yapılması şartına bağlanmalı"). Önizleme
+  // tıklaması / Alt+Shift+ok kenar geçişi ile SON hücreye atlayıp yalnız onu tamamlamak
+  // eskiden öğeyi bitiriyordu (tek koşul `sonHucre` idi). Kayıt {indeks, yazi, hucreler[]}
+  // olarak öğeye BAĞLIDIR: türetilmiş guard (indeks VEYA yazi eşleşmezse boş) sayesinde
+  // (a) öğe değişiminde effect-sırası yarışı yaşanmaz, (b) Kayıtlılar modunda liste
+  // mutasyonuyla AYNI indekse BAŞKA öğe gelirse eski kayıt ona sızmaz (yazi kimliği).
+  // Kayıt indeks DEĞİŞİNCE effect'le de temizlenir → tamamlanmış öğeye "Önceki öğe" ile
+  // dönüşte bayat kayıt kalmaz (yoksa noktalar dolu-restore edilip öğe yeniden
+  // çalışılamazdı). Aynı-indeks sıfırlamaları (Sıfırla, hızlı dolaşım kart seçimi,
+  // Tümü/Kayıtlılar geçişi, Baştan Başla) tamamKayitSifirla ile AÇIK yapılmalı.
+  const [tamamKayit, setTamamKayit] = useState({ indeks: 0, yazi: null, hucreler: [] });
+  const tamamKayitSifirla = () => setTamamKayit({ indeks: 0, yazi: null, hucreler: [] });
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const ogeSesiTimerRef = useRef(null);
@@ -154,6 +168,11 @@ export default function CokHucreOkuyucu({
   const bitti = indeks >= aktifListe.length;
   const aktif = aktifListe[indeks];
   const hucreSayisi = aktif ? aktif.hucreler.length : 0;
+  // Türetilmiş tamamlanma kümesi: kayıt hem indekse hem öğe KİMLİĞİNE (yazi) bağlanır —
+  // liste değişip aynı indekse başka öğe gelirse kayıt kendiliğinden boş görünür.
+  const tamamlananHucreler = (aktif && tamamKayit.indeks === indeks && tamamKayit.yazi === aktif.yazi)
+    ? tamamKayit.hucreler
+    : [];
 
   const kelimeYonergeMetniAl = useCallback((oge) => {
     if (!oge) return '';
@@ -353,12 +372,30 @@ export default function CokHucreOkuyucu({
     setHucreIndeksi(0);
     setBasilanlar([]);
     setYanlis([]);
+    tamamKayitSifirla(); // aynı öğe yeniden seçilirse eski hücre-tamamlanma kaydı kalmasın
     okumaModundanCik();
   };
 
-  // Yeni kelimeye geçince ilk hücreden başla
-  useEffect(() => { setHucreIndeksi(0); }, [indeks]);
-  useEffect(() => { setBasilanlar([]); setYanlis([]); }, [indeks, hucreIndeksi]);
+  // Yeni kelimeye geçince ilk hücreden başla + tamamKayit temizlenir: türetilmiş guard
+  // yarışlara karşı korur ama TAMAMLANMIŞ öğeye "Önceki öğe" ile AYNI indeksle dönüşte
+  // bayat kayıt eşleşirdi → noktalar dolu-restore edilip öğe yeniden çalışılamazdı.
+  // Effect temizliği bunu keser (bir frame'lik bayat eşleşme türetilmiş guard'la zararsız).
+  useEffect(() => { setHucreIndeksi(0); tamamKayitSifirla(); }, [indeks]);
+  // Hücre değişince basılanlar sıfırlanır; TAMAMLANMIŞ hücreye geri dönüşte ise noktalar
+  // DOLU geri yüklenir (kullanıcı: "ilk hücre geçildikten sonra erişilebilir şekilde ilk
+  // hücre okunamıyor" — dönüşte noktalar "dolu" okunur + noktayaTikla'daki
+  // `basilanlar.includes(n)` guard'ı sayesinde tamamlanmış hücre İKİNCİ kez "tamamlanıp"
+  // çift geçiş/çift ding tetikleyemez).
+  useEffect(() => {
+    const oge = aktifListe[indeks];
+    const hedefHucre = oge?.hucreler?.[hucreIndeksi];
+    const hucreTamam = tamamKayit.indeks === indeks
+      && tamamKayit.yazi === (oge?.yazi ?? null)
+      && tamamKayit.hucreler.includes(hucreIndeksi)
+      && Array.isArray(hedefHucre);
+    setBasilanlar(hucreTamam ? [...hedefHucre] : []);
+    setYanlis([]);
+  }, [indeks, hucreIndeksi, tamamKayit]);
 
   // Yeni kelime tanıtımı (kelime adı + okunuş + hücre sayısı)
   useEffect(() => {
@@ -764,6 +801,27 @@ export default function CokHucreOkuyucu({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hucreIndeksi]);
 
+  // Yan-yana (2 hücreli) dizilimde SARMALI hücre dönüşünde odak restore: eski aktif
+  // hücrenin buton noktaları div'e dönüşünce (React tag değişimi = DOM yeniden yaratma)
+  // odak body'ye düşerdi; NVDA kullanıcısı konumunu kaybederdi. Odak yalnız BOŞA
+  // düştüyse yeni aktif hücrenin İLK noktasına verilir ("İLK TAB = 1. nokta"
+  // standardıyla aynı hedef; kullanıcı 900ms penceresinde başka yere odaklandıysa
+  // odak ÇALINMAZ). kenarGecisRef KULLANILMAZ — onun effect'i "N. hücre." duyurusu da
+  // yapar ve noktayaTikla'nın zengin sarma duyurusunu ezerdi; burada duyuru YOK.
+  const sarmaOdakRef = useRef(false);
+  useEffect(() => {
+    if (!sarmaOdakRef.current) return undefined;
+    sarmaOdakRef.current = false;
+    const id = window.requestAnimationFrame(() => {
+      const ae = document.activeElement;
+      if (ae && ae !== document.body) return;
+      const kok = dotSentinelRef.current?.parentElement;
+      kok?.querySelector('button.dot')?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hucreIndeksi]);
+
   // ⚠ Yönerge okunurken klavye ENGELLEME KALDIRILDI (kullanıcı: "yönerge bitmesini bekleyiniz ve
   // zorla bekletmeyi kaldıralım"): noktalar her an etkileşimli; Enter/Space/ok/Tab DOĞAL çalışır
   // (Tab, yönerge bölgesinden DOM sırasıyla ilk noktaya geçer). Eski "bitmesini bekleyiniz" toast'ı
@@ -862,8 +920,8 @@ export default function CokHucreOkuyucu({
             </button>
           )}
           {kayitlilarModu
-            ? <button className="btn" type="button" onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tüm Listeye Dön</button>
-            : <button className="btn" type="button" onClick={() => setIndeks(0)}>Baştan Başla</button>}
+            ? <button className="btn" type="button" onClick={() => { setKayitlilarModu(false); setIndeks(0); tamamKayitSifirla(); }}>Tüm Listeye Dön</button>
+            : <button className="btn" type="button" onClick={() => { setIndeks(0); tamamKayitSifirla(); }}>Baştan Başla</button>}
         </div>
       </div>
     );
@@ -930,11 +988,43 @@ export default function CokHucreOkuyucu({
       srDurumDuyur(`Sıradaki nokta: ${aktifNoktalar[yeni.length]} numara.`, 'nokta');
       return;
     }
-    // Hücre tamamlandı.
-    if (!sonHucre) {
-      // Öğede başka hücre var → ses + kısa duyuru (yine "Doğru" sözcüğü yok) + sonraki hücre.
-      srDurumDuyur('Sonraki hücreye geçiliyor.', 'dogru');
-      setTimeout(() => setHucreIndeksi((i) => i + 1), 900);
+    // Hücre tamamlandı → kaydet. Öğe ANCAK TÜM hücreler tamamlanınca biter (kullanıcı:
+    // "ilk kutular tamamlanmadan son kutu tamamlanırsa işlem başarılı bulunuyor" —
+    // eskiden tek koşul `sonHucre` idi; önizleme/Alt+Shift+ok ile son hücreye atlayıp
+    // yalnız onu tamamlamak öğeyi bitiriyordu).
+    const kayitliHucreler = tamamlananHucreler.includes(guvenliHucreIndeksi)
+      ? tamamlananHucreler
+      : [...tamamlananHucreler, guvenliHucreIndeksi];
+    setTamamKayit({ indeks, yazi: k.yazi, hucreler: kayitliHucreler });
+    // Eksik hücreler: BOŞ hücreler ([] — ör. müzik boş ölçü ayracı) dokunuşla
+    // tamamlanamaz → şarttan MUAF (yoksa boş ara hücreli öğe asla bitemezdi ve sarma
+    // kullanıcıyı basılacak noktası olmayan hücreye yönlendirirdi).
+    const eksikler = [];
+    for (let i = 0; i < hucreSayisi; i += 1) {
+      if (!(k.hucreler[i] || []).length) continue;
+      if (!kayitliHucreler.includes(i)) eksikler.push(i);
+    }
+    if (eksikler.length > 0) {
+      // Sıradaki TAMAMLANMAMIŞ hücre: aktiften ileri doğru, sona gelince başa sarar.
+      const hedefIdx = eksikler.find((i) => i > guvenliHucreIndeksi) ?? eksikler[0];
+      if (hedefIdx === guvenliHucreIndeksi + 1) {
+        // Ardışık ilerleme: eski davranış ve metin AYNEN (ses + kısa duyuru, "Doğru" sözcüğü yok).
+        srDurumDuyur('Sonraki hücreye geçiliyor.', 'dogru');
+      } else {
+        // Atlamalı geçiş (ör. son hücre önce yapıldı → başa sarıldı): hedef hücre adıyla
+        // duyurulur; hedef 1. hücreyse hücre-değişim seslendirmesi (hucreIndeksi===0 erken
+        // dönüşü) çalışmayacağından dokunulacak noktalar da bu duyuruda söylenir.
+        const hedefAd = k.hucreAdlari?.[hedefIdx] || `${hedefIdx + 1}. hücre`;
+        const hedefNoktalarMetni = hedefIdx === 0
+          ? ` ${noktaListesi(k.hucreler[hedefIdx] || [], 'ya', 'a')} dokunun.`
+          : '';
+        srDurumDuyur(`${hedefAd} henüz tamamlanmadı, o hücreye geçiliyor.${hedefNoktalarMetni}`, 'dogru');
+        // Yan-yana dizilimde sarmalı dönüşte odak restore işaretle: eski aktif hücrenin
+        // buton noktaları div'e dönüşünce odak body'ye düşer (step-through'da düşmez —
+        // büyük hücrenin butonları aynı DOM öğeleri kalır). Bkz. sarmaOdakRef effect'i.
+        if (ikiHucreTekSatir) sarmaOdakRef.current = true;
+      }
+      setTimeout(() => setHucreIndeksi(hedefIdx), 900);
       return;
     }
     // ÖĞE tamamlandı → "Tebrikler" (HEMEN değişme) → "Sonraki öğe" → SONRA geçiş (kullanıcı isteği).
@@ -1004,8 +1094,8 @@ export default function CokHucreOkuyucu({
         )}
         {kayitliSayisi > 0 && (
           <div className="banner-grup-secim" style={{ margin: '4px 0 0' }}>
-            <button type="button" className={`btn ${!kayitlilarModu ? 'aktif' : ''}`} aria-pressed={!kayitlilarModu} onClick={() => { setKayitlilarModu(false); setIndeks(0); }}>Tümü</button>
-            <button type="button" className={`btn ${kayitlilarModu ? 'aktif' : ''}`} aria-pressed={kayitlilarModu} onClick={() => { setKayitlilarModu(true); setIndeks(0); }}>Kayıtlılar ({kayitliSayisi})</button>
+            <button type="button" className={`btn ${!kayitlilarModu ? 'aktif' : ''}`} aria-pressed={!kayitlilarModu} onClick={() => { setKayitlilarModu(false); setIndeks(0); tamamKayitSifirla(); }}>Tümü</button>
+            <button type="button" className={`btn ${kayitlilarModu ? 'aktif' : ''}`} aria-pressed={kayitlilarModu} onClick={() => { setKayitlilarModu(true); setIndeks(0); tamamKayitSifirla(); }}>Kayıtlılar ({kayitliSayisi})</button>
           </div>
         )}
       </div>
@@ -1111,7 +1201,7 @@ export default function CokHucreOkuyucu({
                    Ekran okuyucu hücre ayrımını hucreAdi ("1. hücre") grup etiketiyle yapar. */
                 hucreAdi={`${hucreIndex + 1}. hücre`}
                 hedefNoktalar={noktalar}
-                dogruNoktalar={hucreIndex < guvenliHucreIndeksi ? noktalar : hucreIndex === guvenliHucreIndeksi ? basilanlar : []}
+                dogruNoktalar={hucreIndex === guvenliHucreIndeksi ? basilanlar : tamamlananHucreler.includes(hucreIndex) ? noktalar : []}
                 yanlisNoktalar={hucreIndex === guvenliHucreIndeksi ? yanlis : []}
                 tiklanabilir={hucreIndex === guvenliHucreIndeksi}
                 onNoktaTikla={noktayaTikla}
@@ -1160,7 +1250,7 @@ export default function CokHucreOkuyucu({
                 aria-selected={i === guvenliHucreIndeksi}
                 className={`btn hucre-onizleme-oge ${i === guvenliHucreIndeksi ? 'aktif' : ''}`}
                 onClick={() => setHucreIndeksi(i)}
-                aria-label={`${i + 1}. hücreye git`}
+                aria-label={`${i + 1}. hücreye git${tamamlananHucreler.includes(i) ? ', tamamlandı' : ''}`}
               >
                 <span className="hucre-onizleme-grid" aria-hidden="true">
                   {[1, 4, 2, 5, 3, 6].map((n) => (
@@ -1290,6 +1380,7 @@ className="btn"           type="button"
             setHucreIndeksi(0);
             setBasilanlar([]);
             setYanlis([]);
+            tamamKayitSifirla(); // indeks zaten 0 iken de kayıt temizlensin (türetilmiş guard yetmez)
             konusDil('En başa dönüldü.');
           }}
         >

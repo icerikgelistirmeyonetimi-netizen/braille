@@ -62,7 +62,7 @@ import { INGILIZCE_BOLUMLER } from '../data/ingilizceBraille.js';
 const SAYI_ISARETI = [3, 4, 5, 6];
 
 // "Örnek/ifade" girişlerinde (İfade Okuma: tarih/"15 + 8 = 23"; Özel İşaretler:
-// Tarih Yazma "3.3.2013", Rumuzlu İfadeler "TBMM") gömülü SAYI ve HARF'ler keyfîdir —
+// Tarih Yazma "23.4.1923", Rumuzlu İfadeler "TBMM") gömülü SAYI ve HARF'ler keyfîdir —
 // başka sayı/harf de olabilirdi. Kuralı taşıyan anlamlı kısım işaret/ayraç/göstergedir
 // (bağ 36, rakam işareti 3456, büyük harf işareti 6 …). Sorgunun TÜM hücreleri aşağıdaki
 // keyfî desenlerdense örnek girişler eşleşmez (rakam/harf araması tarihi/rumuzu bulmasın);
@@ -255,7 +255,7 @@ kaynakEkle(KELIME_PARCASI_KISALTMALARI, (k) => ({
 kaynakEkle(NOKTALAMA_ISARETLERI, (s) => ({ etiket: s.ad, altEtiket: s.sembol, hucreler: s.hucreler }),
   { modulBaslik: 'Modül 3', kategori: 'Noktalama İşaretleri', yol: '/noktalama-isaretleri' });
 
-// Gömülü örnek (keyfî sayı/harf) taşıyan girişler: tarih "3.3.2013", rumuz "TBMM".
+// Gömülü örnek (keyfî sayı/harf) taşıyan girişler: tarih "23.4.1923", rumuz "TBMM".
 const OZEL_ORNEK_ADLARI = new Set(['Tarih Yazma', 'Rumuzlu İfadeler']);
 kaynakEkle(OZEL_ISARETLER, (s) => ({
   etiket: s.ad, altEtiket: s.sembol, hucreler: s.hucreler, ornek: OZEL_ORNEK_ADLARI.has(s.ad),
